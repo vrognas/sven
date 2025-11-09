@@ -18,7 +18,8 @@
       "WebSearch",
       "Bash(npx tsc:*)",
       "Bash(npx mocha:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(node build.js:*)"
     ],
     "deny": [],
     "ask": []
