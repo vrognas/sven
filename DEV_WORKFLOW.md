@@ -56,6 +56,7 @@ npm run compile
 - Disabled webpack minification for faster builds
 - Set TypeScript to transpile-only mode to bypass strict type errors
 - Converted all scripts from yarn to npm
+- **Performance:** Replaced wildcard activation event with specific triggers (only activates when SVN needed)
 
 ## Publishing to OpenVSX
 
