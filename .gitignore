@@ -4,4 +4,4 @@
 /node_modules
 /out
 /test-reports
-svn-scm*.vsix
+positron-svn*.vsix

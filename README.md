@@ -1,14 +1,8 @@
-# Subversion source control for VS Code
+# Subversion source control for Positron
 
-![Visual Studio Marketplace Release Date](https://img.shields.io/visual-studio-marketplace/release-date/johnstoncode.svn-scm)
-![Visual Studio Marketplace Last Updated](https://img.shields.io/visual-studio-marketplace/last-updated/johnstoncode.svn-scm)
-![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/johnstoncode.svn-scm)
-![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/johnstoncode.svn-scm)
+Positron-optimized fork of the SVN extension with enhanced features for data science workflows.
 
-![GitHub Workflow Status (with branch)](https://img.shields.io/github/actions/workflow/status/JohnstonCode/svn-scm/main.yml?branch=master)
-[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
-
-[![Known Vulnerabilities](https://snyk.io/test/github/JohnstonCode/svn-scm/badge.svg)](https://snyk.io/test/github/JohnstonCode/svn-scm)
+**Original extension:** [JohnstonCode/svn-scm](https://github.com/JohnstonCode/svn-scm)
 
 # Prerequisites
 
@@ -24,11 +18,9 @@ If you use [TortoiseSVN](https://tortoisesvn.net/), make sure the option
 ## Feedback & Contributing
 
 * Please report any bugs, suggestions or documentation requests via the
-  [Issues](https://github.com/JohnstonCode/svn-scm/issues)
+  [Issues](https://github.com/vrognas/positron-svn/issues)
 * Feel free to submit
-  [pull requests](https://github.com/JohnstonCode/svn-scm/pulls)
-
-## [Contributors](https://github.com/JohnstonCode/svn-scm/graphs/contributors)
+  [pull requests](https://github.com/vrognas/positron-svn/pulls)
 
 # Features
 

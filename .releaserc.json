@@ -19,8 +19,8 @@
     "semantic-release-vsce",
     {
       "path": "@semantic-release/github",
-      "assets": "svn-scm.vsix"
+      "assets": "positron-svn.vsix"
     }
   ],
-  "packageVsix": "svn-scm.vsix"
+  "packageVsix": "positron-svn.vsix"
 }

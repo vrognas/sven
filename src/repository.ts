@@ -991,7 +991,7 @@ export class Repository implements IRemoteRepository {
   }
 
   protected getCredentialServiceName() {
-    let key = "vscode.svn-scm";
+    let key = "vscode.positron-svn";
 
     const info = this.repository.info;
 

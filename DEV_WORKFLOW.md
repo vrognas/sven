@@ -11,10 +11,10 @@ The packaged extension is at: `positron-svn-2.17.0.vsix`
 2. Go to Extensions (Ctrl+Shift+X)
 3. Click the `...` menu at the top right of the Extensions panel
 4. Select "Install from VSIX..."
-5. Choose `C:\Users\viktor.rognas\git_repos\svn-scm\positron-svn-2.17.0.vsix`
+5. Choose `C:\Users\viktor.rognas\git_repos\positron-svn\positron-svn-2.17.0.vsix`
 6. Reload Positron when prompted
 
-**Note:** This extension has a different ID (`positron-svn`) than the marketplace version (`svn-scm`), so you can have **both installed simultaneously**! This lets you switch between your development version and the stable marketplace version safely.
+**Note:** This extension has ID `positron-svn` and is completely independent from the original svn-scm extension.
 
 ## Making Changes and Testing
 
@@ -30,7 +30,7 @@ When you want to test changes:
 
 3. **Reinstall in Positron:**
    - Extensions panel → `...` menu → "Install from VSIX..."
-   - Select the newly generated `svn-scm-2.17.0.vsix`
+   - Select the newly generated `positron-svn-2.17.0.vsix`
    - Reload Positron
 
 ## Quick Reference Commands
@@ -63,7 +63,7 @@ When ready to publish:
 
 ```bash
 # Install ovsx CLI (already in devDependencies)
-npx ovsx publish svn-scm-2.17.0.vsix -p YOUR_ACCESS_TOKEN
+npx ovsx publish positron-svn-2.17.0.vsix -p YOUR_ACCESS_TOKEN
 ```
 
 Get your access token at: https://open-vsx.org/user-settings/tokens
