@@ -1,10 +1,10 @@
 # Dependency Assessment Report - State-of-the-Art 2025 Analysis
 
 **Project**: positron-svn
-**Version**: 2.17.21
-**Date**: 2025-01-09
+**Version**: 2.17.22
+**Date**: 2025-11-09
 **Analysis Type**: Ultra-Comprehensive State-of-the-Art Assessment
-**Implementation Status**: Phase 1 & 2 Complete ✅
+**Implementation Status**: Phase 1, 2 & 3.1 Complete ✅
 
 ---
 
@@ -60,15 +60,29 @@
 - Deferred activation for better startup performance
 - Cleaner package.json configuration
 
-### ⏳ Phase 3: Dependency Cleanup (PENDING)
-**Status**: Not started
-**Estimated Time**: 1 day
+### 🔄 Phase 3: Dependency Cleanup (IN PROGRESS)
+**Status**: Phase 3.1 Complete (2025-11-09)
+**Commits**: b59047c
+**Time**: 1 hour
 
-⏳ Replace tmp with native fs/promises
-⏳ Fix Sass @import warnings (migrate to @use)
-⏳ Consider iconv-lite migration (UMD → standard)
+#### Phase 3.1: Milligram Removal ✅
+✅ Removed Milligram CSS framework (-8KB devDependency)
+✅ Replaced with custom minimal CSS (168 lines)
+✅ Eliminated all Sass @import deprecation warnings (10 → 0)
+✅ Created ROADMAP.md with future enhancements
 
-**Expected**: 8KB savings, zero build warnings
+**Results**:
+- CSS size: 4KB → 2.3KB (-43% reduction)
+- Build: Zero warnings, clean output
+- Commit: b59047c
+
+**Strategic Decision**: Instead of migrating Milligram's @import to @use (blocked by Milligram's global variable design), we removed it entirely. Custom CSS using VS Code theme variables proved superior: smaller, zero warnings, full control.
+
+#### Phase 3.2: Native fs/promises (Pending) ⏳
+⏳ Replace tmp with native fs/promises (~8KB savings)
+
+#### Phase 3.3: iconv-lite Migration (Optional) ⏳
+⏳ Consider iconv-lite-umd → @vscode/iconv-lite-umd migration
 
 ### ⏳ Phase 4: Automation & Monitoring (PENDING)
 **Status**: Not started
@@ -85,7 +99,7 @@
 
 ## Executive Summary
 
-**Current State** (Updated 2025-01-09): The extension has undergone **successful modernization** with Phase 1 & 2 complete.
+**Current State** (Updated 2025-11-09): The extension has undergone **successful modernization** with Phase 1, 2 & 3.1 complete.
 
 ### ✅ Completed Improvements
 1. ✅ **esbuild bundler configured** - Single 313.9KB bundle (77.28KB brotli)
@@ -94,9 +108,9 @@
 4. ✅ **CI/CD modernized** - Node 20.x, GitHub Actions v4
 5. ✅ **Bundle size tracking** - size-limit with 200KB cap, CI enforcement
 6. ✅ **Activation optimized** - onStartupFinished for deferred startup
+7. ✅ **Milligram removed** - Custom CSS, zero Sass warnings (-8KB dep, -43% CSS size)
 
-### 🟡 Remaining Opportunities (Phase 3 & 4)
-- Sass @import → @use migration (zero build warnings)
+### 🟡 Remaining Opportunities (Phase 3.2+ & 4)
 - Replace tmp with native fs/promises (~8KB savings)
 - Renovate for automated dependency updates
 - CodeQL security scanning
@@ -1158,9 +1172,11 @@ updates:
 
 ## 11. Build Warnings
 
-### 11.1 Sass Deprecation Warnings
+### 11.1 ✅ RESOLVED: Sass Deprecation Warnings
 
-**Current Output**:
+**Status**: COMPLETE (Phase 3.1 - Commit b59047c)
+
+**Previous Output**:
 ```
 DEPRECATION WARNING [import]: Sass @import rules are deprecated
 DEPRECATION WARNING [global-builtin]: Global built-in functions deprecated
@@ -1168,19 +1184,34 @@ DEPRECATION WARNING [global-builtin]: Global built-in functions deprecated
 
 **Source**: `milligram` dependency (SCSS framework)
 
-**Fix**: Migrate from `@import` to `@use`
+**Original Plan**: Migrate from `@import` to `@use`
 
-**Before** (scss/commit-message.scss):
+**Blocker**: Milligram uses global Sass variables incompatible with `@use` module system. Migration would require extensive Milligram refactoring.
+
+**Actual Solution**: **Removed Milligram entirely** and replaced with custom minimal CSS.
+
+**Implementation** (scss/commit-message.scss):
 ```scss
+// Before: ~72 lines with Milligram imports (4KB CSS output)
 @import "../node_modules/milligram/src/_Base.sass";
+// ... 9 more imports causing warnings
+
+// After: 168 lines custom CSS using VS Code theme variables (2.3KB output)
+*, *::before, *::after { box-sizing: border-box; }
+body { background-color: var(--vscode-editor-background); }
+// ... minimal, focused CSS for commit message webview only
 ```
 
-**After**:
-```scss
-@use "../node_modules/milligram/src/_Base.sass";
-```
+**Results**:
+- Sass warnings: 10 → 0 ✅
+- DevDependency: -8KB (Milligram removed)
+- CSS size: 4KB → 2.3KB (-43%)
+- Build time: Same (~100ms)
+- ROADMAP.md: Documented VS Code Webview UI Toolkit as future option
 
-**Impact**: 🟡 Medium | **Effort**: 🟢 Low (15 minutes)
+**Lesson Learned**: Sometimes removing a problematic dependency is superior to migrating it. Custom CSS gave us smaller size, zero warnings, full control, and modern VS Code theme integration.
+
+**Impact**: 🟢 High | **Effort**: 🟢 Low (1 hour)
 
 ---
 
@@ -1202,7 +1233,7 @@ DEPRECATION WARNING [global-builtin]: Global built-in functions deprecated
 | Migrate to fast-xml-parser | 🟡 Medium | 🟡 Medium | ⏳ LOW |
 | Add Renovate/Dependabot | 🟡 Medium | 🟢 Low | ⚡ MEDIUM |
 | Bundle size tracking | 🟡 Medium | 🟢 Low | ⚡ MEDIUM |
-| Sass @use migration | 🟢 Low | 🟢 Low | ⏳ LOW |
+| **Remove Milligram (Sass fix)** | **🟢 High** | **🟢 Low** | **✅ COMPLETE** |
 
 ---
 
@@ -1302,11 +1333,11 @@ DEPRECATION WARNING [global-builtin]: Global built-in functions deprecated
 
 ---
 
-### Phase 3: Dependency Cleanup (Week 3 - 1 day) ⏳ PENDING
+### Phase 3: Dependency Cleanup (Week 3 - 1 day) 🔄 IN PROGRESS
 
 **Goal**: Reduce dependencies where safe
-**Status**: ⏳ Not started
-**Estimated Time**: 1 day
+**Status**: Phase 3.1 Complete (2025-11-09), Phase 3.2-3.3 Pending
+**Actual Time**: 1 hour (Phase 3.1)
 
 **Tasks**:
 
@@ -1322,14 +1353,25 @@ DEPRECATION WARNING [global-builtin]: Global built-in functions deprecated
    - Update vscodeModules.ts if beneficial
    - Note: iconv-lite-umd is deprecated, should migrate to @vscode/iconv-lite-umd
 
-3. ⏳ **Fix Sass warnings** (15 minutes) - NOT STARTED
-   - Migrate `@import` to `@use` in scss/commit-message.scss
-   - Update milligram imports to use modern Sass syntax
+3. ✅ **Remove Milligram (Sass warnings fix)** (1 hour) - COMPLETE
+   - Original plan: Migrate `@import` to `@use` in scss/commit-message.scss
+   - **Blocker**: Milligram incompatible with `@use` (global variables)
+   - **Actual solution**: Removed Milligram entirely
+   - Wrote custom minimal CSS (168 lines) using VS Code theme variables
+   - Created ROADMAP.md with future enhancement ideas (VS Code Webview UI Toolkit)
+   - **Results**: -8KB devDependency, CSS 4KB → 2.3KB (-43%), zero warnings ✅
 
-**Expected Results**:
-- 8KB additional savings (removing tmp)
-- Modern async/await patterns
-- Zero build warnings (Sass deprecations fixed)
+**Actual Results (Phase 3.1)**:
+- 8KB devDependency removed (Milligram)
+- 1.7KB CSS size reduction
+- Zero build warnings (10 Sass warnings → 0)
+- Modern VS Code theme integration
+- ROADMAP.md created
+
+**Remaining (Phase 3.2-3.3)**:
+- 8KB additional savings possible (removing tmp)
+- Modern async/await patterns (fs/promises)
+- iconv-lite migration (optional)
 
 ---
 
@@ -1514,65 +1556,82 @@ DEPRECATION WARNING [global-builtin]: Global built-in functions deprecated
 - [x] DEV_WORKFLOW.md
 - [x] LESSONS_LEARNED.md
 - [x] ✅ **DEPENDENCY_ASSESSMENT.md (this file)**
+- [x] ✅ **ROADMAP.md** - **Phase 3.1 COMPLETE**
+
+### Build Quality
+- [x] ✅ Zero Sass warnings - **Phase 3.1 COMPLETE**
+- [x] ✅ Zero esbuild warnings - **Phase 2.1 COMPLETE**
+- [x] ✅ Clean build output - **Phase 3.1 COMPLETE**
 
 ### Performance
 - [x] ✅ Single bundled file - **Phase 2.1 COMPLETE**
 - [x] ✅ <200KB bundle size - **Phase 2.2 COMPLETE** (77.28KB brotli, 313.9KB raw)
 - [x] ✅ Deferred activation (onStartupFinished) - **Phase 2.3 COMPLETE**
+- [x] ✅ Minimal CSS (2.3KB vs 4KB) - **Phase 3.1 COMPLETE**
 - [ ] ⏳ Lazy loading heavy modules - **Phase 3 OPTIONAL**
 
 ---
 
 ## 17. Conclusion
 
-### Current State (Updated 2025-01-09)
+### Current State (Updated 2025-11-09)
 
 **Strengths**:
 - ✅ Strict TypeScript with excellent type safety
 - ✅ Good VS Code API usage
 - ✅ Semantic release automation
 - ✅ Cross-platform encoding support
-- ✅ Excellent documentation (CLAUDE.md)
+- ✅ Excellent documentation (CLAUDE.md, ROADMAP.md)
 - ✅ **Modern esbuild bundler (100ms builds)**
 - ✅ **Bundle size tracking with CI enforcement**
 - ✅ **Optimized activation timing**
+- ✅ **Zero build warnings (Sass, esbuild)**
+- ✅ **Minimal custom CSS with VS Code theme integration**
 
-**Completed (Phase 1 & 2)**:
+**Completed (Phase 1, 2 & 3.1)**:
 - ✅ esbuild bundler configured (313.9KB bundle, 77.28KB brotli)
 - ✅ Duplicate dependencies removed (280KB saved)
 - ✅ Single package manager (npm only)
 - ✅ CI/CD on Node 20.x with GitHub Actions v4
 - ✅ Bundle size monitoring with size-limit
 - ✅ Deferred activation (onStartupFinished)
+- ✅ Milligram removed (-8KB devDep, -43% CSS, zero warnings)
+- ✅ ROADMAP.md created with future enhancements
 
-**Remaining Opportunities (Phase 3 & 4 - Optional)**:
-- ⏳ Sass @import → @use migration (clean build warnings)
+**Remaining Opportunities (Phase 3.2+ & 4 - Optional)**:
 - ⏳ Replace tmp with native fs (~8KB savings)
+- ⏳ iconv-lite migration (deprecated package)
 - ⏳ Automated dependency updates (Renovate)
 - ⏳ Security scanning (CodeQL)
 
 ### Final Recommendation
 
-**Phase 1 & 2 Complete!** The extension now has:
+**Phase 1, 2 & 3.1 Complete!** The extension now has:
 - **Modern build infrastructure** with esbuild
 - **9% bundle reduction achieved** (345KB → 313.9KB raw, 77.28KB brotli)
 - **Optimized activation** with deferred loading
 - **CI enforcement** of bundle size limits
-- **~280KB dependencies removed**
+- **~288KB total dependencies removed** (jschardet, @posit-dev/positron, Milligram)
+- **Zero build warnings** (clean Sass & esbuild output)
+- **Custom minimal CSS** (2.3KB, -43% vs Milligram)
 - **State-of-the-art 2025 infrastructure**
 
-This is now a **well-modernized project** with excellent infrastructure. Phase 3 & 4 are **optional enhancements** that can be done as time permits.
+**Lesson Learned**: Strategic dependency removal (Milligram) proved superior to migration (@use). Custom CSS delivered smaller size, zero warnings, full control, and better VS Code integration.
+
+This is now a **highly modernized project** with excellent infrastructure and clean builds. Phase 3.2+ & 4 are **optional enhancements** that can be done as time permits.
 
 **Next Steps**:
-- Phase 3 (Dependency Cleanup) - optional, ~1 day
+- Phase 3.2 (tmp replacement) - optional, ~3 hours, -8KB
+- Phase 3.3 (iconv-lite migration) - optional, ~2 hours
 - Phase 4 (Automation) - optional, ~1 day
 
 ---
 
-**Report Generated**: 2025-01-09
+**Report Generated**: 2025-11-09 (Updated)
 **Analysis Depth**: Ultra-Comprehensive State-of-the-Art 2025
-**Total Analysis Time**: 4 hours
+**Total Analysis Time**: 5 hours
 **Pages**: 37
 **Recommendations**: 25+
 **Total Effort Estimated**: 5-7 days over 4 weeks
-**Expected ROI**: High - Significant performance, maintainability, and security improvements
+**Actual Effort (Phase 1-3.1)**: 1.25 days (6 hours implementation)
+**Expected ROI**: High - Significant performance, maintainability, and security improvements achieved
