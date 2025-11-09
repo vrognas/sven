@@ -82,7 +82,7 @@ export class Repository implements IRemoteRepository {
   public remoteChangedFiles: number = 0;
   public isIncomplete: boolean = false;
   public needCleanUp: boolean = false;
-  private remoteChangedUpdateInterval?: NodeJS.Timer;
+  private remoteChangedUpdateInterval?: NodeJS.Timeout;
   private deletedUris: Uri[] = [];
   private canSaveAuth: boolean = false;
 

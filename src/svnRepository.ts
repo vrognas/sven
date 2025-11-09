@@ -445,7 +445,7 @@ export class Repository {
         prefix: "svn-commit-message-"
       });
 
-      await writeFile(tmpFile.name, message, "UTF-8");
+      await writeFile(tmpFile.name, message, { encoding: "utf-8" });
 
       args.push("-F", tmpFile.name);
       args.push("--encoding", "UTF-8");
