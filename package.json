@@ -37,16 +37,20 @@
         "onView:itemlog",
         "onView:branchchanges"
     ],
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
+    "sideEffects": [
+        "*.css",
+        "*.scss"
+    ],
     "scripts": {
-        "build": "npm run build:ts && npm run build:css",
+        "build": "node build.js && npm run build:css",
         "build:css": "sass scss/:css/ --style=compressed --no-source-map",
         "build:ts": "tsc -p ./",
-        "compile": "tsc -watch -p ./",
+        "compile": "node build.js --watch",
         "lint": "eslint \"src/**/*.ts\"",
         "lint:fix": "npm run lint --fix",
         "organize": "node ./out/tools/organize.js",
-        "semantic-release": "semantic-release --yarn",
+        "semantic-release": "semantic-release",
         "style-check": "prettylint 'src/**/*.ts'",
         "style-fix": "prettier --write \"src/**/*.ts\"",
         "pretest": "npm run build:ts && npm run lint",
@@ -79,6 +83,7 @@
         "@typescript-eslint/parser": "^7.18.0",
         "@vscode/test-cli": "^0.0.12",
         "decache": "^4.6.2",
+        "esbuild": "^0.24.2",
         "eslint": "^8.57.1",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
