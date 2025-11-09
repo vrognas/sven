@@ -1,7 +1,7 @@
 import * as path from "path";
 import { window } from "vscode";
 import { inputCommitFiles } from "../changelistItems";
-import { Status } from "../common/types";
+import { ISvnErrorData, Status } from "../common/types";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
@@ -57,7 +57,8 @@ export class CommitWithMessage extends Command {
       repository.inputBox.value = "";
     } catch (error) {
       console.error(error);
-      window.showErrorMessage(error.stderrFormated);
+      const svnError = error as ISvnErrorData;
+      window.showErrorMessage(svnError.stderrFormated || String(error));
     }
   }
 }

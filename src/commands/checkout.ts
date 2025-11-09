@@ -1,7 +1,7 @@
 import * as os from "os";
 import * as path from "path";
 import { commands, ProgressLocation, Uri, window, workspace } from "vscode";
-import { IAuth, ICpOptions } from "../common/types";
+import { IAuth, ICpOptions, ISvnErrorData } from "../common/types";
 import { getBranchName } from "../helpers/branch";
 import { configuration } from "../helpers/configuration";
 import { SourceControlManager } from "../source_control_manager";
@@ -97,8 +97,9 @@ export class Checkout extends Command {
         });
         break;
       } catch (err) {
+        const svnError = err as ISvnErrorData;
         if (
-          err.svnErrorCode === svnErrorCodes.AuthorizationFailed &&
+          svnError.svnErrorCode === svnErrorCodes.AuthorizationFailed &&
           attempt <= 3
         ) {
           const auth = (await commands.executeCommand(
