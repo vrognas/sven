@@ -8,32 +8,35 @@ Commit often, with small and focused commits. Its great that you keep updating t
 
 ## Build and Development Commands
 
+**Note**: This project uses npm (not yarn). Both lock files exist for historical reasons.
+
 ### Build
 
-- `yarn build` - Full build (TypeScript + CSS)
-- `yarn build:ts` - Build TypeScript using tsc (direct compilation)
-- `yarn build:css` - Build SCSS to CSS
+- `npm run build` - Full build (TypeScript + CSS)
+- `npm run build:ts` - Build TypeScript using tsc (direct compilation)
+- `npm run build:css` - Build SCSS to CSS
+- `npm run package` - Package as VSIX for installation
 
 ### Development
 
-- `yarn compile` - Watch TypeScript changes (development mode)
-- `yarn watch:css` - Watch CSS changes
-- `yarn test-compile` - Compile TypeScript for tests
+- `npm run compile` - Watch TypeScript changes (development mode)
+- `npm run watch:css` - Watch CSS changes
+- `npm run test-compile` - Compile TypeScript for tests
 
 ### Testing
 
-- `yarn test` - Run tests (requires compiled code)
+- `npm test` - Run tests (requires compiled code)
 
 ### Code Quality
 
-- `yarn lint` - Run ESLint
-- `yarn lint:fix` - Fix ESLint issues
-- `yarn style-check` - Check code formatting
-- `yarn style-fix` - Fix code formatting
+- `npm run lint` - Run ESLint
+- `npm run lint:fix` - Fix ESLint issues
+- `npm run style-check` - Check code formatting
+- `npm run style-fix` - Fix code formatting
 
 ### Release
 
-- `yarn semantic-release` - Create semantic release
+- `npm run semantic-release` - Create semantic release
 
 ## Architecture
 
