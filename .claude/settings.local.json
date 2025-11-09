@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where:*)",
+      "Bash(nul)",
+      "Bash(yarn --version:*)",
+      "Bash(npm:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx @vscode/vsce package:*)",
+      "Bash(find:*)",
+      "mcp__pandoc-mcp-server__convert-contents",
+      "mcp__r-mcp-server__btw_tool_files_write_text_file"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

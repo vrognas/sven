@@ -18,6 +18,9 @@ const config = {
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../[resource-path]'
   },
+  optimization: {
+    minimize: false
+  },
   devtool: 'source-map',
   externals: [
     {
@@ -35,7 +38,10 @@ const config = {
         exclude: /node_modules/,
         use: [
           {
-            loader: 'ts-loader'
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true
+            }
           }
         ]
       }

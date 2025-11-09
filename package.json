@@ -1,22 +1,22 @@
 {
-    "name": "svn-scm",
-    "displayName": "SVN",
-    "description": "Integrated Subversion source control",
+    "name": "positron-svn",
+    "displayName": "SVN (Positron)",
+    "description": "Integrated Subversion source control - Positron fork with enhanced features",
     "version": "2.17.0",
-    "publisher": "johnstoncode",
+    "publisher": "vrognas",
     "engines": {
         "vscode": "^1.53.0"
     },
     "private": true,
     "enableProposedApi": false,
     "icon": "images/subversion.png",
-    "homepage": "https://github.com/JohnstonCode/svn-scm/blob/master/README.md",
+    "homepage": "https://github.com/viktor-rognas/svn-scm/blob/master/README.md",
     "repository": {
         "type": "git",
-        "url": "https://github.com/JohnstonCode/svn-scm.git"
+        "url": "https://github.com/viktor-rognas/svn-scm.git"
     },
     "bugs": {
-        "url": "https://github.com/JohnstonCode/svn-scm/issues"
+        "url": "https://github.com/viktor-rognas/svn-scm/issues"
     },
     "categories": [
         "Other",
@@ -33,21 +33,22 @@
     ],
     "main": "./out/extension",
     "scripts": {
-        "build": "yarn run build:ts && yarn run build:css",
-        "build:css": "yarn node-sass scss/ -o css/ --output-style compressed",
+        "build": "npm run build:ts && npm run build:css",
+        "build:css": "sass scss/:css/ --style=compressed --no-source-map",
         "build:ts": "webpack --mode production",
         "compile": "webpack --mode development --watch",
         "lint": "eslint \"src/**/*.ts\"",
-        "lint:fix": "yarn run lint --fix",
+        "lint:fix": "npm run lint --fix",
         "organize": "node ./out/tools/organize.js",
         "semantic-release": "semantic-release --yarn",
-        "style-check": "yarn prettylint 'src/**/*.ts'",
-        "style-fix": "yarn prettier --write \"src/**/*.ts\"",
+        "style-check": "prettylint 'src/**/*.ts'",
+        "style-fix": "prettier --write \"src/**/*.ts\"",
         "test": "node ./out/test/runTest.js",
         "test-compile": "tsc -p ./",
         "tools:genReadme": "node ./out/tools/generateConfigSectionForReadme.js",
-        "vscode:prepublish": "yarn run lint && yarn run build",
-        "watch:css": "yarn run build:css -w"
+        "vscode:prepublish": "npm run build",
+        "watch:css": "sass scss/:css/ --watch --style=compressed --no-source-map",
+        "package": "npx @vscode/vsce package --no-yarn"
     },
     "dependencies": {
         "iconv-lite-umd": "^0.6.10",
@@ -75,7 +76,7 @@
         "milligram": "^1.4.1",
         "minimatch": "^3.0.4",
         "mocha": "^9.0.3",
-        "node-sass": "^6.0.1",
+        "sass": "^1.77.0",
         "original-fs": "^1.0.0",
         "ovsx": "0.2.0",
         "prettier": "^2.2.1",
@@ -95,6 +96,12 @@
         "commitizen": {
             "path": "cz-conventional-changelog"
         }
+    },
+    "overrides": {
+        "ajv": "^6.12.6",
+        "ajv-keywords": "^3.5.2",
+        "ajv-formats": "^1.6.1",
+        "prettier": "^2.2.1"
     },
     "contributes": {
         "viewsContainers": {
