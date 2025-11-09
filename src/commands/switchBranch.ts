@@ -1,4 +1,5 @@
 import { window } from "vscode";
+import { ISvnErrorData } from "../common/types";
 import { selectBranch } from "../helpers/branch";
 import { Repository } from "../repository";
 import { Command } from "./command";
@@ -32,10 +33,10 @@ export class SwitchBranch extends Command {
         try {
           await repository.switchBranch(branch.path);
         } catch (error) {
+          const svnError = error as ISvnErrorData;
           if (
-            typeof error === "object" &&
-            error.hasOwnProperty("stderrFormated") &&
-            error.stderrFormated.includes("ignore-ancestry")
+            svnError.stderrFormated &&
+            svnError.stderrFormated.includes("ignore-ancestry")
           ) {
             const answer = await window.showErrorMessage(
               "Seems like these branches don't have a common ancestor. " +

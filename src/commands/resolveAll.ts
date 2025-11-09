@@ -1,5 +1,6 @@
 import { window } from "vscode";
 import { getConflictPickOptions } from "../conflictItems";
+import { ISvnErrorData } from "../common/types";
 import { Repository } from "../repository";
 import { Command } from "./command";
 
@@ -32,7 +33,8 @@ export class ResolveAll extends Command {
         );
         window.showInformationMessage(response);
       } catch (error) {
-        window.showErrorMessage(error.stderr);
+        const svnError = error as ISvnErrorData;
+        window.showErrorMessage(svnError.stderr || String(error));
       }
     }
   }
