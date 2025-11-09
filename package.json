@@ -2,7 +2,7 @@
     "name": "positron-svn",
     "displayName": "SVN (Positron)",
     "description": "Integrated Subversion source control - Positron fork with enhanced features",
-    "version": "2.17.11",
+    "version": "2.17.12",
     "publisher": "vrognas",
     "engines": {
         "vscode": "^1.74.0",
@@ -61,7 +61,11 @@
         "chardet": "^1.6.0",
         "dayjs": "^1.11.19",
         "iconv-lite-umd": "^0.6.10",
-        "jschardet": "^3.0.0"
+        "jschardet": "^3.0.0",
+        "minimatch": "^3.0.4",
+        "semver": "^7.3.5",
+        "tmp": "0.2.1",
+        "xml2js": "^0.4.19"
     },
     "devDependencies": {
         "@semantic-release/changelog": "^5.0.1",
@@ -82,7 +86,6 @@
         "eslint-plugin-prettier": "^3.4.0",
         "glob": "^7.1.7",
         "milligram": "^1.4.1",
-        "minimatch": "^3.0.4",
         "mocha": "^9.0.3",
         "original-fs": "^1.0.0",
         "ovsx": "0.2.0",
@@ -91,11 +94,8 @@
         "sass": "^1.77.0",
         "semantic-release": "^17.4.4",
         "semantic-release-vsce": "^4.0.1",
-        "semver": "^7.3.5",
-        "tmp": "0.2.1",
         "typescript": "^4.3.5",
-        "vscode-test": "^1.6.1",
-        "xml2js": "^0.4.19"
+        "vscode-test": "^1.6.1"
     },
     "config": {
         "commitizen": {
