@@ -1,11 +1,5 @@
-import { jschardet } from "./vscodeModules";
-import * as chardet from "chardet";
+import { analyse } from "chardet";
 import { configuration } from "./helpers/configuration";
-
-if (jschardet.Constants) {
-  jschardet.Constants.MINIMUM_THRESHOLD = 0.2;
-  jschardet.MacCyrillicModel.mTypicalPositiveRatio += 0.001;
-}
 
 function detectEncodingByBOM(buffer: Buffer): string | null {
   if (!buffer || buffer.length < 2) {
@@ -41,7 +35,7 @@ function detectEncodingByBOM(buffer: Buffer): string | null {
 
 const IGNORE_ENCODINGS = ["ascii", "utf-8", "utf-16", "utf-32"];
 
-const JSCHARDET_TO_ICONV_ENCODINGS: { [name: string]: string } = {
+const CHARDET_TO_ICONV_ENCODINGS: { [name: string]: string } = {
   ibm866: "cp866",
   big5: "cp950"
 };
@@ -51,45 +45,44 @@ function normaliseEncodingName(name: string): string {
 }
 
 export function detectEncoding(buffer: Buffer): string | null {
-  const result = detectEncodingByBOM(buffer);
-
-  if (result) {
-    return result;
+  // Check BOM first
+  const bomEncoding = detectEncodingByBOM(buffer);
+  if (bomEncoding) {
+    return bomEncoding;
   }
 
-  const experimental = configuration.get<boolean>(
-    "experimental.detect_encoding",
-    false
+  // Use chardet to analyze encoding
+  const detected = analyse(buffer);
+  if (!detected || detected.length === 0) {
+    return null;
+  }
+
+  // Apply encoding priorities from config if available
+  const encodingPriorities = configuration.get<string[]>(
+    "experimental.encoding_priority",
+    []
   );
-  if (experimental) {
-    const detected = chardet.analyse(buffer);
-    const encodingPriorities = configuration.get<string[]>(
-      "experimental.encoding_priority",
-      []
-    );
 
-    if (!detected) {
-      return null;
-    }
-
+  if (encodingPriorities.length > 0) {
     for (const pri of encodingPriorities) {
-      for (const det of detected) {
-        if (normaliseEncodingName(pri) === normaliseEncodingName(det.name)) {
-          return normaliseEncodingName(det.name);
-        }
+      const match = detected.find(d =>
+        normaliseEncodingName(pri) === normaliseEncodingName(d.name)
+      );
+      if (match && match.confidence > 60) {
+        const normalizedName = normaliseEncodingName(match.name);
+        const mapped = CHARDET_TO_ICONV_ENCODINGS[normalizedName];
+        return mapped || normalizedName;
       }
     }
+  }
 
+  // Return highest confidence result
+  const best = detected[0];
+  if (best.confidence < 80) {
     return null;
   }
 
-  const detected = jschardet.detect(buffer.slice(0, 512 * 128)); // ensure to limit buffer for guessing due to https://github.com/aadsm/jschardet/issues/53
-
-  if (!detected || !detected.encoding || detected.confidence < 0.8) {
-    return null;
-  }
-
-  const encoding = detected.encoding;
+  const encoding = best.name;
 
   // Ignore encodings that cannot guess correctly
   // (http://chardet.readthedocs.io/en/latest/supported-encodings.html)
@@ -98,7 +91,7 @@ export function detectEncoding(buffer: Buffer): string | null {
   }
 
   const normalizedEncodingName = normaliseEncodingName(encoding);
-  const mapped = JSCHARDET_TO_ICONV_ENCODINGS[normalizedEncodingName];
+  const mapped = CHARDET_TO_ICONV_ENCODINGS[normalizedEncodingName];
 
   return mapped || normalizedEncodingName;
 }

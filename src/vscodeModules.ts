@@ -41,7 +41,3 @@ if (!iconv_lite) {
   iconv_lite = getNodeModule("iconv-lite") as typeof import("iconv-lite");
 }
 export const iconv = iconv_lite;
-
-export const jschardet = getNodeModule(
-  "jschardet"
-) as typeof import("jschardet");
