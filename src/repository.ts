@@ -906,7 +906,8 @@ export class Repository implements IRemoteRepository {
     runOperation: () => Promise<T> = () => Promise.resolve<any>(null)
   ): Promise<T> {
     let attempt = 0;
-    let accounts: IStoredAuth[] = [];
+    // Phase 8.2 perf fix - pre-load accounts before retry loop to avoid blocking
+    const accounts: IStoredAuth[] = await this.loadStoredAuths();
 
     while (true) {
       try {
@@ -926,10 +927,6 @@ export class Repository implements IRemoteRepository {
           svnError.svnErrorCode === svnErrorCodes.AuthorizationFailed &&
           attempt <= 1 + accounts.length
         ) {
-          // First attempt load all stored auths
-          if (attempt === 1) {
-            accounts = await this.loadStoredAuths();
-          }
 
           // each attempt, try a different account
           const index = accounts.length - 1;
@@ -954,6 +951,7 @@ export class Repository implements IRemoteRepository {
 
   public dispose(): void {
     this.statusService.dispose();
+    this.repository.clearInfoCacheTimers(); // Phase 8.2 perf fix - clear timers
     this.disposables = dispose(this.disposables);
   }
 }

@@ -262,10 +262,11 @@ export class SourceControlManager implements IDisposable {
   }
 
   private async scanWorkspaceFolders() {
-    for (const folder of workspace.workspaceFolders || []) {
-      const root = folder.uri.fsPath;
-      await this.tryOpenRepository(root);
-    }
+    // Phase 8.2 perf fix - parallel scanning instead of sequential
+    const folders = workspace.workspaceFolders || [];
+    await Promise.all(
+      folders.map(folder => this.tryOpenRepository(folder.uri.fsPath))
+    );
   }
 
   public async tryOpenRepository(path: string, level = 0): Promise<void> {
@@ -320,23 +321,24 @@ export class SourceControlManager implements IDisposable {
         return;
       }
 
-      for (const file of files) {
+      // Phase 8.2 perf fix - parallel stat + recursive calls instead of sequential
+      const tasks = files.map(async file => {
         const dir = path + "/" + file;
-        let stats: Stats;
 
         try {
-          stats = await stat(dir);
+          const stats = await stat(dir);
+          if (
+            stats.isDirectory() &&
+            !matchAll(dir, this.ignoreList, { dot: true })
+          ) {
+            await this.tryOpenRepository(dir, newLevel);
+          }
         } catch (error) {
-          continue;
+          // Ignore errors for individual files
         }
+      });
 
-        if (
-          stats.isDirectory() &&
-          !matchAll(dir, this.ignoreList, { dot: true })
-        ) {
-          await this.tryOpenRepository(dir, newLevel);
-        }
-      }
+      await Promise.all(tasks);
     }
   }
 
