@@ -1,3 +1,17 @@
+## [2.17.35] (2025-11-10)
+
+### Performance Threshold Analysis
+
+* PERFORMANCE_THRESHOLDS.md: Comprehensive bottleneck analysis with realistic thresholds
+* Enterprise SVN repo distribution: 35% small (<500), 40% medium (500-2K), 18% large (2K-5K), 7% XL
+* Network profiles: 60% corp VPN (20-80ms RTT), optimization target
+* Developer machines: 60% standard (4-8 cores, 16GB)
+* 8 bottlenecks quantified: status (40% pain), XML (25%), externals (25%), activation (20%)
+* 5 user scenarios: solo (35% excellent), corporate (40% acceptable), microservices (15% poor), legacy (5% critical)
+* Optimization priority: Tier 1 affects 40%+ users (O(n²) filtering)
+* Target metrics: status 600ms→200ms (3×), activation 30s→<10s (3×)
+* IMPLEMENTATION_PLAN.md: Unresolved questions answered
+
 ## [2.17.34] (2025-11-10)
 
 ### Performance Audit
