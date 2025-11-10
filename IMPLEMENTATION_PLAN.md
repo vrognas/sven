@@ -202,10 +202,16 @@ Test with real SVN fixtures:
 
 ---
 
-## Unresolved Questions
+## Resolved Performance Optimizations
 
-1. Parallelize external getInfo() calls?
-2. Cache external file mappings for O(n)?
-3. Index conflict patterns before loop?
-4. Increase watcher debounce 1s→5s?
-5. Extract DeletedFileHandler (60 lines)?
+**Analysis Complete** (5 parallel subagents):
+
+1. **Parallelize external getInfo()**: NO - @sequentialize decorator prevents concurrency. Better: batch paths into single `svn info` call.
+
+2. **Cache external mappings**: YES - Build Set once per call, O(1) lookup vs O(n) some(). Zero invalidation needed (rebuild instant).
+
+3. **Index conflict patterns**: YES - Set<string> before loop, 25,000→50 iterations (500x faster). Low cost, high gain.
+
+4. **Watcher debounce 1s→5s**: NO - Keep 1s. Better fix: remove double-debounce (repoWatch + onDidAnyFileChanged both @debounce(1000)).
+
+5. **Extract DeletedFileHandler**: DEFER - Fuzzy coupling, low ROI. Unlike Phase 2 services, no clean boundary.

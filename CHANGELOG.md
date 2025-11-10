@@ -1,3 +1,15 @@
+## [2.17.29] (2025-11-10)
+
+### Analysis
+
+* 5 parallel subagents resolved performance optimization questions
+* Parallelize external getInfo: NO (@sequentialize blocks, batch paths instead)
+* Cache external mappings: YES (Set once per call, O(1) lookup, instant rebuild)
+* Index conflict patterns: YES (Set<string>, 25k→50 iterations, 500x faster)
+* Watcher debounce timing: NO increase (remove double-debounce instead)
+* Extract DeletedFileHandler: DEFER (fuzzy coupling, low ROI vs Phase 2)
+* Update IMPLEMENTATION_PLAN: resolve all 5 questions with decisions
+
 ## [2.17.28] (2025-11-10)
 
 ### Documentation
