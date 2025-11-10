@@ -9,12 +9,11 @@ Requirements
 * [NodeJs](https://nodejs.org/) >= 12.4.0
 * [yarn](https://classic.yarnpkg.com/lang/en/) >= 1.22
 
-First you will need to fork the project
-![Github Fork](images/docs/fork.png)
+First you will need to fork the [vrognas/positron-svn](https://github.com/vrognas/positron-svn) repository on GitHub.
 
 Then clone your fork
 ```
-git clone https://github.com/<YOUR_USERNAME>/svn-scm.git
+git clone https://github.com/<YOUR_USERNAME>/positron-svn.git
 ```
 
 ### Dependencies
@@ -43,7 +42,7 @@ This project uses [ESLint](https://eslint.org/) for code linting. You can run ES
 
 ### Debugging
 Run in VS Code
-1. Open the `svn-scm` folder
+1. Open the `positron-svn` folder
 2. Make sure the [dependencies](#dependencies) are installed
 3. Run in [watch](#watch) mode
 4. Choose the `Launch Extension` launch configuration from the launch dropdown in the Debug viewlet and press `F5`.

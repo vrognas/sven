@@ -50,12 +50,12 @@ This extension uses VS Code's `SecretStorage` API to store credentials securely:
 ### Security Audit Trail
 
 Password handling locations:
-- `/home/user/positron-svn/src/svn.ts:114-123` - exec() method
-- `/home/user/positron-svn/src/svn.ts:275-284` - execBuffer() method
+- `src/svn.ts:114-123` - exec() method
+- `src/svn.ts:275-284` - execBuffer() method
 
 Version check:
-- `/home/user/positron-svn/src/svn.ts:84` - supportsStdinPassword flag
+- `src/svn.ts:84` - supportsStdinPassword flag
 
 ## Reporting Security Issues
 
-If you discover a security vulnerability, please email [security contact] instead of using the issue tracker.
+If you discover a security vulnerability, please email security@vrognas.dev instead of using the issue tracker.

@@ -1,104 +1,170 @@
-- In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision.
-- Its important for each implementation to begin with writing and reviewing tests before moving on to implementation (TDD test-driven development).
-  Write minimalist tests. Don't overdo it - about three general end-to-end tests per implementation is enough.
-- Commit often, with small and focused commits.
-- Update the version number and the changelog with every commit.
-- For every commit, go over `CLAUDE.md`, `ARCHITECTURE_ANALYSIS.md`, `DEV_WORKFLOW.md`, and `LESSONS_LEARNED.md` to see if everything is up-to-date.
-- For simple queries, use under five tool calls, but for more complex queries you can use up to 15 tool calls.
+# AI Development Instructions
+
+## Documentation Structure
+
+**This file**: AI behavior and development guidelines
+**Related**: ARCHITECTURE_ANALYSIS.md, DEV_WORKFLOW.md, LESSONS_LEARNED.md, SECURITY.md, PERFORMANCE_BASELINE.md
+
+Review all after each commit to keep current.
+
+## Core Behavioral Rules
+
+- Extremely concise, sacrifice grammar for concision
+- TDD: Write/review tests before implementation (~3 end-to-end tests per feature)
+- Commit often with small focused commits
+- Update version and changelog with every commit
+- Review CLAUDE.md, ARCHITECTURE_ANALYSIS.md, DEV_WORKFLOW.md, LESSONS_LEARNED.md after commits
+- Tool call limits: Simple ≤5, complex ≤15
+
+## Build & Test
+
+```bash
+npm run build       # TypeScript + CSS
+npm run build:ts    # TypeScript only (faster)
+npm run package     # Create VSIX
+npm run compile     # Watch mode
+npm test            # Run tests
+```
+
+**Type safety**: Strict mode enabled. All code passes strict TypeScript checks.
+
+## Testing Guidelines
+
+- Minimalist tests (~3 per feature)
+- Prefer end-to-end over unit tests
+- Test security validators (validateRevision, validateFilePath, validateUrl)
+- Current coverage: <10% (target: 50%+)
+
+## Quality Standards
+
+**Type Safety**:
+- ✅ Strict mode, 0 `any` types
+- Error handling uses ISvnErrorData
+- No type assertions without validation
+
+**Security**:
+- ✅ Phase 4.5 complete (validators applied, credentials secured, TOCTOU fixed)
+- Use validateRevision() for revisions (command injection prevention)
+- Use validateFilePath() for file ops (path traversal prevention)
+- Use validateUrl() for URLs (SSRF prevention)
+- Credentials via --password-from-stdin (SVN 1.9+)
+- See SECURITY.md
+
+**Performance**:
+- Baselines in PERFORMANCE_BASELINE.md
+- Activation <200ms, Commands <500ms, Status <1s, Load <3s
+
+## Project Status
+
+**Version**: 2.17.28
+**Phase**: Phase 2 prerequisites complete
+
+**Completed**:
+- ✅ Phase 1: Build modernization (webpack→tsc), strict types
+- ✅ Phase 4.5: Security hardening complete
+- ✅ Phase 2 prereqs: Async constructor fix, performance baseline, CommandArgs types
+
+**Next**: Repository refactoring (1,179 lines → focused services)
 
 ## Architecture
 
-### Core Components
+**Full details**: ARCHITECTURE_ANALYSIS.md (directory structure, design patterns, technical debt)
 
-**Extension Entry Point (`src/extension.ts`)**
+### Core Flow
+```
+extension.ts → SourceControlManager → Repository → Svn (CLI)
+                     ↓                     ↓
+              Multi-repo mgr        Status/ResourceGroups
+```
 
-- Initializes SVN finder to locate SVN executable
-- Creates `Svn` instance with path and version
-- Instantiates `SourceControlManager` which manages all repositories
-- Registers commands and providers
+### Components
 
-**SVN Wrapper (`src/svn.ts`)**
+**Extension Entry** (`src/extension.ts`):
+- Init SVN finder, create Svn instance with path/version
+- Create SourceControlManager
+- Register commands and providers
 
-- Low-level wrapper around SVN command-line interface
-- Executes SVN commands via child processes
-- Handles encoding detection and conversion
-- Manages authentication credentials
+**SVN Wrapper** (`src/svn.ts`):
+- CLI wrapper with encoding detection/conversion
+- Child process execution
+- Auth credential management
 
-**Source Control Manager (`src/source_control_manager.ts`)**
+**Source Control Manager** (`src/source_control_manager.ts`):
+- Multi-repository coordinator
+- Workspace discovery
+- Repository lifecycle (open/close)
+- Handles externals
 
-- Central manager for all SVN repositories
-- Discovers and opens repositories in workspace
-- Handles multiple repositories and externals
-- Manages repository lifecycle (open/close)
+**Repository** (`src/repository.ts`):
+- Single SVN working copy (1,179 lines - refactor target)
+- Resource groups: changes, unversioned, conflicts, changelists, remotechanges
+- Operations via `run()` for progress tracking
+- Remote change detection, status bar
+- Auth via VS Code SecretStorage API
 
-**Repository (`src/repository.ts`)**
-
-- Represents a single SVN working copy
-- Manages resource groups (changes, unversioned, conflicts, changelists)
-- Coordinates operations through `run()` method
-- Handles remote change detection and status bar
-- Stores authentication using VS Code SecretStorage API
-
-**Base Repository (`src/svnRepository.ts`)**
-
-- Lower-level repository operations
-- Direct SVN command execution (status, commit, update, etc.)
-- Parses SVN output (status, log, info)
+**Base Repository** (`src/svnRepository.ts`):
+- Lower-level SVN operations (970 lines)
+- Direct command execution (status, commit, update, etc.)
+- SVN output parsing
 
 ### Command Pattern
 
-Commands are in `src/commands/` and registered via `src/commands.ts`:
-
-- Each command extends base `Command` class
-- Commands use `getSourceControlManager()` to access repositories
-- Operations are wrapped in `repository.run()` for progress tracking
+Commands in `src/commands/`, registered via `src/commands.ts`:
+- Each extends base `Command` class
+- Use `getSourceControlManager()` to access repos
+- Wrap ops in `repository.run()` for tracking
 
 ### Resource Groups
 
-VS Code Source Control UI organizes files into groups:
-
-- **changes** - Modified files
-- **unversioned** - New files not tracked by SVN
-- **conflicts** - Files with merge conflicts
-- **changelists** - User-defined changelists (dynamic groups)
-- **remotechanges** - Remote changes from server
+VS Code SCM UI groups:
+- **changes**: Modified files
+- **unversioned**: Untracked files
+- **conflicts**: Merge conflicts
+- **changelists**: User-defined groups
+- **remotechanges**: Remote server changes
 
 ### Parsers
 
-XML and text parsers in `src/parser/`:
-
-- `statusParser.ts` - Parse `svn status` output
-- `logParser.ts` - Parse `svn log` output
-- `infoParser.ts` - Parse `svn info --xml` output
-- `diffParser.ts` - Parse `svn diff` output
+`src/parser/`:
+- `statusParser.ts` - svn status
+- `logParser.ts` - svn log
+- `infoParser.ts` - svn info --xml
+- `diffParser.ts` - svn diff
 
 ### History Views
 
-Tree view providers in `src/historyView/`:
-
-- `repoLogProvider.ts` - Repository log viewer
-- `itemLogProvider.ts` - File history viewer
-- `branchChangesProvider.ts` - Branch changes viewer
+`src/historyView/`:
+- `repoLogProvider.ts` - Repo log viewer
+- `itemLogProvider.ts` - File history
+- `branchChangesProvider.ts` - Branch changes
 
 ## SVN Requirements
 
-Extension requires SVN command-line tools:
-
-- Windows: TortoiseSVN with "Command Line Tools" option
-- Configurable via `svn.path` setting
-- Minimum version checks via `isSvn18orGreater` and `isSvn19orGreater` contexts
+- CLI tools required (TortoiseSVN on Windows with "Command Line Tools")
+- Config: `svn.path` setting
+- Version contexts: `isSvn18orGreater`, `isSvn19orGreater`
 
 ## Authentication
 
-Uses VS Code SecretStorage API (replaced keytar in v2.17.0):
+VS Code SecretStorage API (replaced keytar v2.17.0):
+- Stored per repository root URL
+- Multiple accounts supported
+- Auto-retry on auth failure
+- User prompts when needed
 
-- Credentials stored per repository root URL
-- Multiple accounts supported per repository
-- Auto-retry on authentication failure
-- Prompts user when credentials needed
+## Documentation Maintenance
+
+**After each commit, update if needed**:
+1. CLAUDE.md - This file
+2. ARCHITECTURE_ANALYSIS.md - Architecture, debt, phases
+3. DEV_WORKFLOW.md - Build/install workflow
+4. LESSONS_LEARNED.md - Implementation lessons
+5. SECURITY.md - Security validators
+6. PERFORMANCE_BASELINE.md - Performance metrics
 
 ## Plans
 
-- At the end of each plan, give me a list of unresolved questions to answer, if any.
-  Make the questions extremely concise.
-  Sacrifice grammar for the sake of concision.
+At end of each plan:
+- List unresolved questions (extremely concise)
+- Next phase recommendations
+- Technical debt impact
