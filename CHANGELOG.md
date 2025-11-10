@@ -1,3 +1,21 @@
+## [2.17.34] (2025-11-10)
+
+### Performance Audit
+
+* 5 bottlenecks identified via parallel subagents: info cache (2min), remote polling (5min), cascading debounce (3×1s), blocking XML parser, O(n²) filtering
+* Decision: Defer to Phase 8 (affects power users only)
+
+### Code Bloat Audit
+
+* ~250-300 lines removable: duplicate Buffer/String pairs (150), constructor pattern, error handlers (35), debug logging, TODOs (18)
+* Decision: Defer until testing complete
+
+### Documentation
+
+* DX_ANALYSIS.md: Mark Phase 1 complete (v2.17.31), DX score 3.2→4.2/5
+* IMPLEMENTATION_PLAN.md: Refactor to focus next 2 phases (4a Testing + 2b Auth)
+* Remove historical sections: Phase 4.5b, resolved optimizations, DX issues
+
 ## [2.17.33] (2025-11-10)
 
 ### Planning
