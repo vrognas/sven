@@ -326,10 +326,14 @@ export class Repository {
     let target: string = filePath;
 
     if (isChild) {
+      this.validateSinglePath(target);
       target = this.removeAbsolutePath(target);
     }
 
     if (revision) {
+      if (!validateRevision(revision)) {
+        throw new Error("Invalid revision parameter");
+      }
       args.push("-r", revision);
       if (
         isChild &&
@@ -425,10 +429,14 @@ export class Repository {
     let target: string = filePath;
 
     if (isChild) {
+      this.validateSinglePath(target);
       target = this.removeAbsolutePath(target);
     }
 
     if (revision) {
+      if (!validateRevision(revision)) {
+        throw new Error("Invalid revision parameter");
+      }
       args.push("-r", revision);
       if (
         isChild &&
@@ -468,11 +476,24 @@ export class Repository {
     if (/\n|[^\x00-\x7F\x80-\xFF]/.test(message)) {
       tmp.setGracefulCleanup();
 
+      // Create temp file with secure permissions (0600) to prevent TOCTOU attacks
       tmpFile = tmp.fileSync({
-        prefix: "svn-commit-message-"
+        prefix: "svn-commit-message-",
+        mode: 0o600
       });
 
-      await writeFile(tmpFile.name, message, { encoding: "utf-8" });
+      // Verify file is not a symlink (symlink attack prevention)
+      const fileStat = await lstat(tmpFile.name);
+      if (fileStat.isSymbolicLink()) {
+        tmpFile.removeCallback();
+        throw new Error("Security: Temp file is a symlink");
+      }
+
+      // Write atomically with secure permissions
+      await writeFile(tmpFile.name, message, {
+        encoding: "utf-8",
+        mode: 0o600
+      });
 
       args.push("-F", tmpFile.name);
       args.push("--encoding", "UTF-8");
@@ -538,6 +559,7 @@ export class Repository {
   }
 
   public addFiles(files: string[]) {
+    this.validateFilePaths(files);
     const ignoreList = configuration.get<string[]>("sourceControl.ignore");
     if (ignoreList.length > 0) {
       return this.addFilesByIgnore(files, ignoreList);
@@ -550,11 +572,13 @@ export class Repository {
     if (!validateChangelist(changelist)) {
       throw new Error("Invalid changelist name");
     }
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
     return this.exec(["changelist", changelist, ...files]);
   }
 
   public removeChangelist(files: string[]) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
     return this.exec(["changelist", "--remove", ...files]);
   }
@@ -717,6 +741,7 @@ export class Repository {
   }
 
   public async revert(files: string[], depth: keyof typeof SvnDepth) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
     const result = await this.exec(["revert", "--depth", depth, ...files]);
     return result.stdout;
@@ -742,6 +767,7 @@ export class Repository {
   }
 
   public async pullIncomingChange(path: string): Promise<string> {
+    this.validateSinglePath(path);
     const args = ["update", path];
 
     const result = await this.exec(args);
@@ -757,6 +783,7 @@ export class Repository {
   }
 
   public async patch(files: string[]) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
     const result = await this.exec(["diff", "--internal-diff", ...files]);
     const message = result.stdout;
@@ -764,6 +791,7 @@ export class Repository {
   }
 
   public async patchBuffer(files: string[]) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
     const result = await this.execBuffer(["diff", "--internal-diff", ...files]);
     const message = result.stdout;
@@ -782,6 +810,7 @@ export class Repository {
   }
 
   public async removeFiles(files: string[], keepLocal: boolean) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
     const args = ["remove"];
 
@@ -797,6 +826,7 @@ export class Repository {
   }
 
   public async resolve(files: string[], action: string) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
 
     const result = await this.exec(["resolve", "--accept", action, ...files]);
@@ -938,12 +968,14 @@ export class Repository {
   }
 
   public async ls(file: string): Promise<ISvnListItem[]> {
+    this.validateSinglePath(file);
     const result = await this.exec(["list", file, "--xml"]);
 
     return parseSvnList(result.stdout);
   }
 
   public async getCurrentIgnore(directory: string) {
+    this.validateSinglePath(directory);
     directory = this.removeAbsolutePath(directory);
 
     let currentIgnore = "";
@@ -972,6 +1004,7 @@ export class Repository {
     directory: string,
     recursive: boolean = false
   ) {
+    this.validateSinglePath(directory);
     const ignores = await this.getCurrentIgnore(directory);
 
     directory = this.removeAbsolutePath(directory);
@@ -999,6 +1032,8 @@ export class Repository {
   }
 
   public async rename(oldName: string, newName: string): Promise<string> {
+    this.validateSinglePath(oldName);
+    this.validateSinglePath(newName);
     oldName = this.removeAbsolutePath(oldName);
     newName = this.removeAbsolutePath(newName);
     const args = ["rename", oldName, newName];

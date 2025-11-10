@@ -1,3 +1,16 @@
+## [2.17.26] (2025-11-10)
+
+### Security
+
+* Fix TOCTOU vulnerability in temp file creation (svnRepository.ts:449-453)
+* Create temp files with mode 0600 (owner read/write only)
+* Add symlink attack prevention with lstat check
+* Implement atomic write operations with secure permissions
+
+### Testing
+
+* Add temp file security test suite (3 tests for permissions, symlink prevention, unicode)
+
 ## [2.17.25] (2025-11-10)
 
 ### Security
