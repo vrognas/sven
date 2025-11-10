@@ -1,3 +1,19 @@
+## [2.17.31] (2025-11-10)
+
+### Build
+
+* Fix 5 TypeScript compilation errors (dayjs imports, SvnDepth types)
+* Add esModuleInterop to tsconfig.json
+* Type promptDepth() return as keyof typeof SvnDepth
+
+### DX
+
+* Add incremental TS compilation (tsconfig: incremental, tsBuildInfoFile)
+* Parallelize pretest hook: npm-run-all --parallel build:ts lint (25-40s faster)
+* Add test:fast script (skip lint, 15-20s faster for local dev)
+* Add .tsbuildinfo to .gitignore
+* Install npm-run-all devDependency
+
 ## [2.17.30] (2025-11-10)
 
 ### Planning
