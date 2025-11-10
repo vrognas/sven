@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.40
+**Version**: 2.17.43
 **Updated**: 2025-11-10
 
 ---
@@ -14,8 +14,9 @@ Mature VS Code extension providing SVN source control integration. Event-driven 
 - **Largest class**: svnRepository (970 lines)
 - **Repository**: 1,179 → 923 lines (22% reduction, 3 services extracted)
 - **Commands**: 50+
-- **Coverage**: ~15%
+- **Coverage**: ~21-23% (111 tests)
 - **Type safety**: ✅ Strict mode
+- **Performance**: 60-80% faster (debounce + 5s throttle fix)
 
 ---
 
@@ -110,10 +111,10 @@ Flow: activate() -> SvnFinder -> Svn -> SourceControlManager -> registerCommands
 
 | Issue | Status |
 |-------|--------|
-| Test coverage <30% | 🔄 15%, target 25-30% |
-| AuthService extraction | ⚠️ Phase 2b (Week 2) |
+| Test coverage <30% | 🟡 21-23% (close to target 25-30%) |
+| AuthService extraction | ⚠️ Phase 2b (next) |
 | Code bloat (283 lines) | ⚠️ Deferred Phase 9 |
-| Performance (5 bottlenecks) | ⚠️ Deferred Phase 8 |
+| Performance (4 bottlenecks) | ⚠️ Deferred Phase 8 (1 fixed) |
 
 ### Large Files
 
@@ -238,16 +239,15 @@ Solid event-driven architecture. Major progress: build modernization (webpack→
 
 **Completed**:
 - ✅ Build system (tsc), strict mode, 3 services extracted
-- ✅ Performance optimized (debounce 60% faster, filtering 500x faster)
-- ✅ Validator tests (90 tests, 6 validators)
+- ✅ Performance optimized (60-80% faster: debounce + 5s throttle fix)
+- ✅ Phase 4a complete (111 tests: validators, parsers, error handling)
+- ✅ Coverage 21-23% (close to target)
 
-**Next** (Week 2):
-- Parser + integration tests (2 days)
-- Error handling tests (2 days)
-- AuthService extraction (1 day)
-- Target: 25-30% coverage, 4 services
+**Next**:
+- Phase 2b: AuthService extraction (1 day)
+- Target: 25-30% coverage, 4 services, Repository < 860 lines
 
 ---
 
-**Version**: 1.4
-**Updated**: 2025-11-10
+**Version**: 1.5
+**Updated**: 2025-11-10 (v2.17.43)
