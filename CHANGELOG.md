@@ -1,3 +1,15 @@
+## [2.17.42] (2025-11-10)
+
+### Testing (Phase 4a.2 - Parser Tests)
+
+* **Parser tests**: 9 tests for 3 critical parsers (statusParser, logParser, infoParser)
+  - statusParser: Basic modified files, changelists, externals/locked files
+  - logParser: Single/multiple entries, empty paths
+  - infoParser: Repository info, file info, switched WC
+* **Coverage**: Est. 18-20% (3% gain from parsers)
+* **Structure**: test/unit/parsers/ directory created
+* **TDD**: Minimalist approach, 3 end-to-end tests per parser
+
 ## [2.17.41] (2025-11-10)
 
 ### Performance (Critical Bug Fix)
