@@ -1,183 +1,251 @@
-# IMPLEMENTATION PLAN - Next Phases
+# IMPLEMENTATION PLAN - Next 2 Critical Phases
 
-**Version**: v2.17.44
+**Version**: v2.17.45
 **Updated**: 2025-11-10
-**Status**: Phase 2 ✅ | Phase 4.5b ✅ | Phase 4b ✅ | Phase 4b.1 ✅ | Phase 4a ✅ | Next: Phase 2b
+**Status**: Phase 2 ✅ | Next: Phase 8 + Phase 2b
 
 ---
 
 ## Current Status
 
-**Phase 2 Complete** (v2.17.17-18):
+**Completed**:
+- Phase 2: 3 services extracted (StatusService, ResourceGroupManager, RemoteChangeService)
+- Phase 4b/4b.1: 60-80% perf gain (debounce, 5s throttle removed)
+- Phase 4a: 111 tests added, 21-23% coverage
 - Repository: 1,179 → 923 lines (22% reduction)
-- 3 services extracted: StatusService (355), ResourceGroupManager (298), RemoteChangeService (107)
-- 9 tests, zero regressions
-
-**Phase 4b + 4b.1 Complete** (v2.17.38, v2.17.41):
-- Debounce: 1000ms→500/300ms (60% faster, 2-3s→0.8-1.3s)
-- O(n) filtering: Minimatch cache (500x faster, 1000 files × 50 patterns)
-- 5s throttle removed: Instant responsiveness (95% users)
-- Impact: 60-80% improvement, 95%+40% users
-
-**Phase 4a.1 Complete** (v2.17.37):
-- Validator tests: 90 test cases, 6 validators
-- Est. 15% line coverage
-
-**Phase 4a Complete** (v2.17.37, v2.17.42, v2.17.43):
-- Validator tests: 90 tests, 6 validators
-- Parser tests: 9 tests, 3 parsers
-- Error handling tests: 12 tests, 5 critical gaps
-- Total: 111 tests, est. 21-23% coverage
 
 **Outstanding**:
-- 1 CRITICAL security gap (password exposure - deferred, requires stdin refactor)
-- 5 NEW performance bottlenecks identified (Phase 8)
-- ~283 lines code bloat (Phase 9)
+- 15 NEW performance bottlenecks (affects 95% users)
+- 148 lines NEW code bloat
+- 1 CRITICAL security gap (password exposure in stdin - deferred)
 
 ---
 
-## Phase 4a.2: Parser + Integration Tests (Week 2 - 2 days)
+## Phase 8: Critical Performance Bottlenecks (HIGH PRIORITY)
 
-### Parser Tests (1 day)
-Test 3 critical parsers with real fixtures:
-- statusParser: XML parsing, externals, changelists
-- logParser: Multi-entry logs, branches, merges
-- infoParser: Repository info, URL handling
+**Target**: 70% perf improvement, 95% users
+**Effort**: 18-22h
+**Impact**: CRITICAL - UI responsiveness
 
-**Files**: test/unit/parsers/
+### 8.1: Hot Path Optimizations (5h)
 
-### Integration Tests (1 day)
-End-to-end flows:
-- checkout→modify→commit
-- branch→switch→merge
-- Special chars, externals handling
+**Four CRITICAL bottlenecks**:
 
-**Files**: test/integration/
+1. **Config access in hot path** (repository.ts:311, StatusService.ts:121)
+   - Issue: `workspace.getConfiguration()` uncached, 1-10x/sec
+   - Impact: 95% users
+   - Fix: Cache config, invalidate on change
+   - Effort: 2h
+
+2. **O(n*m) resource lookup** (ResourceGroupManager.ts:214-239)
+   - Issue: Linear search all groups × all resources
+   - Impact: 70% users (1000+ files)
+   - Fix: `Map<uriString, Resource>` index
+   - Effort: 2-3h
+
+3. **deletedUris unbounded growth** (repository.ts:81,264,309)
+   - Issue: Array accumulates, no dedup
+   - Impact: 70% users (bulk deletes)
+   - Fix: Change to `Set<string>`
+   - Effort: 1h
+
+4. **O(n) URI conversions** (ResourceGroupManager.ts:226-231)
+   - Issue: `uri.toString()` per lookup
+   - Impact: 70% users
+   - Fix: Maintain URI→Resource Map
+   - Fix included in #2 above
+
+### 8.2: Async/Concurrency Fixes (4h)
+
+**Three blocking operations**:
+
+5. **Sequential workspace scanning** (source_control_manager.ts:264-268)
+   - Issue: `await` in folder loop
+   - Impact: Blocks activation 100-500ms/folder
+   - Fix: `Promise.all()`
+   - Effort: 1h
+
+6. **Auth loaded in retry loop** (repository.ts:893-895)
+   - Issue: SecretStorage blocks retry
+   - Impact: 40% users (networks with auth)
+   - Fix: Pre-load before loop
+   - Effort: 0.5h
+
+7. **Sequential directory stat** (source_control_manager.ts:323-340)
+   - Issue: Sequential stat + recursion
+   - Impact: 60% users (multipleFolders.depth > 2)
+   - Fix: Parallel stat + recursive calls
+   - Effort: 2h
+
+8. **Uncanceled cache timeout leak** (svnRepository.ts:192-194)
+   - Issue: `setTimeout()` never cleared
+   - Impact: Memory leak in long sessions
+   - Fix: Track timers, cancel on dispose
+   - Effort: 1h (included in #7)
+
+### 8.3: File Watcher Optimization (3h)
+
+9. **Unthrottled file watcher events** (repositoryFilesWatcher.ts:38-39)
+   - Issue: `"**"` pattern watches ALL files, no throttle
+   - Impact: 70% users (large workspaces)
+   - Fix: Batch events, throttle decorator
+   - Effort: 3h
+
+### 8.4: Already Documented (from IMPLEMENTATION_PLAN Phase 8)
+
+10. **N+1 external queries** (svnRepository.ts:141-150) - 4h
+11. **O(n²) descendant check** (StatusService.ts:200-208) - 3h
+12. **Missing SVN timeouts** (svn.ts:87-232) - 3h
+13. **O(n) conflict search** (StatusService.ts:313) - 2h
+
+### 8.5: Additional Critical Issues
+
+14. **Synchronous secret storage blocking** (repository.ts:748-806)
+    - Issue: Awaited synchronously in auth retry, blocks UI 100-500ms × 3 retries
+    - Impact: 40% users (CRITICAL severity)
+    - Fix: Async queue, parallel load
+    - Effort: 4h
+
+15. **Linear repo lookup with nested loops** (source_control_manager.ts:376-403)
+    - Issue: O(repos × (externals + ignored)) on every file op
+    - Impact: 60% users
+    - Fix: Path index or Set-based lookup
+    - Effort: 2h
+
+**Total Effort**: 18-22h
+**Expected Improvement**: 70% faster operations, eliminates UI freezes
 
 **Success Criteria**:
-- [ ] Parser tests passing (3 parsers)
-- [ ] Integration tests passing
-- [ ] Coverage: 20-25% (est. +5-10%)
+- [ ] Status updates <300ms (1000 files, VPN)
+- [ ] Activation <5s (10 repos)
+- [ ] No memory leaks in 8h session
+- [ ] Zero UI blocking operations >100ms
 
 ---
 
-## Phase 4a.3: Error Handling Tests (Week 2 - 2 days)
+## Phase 2b: Complete Service Architecture (MEDIUM PRIORITY)
 
-Focus on 5 critical gaps:
-1. Unhandled promise rejections (event handlers)
-2. Generic error messages (add context)
-3. Race conditions in status updates
-4. Silent auth failures
-5. Activation failures
+**Target**: Repository < 860 lines, 4 services extracted
+**Effort**: 6-8h
+**Impact**: MEDIUM - Code quality, maintainability
 
-**Files**: test/unit/error-handling.test.ts
+### 2b.1: AuthService Extraction (4h)
 
-**Success Criteria**:
-- [ ] Error handling tests passing
-- [ ] Coverage: 25-30% (est. +5%)
-
----
-
-## Phase 2b: AuthService Extraction (Week 2 - 1 day, concurrent)
-
-### Extract Auth Logic
-- Lines: repository.ts:735-806 (70 lines)
-- Target: Repository → 850 lines
-- Pattern: Stateless service, zero Repository deps
-
-### Auth Security Tests
+Extract auth logic from repository.ts:735-806 (70 lines):
 - Credential storage (SecretStorage API)
 - Retry flow with auth
 - Multiple accounts per repo
+- Zero Repository dependencies
+
+**Tests** (3 TDD tests):
+1. Credential storage/retrieval
+2. Retry flow with auth
+3. Multiple accounts handling
+
+**Files**:
+- New: `src/services/authService.ts`
+- Modified: `src/repository.ts`
+
+### 2b.2: Code Quality Quick Wins (2h)
+
+Apply during AuthService extraction:
+1. Remove redundant null guards (15 files, 30 lines)
+2. Fix constructor if/if redundancy (command.ts, 8 lines)
+3. Extract duplicate selection logic (7 commands, 21 lines)
+
+**Total Removable**: 59 lines
+
+### 2b.3: Documentation Update (2h)
+
+Update all core docs to reflect final architecture:
+- ARCHITECTURE_ANALYSIS.md (final stats)
+- CLAUDE.md (service pattern)
+- DEV_WORKFLOW.md (testing guidelines)
+- CHANGELOG.md (version entry)
 
 **Success Criteria**:
 - [ ] AuthService extracted (70 lines)
 - [ ] 3 TDD tests passing
 - [ ] Repository < 860 lines
+- [ ] Code bloat reduced 59 lines
+- [ ] Docs updated
+
+---
+
+## Combined Impact
+
+**Performance (Phase 8)**:
+- 70% faster UI operations
+- 95% users benefit
+- Zero UI freezes
+- Memory leaks eliminated
+
+**Architecture (Phase 2b)**:
+- 4 services extracted
+- Repository 22% smaller
+- Better testability
+- Clear separation of concerns
+
+**Total Effort**: 24-30h (3-4 days focused work)
+
+---
+
+## Deferred Work
+
+**Phase 9: Remaining Code Bloat** (89 lines, 2h):
+- Trivial revision wrappers (74 lines, 1h)
+- Inconsistent fs promisification (10 lines, 0.3h)
+- Duplicate selection extraction (5 lines, 0.7h - not covered in 2b.2)
+
+**Phase 10: Security**:
+- Password exposure fix (requires stdin refactor, 8-12h)
+
+**Phase 11: Testing**:
+- Integration tests (Phase 4a.2 deferred)
+- Target: 30% coverage
 
 ---
 
 ## Metrics Dashboard
 
-| Metric | Target | Current | Status |
-|--------|--------|---------|--------|
-| Test coverage (line) | 25-30% | ~21-23% | 🟡 Close |
-| Repository LOC | <860 | 923 | 🟡 |
-| Services extracted | 4 | 3 | 🟡 |
-| CRITICAL vulns | 0 | 1 (deferred) | 🟡 |
-| Performance (debounce) | Faster | 60-80% faster | ✅ |
-| Performance (5s throttle) | Fixed | 95% users | ✅ |
+| Metric | Current | Phase 8 Target | Phase 2b Target |
+|--------|---------|----------------|-----------------|
+| UI responsiveness | Baseline | +70% | - |
+| Memory leaks | Yes | Zero | - |
+| Repository LOC | 923 | - | <860 |
+| Services extracted | 3 | - | 4 |
+| Code bloat removed | 0 | - | 59 lines |
+| Test coverage | 21-23% | - | Stable |
 
 ---
 
-## Next Actions (Week 2)
+## Execution Order
 
-**IMMEDIATE** (4 days):
-1. Phase 4a.2: Parser tests (statusParser, logParser, infoParser) - 1 day
-2. Phase 4a.2: Integration tests (checkout→commit flows) - 1 day
-3. Phase 4a.3: Error handling tests (promise rejections, race conditions) - 2 days
+**Recommended**: Phase 8 → Phase 2b
 
-**CONCURRENT** (1 day):
-4. Phase 2b: Extract AuthService (70 lines from repository.ts)
-5. Phase 2b: Auth security tests (3 TDD tests)
+**Rationale**:
+1. Phase 8 delivers immediate user value (95% users)
+2. Phase 2b completes architectural vision
+3. Combined: Performance + Quality in single release
 
-**Target**: v2.18.0 with 25-30% coverage, 4 services extracted
-
----
-
-## Performance Bottlenecks - Phase 8 (Deferred)
-
-**5 bottlenecks identified** (ultrathink analysis 2025-11-10):
-
-1. **N+1 External Queries** (svnRepository.ts:141-150)
-   - Impact: 85% users with 50+ externals
-   - Severity: HIGH, 4h fix
-   - Sequential `getInfo()` blocks UI
-
-2. **O(n²) Descendant Check** (StatusService.ts:200-208)
-   - Impact: 70% users with 1000+ files
-   - Severity: HIGH, 3h fix
-   - Nested `.some()` loop in `separateExternals()`
-
-3. **5s Hardcoded Throttle** (repository.ts:406)
-   - Impact: 95% users with autorefresh
-   - Severity: HIGH, 1h fix
-   - `await timeout(5000)` blocks UI after every status
-
-4. **Missing SVN Timeouts** (svn.ts:87-232)
-   - Impact: 40% users on slow networks
-   - Severity: MEDIUM, 3h fix
-   - No timeout on `cp.spawn()`, can hang indefinitely
-
-5. **O(n) Conflict Search** (StatusService.ts:313)
-   - Impact: 30% users with conflicts
-   - Severity: MEDIUM, 2h fix
-   - Linear search per unversioned file
-
-**Decision**: Defer to Phase 8 (13h effort, 68% improvement potential)
+**Alternative**: Phase 2b → Phase 8
+- Lower risk (architecture first)
+- Delayed user benefit
+- Not recommended
 
 ---
 
-## Code Bloat - Phase 9 (Deferred)
+## Unresolved Questions
 
-**283 lines removable** (ultrathink analysis 2025-11-10):
+Performance:
+- Max concurrent SVN ops for CPU limit?
+- Status cache TTL for manual refresh mode?
+- Remote polling backoff strategy?
 
-1. Duplicate plainLog methods (svnRepository.ts:784-838) - 54 lines, MEDIUM risk, 1.5h
-2. Command error boilerplate (commands/*.ts) - 60 lines, LOW risk, 1h
-3. Debug console.log (24 files) - 52 lines, LOW risk, 0.5h
-4. Duplicate show/showBuffer (svnRepository.ts:288-427) - 47 lines, MEDIUM risk, 1.5h
-5. EventEmitter + wrappers (repository.ts:115-730) - 70 lines, MEDIUM risk, 2h
+Architecture:
+- AuthService coupling to SecretStorage?
+- Service disposal order on extension deactivate?
 
-**Decision**: Defer until testing complete (6.5h effort)
-
----
-
-## Extraction Opportunities - Future (Deferred)
-
-**Top 3 from refactoring analysis**:
-
-1. **Encoding Detection** (svnRepository.ts:325-378) - 53 lines, LOW risk, HIGH ROI
-2. **Deleted Files Handler** (repository.ts:303-364) - 62 lines, LOW risk, MEDIUM ROI
-3. **Branch Enumeration** (svnRepository.ts:585-645) - 61 lines, MEDIUM risk, MEDIUM ROI
-
-**Decision**: Defer until Phase 2b complete
+Testing:
+- Integration test environment setup?
+- Coverage target realistic (30%)?

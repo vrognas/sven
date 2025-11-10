@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.43
+**Version**: 2.17.45
 **Updated**: 2025-11-10
 
 ---
@@ -113,8 +113,8 @@ Flow: activate() -> SvnFinder -> Svn -> SourceControlManager -> registerCommands
 |-------|--------|
 | Test coverage <30% | 🟡 21-23% (close to target 25-30%) |
 | AuthService extraction | ⚠️ Phase 2b (next) |
-| Code bloat (283 lines) | ⚠️ Deferred Phase 9 |
-| Performance (4 bottlenecks) | ⚠️ Deferred Phase 8 (1 fixed) |
+| Code bloat (148 lines NEW) | ⚠️ Deferred Phase 9 |
+| Performance (15 bottlenecks NEW) | 🔴 Phase 8 CRITICAL (affects 95% users) |
 
 ### Large Files
 
@@ -207,18 +207,21 @@ positronImpl/   // Positron implementation
 
 ---
 
-## 9. Next Actions (Week 2)
+## 9. Next Actions (3-4 days)
 
-### Phase 4a.2-3: Testing (4 days)
-1. Parser tests (statusParser, logParser, infoParser) - 1 day
-2. Integration tests (checkout→commit) - 1 day
-3. Error handling tests - 2 days
-4. Target: 25-30% coverage
+### Phase 8: Critical Performance Bottlenecks (HIGH PRIORITY, 18-22h)
+15 bottlenecks affecting 95% users:
+- Hot path optimizations (config caching, resource lookup O(n*m)→O(1))
+- Async fixes (sequential scanning, auth retry blocking)
+- File watcher throttling
+- Memory leak fixes
+- Target: 70% faster UI, zero freezes
 
-### Phase 2b: AuthService (1 day, concurrent)
-1. Extract 70 lines from repository.ts:735-806
-2. Auth security tests (3 TDD)
-3. Target: Repository < 860 lines
+### Phase 2b: Complete Service Architecture (MEDIUM PRIORITY, 6-8h)
+1. Extract AuthService (70 lines from repository.ts)
+2. Remove code bloat (59 lines: null guards, duplicate logic)
+3. Update docs
+4. Target: Repository < 860 lines, 4 services
 
 ---
 
@@ -243,11 +246,11 @@ Solid event-driven architecture. Major progress: build modernization (webpack→
 - ✅ Phase 4a complete (111 tests: validators, parsers, error handling)
 - ✅ Coverage 21-23% (close to target)
 
-**Next**:
-- Phase 2b: AuthService extraction (1 day)
-- Target: 25-30% coverage, 4 services, Repository < 860 lines
+**Next** (see IMPLEMENTATION_PLAN.md):
+- Phase 8: Performance (18-22h, 95% users, CRITICAL)
+- Phase 2b: Architecture (6-8h, quality/maintainability)
 
 ---
 
-**Version**: 1.5
-**Updated**: 2025-11-10 (v2.17.43)
+**Version**: 1.6
+**Updated**: 2025-11-10 (v2.17.45)

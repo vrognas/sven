@@ -1,3 +1,15 @@
+## [2.17.45] (2025-11-10)
+
+### Documentation (Performance Audit + Cleanup)
+
+* **Audit**: 4 parallel subagent analysis (performance-engineer, performance-monitor, refactoring-specialist, code-reviewer)
+* **Findings**: 15 NEW performance bottlenecks (affects 95% users, 18-22h fix), 148 lines NEW code bloat
+* **Critical issues**: Config caching, O(n*m) resource lookup, deletedUris leak, auth blocking, file watcher storms
+* **Cleanup**: Removed 4 obsolete docs (PR_SUMMARY, PERFORMANCE_THRESHOLDS, ROADMAP, PERFORMANCE_ANALYSIS - 1400+ lines)
+* **Updated**: IMPLEMENTATION_PLAN.md streamlined to 2 critical phases only (Phase 8: Performance, Phase 2b: Architecture)
+* **Updated**: ARCHITECTURE_ANALYSIS.md with audit results
+* **Impact**: Clearer roadmap, prioritized user-facing work
+
 ## [2.17.44] (2025-11-10)
 
 ### Documentation (PR Preparation)
