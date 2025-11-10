@@ -1,3 +1,16 @@
+## [2.17.43] (2025-11-10)
+
+### Testing (Phase 4a.3 - Error Handling Tests)
+
+* **Error handling tests**: 12 tests covering 5 critical gaps
+  - Promise rejection handling (2 tests): Event handlers, unhandled rejections
+  - Error message context (3 tests): Operation context, file paths, stack traces
+  - Race condition prevention (2 tests): Sequential vs concurrent operations
+  - Auth failure handling (2 tests): Typed errors, silent failures
+  - Activation recovery (3 tests): Context, missing binary, retry logic
+* **Coverage**: Est. 21-23% (+2-3% from error handling)
+* **Phase 4a.3 complete**: Critical error scenarios covered
+
 ## [2.17.42] (2025-11-10)
 
 ### Testing (Phase 4a.2 - Parser Tests)
