@@ -1,3 +1,13 @@
+## [2.17.33] (2025-11-10)
+
+### Planning
+
+* Update IMPLEMENTATION_PLAN: Phase 4.5b complete status
+* Metrics dashboard: Build ✅, DX ✅, URL validation ✅, validateRevision ✅
+* CRITICAL vulns: 2→1 (password deferred, URL+revision complete)
+* Next: Phase 4a - Security Foundation tests (Week 1, 6 days)
+* Findings: validateRevision only 1 user input (not 11 files as estimated)
+
 ## [2.17.32] (2025-11-10)
 
 ### Security
