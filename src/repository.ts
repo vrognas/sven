@@ -403,7 +403,6 @@ export class Repository implements IRemoteRepository {
   private async updateWhenIdleAndWait(): Promise<void> {
     await this.whenIdleAndFocused();
     await this.status();
-    await timeout(5000);
   }
 
   public async whenIdleAndFocused(): Promise<void> {
