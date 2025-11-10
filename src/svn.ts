@@ -2,6 +2,7 @@ import * as cp from "child_process";
 import { EventEmitter } from "events";
 import * as proc from "process";
 import { Readable } from "stream";
+import * as semver from "semver";
 import {
   ConstructorPolicy,
   ICpOptions,
@@ -69,6 +70,7 @@ export class Svn {
 
   private svnPath: string;
   private lastCwd: string = "";
+  private supportsStdinPassword: boolean = false;
 
   private _onOutput = new EventEmitter();
   get onOutput(): EventEmitter {
@@ -78,6 +80,8 @@ export class Svn {
   constructor(options: ISvnOptions) {
     this.svnPath = options.svnPath;
     this.version = options.version;
+    // SVN 1.9+ supports --password-from-stdin for secure password handling
+    this.supportsStdinPassword = semver.satisfies(options.version, ">= 1.9");
   }
 
   public logOutput(output: string): void {
@@ -104,8 +108,18 @@ export class Svn {
     if (options.username) {
       args.push("--username", options.username);
     }
+
+    // SECURITY: Use stdin for password to prevent exposure in process list
+    let passwordInput: string | undefined;
     if (options.password) {
-      args.push("--password", options.password);
+      if (this.supportsStdinPassword) {
+        // SVN 1.9+: Use stdin to avoid password in process args
+        args.push("--password-from-stdin");
+        passwordInput = options.password;
+      } else {
+        // SVN 1.6-1.8: Fallback to CLI arg (less secure, documented limitation)
+        args.push("--password", options.password);
+      }
     }
 
     if (options.username || options.password) {
@@ -140,6 +154,12 @@ export class Svn {
     });
 
     const process = cp.spawn(this.svnPath, args, defaults);
+
+    // SECURITY: Write password to stdin if using --password-from-stdin
+    if (passwordInput && process.stdin) {
+      process.stdin.write(passwordInput + "\n");
+      process.stdin.end();
+    }
 
     const disposables: IDisposable[] = [];
 
@@ -249,8 +269,18 @@ export class Svn {
     if (options.username) {
       args.push("--username", options.username);
     }
+
+    // SECURITY: Use stdin for password to prevent exposure in process list
+    let passwordInput: string | undefined;
     if (options.password) {
-      args.push("--password", options.password);
+      if (this.supportsStdinPassword) {
+        // SVN 1.9+: Use stdin to avoid password in process args
+        args.push("--password-from-stdin");
+        passwordInput = options.password;
+      } else {
+        // SVN 1.6-1.8: Fallback to CLI arg (less secure, documented limitation)
+        args.push("--password", options.password);
+      }
     }
 
     if (options.username || options.password) {
@@ -277,6 +307,12 @@ export class Svn {
     });
 
     const process = cp.spawn(this.svnPath, args, defaults);
+
+    // SECURITY: Write password to stdin if using --password-from-stdin
+    if (passwordInput && process.stdin) {
+      process.stdin.write(passwordInput + "\n");
+      process.stdin.end();
+    }
 
     const disposables: IDisposable[] = [];
 

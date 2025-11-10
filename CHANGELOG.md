@@ -1,3 +1,16 @@
+## [2.17.25] (2025-11-10)
+
+### Security
+
+* Add URL validation to prevent SSRF attacks in checkout command
+* Block localhost, private IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x), file:// protocol
+* Allow only http, https, svn, svn+ssh protocols
+* Comprehensive error messages for invalid URLs
+
+### Testing
+
+* Add URL validation test suite (validation.test.ts)
+
 ## [2.17.24] (2025-11-09)
 
 ### Dependencies

@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as fs from "original-fs";
 import { ConstructorPolicy, ICpOptions, ISvnOptions } from "../common/types";
 import { Svn } from "../svn";
 import { Repository } from "../svnRepository";
@@ -170,5 +171,142 @@ suite("Svn Repository Tests", () => {
     };
 
     await repository.plainLogByText("bugfix");
+  });
+
+  test("Test show validation - invalid revision", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tpm",
+      ConstructorPolicy.LateInit
+    );
+
+    try {
+      await repository.show("/tmp/test.txt", "invalid;revision");
+      assert.fail("Should throw on invalid revision");
+    } catch (e: unknown) {
+      assert.match((e as Error).message, /Invalid revision/);
+    }
+  });
+
+  test("Test show validation - valid numeric revision", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tpm",
+      ConstructorPolicy.LateInit
+    );
+    repository.exec = async (args: string[]) => {
+      assert.ok(args.includes("-r"));
+      assert.ok(args.includes("123"));
+      return { exitCode: 0, stderr: "", stdout: "file contents" };
+    };
+
+    await repository.show("/tmp/test.txt", "123");
+  });
+
+  test("Test show validation - valid keyword revision", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tpm",
+      ConstructorPolicy.LateInit
+    );
+    repository.exec = async (args: string[]) => {
+      assert.ok(args.includes("-r"));
+      assert.ok(args.includes("HEAD"));
+      return { exitCode: 0, stderr: "", stdout: "file contents" };
+    };
+
+    await repository.show("/tmp/test.txt", "HEAD");
+  });
+
+  test("Test commitFiles creates temp file with secure permissions (0600)", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tpm",
+      ConstructorPolicy.LateInit
+    );
+
+    let tempFilePath: string | undefined;
+    repository.exec = async (args: string[]) => {
+      const fileIndex = args.indexOf("-F");
+      if (fileIndex !== -1) {
+        tempFilePath = args[fileIndex + 1];
+        const stats = fs.statSync(tempFilePath);
+        const mode = stats.mode & 0o777;
+        assert.strictEqual(mode, 0o600, "Temp file should have 0600 permissions");
+      }
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: "Committed revision 123."
+      };
+    };
+
+    await repository.commitFiles("Multiline\ncommit message", ["test.php"]);
+  });
+
+  test("Test commitFiles prevents symlink attacks", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tpm",
+      ConstructorPolicy.LateInit
+    );
+
+    let tempFilePath: string | undefined;
+    repository.exec = async (args: string[]) => {
+      const fileIndex = args.indexOf("-F");
+      if (fileIndex !== -1) {
+        tempFilePath = args[fileIndex + 1];
+        const stats = fs.lstatSync(tempFilePath);
+        assert.ok(!stats.isSymbolicLink(), "Temp file should not be a symlink");
+      }
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: "Committed revision 123."
+      };
+    };
+
+    await repository.commitFiles("Test\nmessage", ["test.php"]);
+  });
+
+  test("Test commitFiles with unicode creates secure temp file", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tpm",
+      ConstructorPolicy.LateInit
+    );
+
+    let tempFilePath: string | undefined;
+    repository.exec = async (args: string[]) => {
+      const fileIndex = args.indexOf("-F");
+      if (fileIndex !== -1) {
+        tempFilePath = args[fileIndex + 1];
+        const stats = fs.statSync(tempFilePath);
+        const mode = stats.mode & 0o777;
+        assert.strictEqual(mode, 0o600, "Temp file with unicode should have 0600 permissions");
+
+        const content = fs.readFileSync(tempFilePath, "utf-8");
+        assert.ok(content.includes("🔒"), "Temp file should contain unicode content");
+      }
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: "Committed revision 123."
+      };
+    };
+
+    await repository.commitFiles("Secure commit 🔒", ["test.php"]);
   });
 });

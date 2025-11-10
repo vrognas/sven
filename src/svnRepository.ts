@@ -16,7 +16,7 @@ import {
 } from "./common/types";
 import { sequentialize } from "./decorators";
 import * as encodeUtil from "./encoding";
-import { exists, writeFile, stat, readdir } from "./fs";
+import { exists, writeFile, stat, readdir, lstat } from "./fs";
 import { getBranchName } from "./helpers/branch";
 import { configuration } from "./helpers/configuration";
 import { parseInfoXml } from "./parser/infoParser";
@@ -36,7 +36,9 @@ import { parseDiffXml } from "./parser/diffParser";
 import {
   validateChangelist,
   validateAcceptAction,
-  validateSearchPattern
+  validateSearchPattern,
+  validateRevision,
+  validateFilePath
 } from "./validation";
 
 export class Repository {
@@ -107,6 +109,22 @@ export class Repository {
     return fixPegRevision(file);
   }
 
+  private validateFilePaths(files: string[]): void {
+    for (const file of files) {
+      const relativePath = this.removeAbsolutePath(file);
+      if (!validateFilePath(relativePath)) {
+        throw new Error(`Invalid file path detected: ${relativePath}`);
+      }
+    }
+  }
+
+  private validateSinglePath(filePath: string): void {
+    const relativePath = this.removeAbsolutePath(filePath);
+    if (!validateFilePath(relativePath)) {
+      throw new Error(`Invalid file path detected: ${relativePath}`);
+    }
+  }
+
   public async getStatus(params: {
     includeIgnored?: boolean;
     includeExternals?: boolean;
@@ -174,6 +192,9 @@ export class Repository {
     const args = ["info", "--xml"];
 
     if (revision) {
+      if (!validateRevision(revision)) {
+        throw new Error("Invalid revision parameter");
+      }
       args.push("-r", revision);
     }
 
@@ -427,6 +448,7 @@ export class Repository {
   }
 
   public async commitFiles(message: string, files: string[]) {
+    this.validateFilePaths(files);
     files = files.map(file => this.removeAbsolutePath(file));
 
     const args = ["commit", ...files];
@@ -485,6 +507,7 @@ export class Repository {
   }
 
   public async addFilesByIgnore(files: string[], ignoreList: string[]) {
+    this.validateFilePaths(files);
     const allFiles = async (file: string): Promise<string[]> => {
       if ((await stat(file)).isDirectory()) {
         return (

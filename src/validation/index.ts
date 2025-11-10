@@ -87,10 +87,70 @@ export function validateFilePath(path: string): boolean {
   return !path.includes('..') && !path.startsWith('/') && !path.startsWith('\\');
 }
 
+/**
+ * Validates URLs to prevent SSRF attacks
+ * - Allows only: http, https, svn, svn+ssh protocols
+ * - Rejects file:// URLs
+ * - Blocks localhost, private IPs, and metadata endpoints
+ */
+export function validateUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    // Protocol validation: allow only safe protocols
+    const allowedProtocols = ['http:', 'https:', 'svn:', 'svn+ssh:'];
+    if (!allowedProtocols.includes(parsed.protocol)) {
+      return false;
+    }
+
+    // Extract hostname for IP validation
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Block localhost variants
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return false;
+    }
+
+    // Block private IP ranges (SSRF prevention)
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const ipMatch = hostname.match(ipv4Regex);
+
+    if (ipMatch) {
+      const [, a, b, c, d] = ipMatch.map(Number);
+
+      // Validate octets
+      if (a > 255 || b > 255 || c > 255 || d > 255) {
+        return false;
+      }
+
+      // Block private IP ranges
+      if (
+        a === 10 ||                           // 10.0.0.0/8
+        (a === 172 && b >= 16 && b <= 31) ||  // 172.16.0.0/12
+        (a === 192 && b === 168) ||           // 192.168.0.0/16
+        (a === 169 && b === 254) ||           // 169.254.0.0/16 (link-local, AWS metadata)
+        a === 127                             // 127.0.0.0/8 (loopback)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    // Invalid URL format
+    return false;
+  }
+}
+
 export const validators = {
   changelist: validateChangelist,
   acceptAction: validateAcceptAction,
   searchPattern: validateSearchPattern,
   revision: validateRevision,
-  filePath: validateFilePath
+  filePath: validateFilePath,
+  url: validateUrl
 };
