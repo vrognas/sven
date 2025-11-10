@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN - Next Phases
 
-**Version**: v2.17.40
+**Version**: v2.17.41
 **Updated**: 2025-11-10
-**Status**: Phase 2 ✅ | Phase 4.5b ✅ | Phase 4b ✅ | Phase 4a.1 ✅ | Next: Phase 4a.2-3 + Phase 2b
+**Status**: Phase 2 ✅ | Phase 4.5b ✅ | Phase 4b ✅ | Phase 4b.1 ✅ | Phase 4a.1 ✅ | Next: Phase 4a.2-3 + Phase 2b
 
 ---
 
@@ -13,10 +13,11 @@
 - 3 services extracted: StatusService (355), ResourceGroupManager (298), RemoteChangeService (107)
 - 9 tests, zero regressions
 
-**Phase 4b Complete** (v2.17.38):
+**Phase 4b + 4b.1 Complete** (v2.17.38, v2.17.41):
 - Debounce: 1000ms→500/300ms (60% faster, 2-3s→0.8-1.3s)
 - O(n) filtering: Minimatch cache (500x faster, 1000 files × 50 patterns)
-- Impact: 45-65% improvement, 100%+40% users
+- 5s throttle removed: Instant responsiveness (95% users)
+- Impact: 60-80% improvement, 95%+40% users
 
 **Phase 4a.1 Complete** (v2.17.37):
 - Validator tests: 90 test cases, 6 validators

@@ -1,4 +1,4 @@
-import { minimatch, Minimatch, MinimatchOptions } from "minimatch";
+import { Minimatch, MinimatchOptions } from "minimatch";
 
 /**
  * Pre-compiled matcher cache for performance optimization
@@ -17,8 +17,6 @@ function getCachedMatchers(
   opts: MinimatchOptions = {}
 ): MatcherCache["matchers"] {
   const optsKey = JSON.stringify(opts);
-  const patternsKey = patterns.join("|");
-  const cacheKey = `${patternsKey}:${optsKey}`;
 
   // Check if cache is valid
   if (

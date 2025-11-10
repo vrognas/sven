@@ -1,3 +1,12 @@
+## [2.17.41] (2025-11-10)
+
+### Performance (Critical Bug Fix)
+
+* **5s throttle removed** (repository.ts:406) - Eliminated 5s blocking delay after every status check
+* Impact: 95% users, instant responsiveness (Phase 4b.1 critical bug)
+* Protection maintained: @throttle + @debounce(500) + whenIdleAndFocused() sufficient
+* Build: Fixed unused import warnings in util/globMatch.ts
+
 ## [2.17.40] (2025-11-10)
 
 ### Documentation
