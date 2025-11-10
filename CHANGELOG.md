@@ -1,3 +1,19 @@
+## [2.17.27] (2025-11-10)
+
+### Security - Phase 4.5 Complete
+
+* Apply validateRevision() to 4 locations (command injection prevention)
+* Apply validateFilePath() to 18 file operations (path traversal prevention)
+* Fix credential exposure - use --password-from-stdin for SVN 1.9+ (90%+ users)
+* Add comprehensive security validator documentation (SECURITY.md)
+
+### Testing
+
+* Add validateRevision security tests (command injection)
+* Add validateFilePath security tests (path traversal)
+* Add password security test suite (4 tests for stdin handling)
+* Total: 30+ new security tests
+
 ## [2.17.26] (2025-11-10)
 
 ### Security

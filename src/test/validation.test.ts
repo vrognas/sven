@@ -1,5 +1,96 @@
 import * as assert from "assert";
-import { validateUrl } from "../validation";
+import { validateUrl, validateRevision, validateFilePath } from "../validation";
+
+suite("Revision Validation Tests - Command Injection Prevention", () => {
+  suite("Valid Revisions", () => {
+    test("allows numeric revisions", () => {
+      assert.strictEqual(validateRevision("0"), true);
+      assert.strictEqual(validateRevision("1"), true);
+      assert.strictEqual(validateRevision("123"), true);
+      assert.strictEqual(validateRevision("999999"), true);
+    });
+
+    test("allows revisions with + prefix", () => {
+      assert.strictEqual(validateRevision("+123"), true);
+      assert.strictEqual(validateRevision("+1"), true);
+    });
+
+    test("allows SVN keywords", () => {
+      assert.strictEqual(validateRevision("HEAD"), true);
+      assert.strictEqual(validateRevision("PREV"), true);
+      assert.strictEqual(validateRevision("BASE"), true);
+      assert.strictEqual(validateRevision("COMMITTED"), true);
+    });
+  });
+
+  suite("Command Injection Prevention", () => {
+    test("rejects shell metacharacters", () => {
+      assert.strictEqual(validateRevision("123;rm -rf /"), false);
+      assert.strictEqual(validateRevision("123|cat /etc/passwd"), false);
+      assert.strictEqual(validateRevision("123&whoami"), false);
+      assert.strictEqual(validateRevision("123`id`"), false);
+      assert.strictEqual(validateRevision("123$(whoami)"), false);
+    });
+
+    test("rejects negative revisions", () => {
+      assert.strictEqual(validateRevision("-1"), false);
+      assert.strictEqual(validateRevision("-123"), false);
+    });
+
+    test("rejects invalid keywords", () => {
+      assert.strictEqual(validateRevision("INVALID"), false);
+      assert.strictEqual(validateRevision("head"), false); // lowercase not allowed
+      assert.strictEqual(validateRevision("base123"), false);
+    });
+
+    test("rejects empty/whitespace", () => {
+      assert.strictEqual(validateRevision(""), false);
+      assert.strictEqual(validateRevision(" "), false);
+      assert.strictEqual(validateRevision("  123  "), false);
+    });
+  });
+});
+
+suite("File Path Validation Tests - Path Traversal Prevention", () => {
+  suite("Valid Paths", () => {
+    test("allows simple filenames", () => {
+      assert.strictEqual(validateFilePath("file.txt"), true);
+      assert.strictEqual(validateFilePath("test.php"), true);
+    });
+
+    test("allows relative paths", () => {
+      assert.strictEqual(validateFilePath("src/file.txt"), true);
+      assert.strictEqual(validateFilePath("dir/subdir/file.js"), true);
+    });
+  });
+
+  suite("Path Traversal Prevention", () => {
+    test("rejects parent directory traversal", () => {
+      assert.strictEqual(validateFilePath("../etc/passwd"), false);
+      assert.strictEqual(validateFilePath("dir/../../../etc/passwd"), false);
+      assert.strictEqual(validateFilePath("..\\windows\\system32"), false);
+    });
+
+    test("rejects absolute paths (Unix)", () => {
+      assert.strictEqual(validateFilePath("/etc/passwd"), false);
+      assert.strictEqual(validateFilePath("/var/log/system.log"), false);
+    });
+
+    test("rejects absolute paths (Windows)", () => {
+      assert.strictEqual(validateFilePath("C:\\windows\\system32"), false);
+      assert.strictEqual(validateFilePath("\\\\share\\file"), false);
+    });
+
+    test("rejects hidden traversal attempts", () => {
+      assert.strictEqual(validateFilePath("dir/..\\../file"), false);
+      assert.strictEqual(validateFilePath("./../../etc/passwd"), false);
+    });
+
+    test("rejects empty paths", () => {
+      assert.strictEqual(validateFilePath(""), false);
+    });
+  });
+});
 
 suite("URL Validation Tests", () => {
   suite("Valid URLs", () => {
