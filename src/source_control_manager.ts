@@ -20,8 +20,8 @@ import {
 import { debounce } from "./decorators";
 import { readdir, stat } from "./fs";
 import { configuration } from "./helpers/configuration";
-import { RemoteRepository } from "./remoteRepository";
 import { Repository } from "./repository";
+import { Repository as BaseRepository } from "./svnRepository";
 import { Svn, svnErrorCodes } from "./svn";
 import SvnError from "./svnError";
 import {
@@ -340,8 +340,8 @@ export class SourceControlManager implements IDisposable {
     }
   }
 
-  public async getRemoteRepository(uri: Uri): Promise<RemoteRepository> {
-    return RemoteRepository.open(this.svn, uri);
+  public async getRemoteRepository(uri: Uri): Promise<BaseRepository> {
+    return this.svn.open(uri.toString(true), "");
   }
 
   public getRepository(hint: any): Repository | null {

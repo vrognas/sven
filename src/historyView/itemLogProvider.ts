@@ -128,7 +128,7 @@ export class ItemLogProvider
             this.currentItem = {
               isComplete: false,
               entries: [],
-              repo,
+              repo: repo.repository,
               svnTarget: Uri.parse(info.url),
               persisted: {
                 commitFrom: "HEAD",

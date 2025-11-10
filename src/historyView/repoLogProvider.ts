@@ -19,7 +19,7 @@ import {
 } from "../common/types";
 import { exists } from "../fs";
 import { SourceControlManager } from "../source_control_manager";
-import { IRemoteRepository } from "../remoteRepository";
+import { Repository as IRemoteRepository } from "../svnRepository";
 import { Repository } from "../repository";
 import { dispose, unwrap } from "../util";
 import {
@@ -181,7 +181,7 @@ export class RepoLogProvider
     } else {
       try {
         const svninfo = await repo.getInfo(repoLike, rev);
-        item.repo = repo;
+        item.repo = repo.repository;
         item.svnTarget = Uri.parse(svninfo.url);
         item.persisted.baseRevision = parseInt(svninfo.revision, 10);
       } catch (e) {
@@ -295,7 +295,7 @@ export class RepoLogProvider
         this.logCache.set(repoUrl, {
           entries: [],
           isComplete: false,
-          repo,
+          repo: repo.repository,
           svnTarget: remoteRoot,
           persisted,
           order: this.logCache.size

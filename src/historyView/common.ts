@@ -14,7 +14,7 @@ import {
 import { ISvnLogEntry, ISvnLogEntryPath } from "../common/types";
 import { exists, lstat } from "../fs";
 import { configuration } from "../helpers/configuration";
-import { IRemoteRepository } from "../remoteRepository";
+import { Repository as IRemoteRepository } from "../svnRepository";
 import { SvnRI } from "../svnRI";
 import { tempSvnFs } from "../temp_svn_fs";
 

@@ -36,7 +36,6 @@ import { exists } from "./fs";
 import { configuration } from "./helpers/configuration";
 import OperationsImpl from "./operationsImpl";
 import { PathNormalizer } from "./pathNormalizer";
-import { IRemoteRepository } from "./remoteRepository";
 import { Resource } from "./resource";
 import { StatusBarCommands } from "./statusbar/statusBarCommands";
 import { svnErrorCodes } from "./svn";
@@ -67,7 +66,7 @@ function shouldShowProgress(operation: Operation): boolean {
   }
 }
 
-export class Repository implements IRemoteRepository {
+export class Repository {
   public sourceControl: SourceControl;
   public statusBar: StatusBarCommands;
   public changes: ISvnResourceGroup;

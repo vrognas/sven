@@ -19,6 +19,7 @@ import * as encodeUtil from "./encoding";
 import { exists, writeFile, stat, readdir } from "./fs";
 import { getBranchName } from "./helpers/branch";
 import { configuration } from "./helpers/configuration";
+import { PathNormalizer } from "./pathNormalizer";
 import { parseInfoXml, parseBatchInfoXml } from "./parser/infoParser";
 import { parseSvnList } from "./parser/listParser";
 import { parseSvnLog } from "./parser/logParser";
@@ -48,6 +49,15 @@ export class Repository {
 
   public username?: string;
   public password?: string;
+
+  // IRemoteRepository interface compatibility (replaces RemoteRepository wrapper)
+  public get branchRoot(): Uri {
+    return Uri.parse(this.info.url);
+  }
+
+  public getPathNormalizer(): PathNormalizer {
+    return new PathNormalizer(this.info);
+  }
 
   constructor(
     private svn: Svn,
@@ -333,41 +343,11 @@ export class Repository {
   }
 
   public async show(file: string | Uri, revision?: string): Promise<string> {
-    const args = ["cat"];
+    // Get buffer and decode with proper encoding
+    const buffer = await this.showBuffer(file, revision);
 
-    let uri: Uri;
-    let filePath: string;
-
-    if (file instanceof Uri) {
-      uri = file;
-      filePath = file.toString(true);
-    } else {
-      uri = Uri.file(file);
-      filePath = file;
-    }
-
-    const isChild =
-      uri.scheme === "file" && isDescendant(this.workspaceRoot, uri.fsPath);
-
-    let target: string = filePath;
-
-    if (isChild) {
-      target = this.removeAbsolutePath(target);
-    }
-
-    if (revision) {
-      args.push("-r", revision);
-      if (
-        isChild &&
-        !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
-      ) {
-        const info = await this.getInfo();
-        target = info.url + "/" + target.replace(/\\/g, "/");
-        // TODO move to SvnRI
-      }
-    }
-
-    args.push(target);
+    const uri = file instanceof Uri ? file : Uri.file(file);
+    const filePath = file instanceof Uri ? file.toString(true) : file;
 
     /**
      * ENCODE DETECTION
@@ -400,8 +380,6 @@ export class Repository {
       }
 
       if (autoGuessEncoding) {
-        // The `getText` return a `utf-8` string
-        const buffer = Buffer.from(textDocument.getText(), "utf-8");
         const detectedEncoding = encodeUtil.detectEncoding(buffer);
         if (detectedEncoding) {
           encoding = detectedEncoding;
@@ -420,12 +398,10 @@ export class Repository {
       false
     );
     if (experimental) {
-      encoding = null;
+      encoding = encodeUtil.detectEncoding(buffer) || "utf8";
     }
 
-    const result = await this.exec(args, { encoding });
-
-    return result.stdout;
+    return buffer.toString(encoding || "utf8");
   }
 
   public async showBuffer(
@@ -781,17 +757,14 @@ export class Repository {
   }
 
   public async patch(files: string[]) {
-    files = files.map(file => this.removeAbsolutePath(file));
-    const result = await this.exec(["diff", "--internal-diff", ...files]);
-    const message = result.stdout;
-    return message;
+    const buffer = await this.patchBuffer(files);
+    return buffer.toString("utf8");
   }
 
   public async patchBuffer(files: string[]) {
     files = files.map(file => this.removeAbsolutePath(file));
     const result = await this.execBuffer(["diff", "--internal-diff", ...files]);
-    const message = result.stdout;
-    return message;
+    return result.stdout;
   }
 
   public async patchChangelist(changelistName: string) {
@@ -829,16 +802,8 @@ export class Repository {
   }
 
   public async plainLog(): Promise<string> {
-    const logLength = configuration.get<string>("log.length") ?? "50";
-    const result = await this.exec([
-      "log",
-      "-r",
-      "HEAD:1",
-      "--limit",
-      logLength
-    ]);
-
-    return result.stdout;
+    const buffer = await this.plainLogBuffer();
+    return buffer.toString("utf8");
   }
 
   public async plainLogBuffer(): Promise<Buffer> {
@@ -855,24 +820,18 @@ export class Repository {
   }
 
   public async plainLogByRevision(revision: number) {
-    const result = await this.exec(["log", "-r", revision.toString()]);
-
-    return result.stdout;
+    const buffer = await this.plainLogByRevisionBuffer(revision);
+    return buffer.toString("utf8");
   }
 
   public async plainLogByRevisionBuffer(revision: number) {
     const result = await this.execBuffer(["log", "-r", revision.toString()]);
-
     return result.stdout;
   }
 
   public async plainLogByText(search: string) {
-    if (!validateSearchPattern(search)) {
-      throw new Error("Invalid search pattern");
-    }
-    const result = await this.exec(["log", "--search", search]);
-
-    return result.stdout;
+    const buffer = await this.plainLogByTextBuffer(search);
+    return buffer.toString("utf8");
   }
 
   public async plainLogByTextBuffer(search: string) {
@@ -880,7 +839,6 @@ export class Repository {
       throw new Error("Invalid search pattern");
     }
     const result = await this.execBuffer(["log", "--search", search]);
-
     return result.stdout;
   }
 

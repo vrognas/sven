@@ -1,3 +1,18 @@
+## [2.17.26] (2025-11-10)
+
+### Refactoring (Phase 1.5 - Day 3: Dead Code Deletion) 🧹
+
+* **~140 lines removed**
+* Delete RemoteRepository wrapper class (35 lines, thin pass-through to BaseRepository)
+* Delete openChange* command wrappers (40 lines, consolidated into parameterized OpenChange)
+* Consolidate show/buffer method pairs (65 lines duplicate logic eliminated)
+
+### Technical Debt
+
+* BaseRepository: Add branchRoot getter, getPathNormalizer() for IRemoteRepository compatibility
+* Commands: Replace 3 wrapper classes with single OpenChange(commandId, revision)
+* Show/Buffer pairs: String versions now call Buffer versions and decode (DRY principle)
+
 ## [2.17.25] (2025-11-10)
 
 ### Performance (Phase 1.5 - Day 1-2: Quick Wins) ⚡
