@@ -1,6 +1,6 @@
 # IMPLEMENTATION PLAN - Next Phases
 
-**Version**: v2.17.36
+**Version**: v2.17.37
 **Updated**: 2025-11-10
 **Status**: Phase 2 Complete ✅ | Phase 4.5b Complete ✅ | Next: Phase 4a Testing + Phase 2b Auth
 
@@ -55,10 +55,10 @@ Focus on 5 critical user-facing gaps:
 **Target**: 25-30% coverage
 
 **Success Criteria**:
-- [ ] All validators tested (boundary + malicious)
+- [x] All validators tested (90 tests: boundary + malicious)
 - [ ] Parsers + integration tested
 - [ ] Error handling tests passing
-- [ ] 25-30% line coverage
+- [ ] 25-30% line coverage (est. 15% with validators)
 
 ---
 

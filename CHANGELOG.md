@@ -1,3 +1,13 @@
+## [2.17.37] (2025-11-10)
+
+### Testing (TDD Phase 4a.1)
+
+* Validator tests: 90 test cases for 6 validators (boundary + malicious)
+* Coverage: validateChangelist, validateAcceptAction, validateSearchPattern, validateRevision, validateFilePath, validateRepositoryUrl
+* Test scenarios: empty/null, command injection, shell metacharacters, path traversal, SSRF, edge cases
+* File: src/test/unit/validation/validators.test.ts
+* Phase 4a.1 complete (est. 15% coverage)
+
 ## [2.17.36] (2025-11-10)
 
 ### Performance Ultrathink
