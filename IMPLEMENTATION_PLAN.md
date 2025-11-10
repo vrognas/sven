@@ -421,6 +421,44 @@ Most `any` types are justifiable:
 
 **Verification:** 12 tests pass, decorators documented, strategy documented
 
+### Strategy Decisions (Unresolved Questions Answered)
+
+**1. Decorator Extraction Approach: DEFER ✅**
+
+Extract non-decorated logic only in Phase 2:
+- ✅ **Extract:** Changelist management, file watcher setup, group creation (non-decorated)
+- ❌ **Don't extract:** `updateModelState()`, remote polling, throttled/debounced methods
+- 📅 **Defer to Phase 5:** Decorator refactor when test coverage exists
+
+**Rationale:** Decorator state coupling (module/instance) makes extraction risky. Safe deferral possible since decorated methods isolated.
+
+**2. AuthService Extraction: SKIP ENTIRELY ✅**
+
+Don't extract AuthService:
+- High coupling with retry logic across Repository
+- SecretStorage spans multiple methods
+- Low ROI (150 lines) vs high regression risk
+- Keep auth methods on Repository, improve in-place if needed
+
+**Rationale:** Phase 2 downgraded to refactor-in-place; AuthService extraction not worth risk.
+
+**3. Remote Poll Default: BOTH (Config + Default Change) ✅**
+
+Increase default + add user config:
+```json
+"svn.remoteChanges.checkFrequency": {
+  "type": "number",
+  "default": 900,
+  "description": "Check for remote changes every N seconds (0 to disable)"
+}
+```
+
+- Default: 300s → 900s (reduces UI freeze frequency 3x)
+- Config: Users set 300/600/900/0 based on workflow
+- Implementation: Phase 1.5 Day 1-2 (15min)
+
+**Rationale:** Power users get control, casual users get better default, zero breaking change.
+
 ### Success Criteria
 - ✅ Performance: 60%+ improvement (activation, status, memory)
 - ✅ Dead code: 200-300 lines removed
@@ -442,11 +480,12 @@ Phase 2 can proceed when:
 
 ---
 
-## Phase 2: Architecture - Service Extraction (3 weeks)
+## Phase 2: Architecture - Refactor-in-Place (3 weeks)
 
-### Why Second
+### Why Second (Revised from Service Extraction)
 - With clean types, can safely refactor
-- Clear boundaries enable testing
+- Phase 1.5 decisions: DEFER decorators, SKIP AuthService
+- Refactor-in-place safer than extraction given coupling
 - Must happen BEFORE writing tests (can't test god class)
 
 ### Current Reality: Repository.ts (1,179 lines)
@@ -463,107 +502,94 @@ Phase 2 can proceed when:
 - Event emission
 - Disposal
 
-### Service Extraction Goals REVISED
+### Refactor Goals REVISED (Post-Phase 1.5 Decisions)
 
-#### ❌ Original Plan: 7 Services, 450-550 lines
-**Problems:**
-- ConflictService weak boundary (just a resource group)
-- CacheService undefined (no clear cache abstraction)
-- OperationService = skeleton of Repository (extraction dangerous)
-- EventService = infrastructure not service (zero value)
-- 450-550 lines impossible without extracting core coordination
+#### ❌ Original Plan: Extract 3-4 Services, 650-750 lines
+**Problems (Expert Audit):**
+- Decorator coupling: extraction breaks throttle/debounce semantics
+- Async constructors: can't test extracted services
+- run() skeleton: all services need it, duplication or breakage
+- High risk, low reward given coupling
 
-#### ✅ Revised Plan: 3-4 Services, 650-750 lines
+#### ✅ Final Plan: Refactor-in-Place, 900-950 lines
 
-**Extract These:**
+**Refactor (Non-Decorated Logic Only):**
 
-1. **StatusService** (150-200 lines) - 🟢 SAFE
-   - `updateModelState()` logic (lines 451-711)
-   - Status parsing, resource group population
-   - Clear boundary, minimal dependencies
+1. **Changelist Methods** (lines 596-656) - 🟢 LOW RISK
+   - Extract to private methods with clear contracts
+   - No decorators involved
+   - ~60 lines cleaner
 
-2. **ResourceGroupManager** (100-120 lines) - 🟡 MEDIUM
-   - Group creation/disposal
-   - Changelist management (lines 604-650)
-   - Resource ordering coordination
+2. **Group Creation Logic** (lines 614-654) - 🟢 LOW RISK
+   - Consolidate group recreation patterns
+   - Simplify resource ordering
+   - ~40 lines cleaner
 
-3. **RemoteChangeService** (120-150 lines) - 🟡 MEDIUM
-   - Remote change polling (lines 271-316, 386-401, 675-704)
-   - Interval management
-   - Remote group recreation
+3. **File Watcher Setup** (lines 190-240) - 🟢 LOW RISK
+   - Extract initialization logic
+   - Clear setup/teardown boundary
+   - ~50 lines cleaner
 
-4. **Optional: AuthenticationService** (150 lines) - 🟡 COMPLEX
-   - Auth retry logic (lines 1129-1177)
-   - Credential prompts
-   - SecretStorage integration
-   - Only if time permits
+4. **Config Facade** (NEW) - 🟢 LOW RISK
+   - Centralize 20+ `configuration.get()` calls
+   - Reduce duplication
+   - ~30 lines cleaner (net)
 
-**DO NOT Extract:**
-- ❌ OperationService - too central (run() method = skeleton)
-- ❌ EventService - infrastructure not service
-- ❌ ConflictService - not a service (just resource group)
-- ❌ CacheService - undefined scope
+**DO NOT Extract/Refactor:**
+- ❌ `updateModelState()` - uses `@throttle` + `@globalSequentialize`
+- ❌ Remote polling - uses `@debounce` + `run()`
+- ❌ Auth methods - high coupling, SKIP decision
+- ❌ Decorated methods - DEFER to Phase 5
 
 **Realistic Target:**
-- Repository.ts: 1,179 → **650-750 lines** (not 450-550)
-- Extracted services: **3-4** (not 7)
-- Each service: <250 lines
+- Repository.ts: 1,179 → **900-950 lines** (not 650-750)
+- Services extracted: **0** (defer to Phase 5)
+- Refactored methods: **4 areas** (180 lines cleaner)
 
-### Approach: Incremental Not Big Bang
+### Approach: Refactor-in-Place
 
-#### Cycle 1: StatusService (Week 1)
+#### Week 1: Changelist + Group Methods
 ```typescript
-class StatusService {
-  constructor(private repository: BaseRepository, private config: Configuration) {}
-
-  async updateStatus(checkRemote: boolean): Promise<StatusResult> {
-    const statuses = await this.repository.getStatus({...});
-    return this.parseStatuses(statuses);
-  }
-}
+// Extract to private methods
+private createChangelistGroup(name: string): SourceControlResourceGroup { ... }
+private disposeChangelistGroup(name: string): void { ... }
+private recreateResourceGroups(): void { ... }
 ```
-- Extract lines 451-614
-- Test coverage: 80%+
+- Lines 596-656 → private methods
+- Test existing functionality
 - Commit when stable
 
-#### Cycle 2: ResourceGroupManager (Week 2)
+#### Week 2: File Watcher + Config Facade
 ```typescript
-class ResourceGroupManager {
-  constructor(private sourceControl: SourceControl, private disposables: Disposable[]) {}
-
-  updateGroups(result: StatusResult): void {
-    this.updateChanges(result.changes);
-    this.updateConflicts(result.conflicts);
-    this.updateChangelists(result.changelists);
-  }
+// Config facade
+class ConfigFacade {
+  constructor(private config: Configuration) {}
+  get remoteCheckFrequency(): number { return this.config.get('remoteChanges.checkFrequency', 900); }
+  // ... 15 more getters
 }
+
+// File watcher extraction
+private setupFileWatcher(): void { ... }
+private teardownFileWatcher(): void { ... }
 ```
-- Extract group management logic
-- Test coverage: 70%+
+- Reduce config duplication
+- Isolate watcher setup
 - Commit when stable
 
-#### Cycle 3: RemoteChangeService (Week 3)
-```typescript
-class RemoteChangeService {
-  private interval?: NodeJS.Timeout;
-
-  startPolling(): void {
-    const freq = this.config.get('remoteChanges.checkFrequency');
-    this.interval = setInterval(() => this.check(), freq * 1000);
-  }
-}
-```
-- Extract polling logic
-- Test coverage: 60%+
-- Commit when stable
+#### Week 3: Testing + Cleanup
+- Add tests for refactored methods (50 tests, ~1000 lines)
+- Remove TODOs and commented code
+- Update documentation
+- Final commit
 
 ### Success Criteria
-- Repository.ts: 1,179 → 650-750 lines
-- 3-4 focused services extracted
-- Each service <250 lines
+- Repository.ts: 1,179 → 900-950 lines
+- 4 areas refactored (180 lines cleaner)
+- Config facade created (reduces duplication)
+- 50 new tests for refactored methods
 - Zero functionality regression
-- Integration tests pass
 - Extension activates correctly
+- Decorated methods preserved (defer to Phase 5)
 
 ---
 
