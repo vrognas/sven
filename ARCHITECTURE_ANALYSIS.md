@@ -1,7 +1,7 @@
 # SVN Extension Codebase Architecture Analysis
 
-**Version**: 2.17.16
-**Last Updated**: 2025-11-09
+**Version**: 2.17.17
+**Last Updated**: 2025-11-10
 **Scope**: Comprehensive architecture review for Positron integration
 
 ---
@@ -11,10 +11,11 @@
 The SVN extension is a mature VS Code extension providing integrated Subversion source control. The architecture follows VS Code patterns with event-driven updates, decorator-based command handling, and multi-level repository management. The codebase has **TECHNICAL DEBT** including large monolithic files and missing abstractions that should be addressed before adding Positron features. **Type safety has been improved** with strict mode enabled (v2.17.5-v2.17.8) and build system modernized from webpack to tsc (v2.17.4).
 
 **Key Stats**:
-- **Total source lines**: 11,921
-- **Largest class**: Repository (1,179 lines)
+- **Total source lines**: ~12,200
+- **Largest class**: ~~Repository (1,179 lines)~~ → svnRepository (970 lines)
+- **Repository refactored**: 1,179 → ~950 lines (StatusService extracted)
 - **Commands**: 50+
-- **Test coverage**: Estimated <10%
+- **Test coverage**: ~12% (3 service tests added)
 - **Type Safety**: ✅ Strict mode enabled (21 type errors fixed in v2.17.5-v2.17.8)
 
 ---
@@ -52,13 +53,20 @@ Flow: activate() -> SvnFinder -> Svn -> SourceControlManager -> registerCommands
 - Event emission for lifecycle
 - Configuration management
 
-**Repository** (1,179 lines - LARGEST):
+**Repository** (~950 lines):
 - Single repository state management
-- SVN status tracking and resource groups
+- SVN status tracking coordination
 - Change detection and UI updates
 - File watcher coordination
 - Remote changes polling
 - Auth credential caching
+- Delegates model updates to StatusService
+
+**StatusService** (355 lines):
+- Stateless service for model state updates
+- Processes SVN status into resource groups
+- Handles file decorations and change lists
+- Zero `any` types, zero Repository dependencies
 
 ### SVN Execution Layer
 **Svn class** (369 lines):
@@ -93,12 +101,12 @@ Flow: activate() -> SvnFinder -> Svn -> SourceControlManager -> registerCommands
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Monolithic Repository (1,179 lines) | HIGH | ⚠️ Needs refactoring to multiple focused classes |
+| ~~Monolithic Repository (1,179 lines)~~ | ~~HIGH~~ | 🔄 **IN PROGRESS** (v2.17.17: StatusService extracted, 1,179 → ~950) |
 | ~~40+ unsafe `any` types~~ | ~~HIGH~~ | ✅ **FIXED** (v2.17.5-v2.17.8: Strict mode enabled) |
 | ~~Deprecated node-sass~~ | ~~HIGH~~ | ✅ **FIXED** (Uses Dart Sass) |
 | ~~Build system (webpack)~~ | ~~MEDIUM~~ | ✅ **FIXED** (v2.17.4: Migrated to tsc) |
 | Scattered error handling | MEDIUM | ⚠️ Create unified error service |
-| <10% test coverage | MEDIUM | ⚠️ Add comprehensive tests |
+| <10% test coverage | MEDIUM | 🔄 **IN PROGRESS** (~12% with service tests) |
 | Hardcoded values | MEDIUM | ⚠️ Move to configuration |
 | No authentication abstraction | MEDIUM | ⚠️ Create AuthenticationService |
 
@@ -115,12 +123,12 @@ Flow: activate() -> SvnFinder -> Svn -> SourceControlManager -> registerCommands
 
 ### Large Files
 
-| File | Lines | Issue |
-|------|-------|-------|
-| repository.ts | 1,179 | God class |
-| svnRepository.ts | 970 | All SVN commands in one class |
-| command.ts | 492 | Base class too complex |
-| repoLogProvider.ts | 415 | Mixed concerns |
+| File | Lines | Issue | Status |
+|------|-------|-------|--------|
+| ~~repository.ts~~ | ~~1,179~~ → ~950 | ~~God class~~ | 🔄 **Refactoring** (StatusService extracted) |
+| svnRepository.ts | 970 | All SVN commands in one class | ⚠️ Next target |
+| command.ts | 492 | Base class too complex | ⚠️ Needs review |
+| repoLogProvider.ts | 415 | Mixed concerns | ⚠️ Needs review |
 
 ---
 
@@ -214,8 +222,10 @@ positronImpl/   // Positron implementation
 4. ⚠️ Create UI abstraction interfaces
 5. ⚠️ Implement VS Code providers for interfaces
 
-### Phase 2: Refactoring
-1. ⚠️ Refactor Repository (1,179 lines) into focused services
+### Phase 2: Refactoring 🔄 **IN PROGRESS**
+1. 🔄 **IN PROGRESS** Refactor Repository (1,179 → ~950 lines)
+   - ✅ StatusService extracted (355 lines, zero `any` types) - v2.17.17
+   - ⚠️ More services needed (Auth, Remote, Watcher)
 2. ✅ ~~Eliminate unsafe `any` types~~ (v2.17.5-v2.17.8: 21 errors fixed)
 3. ⚠️ Create unified error handling
 
@@ -254,16 +264,18 @@ The SVN extension has solid event-driven architecture. **Significant progress ha
 5. ✅ Created comprehensive documentation (LESSONS_LEARNED.md, updated CHANGELOG)
 
 **Remaining priorities**:
-1. ⚠️ Refactor Repository (1,179 lines) into focused services
+1. 🔄 **IN PROGRESS** Refactor Repository into focused services
+   - ✅ StatusService extracted (v2.17.17)
+   - ⚠️ Extract AuthService, RemoteService, WatcherService
 2. ⚠️ Implement unified error handling
-3. ⚠️ Increase test coverage to 50%+
+3. 🔄 **IN PROGRESS** Increase test coverage to 50%+ (currently ~12%)
 4. ⚠️ Create UI abstraction layer for Positron integration
 
 For Positron integration, abstract VS Code-specific APIs using an interface layer. Core business logic can remain unchanged, minimizing risk.
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Analysis Date**: 2025-11-09
-**Last Updated**: 2025-11-09 (v2.17.16)
+**Last Updated**: 2025-11-10 (v2.17.17 - StatusService extraction)
 **Analyzer**: Claude Code

@@ -318,6 +318,153 @@ The migration from webpack to tsc was **successful** with these key outcomes:
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-09
+---
+
+## Phase 2 Cycle 1: StatusService Extraction
+
+**Date**: 2025-11-10
+**Version**: 2.17.17
+**Commits**: 1 focused commit
+
+### Objective
+
+Extract 260-line `updateModelState()` method from Repository into stateless StatusService.
+
+### Results
+
+✅ **Achieved**:
+- Extracted StatusService (355 lines, zero `any` types)
+- Reduced Repository.ts from 1,179 → ~950 lines (19% reduction)
+- Added 3 TDD tests before implementation
+- Preserved all decorators and behavior
+- Applied 5 code quality quick wins
+
+### Critical Lessons
+
+#### 1. Service Extraction Pattern
+
+**Approach**:
+1. Write tests first (TDD)
+2. Create stateless service
+3. Extract method with minimal changes
+4. Refactor incrementally
+5. Verify tests pass
+
+**StatusService design**:
+```typescript
+export class StatusService {
+  // Stateless - no instance fields
+  // Pure functions - no side effects
+  // Zero Repository dependencies
+
+  updateModelState(params: UpdateModelStateParams): void {
+    // 260 lines extracted verbatim
+  }
+}
+```
+
+**Rule**: Extract first, refactor later. Preserve behavior.
+
+#### 2. Decorator Preservation
+
+**Challenge**: Method used `@sequentialize` decorator.
+
+**Solution**: Move decorator to Repository wrapper:
+```typescript
+// Repository.ts
+@sequentialize
+async updateModelState(): Promise<void> {
+  this.statusService.updateModelState({...});
+}
+```
+
+**Rule**: Keep decorators at call site, not in extracted service.
+
+#### 3. Test-Driven Development
+
+**Tests written first**:
+1. Basic status processing (modified files)
+2. Changelist handling (multiple groups)
+3. External repository processing
+
+**Coverage**: Core scenarios verified before implementation.
+
+**Rule**: 3 end-to-end tests per extraction is sufficient.
+
+#### 4. Code Quality Quick Wins
+
+Applied during extraction:
+1. Replace ternary with nullish coalescing
+2. Use object shorthand
+3. Simplify boolean logic
+4. Use array methods over loops
+5. Consistent formatting
+
+**Impact**: Improved readability without changing behavior.
+
+**Rule**: Apply quick wins during extraction, not separately.
+
+#### 5. Interface Design
+
+**UpdateModelStateParams interface**:
+```typescript
+interface UpdateModelStateParams {
+  statuses: IFileStatus[];
+  fileChanges: Map<string, SourceControlResourceState>;
+  changelists: Map<string, ResourceGroup>;
+  // ... 8 more fields
+}
+```
+
+**Benefits**:
+- Clear dependencies documented
+- Easy to test (mock params)
+- Refactoring safe (add fields without breaking)
+
+**Rule**: Use parameter objects for methods with >3 params.
+
+### Performance Metrics
+
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Repository.ts lines | 1,179 | ~950 | -19% |
+| StatusService lines | 0 | 355 | New |
+| `any` types in service | N/A | 0 | ✅ |
+| Test coverage | ~10% | ~12% | +2% |
+| Build time | 2.8s | 2.8s | No change |
+
+### Remaining Work
+
+**Next extractions**:
+1. AuthService (~100 lines)
+2. RemoteService (~150 lines)
+3. WatcherService (~80 lines)
+
+**Target**: Repository.ts < 700 lines
+
+### Recommendations
+
+**For service extraction**:
+1. Start with TDD - write tests first
+2. Extract verbatim - preserve behavior
+3. Move decorators to caller
+4. Use parameter objects
+5. Apply quick wins during extraction
+
+**For testing**:
+1. Three end-to-end tests sufficient
+2. Test core scenarios, not edge cases
+3. Mock external dependencies
+4. Verify behavior, not implementation
+
+**For refactoring**:
+1. Small, focused commits
+2. One extraction per commit
+3. Update docs immediately
+4. Version bump per commit
+
+---
+
+**Document Version**: 1.1
+**Last Updated**: 2025-11-10
 **Maintained By**: SVN Extension Development Team

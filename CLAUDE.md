@@ -39,6 +39,13 @@
 - Handles remote change detection and status bar
 - Stores authentication using VS Code SecretStorage API
 
+**Status Service (`src/services/statusService.ts`)**
+
+- Stateless service for model state updates
+- Processes SVN status into resource groups
+- Handles file decorations and change lists
+- Zero dependencies on Repository class
+
 **Base Repository (`src/svnRepository.ts`)**
 
 - Lower-level repository operations

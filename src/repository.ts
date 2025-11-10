@@ -15,6 +15,7 @@ import {
   window,
   workspace
 } from "vscode";
+import { StatusService } from "./services/StatusService";
 import {
   IAuth,
   IFileStatus,
@@ -53,7 +54,7 @@ import {
   timeout,
   toDisposable
 } from "./util";
-import { match, matchAll } from "./util/globMatch";
+import { match } from "./util/globMatch";
 import { RepositoryFilesWatcher } from "./watchers/repositoryFilesWatcher";
 
 function shouldShowProgress(operation: Operation): boolean {
@@ -85,6 +86,7 @@ export class Repository implements IRemoteRepository {
   private remoteChangedUpdateInterval?: NodeJS.Timeout;
   private deletedUris: Uri[] = [];
   private canSaveAuth: boolean = false;
+  private statusService: StatusService;
 
   private lastPromptAuth?: Thenable<IAuth | undefined>;
 
@@ -187,6 +189,12 @@ export class Repository implements IRemoteRepository {
     public repository: BaseRepository,
     private secrets: SecretStorage
   ) {
+    this.statusService = new StatusService(
+      repository,
+      repository.workspaceRoot,
+      repository.root
+    );
+
     this._fsWatcher = new RepositoryFilesWatcher(repository.root);
     this.disposables.push(this._fsWatcher);
 
@@ -441,175 +449,25 @@ export class Repository implements IRemoteRepository {
   @throttle
   @globalSequentialize("updateModelState")
   public async updateModelState(checkRemoteChanges: boolean = false) {
-    const changes: Resource[] = [];
-    const unversioned: Resource[] = [];
-    const conflicts: Resource[] = [];
-    const changelists: Map<string, Resource[]> = new Map();
-    const remoteChanges: Resource[] = [];
-
-    this.statusExternal = [];
-    this.statusIgnored = [];
-    this.isIncomplete = false;
-    this.needCleanUp = false;
-
-    const combineExternal = configuration.get<boolean>(
-      "sourceControl.combineExternalIfSameServer",
-      false
-    );
-
-    const statuses =
-      (await this.retryRun(async () => {
-        return this.repository.getStatus({
-          includeIgnored: true,
-          includeExternals: combineExternal,
-          checkRemoteChanges
-        });
-      })) ?? [];
-
-    const fileConfig = workspace.getConfiguration("files", Uri.file(this.root));
-
-    const filesToExclude = fileConfig.get<any>("exclude");
-
-    const excludeList: string[] = [];
-    for (const pattern in filesToExclude) {
-      if (filesToExclude.hasOwnProperty(pattern)) {
-        const negate = !filesToExclude[pattern];
-        excludeList.push((negate ? "!" : "") + pattern);
-      }
-    }
-
-    this.statusExternal = statuses.filter(
-      status => status.status === Status.EXTERNAL
-    );
-
-    if (combineExternal && this.statusExternal.length) {
-      const repositoryUuid = await this.repository.getRepositoryUuid();
-      this.statusExternal = this.statusExternal.filter(
-        status => repositoryUuid !== status.repositoryUuid
-      );
-    }
-
-    const statusesRepository = statuses.filter(status => {
-      if (status.status === Status.EXTERNAL) {
-        return false;
-      }
-
-      return !this.statusExternal.some(external =>
-        isDescendant(external.path, status.path)
-      );
+    // Get categorized status from StatusService
+    const result = await this.retryRun(async () => {
+      return this.statusService.updateStatus({ checkRemoteChanges });
     });
 
-    const hideUnversioned = configuration.get<boolean>(
-      "sourceControl.hideUnversioned"
-    );
+    // Update metadata
+    this.statusExternal = [...result.statusExternal];
+    this.statusIgnored = [...result.statusIgnored];
+    this.isIncomplete = result.isIncomplete;
+    this.needCleanUp = result.needCleanUp;
 
-    const ignoreList = configuration.get<string[]>("sourceControl.ignore");
+    // Update resource groups
+    this.changes.resourceStates = result.changes;
+    this.conflicts.resourceStates = result.conflicts;
 
-    for (const status of statusesRepository) {
-      if (status.path === ".") {
-        this.isIncomplete = status.status === Status.INCOMPLETE;
-        this.needCleanUp = status.wcStatus.locked;
-      }
-
-      // If exists a switched item, the repository is incomplete
-      // To simulate, run "svn switch" and kill "svn" proccess
-      // After, run "svn update"
-      if (status.wcStatus.switched) {
-        this.isIncomplete = true;
-      }
-
-      if (
-        status.wcStatus.locked ||
-        status.wcStatus.switched ||
-        status.status === Status.INCOMPLETE
-      ) {
-        // On commit, `svn status` return all locked files with status="normal" and props="none"
-        continue;
-      }
-
-      if (matchAll(status.path, excludeList, { dot: true })) {
-        continue;
-      }
-
-      const uri = Uri.file(path.join(this.workspaceRoot, status.path));
-      const renameUri = status.rename
-        ? Uri.file(path.join(this.workspaceRoot, status.rename))
-        : undefined;
-
-      if (status.reposStatus) {
-        remoteChanges.push(
-          new Resource(
-            uri,
-            status.reposStatus.item,
-            undefined,
-            status.reposStatus.props,
-            true
-          )
-        );
-      }
-
-      const resource = new Resource(
-        uri,
-        status.status,
-        renameUri,
-        status.props
-      );
-
-      if (
-        (status.status === Status.NORMAL || status.status === Status.NONE) &&
-        (status.props === Status.NORMAL || status.props === Status.NONE) &&
-        !status.changelist
-      ) {
-        // Ignore non changed itens
-        continue;
-      } else if (status.status === Status.IGNORED) {
-        this.statusIgnored.push(status);
-      } else if (status.status === Status.CONFLICTED) {
-        conflicts.push(resource);
-      } else if (status.status === Status.UNVERSIONED) {
-        if (hideUnversioned) {
-          continue;
-        }
-
-        const matches = status.path.match(
-          /(.+?)\.(mine|working|merge-\w+\.r\d+|r\d+)$/
-        );
-
-        // If file end with (mine, working, merge, etc..) and has file without extension
-        if (
-          matches &&
-          matches[1] &&
-          statuses.some(s => s.path === matches[1])
-        ) {
-          continue;
-        }
-        if (
-          ignoreList.length > 0 &&
-          matchAll(path.sep + status.path, ignoreList, {
-            dot: true,
-            matchBase: true
-          })
-        ) {
-          continue;
-        }
-        unversioned.push(resource);
-      } else if (status.changelist) {
-        let changelist = changelists.get(status.changelist);
-        if (!changelist) {
-          changelist = [];
-        }
-        changelist.push(resource);
-        changelists.set(status.changelist, changelist);
-      } else {
-        changes.push(resource);
-      }
-    }
-
-    this.changes.resourceStates = changes;
-    this.conflicts.resourceStates = conflicts;
-
+    // Track changelist size for UI recreation
     const prevChangelistsSize = this.changelists.size;
 
+    // Clear existing changelist groups
     this.changelists.forEach((group, _changelist) => {
       group.resourceStates = [];
     });
@@ -620,7 +478,8 @@ export class Repository implements IRemoteRepository {
       "sourceControl.ignoreOnStatusCount"
     );
 
-    changelists.forEach((resources, changelist) => {
+    // Update or create changelist groups
+    result.changelists.forEach((resources, changelist) => {
       let group = this.changelists.get(changelist);
       if (!group) {
         // Prefix 'changelist-' to prevent double id with 'change' or 'external'
@@ -634,7 +493,7 @@ export class Repository implements IRemoteRepository {
         this.changelists.set(changelist, group);
       }
 
-      group.resourceStates = resources;
+      group.resourceStates = [...resources];
 
       if (!ignoreOnStatusCountList.includes(changelist)) {
         counts.push(group);
@@ -653,7 +512,7 @@ export class Repository implements IRemoteRepository {
       this.unversioned.hideWhenEmpty = true;
     }
 
-    this.unversioned.resourceStates = unversioned;
+    this.unversioned.resourceStates = result.unversioned;
 
     if (configuration.get<boolean>("sourceControl.countUnversioned", false)) {
       counts.push(this.unversioned);
@@ -684,10 +543,10 @@ export class Repository implements IRemoteRepository {
 
     // Update remote changes group
     if (checkRemoteChanges) {
-      this.remoteChanges.resourceStates = remoteChanges;
+      this.remoteChanges.resourceStates = result.remoteChanges;
 
-      if (remoteChanges.length !== this.remoteChangedFiles) {
-        this.remoteChangedFiles = remoteChanges.length;
+      if (result.remoteChanges.length !== this.remoteChangedFiles) {
+        this.remoteChangedFiles = result.remoteChanges.length;
         this._onDidChangeRemoteChangedFiles.fire();
       }
     }

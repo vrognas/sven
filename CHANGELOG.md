@@ -1,3 +1,20 @@
+## [2.17.25] (2025-11-10)
+
+### Refactoring
+
+* Extract StatusService from Repository (Phase 2 Cycle 1)
+* Reduce Repository.ts: 1,179 → ~950 lines (-229 LOC)
+* Add StatusService: 355 lines, zero `any` types, pure function design
+* Apply 5 code quality quick wins (type safety, extracted methods)
+* Add 3 TDD tests for StatusService (categorization, changelists, filtering)
+* Preserve critical decorators (@throttle, @globalSequentialize)
+* Update architecture docs (ARCHITECTURE_ANALYSIS.md, LESSONS_LEARNED.md)
+
+### Build
+
+* Rebuild dist with StatusService extraction
+* Test coverage: ~10% → ~12%
+
 ## [2.17.24] (2025-11-09)
 
 ### Dependencies
