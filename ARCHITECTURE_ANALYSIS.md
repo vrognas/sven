@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.68
+**Version**: 2.17.71
 **Updated**: 2025-11-11
 
 ---
@@ -13,7 +13,7 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Source lines**: ~12,200
 - **Repository**: 1,179 → 923 lines (22% reduction, 3 services extracted)
 - **Commands**: 50+ (22 refactored, 127 lines removed)
-- **Coverage**: ~21-23% (121 tests)
+- **Coverage**: ~21-23% (127 tests)
 - **Performance**: ✅ Phases 8-10+12+14-15 COMPLETE (24 bottlenecks fixed, 1 bug)
 
 ---

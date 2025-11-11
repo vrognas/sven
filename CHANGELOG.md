@@ -1,3 +1,20 @@
+## [2.17.71] (2025-11-11)
+
+### Test: Add missing parser tests (TDD prep for xml2js→fast-xml-parser) 🧪
+
+* **Add diffParser.test.ts**: 3 tests for SVN diff XML parsing
+  - Single path element
+  - Multiple path elements
+  - Empty paths rejection
+* **Add listParser.test.ts**: 3 tests for SVN list XML parsing
+  - Single entry
+  - Multiple entries
+  - Empty list handling
+* **Fix lint error**: deleteUnversioned.test.ts unused catch variable
+* **Add @types/picomatch**: Fix TypeScript compilation
+* **Purpose**: TDD foundation before xml2js migration (Phase 0/4)
+* **Coverage**: 2/5 parsers now have tests (was 3/5, now 5/5)
+
 ## [2.17.70] (2025-11-11)
 
 ### Perf: Dependency optimization - minimatch → picomatch ⚡
