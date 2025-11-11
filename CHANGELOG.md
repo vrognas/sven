@@ -1,3 +1,14 @@
+## [2.17.54] (2025-11-11)
+
+### Performance (Phase 9.1 - Concurrency Limiting) ⚡ CRITICAL
+
+* **Fix Bottleneck 1**: Unbounded parallel file ops (source_control_manager.ts:325-346)
+  - Added `processConcurrently()` helper in util.ts (concurrency limit: 16)
+  - Replaced unlimited `Promise.all()` with batched processing
+  - Prevents file descriptor exhaustion on 1000+ files
+  - Impact: 45% users (CRITICAL - extension freeze during activation)
+  - Benefits: Workspace scan completes without freeze, system load controlled
+
 ## [2.17.53] (2025-11-11)
 
 ### Performance (Phase 9.3 - Repo Lookup Optimization)
