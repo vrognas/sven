@@ -1,3 +1,10 @@
+## [2.17.89] (2025-11-11)
+
+### Cleanup: Remove debug logging
+
+* **Debug removal**: Remove console.log from logParser.ts
+* **Impact**: Cleaner console output
+
 ## [2.17.88] (2025-11-11)
 
 ### Cleanup: Remove duplicate keys in XML parser

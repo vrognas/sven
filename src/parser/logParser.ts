@@ -4,12 +4,6 @@ import { XmlParserAdapter } from "./xmlParserAdapter";
 export async function parseSvnLog(content: string): Promise<ISvnLogEntry[]> {
   return new Promise<ISvnLogEntry[]>((resolve, reject) => {
     try {
-      // Log first 500 chars of XML for debugging
-      if (content.length > 0) {
-        const preview = content.substring(0, 500).replace(/\n/g, '\\n');
-        console.log('[logParser] XML preview:', preview);
-      }
-
       const result = XmlParserAdapter.parse(content, {
         mergeAttrs: true,
         explicitRoot: false,
