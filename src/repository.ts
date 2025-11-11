@@ -383,7 +383,7 @@ export class Repository implements IRemoteRepository {
 
         // If some match, remove from list
         return !rules.some(
-          rule => rule.match(relativePath) || rule.match(uri.fsPath)
+          rule => rule(relativePath) || rule(uri.fsPath)
         );
       });
     }
