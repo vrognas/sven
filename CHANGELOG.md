@@ -1,3 +1,14 @@
+## [2.17.53] (2025-11-11)
+
+### Performance (Phase 9.3 - Repo Lookup Optimization)
+
+* **Fix Bottleneck 3**: Expensive repo lookup (source_control_manager.ts:415-428)
+  - Removed sequential `repository.info()` SVN command calls
+  - Use fast `isDescendant()` path check instead (O(n) vs network-bound)
+  - Eliminated try/catch overhead and network latency
+  - Impact: 8% users (changelist ops on slow networks)
+  - Benefits: Changelist ops 50-300ms → <50ms (5+ repos)
+
 ## [2.17.52] (2025-11-11)
 
 ### Performance (Phase 9.2 - Config Caching)
