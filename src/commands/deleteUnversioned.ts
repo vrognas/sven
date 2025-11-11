@@ -30,7 +30,7 @@ export class DeleteUnversioned extends Command {
           const stat = await lstat(fsPath);
 
           if (stat.isDirectory()) {
-            deleteDirectory(fsPath);
+            await deleteDirectory(fsPath);
           } else {
             await unlink(fsPath);
           }

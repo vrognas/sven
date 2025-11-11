@@ -1,3 +1,13 @@
+## [2.17.67] (2025-11-11)
+
+### Fix: Phase 14 - Async Deletion Bug 🔥
+
+* **Critical bug fix**: Directory deletion not awaited (deleteUnversioned.ts:33)
+  - Added: `await` to deleteDirectory() call
+  - Impact: 40-50% users, prevents silent failures and data loss
+  - Errors now properly caught by handleRepositoryOperation
+  - Tests: 2 TDD tests in deleteUnversioned.test.ts
+
 ## [2.17.66] (2025-11-11)
 
 ### Docs: Next phase audit + plan update 📋

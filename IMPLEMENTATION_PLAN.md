@@ -47,9 +47,9 @@ if (stat.isDirectory()) {
 2. Errors properly caught by handleRepositoryOperation
 
 **Success Criteria**:
-- [ ] await added to deleteDirectory call
-- [ ] Directory deletion errors surface to user
-- [ ] Tests pass
+- [x] await added to deleteDirectory call (v2.17.67)
+- [x] Directory deletion errors surface to user
+- [x] Tests pass (2 TDD tests)
 
 ---
 
