@@ -268,3 +268,25 @@ export function pathEquals(a: string, b: string): boolean {
 }
 
 export const EmptyDisposable = toDisposable(() => null);
+
+/**
+ * Phase 9.1 perf fix - process array items with concurrency limit
+ * Prevents file descriptor exhaustion and system load spikes
+ * @param items Array of items to process
+ * @param fn Async function to apply to each item
+ * @param concurrency Max concurrent operations (default: 16)
+ * @returns Promise resolving to array of results
+ */
+export async function processConcurrently<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number = 16
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
