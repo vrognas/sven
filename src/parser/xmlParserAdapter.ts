@@ -52,7 +52,27 @@ export class XmlParserAdapter {
       allowBooleanAttributes: true,
       cdataPropName: "__cdata", // Handle CDATA sections
       htmlEntities: true, // Decode HTML entities
-      removeNSPrefix: true // Remove namespace prefixes
+      removeNSPrefix: true, // Remove namespace prefixes
+      numberParseOptions: {
+        hex: false,
+        leadingZeros: false,
+        skipLike: /./  // Don't parse any numbers, keep as strings
+      },
+      stopNodes: [], // Parse all nodes
+      unpairedTags: [], // No unpaired tags expected
+      alwaysCreateTextNode: false,
+      commentPropName: false, // Ignore comments
+      isArray: () => false, // Single elements not wrapped in arrays
+      tagValueProcessor: (tagName: string, tagValue: string) => tagValue,
+      attributeValueProcessor: (attrName: string, attrValue: string) => attrValue,
+      // Disable strict XML validation to match xml2js permissiveness
+      ignorePI: true, // Ignore processing instructions
+      ignorePiTags: true, // Ignore PI tags
+      preserveOrder: false, // Don't preserve order
+      // Allow malformed XML that xml2js would accept
+      trimValue: true,
+      parseTagValue: true,
+      parseAttributeValue: false
     });
   }
 

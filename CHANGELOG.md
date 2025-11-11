@@ -1,3 +1,14 @@
+## [2.17.87] (2025-11-11)
+
+### Fix: camelcase() regex for XML parser compatibility
+
+* **Character support**: Allow @, #, ., : in tag names
+  - @ for attribute prefix (@_)
+  - # for text nodes (#text)
+  - . and : for XML tag names
+* **Root cause**: XML parser succeeded, but camelCase transformation rejected @_ prefix
+* **Impact**: Fixes "Invalid characters in tag name" error in SVN log parsing
+
 ## [2.17.84] (2025-11-11)
 
 ### Fix: XML parser invalid character handling
