@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { XmlParserAdapter } from "../../src/parser/xmlParserAdapter";
+import { XmlParserAdapter } from "../../parser/xmlParserAdapter";
 
 suite("XmlParserAdapter", () => {
   test("merges attributes into parent object", () => {

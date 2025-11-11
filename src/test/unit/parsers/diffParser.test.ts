@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { parseDiffXml } from "../../../src/parser/diffParser";
+import { parseDiffXml } from "../../../parser/diffParser";
 
 suite("DiffParser", () => {
   test("parses single path", async () => {

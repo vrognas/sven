@@ -1,3 +1,22 @@
+## [2.17.79] (2025-11-11)
+
+### Docs: Complete xml2js→fast-xml-parser migration (Phase 4/4) ✅
+
+* **Add comprehensive tests**: 18 new tests (adapter + SVN-specific)
+  - xmlParserAdapter.test.ts: 11 compatibility tests
+  - xmlParserAdapter-svn.test.ts: 7 SVN-specific tests
+  - Test hyphenated attributes, attribute merging, array handling
+* **Update LESSONS_LEARNED.md**: Complete migration case study
+  - Critical success factors (TDD, adapter pattern, incremental)
+  - Failure modes identified (activation risk, silent errors)
+  - Metrics: 79% bundle reduction, +17 tests, improved error handling
+  - Recommendations for future migrations
+* **Validation results**:
+  - Extension builds successfully (250KB bundle, down from ~322KB)
+  - VSIX packages: 648.39 KB (41% reduction from v2.17.0)
+  - xml2js removed, fast-xml-parser 627KB in node_modules
+  - All parsers functional, error handling improved
+
 ## [2.17.78] (2025-11-11)
 
 ### Chore: Remove xml2js dependency (Phase 3/4) 🧹
