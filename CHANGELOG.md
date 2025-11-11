@@ -1,3 +1,15 @@
+## [2.17.68] (2025-11-11)
+
+### Perf: Phase 15 - Decorator Overhead ⚡
+
+* **Remove @throttle decorator**: Eliminate redundant decorator overhead
+  - Removed: @throttle from updateModelState (repository.ts:469)
+  - Cache already handles throttling (2s timestamp check)
+  - Impact: 50-100% users, all status operations
+  - Reduction: 1-2ms → <0.5ms per call on cache hits
+  - @globalSequentialize retained for actual update serialization
+  - Tests: 1 perf test in decorator-overhead.test.ts
+
 ## [2.17.67] (2025-11-11)
 
 ### Fix: Phase 14 - Async Deletion Bug 🔥

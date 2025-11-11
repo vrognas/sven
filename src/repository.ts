@@ -466,10 +466,10 @@ export class Repository implements IRemoteRepository {
   private lastModelUpdate: number = 0;
   private readonly MODEL_CACHE_MS = 2000; // 2s cache
 
-  @throttle
   @globalSequentialize("updateModelState")
   public async updateModelState(checkRemoteChanges: boolean = false) {
     // Short-term cache: skip if called within 2s
+    // Note: @throttle removed (Phase 15) - cache already handles throttling
     const now = Date.now();
     if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) {
       return;
