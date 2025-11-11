@@ -1,3 +1,14 @@
+## [2.17.75] (2025-11-11)
+
+### Feat: Migrate infoParser to fast-xml-parser (Phase 2.3/4) 🚀
+
+* **Migrate infoParser.ts**: Replace xml2js with XmlParserAdapter
+  - Remove xml2js import, use XmlParserAdapter
+  - Improve error handling: specific error for missing entry
+  - Critical for extension activation (source_control_manager.ts:295)
+* **Tests**: All 3 infoParser tests pass (including hyphenated attrs)
+* **Progress**: 3/5 parsers migrated
+
 ## [2.17.74] (2025-11-11)
 
 ### Feat: Migrate diffParser to fast-xml-parser (Phase 2.2/4) 🚀
