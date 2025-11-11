@@ -1,3 +1,14 @@
+## [2.17.90] (2025-11-11)
+
+### Audit: Performance, bloat, tech debt cleanup
+
+* **Cleanup**: Remove obsolete docs (QA_SUMMARY.md, QA_REPORT_XML_PARSER.md, PR_SUMMARY.md, PERFORMANCE_ANALYSIS.md)
+* **Plan update**: IMPLEMENTATION_PLAN.md - 2 critical phases only
+  - Phase 16: Conditional resource index rebuild (5-15ms waste, 50-80% users)
+  - Phase 17: AuthService extraction (security, 20-30% repos)
+* **Arch update**: ARCHITECTURE_ANALYSIS.md version sync to v2.17.89
+* **Impact**: Focused roadmap, cleaner docs
+
 ## [2.17.89] (2025-11-11)
 
 ### Cleanup: Remove debug logging
