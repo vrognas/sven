@@ -1,3 +1,19 @@
+## [2.17.72] (2025-11-11)
+
+### Feat: Add XmlParserAdapter (Phase 1/4 xml2js→fast-xml-parser) 🔧
+
+* **Install fast-xml-parser**: Add dependency (9.55KB vs xml2js 45KB)
+* **Create xmlParserAdapter.ts**: xml2js-compatible wrapper
+  - mergeAttrs: Merge attributes into parent object
+  - explicitArray: Control array wrapping behavior
+  - camelcase: Transform tag/attribute names to camelCase
+  - XXE protection: processEntities: false
+* **Add xmlParserAdapter.test.ts**: 11 compatibility tests
+  - Attribute merging, camelCase transforms, array handling
+  - Hyphenated names (wc-status → wcStatus)
+  - Nested objects, text content, empty elements
+* **Purpose**: De-risk migration with compatibility layer
+
 ## [2.17.71] (2025-11-11)
 
 ### Test: Add missing parser tests (TDD prep for xml2js→fast-xml-parser) 🧪
