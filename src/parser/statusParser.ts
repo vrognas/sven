@@ -73,6 +73,7 @@ export async function parseStatusXml(content: string): Promise<IFileStatus[]> {
     try {
       const result = XmlParserAdapter.parse(content, {
         mergeAttrs: true,
+        explicitRoot: false,
         explicitArray: false,
         camelcase: true
       });

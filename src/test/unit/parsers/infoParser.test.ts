@@ -86,6 +86,8 @@ suite("InfoParser", () => {
 
     assert.strictEqual(result.url, "https://svn.example.com/repo/branches/feature");
     assert.strictEqual(result.relativeUrl, "^/branches/feature");
-    // wcInfo structure validated by type checking
+    // CRITICAL: Verify wcInfo.wcrootAbspath exists (needed for repo detection)
+    assert.ok(result.wcInfo);
+    assert.strictEqual(result.wcInfo.wcrootAbspath, "/home/user/repo");
   });
 });

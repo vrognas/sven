@@ -1,3 +1,18 @@
+## [2.17.80] (2025-11-11)
+
+### Fix: Add missing explicitRoot:false to XML parsers (CRITICAL) 🔥
+
+* **Root cause**: xml2js used explicitRoot:false to strip root element
+  - `<info><entry>` → `{ entry: {...} }` instead of `{ info: { entry: {...} } }`
+  - Adapter was missing this transformation
+  - Caused infoParser to fail → extension not loading in SVN repos
+* **Solution**: Implement explicitRoot handling in xmlParserAdapter
+  - Add stripRootElement() method to adapter
+  - Apply explicitRoot:false to infoParser, logParser, statusParser
+  - listParser, diffParser keep root element (access result.list/paths)
+  - Add test assertion for wcInfo.wcrootAbspath
+* **Impact**: Extension now properly activates in SVN repositories
+
 ## [2.17.79] (2025-11-11)
 
 ### Docs: Complete xml2js→fast-xml-parser migration (Phase 4/4) ✅

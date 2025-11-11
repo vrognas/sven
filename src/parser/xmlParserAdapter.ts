@@ -4,6 +4,7 @@ import { camelcase } from "../util";
 interface ParseOptions {
   mergeAttrs?: boolean;
   explicitArray?: boolean;
+  explicitRoot?: boolean;
   camelcase?: boolean;
 }
 
@@ -13,6 +14,7 @@ interface ParseOptions {
  * Implements key xml2js behaviors:
  * - mergeAttrs: Merge XML attributes into parent object
  * - explicitArray: Control single vs array element wrapping
+ * - explicitRoot: Include/exclude root element (false strips root)
  * - camelcase: Transform tag and attribute names to camelCase
  */
 export class XmlParserAdapter {
@@ -129,6 +131,24 @@ export class XmlParserAdapter {
   }
 
   /**
+   * Strip root element if explicitRoot: false
+   * Mimics xml2js explicitRoot: false behavior
+   */
+  private static stripRootElement(obj: any): any {
+    if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
+      return obj;
+    }
+
+    const keys = Object.keys(obj);
+    // If single root element, return its value
+    if (keys.length === 1) {
+      return obj[keys[0]];
+    }
+
+    return obj;
+  }
+
+  /**
    * Parse XML string with xml2js-compatible output
    *
    * @param xml XML string to parse
@@ -142,6 +162,11 @@ export class XmlParserAdapter {
     // Apply transformations in order
     if (options.mergeAttrs) {
       result = this.mergeAttributes(result);
+    }
+
+    // Strip root element if explicitRoot: false (default behavior)
+    if (options.explicitRoot === false) {
+      result = this.stripRootElement(result);
     }
 
     if (options.camelcase) {

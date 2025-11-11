@@ -6,6 +6,7 @@ export async function parseSvnLog(content: string): Promise<ISvnLogEntry[]> {
     try {
       const result = XmlParserAdapter.parse(content, {
         mergeAttrs: true,
+        explicitRoot: false,
         explicitArray: false,
         camelcase: true
       });

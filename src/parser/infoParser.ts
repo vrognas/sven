@@ -6,6 +6,7 @@ export async function parseInfoXml(content: string): Promise<ISvnInfo> {
     try {
       const result = XmlParserAdapter.parse(content, {
         mergeAttrs: true,
+        explicitRoot: false,
         explicitArray: false,
         camelcase: true
       });
