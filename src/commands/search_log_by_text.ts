@@ -29,7 +29,7 @@ export class SearchLogByText extends Command {
 
     await commands.executeCommand<void>("vscode.open", uri);
 
-    try {
+    await this.handleRepositoryOperation(async () => {
       const result = await window.withProgress(
         {
           cancellable: false,
@@ -46,9 +46,6 @@ export class SearchLogByText extends Command {
         create: true,
         overwrite: true
       });
-    } catch (error) {
-      window.showErrorMessage(`Search failed: ${error instanceof Error ? error.message : String(error)}`);
-      console.error(error);
-    }
+    }, "Unable to search log");
   }
 }

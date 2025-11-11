@@ -91,28 +91,17 @@ export class ChangeList extends Command {
     }
 
     if (changelistName === false) {
-      try {
-        await repository.removeChangelist(paths);
-      } catch (error) {
-        console.log(error);
-        window.showErrorMessage(
-          `Unable to remove file "${paths.join(",")}" from changelist`
-        );
-      }
+      await this.handleRepositoryOperation(
+        async () => await repository.removeChangelist(paths),
+        `Unable to remove file "${paths.join(",")}" from changelist`
+      );
     } else {
-      try {
+      await this.handleRepositoryOperation(async () => {
         await repository.addChangelist(paths, changelistName);
         window.showInformationMessage(
           `Added files "${paths.join(",")}" to changelist "${changelistName}"`
         );
-      } catch (error) {
-        console.log(error);
-        window.showErrorMessage(
-          `Unable to add file "${paths.join(
-            ","
-          )}" to changelist "${changelistName}"`
-        );
-      }
+      }, `Unable to add file "${paths.join(",")}" to changelist "${changelistName}"`);
     }
   }
 }

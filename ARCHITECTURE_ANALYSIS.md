@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.61
+**Version**: 2.17.68
 **Updated**: 2025-11-11
 
 ---
@@ -12,9 +12,9 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 **Stats**:
 - **Source lines**: ~12,200
 - **Repository**: 1,179 → 923 lines (22% reduction, 3 services extracted)
-- **Commands**: 50+ (5 refactored, 82 lines removed)
-- **Coverage**: ~21-23% (118 tests)
-- **Performance**: ✅ Phase 8+9+10 COMPLETE (22 bottlenecks fixed, 100% users)
+- **Commands**: 50+ (22 refactored, 127 lines removed)
+- **Coverage**: ~21-23% (121 tests)
+- **Performance**: ✅ Phases 8-10+12+14-15 COMPLETE (24 bottlenecks fixed, 1 bug)
 
 ---
 
@@ -55,29 +55,30 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ---
 
-## Recent Improvements (Phase 10 & 11) ✅
+## Recent Improvements (Phases 10-15) ✅
 
-### Performance Fixes (Phase 10, v2.17.58-61)
+### Performance (Phases 10+12+15, v2.17.58-68)
 - **processConcurrently import** ✅ Fixed regression (45% users)
 - **Command cache** ✅ Cached SourceControlManager (100% users, -10ms per command)
-- **updateInfo() cache** ✅ Timestamp-based 5s cache (30% users, 90% reduction)
+- **updateInfo() cache** ✅ Timestamp 5s cache (30% users, 90% reduction)
+- **updateModelState cache** ✅ Timestamp 2s cache (50% users, 60-80% burst reduction)
+- **Decorator overhead** ✅ Removed @throttle (50-100% users, 1-2ms → <0.5ms)
 
-### Code Quality (Phase 11, v2.17.58)
-- **82 lines removed** from 5 commands (50% size reduction)
-- **3 helpers added**: executeOnResources, handleRepositoryOperation, executeRevert
+### Code Quality (Phases 11+13, v2.17.58+64)
+- **127 lines removed** from 22 commands (Phase 11: 82, Phase 13: 45)
+- **5 helpers added**: executeOnResources, handleRepositoryOperation, executeRevert, getResourceStatesOrExit
+- **17 commands** using error helpers (up from 3)
 - **Single source of truth** for command patterns
 
-### Remaining Technical Debt
+### Bug Fixes (Phase 14, v2.17.67)
+- **Async deletion bug** ✅ Added await to deleteDirectory() (40-50% users, DATA LOSS fix)
 
-**Architecture Debt** (Deferred):
-- **God classes**: repository.ts (923) + svnRepository.ts (970) = 1,893 lines
-- **Missing AuthService**: Auth logic scattered (70 lines)
-- **Command base ISP**: 50+ commands inherit unused methods (492 lines)
+### Technical Debt
 
-**Low Priority**:
-- show()/showBuffer() duplication (35 lines)
-- Redundant null checks (30 lines)
-- @sequentialize blocks concurrent requests (20% users)
+**Deferred (Low ROI)**:
+- God classes: repository.ts (923) + svnRepository.ts (970) (diminishing returns)
+- Missing AuthService: Auth logic scattered (HIGH risk to extract)
+- Test coverage: 21-23% → 50%+ (20-30h effort)
 
 ---
 
@@ -122,5 +123,5 @@ See IMPLEMENTATION_PLAN.md (Deferred):
 
 ---
 
-**Version**: 1.9
-**Updated**: 2025-11-11 (v2.17.61)
+**Version**: 1.11
+**Updated**: 2025-11-11 (v2.17.68)

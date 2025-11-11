@@ -463,9 +463,19 @@ export class Repository implements IRemoteRepository {
     }
   }
 
-  @throttle
+  private lastModelUpdate: number = 0;
+  private readonly MODEL_CACHE_MS = 2000; // 2s cache
+
   @globalSequentialize("updateModelState")
   public async updateModelState(checkRemoteChanges: boolean = false) {
+    // Short-term cache: skip if called within 2s
+    // Note: @throttle removed (Phase 15) - cache already handles throttling
+    const now = Date.now();
+    if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) {
+      return;
+    }
+    this.lastModelUpdate = now;
+
     // Get categorized status from StatusService
     const result = await this.retryRun(async () => {
       return this.statusService.updateStatus({ checkRemoteChanges });

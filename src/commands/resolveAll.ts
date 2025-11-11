@@ -1,6 +1,5 @@
 import { window } from "vscode";
 import { getConflictPickOptions } from "../conflictItems";
-import { ISvnErrorData } from "../common/types";
 import { Repository } from "../repository";
 import { Command } from "./command";
 
@@ -26,16 +25,13 @@ export class ResolveAll extends Command {
         return;
       }
 
-      try {
+      await this.handleRepositoryOperation(async () => {
         const response = await repository.resolve(
           [conflict.resourceUri.path],
           choice.label
         );
         window.showInformationMessage(response);
-      } catch (error) {
-        const svnError = error as ISvnErrorData;
-        window.showErrorMessage(svnError.stderr || String(error));
-      }
+      }, "Unable to resolve conflict");
     }
   }
 }

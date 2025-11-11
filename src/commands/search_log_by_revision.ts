@@ -25,7 +25,7 @@ export class SearchLogByRevision extends Command {
 
     const revision = parseInt(input, 10);
 
-    try {
+    await this.handleRepositoryOperation(async () => {
       const resource = toSvnUri(
         Uri.file(repository.workspaceRoot),
         SvnUriAction.LOG_REVISION,
@@ -36,9 +36,6 @@ export class SearchLogByRevision extends Command {
       });
 
       await commands.executeCommand<void>("vscode.open", uri);
-    } catch (error) {
-      console.error(error);
-      window.showErrorMessage("Unable to log");
-    }
+    }, "Unable to log");
   }
 }

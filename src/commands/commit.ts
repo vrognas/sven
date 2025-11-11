@@ -1,6 +1,6 @@
 import * as path from "path";
 import { SourceControlResourceState, Uri, window } from "vscode";
-import { ISvnErrorData, Status } from "../common/types";
+import { Status } from "../common/types";
 import { inputCommitMessage } from "../messages";
 import { Resource } from "../resource";
 import { Command } from "./command";
@@ -33,10 +33,6 @@ export class Commit extends Command {
     });
 
     await this.runByRepository(uris, async (repository, resources) => {
-      if (!repository) {
-        return;
-      }
-
       const paths = resources.map(resource => resource.fsPath);
 
       for (const resource of resources) {
@@ -52,27 +48,23 @@ export class Commit extends Command {
         }
       }
 
-      try {
-        const message = await inputCommitMessage(
-          repository.inputBox.value,
-          true,
-          paths
-        );
+      const message = await inputCommitMessage(
+        repository.inputBox.value,
+        true,
+        paths
+      );
 
-        if (message === undefined) {
-          return;
-        }
+      if (message === undefined) {
+        return;
+      }
 
-        repository.inputBox.value = message;
+      repository.inputBox.value = message;
 
+      await this.handleRepositoryOperation(async () => {
         const result = await repository.commitFiles(message, paths);
         window.showInformationMessage(result);
         repository.inputBox.value = "";
-      } catch (error) {
-        console.error(error);
-        const svnError = error as ISvnErrorData;
-        window.showErrorMessage(svnError.stderrFormated || String(error));
-      }
+      }, "Unable to commit");
     });
   }
 }
