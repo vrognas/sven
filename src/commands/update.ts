@@ -9,7 +9,7 @@ export class Update extends Command {
   }
 
   public async execute(repository: Repository) {
-    try {
+    await this.handleRepositoryOperation(async () => {
       const ignoreExternals = configuration.get<boolean>(
         "update.ignoreExternals",
         false
@@ -24,9 +24,6 @@ export class Update extends Command {
       if (showUpdateMessage) {
         window.showInformationMessage(result);
       }
-    } catch (error) {
-      console.error(error);
-      window.showErrorMessage("Unable to update");
-    }
+    }, "Unable to update");
   }
 }

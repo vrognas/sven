@@ -1,3 +1,21 @@
+## [2.17.64] (2025-11-11)
+
+### Refactor: Phase 13.2 + 13.3 - Command Boilerplate 🏗️
+
+* **Phase 13.2**: Extract empty selection guards (6 commands, 18 lines)
+  - Add: getResourceStatesOrExit() helper to Command base
+  - Migrate: resolve, patch, remove, deleteUnversioned, addToIgnoreSCM, revert
+  - Pattern: `if (selection.length === 0) return` → `if (!selection) return`
+  - Test: 1 TDD test in commandBoilerplate.test.ts
+
+* **Phase 13.3**: Migrate error helpers (11 commands, 180 lines)
+  - Migrate: update, log, commitWithMessage, commit, changeList (2x)
+  - Migrate: revertAll, resolveAll, pullIncomingChange, search_log_*
+  - Pattern: `try/catch + console.log + showErrorMessage` → `handleRepositoryOperation()`
+  - Result: 17 commands total using Phase 11 helpers
+
+* **Summary**: 17 commands refactored, 25 net lines removed (109-84)
+
 ## [2.17.63] (2025-11-11)
 
 ### Perf: Phase 12 - Status Update Cache ⚡

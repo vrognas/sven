@@ -28,6 +28,12 @@ class TestCommand extends Command {
   ): Promise<T | undefined> {
     return this.handleRepositoryOperation(operation, errorMsg);
   }
+
+  public async testGetResourceStatesOrExit(
+    resourceStates: SourceControlResourceState[]
+  ) {
+    return this.getResourceStatesOrExit(resourceStates);
+  }
 }
 
 suite("Command Boilerplate Tests", () => {
@@ -79,6 +85,23 @@ suite("Command Boilerplate Tests", () => {
     test("Prompts for confirmation", async () => {
       // Test will be implemented after base method exists
       assert.ok(true, "Placeholder - executeRevert not yet implemented");
+    });
+  });
+
+  suite("13.2: getResourceStatesOrExit", () => {
+    test("Returns null on empty selection", async () => {
+      const result = await command.testGetResourceStatesOrExit([]);
+      assert.strictEqual(result, null, "Should return null for empty selection");
+    });
+
+    test("Returns selection when non-empty", async () => {
+      // Create mock resource state
+      const mockResource = {
+        resourceUri: { scheme: "file", fsPath: "/test/file.txt" }
+      } as any;
+
+      const result = await command.testGetResourceStatesOrExit([mockResource]);
+      assert.ok(result !== null, "Should return non-null for non-empty selection");
     });
   });
 });

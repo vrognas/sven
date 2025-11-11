@@ -7,11 +7,8 @@ export class Remove extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStates(resourceStates);
-
-    if (selection.length === 0) {
-      return;
-    }
+    const selection = await this.getResourceStatesOrExit(resourceStates);
+    if (!selection) return;
 
     const answer = await window.showWarningMessage(
       "Would you like to keep a local copy of the files?",

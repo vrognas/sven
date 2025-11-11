@@ -11,7 +11,7 @@ export class Log extends Command {
   }
 
   public async execute(repository: Repository) {
-    try {
+    await this.handleRepositoryOperation(async () => {
       const resource = toSvnUri(
         Uri.file(repository.workspaceRoot),
         SvnUriAction.LOG
@@ -21,9 +21,6 @@ export class Log extends Command {
       });
 
       await commands.executeCommand<void>("vscode.open", uri);
-    } catch (error) {
-      console.error(error);
-      window.showErrorMessage("Unable to log");
-    }
+    }, "Unable to log");
   }
 }

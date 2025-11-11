@@ -145,6 +145,17 @@ export abstract class Command implements Disposable {
     return resourceStates.filter(s => s instanceof Resource) as Resource[];
   }
 
+  /**
+   * Get resource states or return null if empty (Phase 13.2).
+   * Replaces pattern: `if (selection.length === 0) return;`
+   */
+  protected async getResourceStatesOrExit(
+    resourceStates: SourceControlResourceState[]
+  ): Promise<Resource[] | null> {
+    const selection = await this.getResourceStates(resourceStates);
+    return selection.length === 0 ? null : selection;
+  }
+
   protected runByRepository<T>(
     resource: Uri,
     fn: (repository: Repository, resource: Uri) => Promise<T>

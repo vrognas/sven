@@ -16,7 +16,7 @@ export class PullIncommingChange extends Command {
     );
 
     if (changes[0] instanceof IncomingChangeNode) {
-      try {
+      await this.handleRepositoryOperation(async () => {
         const incomingChange = changes[0];
 
         const result = await incomingChange.repository.pullIncomingChange(
@@ -26,10 +26,7 @@ export class PullIncommingChange extends Command {
         if (showUpdateMessage) {
           window.showInformationMessage(result);
         }
-      } catch (error) {
-        console.error(error);
-        window.showErrorMessage("Unable to update");
-      }
+      }, "Unable to update");
 
       return;
     }

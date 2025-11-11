@@ -23,13 +23,10 @@ export class RevertAll extends Command {
 
     await this.runByRepository(uris, async (repository, resources) => {
       const paths = resources.map(resource => resource.fsPath).reverse();
-
-      try {
-        await repository.revert(paths, depth);
-      } catch (error) {
-        console.log(error);
-        window.showErrorMessage("Unable to revert");
-      }
+      await this.handleRepositoryOperation(
+        async () => await repository.revert(paths, depth),
+        "Unable to revert"
+      );
     });
   }
 }

@@ -8,11 +8,8 @@ export class Resolve extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStates(resourceStates);
-
-    if (selection.length === 0) {
-      return;
-    }
+    const selection = await this.getResourceStatesOrExit(resourceStates);
+    if (!selection) return;
 
     const picks = getConflictPickOptions();
     const choice = await window.showQuickPick(picks, {

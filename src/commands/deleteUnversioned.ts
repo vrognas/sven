@@ -9,10 +9,8 @@ export class DeleteUnversioned extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStates(resourceStates);
-    if (selection.length === 0) {
-      return;
-    }
+    const selection = await this.getResourceStatesOrExit(resourceStates);
+    if (!selection) return;
     const uris = selection.map(resource => resource.resourceUri);
     const answer = await window.showWarningMessage(
       "Would you like to delete selected files?",
@@ -24,9 +22,9 @@ export class DeleteUnversioned extends Command {
       for (const uri of uris) {
         const fsPath = uri.fsPath;
 
-        try {
+        await this.handleRepositoryOperation(async () => {
           if (!(await exists(fsPath))) {
-            continue;
+            return;
           }
 
           const stat = await lstat(fsPath);
@@ -36,9 +34,7 @@ export class DeleteUnversioned extends Command {
           } else {
             await unlink(fsPath);
           }
-        } catch (err) {
-          // TODO(cjohnston) Show meaningful error to user
-        }
+        }, "Unable to delete file");
       }
     }
   }

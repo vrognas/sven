@@ -51,14 +51,10 @@ export class CommitWithMessage extends Command {
       }
     });
 
-    try {
+    await this.handleRepositoryOperation(async () => {
       const result = await repository.commitFiles(message, filePaths);
       window.showInformationMessage(result);
       repository.inputBox.value = "";
-    } catch (error) {
-      console.error(error);
-      const svnError = error as ISvnErrorData;
-      window.showErrorMessage(svnError.stderrFormated || String(error));
-    }
+    }, "Unable to commit");
   }
 }

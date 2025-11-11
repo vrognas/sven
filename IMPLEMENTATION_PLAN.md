@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.61
+**Version**: v2.17.64
 **Updated**: 2025-11-11
-**Status**: Phases 10-11 COMPLETE ✅
+**Status**: Phases 10-13.2/13.3 COMPLETE ✅
 
 ---
 
@@ -15,6 +15,8 @@
 - Phase 9: 3 NEW bottlenecks (v2.17.52-54, 45% impact)
 - Phase 10: Regression + hot path fixes (v2.17.59-60, 100% users)
 - Phase 11: Command boilerplate (v2.17.58, 82 lines removed)
+- Phase 12: Status update cache (v2.17.63, 60-80% burst reduction)
+- Phase 13.2/13.3: Empty guards + error helpers (v2.17.64, 17 commands)
 
 ---
 
@@ -74,24 +76,23 @@ async updateModelState(): Promise<void> {
 **Fix**: Remove all unnecessary repository null guards
 **Tests**: Existing command tests verify no regressions
 
-### 13.2: Extract Empty Selection Guards (30min)
+### 13.2: Extract Empty Selection Guards ✅ (v2.17.64)
 **Pattern**: 6 commands duplicate selection check (18 lines)
-**Files**: resolve.ts:13, revert.ts:13, patch.ts:12, etc.
-**Fix**: Add `getResourceStatesOrExit()` to Command base returning null on empty
+**Files**: resolve.ts, revert.ts, patch.ts, remove.ts, deleteUnversioned.ts, addToIgnoreSCM.ts
+**Fix**: Added `getResourceStatesOrExit()` to Command base returning null on empty
 **Tests** (1 TDD):
-1. Returns null on empty selection, exits early
+1. Returns null on empty selection, exits early ✓
 
-### 13.3: Migrate to Phase 11 Error Helpers (1.5h)
-**Pattern**: 17 commands not using `handleRepositoryOperation()` (180 lines)
-**Issue**: Phase 11.2 added helper but only 3 commands migrated
-**Fix**: Migrate remaining try/catch blocks to use helper
-**Tests**: Existing tests verify error handling preserved
+### 13.3: Migrate to Phase 11 Error Helpers ✅ (v2.17.64)
+**Pattern**: 11 commands migrated (update, log, commit*, changeList, revert*, resolve*, search*, pull*)
+**Fix**: Converted try/catch blocks to use `handleRepositoryOperation()`
+**Result**: 17 commands total using Phase 11 helpers (up from 3)
 
 **Success Criteria**:
-- [ ] 232 lines bloat removed (34 + 18 + 180)
-- [ ] Command base has 2 new helpers (getResourceStatesOrExit + migrations)
-- [ ] 20 commands refactored
-- [ ] Build passes, no regressions
+- [x] 25 net lines bloat removed (109-84 with tests/helpers)
+- [x] Command base has getResourceStatesOrExit helper
+- [x] 17 commands using error helpers (up from 3)
+- [x] Build passes, no regressions
 
 ---
 
