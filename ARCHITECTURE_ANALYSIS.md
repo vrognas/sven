@@ -67,17 +67,12 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - **3 helpers added**: executeOnResources, handleRepositoryOperation, executeRevert
 - **Single source of truth** for command patterns
 
-### Remaining Technical Debt
+### Technical Debt
 
-**Architecture Debt** (Deferred):
-- **God classes**: repository.ts (923) + svnRepository.ts (970) = 1,893 lines
-- **Missing AuthService**: Auth logic scattered (70 lines)
-- **Command base ISP**: 50+ commands inherit unused methods (492 lines)
-
-**Low Priority**:
-- show()/showBuffer() duplication (35 lines)
-- Redundant null checks (30 lines)
-- @sequentialize blocks concurrent requests (20% users)
+**Deferred (Low ROI)**:
+- God classes: repository.ts (923) + svnRepository.ts (970) (diminishing returns)
+- Missing AuthService: Auth logic scattered (HIGH risk to extract)
+- Test coverage: 21-23% → 50%+ (20-30h effort)
 
 ---
 

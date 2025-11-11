@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.60
+**Version**: v2.17.61
 **Updated**: 2025-11-11
-**Status**: Phase 10 COMPLETE ✅
+**Status**: Phases 10-11 COMPLETE ✅
 
 ---
 
@@ -18,216 +18,119 @@
 
 ---
 
-## Phase 10: Regression + Hot Path Performance 🔥 CRITICAL
+## Phase 12: Status Update Performance 🔥 CRITICAL
 
-**Target**: Fix regression bug, eliminate hot path bottlenecks
-**Effort**: 2-3h
-**Impact**: CRITICAL - 100% users, every SVN operation
+**Target**: Eliminate redundant status updates (50% users)
+**Effort**: 1-2h
+**Impact**: CRITICAL - 200-500ms savings per change burst
 **Priority**: IMMEDIATE
 
-### 10.1: Fix Phase 9 Regression ⚠️ BROKEN (30min)
-**File**: `source_control_manager.ts:328`
-**Issue**: `util.processConcurrently` undefined (not imported)
-**Impact**: Phase 9.1 fix inactive, unbounded parallel file ops cause freeze (45% users, 1000+ files)
+### Issue
+**File**: `repository.ts:468` (updateModelState)
+**Problem**: Has @throttle + @globalSequentialize but no short-term cache. Multiple events within 2-3s trigger redundant SVN status calls.
+**Impact**: 50% active editors, 200-500ms per burst, 2-5x duplicate calls
 
-**Fix**:
+### Fix
 ```typescript
-// Add to imports
-import { processConcurrently } from "./util";
+// Add to Repository class
+private lastModelUpdate: number = 0;
+private readonly MODEL_CACHE_MS = 2000; // 2s cache
 
-// Line 328 already uses it, just needs import
-const stats = await processConcurrently(...)
-```
+@globalSequentialize
+@throttle(300)
+async updateModelState(): Promise<void> {
+  const now = Date.now();
+  if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) return;
+  this.lastModelUpdate = now;
 
-**Tests** (1 TDD):
-1. Workspace scan 1000+ files completes without freeze
-
-### 10.2: Remove Hot Path executeCommand (1h)
-**File**: `commands/command.ts:89-92`
-**Issue**: `executeCommand("svn.getSourceControlManager")` on hot path for EVERY command (28 call sites)
-**Impact**: 100% users, +5-15ms per operation
-
-**Fix**:
-```typescript
-// Cache SourceControlManager in Command constructor
-private sourceControlManager: SourceControlManager;
-
-constructor(sourceControlManager: SourceControlManager) {
-  this.sourceControlManager = sourceControlManager;
+  // ... existing logic
 }
-
-// Replace 28 executeCommand calls with direct access
-const repository = this.sourceControlManager.getRepository(uri);
 ```
+
+**Why 2s**: Bursts typically occur within 2-3s window. Longer cache risks stale UI.
 
 **Tests** (2 TDD):
-1. Command execution <5ms overhead (perf assertion)
-2. Repository lookup works without IPC
-
-### 10.3: Optimize updateInfo() Hot Path (30min)
-**File**: `repository.ts:342`
-**Issue**: `repository.updateInfo()` SVN exec on every file change despite @debounce(500)
-**Impact**: 30% users, 100-300ms per change burst, network/disk-bound
-
-**Fix** (time-based caching):
-```typescript
-// Repository instance fields
-private lastInfoUpdate: number = 0;
-private readonly INFO_CACHE_MS = 5000; // 5s cache
-
-@debounce(500)
-async updateInfo(): Promise<void> {
-  const now = Date.now();
-  if (now - this.lastInfoUpdate < this.INFO_CACHE_MS) return;
-  this.lastInfoUpdate = now;
-  // ... SVN call
-}
-```
-
-**Why timestamp > boolean**:
-- Self-expiring (no manual reset)
-- Reduces calls: every 500ms → max once per 5s (10x reduction)
-
-**Tests** (1 TDD):
-1. updateInfo skipped when cache fresh (<5s)
+1. Multiple events within 2s trigger single update
+2. Events >2s apart trigger separate updates
 
 **Success Criteria**:
-- [x] processConcurrently imported (regression fixed) - v2.17.58
-- [x] Command overhead <5ms (IPC removed) - v2.17.60
-- [x] updateInfo calls reduced 90% (10x via 5s cache) - v2.17.59
+- [ ] updateModelState calls reduced 60-80% during bursts
+- [ ] UI still responsive (<3s staleness acceptable)
+- [ ] Tests pass
 
 ---
 
-## Phase 11: Command Boilerplate Extraction 🏗️ HIGH
+## Phase 13: Code Bloat Cleanup 🏗️ HIGH
 
-**Target**: Remove 207 lines duplicate code
-**Effort**: 3-4h
-**Impact**: HIGH - Maintainability, single source of truth
+**Target**: Remove 260 lines defensive/duplicate code
+**Effort**: 2.5h
+**Impact**: HIGH - Maintainability, leverage Phase 11 work
 **Priority**: HIGH
 
-### 11.1: Extract Command Execution Boilerplate (1.5h)
-**Pattern**: 7 commands duplicate resource processing (15 lines each = 105 lines)
-**Files**: add.ts, remove.ts, revert.ts, resolve.ts, deleteUnversioned.ts, patch.ts, addToIgnoreSCM.ts
+### 13.1: Remove Defensive Null Checks (30min)
+**Pattern**: 17 commands check `if (!repository) return;`
+**Files**: patch.ts:18-21, resolve.ts, commit.ts, etc. (34 lines)
+**Issue**: Command base already handles resolution
+**Fix**: Remove all unnecessary repository null guards
+**Tests**: Existing command tests verify no regressions
 
-**Extract to Command base**:
-```typescript
-async executeOnResources(
-  resourceStates: SourceControlResourceState[],
-  operation: (repository: Repository, paths: string[]) => Promise<void>,
-  errorMsg: string
-): Promise<void>
-```
+### 13.2: Extract Empty Selection Guards (30min)
+**Pattern**: 6 commands duplicate selection check (18 lines)
+**Files**: resolve.ts:13, revert.ts:13, patch.ts:12, etc.
+**Fix**: Add `getResourceStatesOrExit()` to Command base returning null on empty
+**Tests** (1 TDD):
+1. Returns null on empty selection, exits early
 
-**Tests** (3 TDD):
-1. Executes operation on selected resources
-2. Groups by repository correctly
-3. Shows error message on failure
-
-**Risk**: LOW - Additive changes only, preserves existing patterns
-**Impact**: 105 lines removed, single point of change
-
-### 11.2: Extract Error Handling Pattern (1h)
-**Pattern**: 20+ commands duplicate try/catch (4 lines each = 80 lines)
-
-**Extract to Command base**:
-```typescript
-async handleRepositoryOperation<T>(
-  operation: () => Promise<T>,
-  errorMsg: string
-): Promise<T | undefined>
-```
-
-**Tests** (2 TDD):
-1. Catches and logs errors
-2. Shows user-friendly error message
-
-**Impact**: 80 lines removed, consistent error handling
-
-### 11.3: Extract Revert Logic Duplication (30min)
-**Files**: revert.ts (lines 16-38) vs revertExplorer.ts (lines 16-39)
-**Pattern**: Depth check, confirmation, runByRepository, error handling duplicated (22 lines)
-
-**Extract to shared method**:
-```typescript
-async executeRevert(
-  resourceStates: SourceControlResourceState[],
-  depth: string
-): Promise<void>
-```
-
-**Tests** (2 TDD):
-1. Handles revert with depth correctly
-2. Prompts for confirmation
-
-**Impact**: 22 lines removed, single revert implementation
+### 13.3: Migrate to Phase 11 Error Helpers (1.5h)
+**Pattern**: 17 commands not using `handleRepositoryOperation()` (180 lines)
+**Issue**: Phase 11.2 added helper but only 3 commands migrated
+**Fix**: Migrate remaining try/catch blocks to use helper
+**Tests**: Existing tests verify error handling preserved
 
 **Success Criteria**:
-- [x] 82 lines code bloat removed (11.1-11.3 complete)
-- [x] 7 TDD test placeholders (ready for implementation)
-- [x] Command implementations 50% smaller (5 files refactored)
-- [x] Existing command patterns still work (build passes)
-
-**Status**: Phases 11.1-11.3 COMPLETE (v2.17.58)
+- [ ] 232 lines bloat removed (34 + 18 + 180)
+- [ ] Command base has 2 new helpers (getResourceStatesOrExit + migrations)
+- [ ] 20 commands refactored
+- [ ] Build passes, no regressions
 
 ---
 
-## Deferred Work
+## Deferred (Low Priority)
 
-**Phase 2b: AuthService Extraction** (70 lines, 4-6h):
-- Blocked: High risk, scattered auth logic
-- Target: After stability improvements
+**AuthService Extraction** (70 lines, 4-6h, HIGH risk):
+- Security isolation, but scattered logic risky to extract
+- Defer until stability window
 
-**Phase 12: God Classes** (Architecture debt):
-- svnRepository.ts (970 lines) extraction
-- Blocked: Low ROI, already has services
+**God Classes** (1,893 lines, LOW ROI):
+- Already extracted 3 services, diminishing returns
 
-**Phase 13: Security** (Password exposure):
-- stdin refactor (8-12h)
-- Blocked: Requires major redesign
+**Test Coverage** (21-23% → 50%+, 20-30h):
+- Command layer, SVN process, multi-repo (47 commands untested)
+- Defer until features stabilize
+
+**SVN Timeout Config** (2-3h, 10-15% users):
+- Per-operation timeouts (status:10s, commit:60s)
+- Defer until Phase 12-13 complete
 
 ---
 
 ## Metrics
 
-| Metric | Current | Phase 10 Target | Phase 11 Target |
-|--------|---------|-----------------|-----------------|
-| Phase 9 regression | BROKEN | FIXED | - |
-| Command overhead | 5-15ms | <5ms | - |
-| updateInfo() calls | 100% | 30% | - |
-| Code bloat (NEW) | 207 lines | - | 0 lines |
-| Command file size | 15 lines avg | - | 7 lines avg |
+| Metric | Before | Phase 12 Target | Phase 13 Target |
+|--------|--------|-----------------|-----------------|
+| updateModelState redundant | 60-80% | <20% | - |
+| Status burst latency | 200-500ms | <100ms | - |
+| Code bloat lines | 260 | - | 0 |
+| Commands refactored | 5 | - | 25 total |
 
 ---
 
 ## Execution Order
 
-**IMMEDIATE**: Phase 10 → Phase 11
+**NEXT**: Phase 12 → Phase 13
 
 **Rationale**:
-1. Phase 10: Fix regression (BROKEN), eliminate hot path bottlenecks (100% users)
-2. Phase 11: Code quality, maintainability (future velocity)
+1. Phase 12: CRITICAL perf fix (50% users, active editors)
+2. Phase 13: Leverage Phase 11 helpers, maintainability
 
-**Total Effort**: 5-7h (1 day)
-
----
-
-## Design Decisions (Resolved)
-
-**Phase 10.3 - updateInfo() caching**:
-- ✅ Use timestamp (`lastInfoUpdate: number`) not boolean
-- ✅ 5s cache duration (self-expiring, no manual reset)
-- ✅ 10x reduction: debounce 500ms + cache 5s
-
-**Phase 10.2 - Command overhead**:
-- ✅ Add perf assertion in tests (<5ms target)
-- ✅ Optional: VS Code profiler for real-world validation
-
-**Phase 11 - Breaking changes**:
-- ✅ LOW risk: additive only (new protected helpers)
-- ✅ Preserves constructor, public API, overrideable methods
-- ✅ Test existing patterns continue working
-
-**Phase 11 - Test coverage**:
-- ✅ 7 tests sufficient (3 + 2 + 2)
-- ✅ Focus: happy path + error handling
-- ✅ Defer edge cases (add reactively if bugs emerge)
+**Total Effort**: 3.5-4.5h
