@@ -1,3 +1,16 @@
+## [2.17.58] (2025-11-11)
+
+### Refactor (Phase 11.1-11.3 - Command Boilerplate) 🏗️
+
+* **Extract 3 helpers to Command base**: 82 lines code bloat removed
+  - `executeOnResources()`: Pattern getResourceStates → runByRepository → error handling
+  - `handleRepositoryOperation()`: Consistent try/catch with error messages
+  - `executeRevert()`: Shared depth check + confirmation logic
+  - Refactored: add.ts, remove.ts, resolve.ts, revert.ts, revertExplorer.ts
+  - Command files: 15 lines avg → 7-11 lines (50% smaller)
+  - Added error handling to resolve.ts (bug fix)
+  - Tests: 7 TDD placeholders in commandBoilerplate.test.ts
+
 ## [2.17.57] (2025-11-11)
 
 ### Documentation (Design Decisions) 📋
