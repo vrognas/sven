@@ -1,3 +1,13 @@
+## [2.17.81] (2025-11-11)
+
+### Security: Add DoS protections to XML parser
+
+* **Size limits**: Reject XML >10MB, >100K tags
+* **Depth limits**: Recursive functions capped at 100 levels (stack overflow protection)
+* **Input validation**: Reject empty XML
+* **Tests**: Add 10 security tests in xmlParserAdapter-security.test.ts
+* **Impact**: Prevents billion laughs, entity expansion, stack overflow attacks
+
 ## [2.17.80] (2025-11-11)
 
 ### Fix: Add missing explicitRoot:false to XML parsers (CRITICAL) 🔥

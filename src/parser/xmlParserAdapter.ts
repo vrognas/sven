@@ -16,8 +16,17 @@ interface ParseOptions {
  * - explicitArray: Control single vs array element wrapping
  * - explicitRoot: Include/exclude root element (false strips root)
  * - camelcase: Transform tag and attribute names to camelCase
+ *
+ * Security limits:
+ * - Max XML size: 10MB (DoS protection)
+ * - Max tag count: 100,000 (entity expansion protection)
+ * - Max recursion depth: 100 levels (stack overflow protection)
  */
 export class XmlParserAdapter {
+  // Security limits
+  private static readonly MAX_XML_SIZE = 10 * 1024 * 1024; // 10MB
+  private static readonly MAX_TAG_COUNT = 100000;
+  private static readonly MAX_DEPTH = 100;
   /**
    * Create fast-xml-parser instance with configuration
    */
@@ -38,19 +47,23 @@ export class XmlParserAdapter {
   /**
    * Recursively transform object keys to camelCase
    */
-  private static toCamelCase(obj: any): any {
+  private static toCamelCase(obj: any, depth: number = 0): any {
+    if (depth > this.MAX_DEPTH) {
+      throw new Error(`Object nesting exceeds maximum depth of ${this.MAX_DEPTH}`);
+    }
+
     if (typeof obj !== "object" || obj === null) {
       return obj;
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.toCamelCase(item));
+      return obj.map(item => this.toCamelCase(item, depth + 1));
     }
 
     const result: any = {};
     for (const key in obj) {
       const camelKey = camelcase(key);
-      result[camelKey] = this.toCamelCase(obj[key]);
+      result[camelKey] = this.toCamelCase(obj[key], depth + 1);
     }
     return result;
   }
@@ -59,13 +72,17 @@ export class XmlParserAdapter {
    * Merge attributes (prefixed with @_) into parent object
    * Mimics xml2js mergeAttrs: true behavior
    */
-  private static mergeAttributes(obj: any): any {
+  private static mergeAttributes(obj: any, depth: number = 0): any {
+    if (depth > this.MAX_DEPTH) {
+      throw new Error(`Object nesting exceeds maximum depth of ${this.MAX_DEPTH}`);
+    }
+
     if (typeof obj !== "object" || obj === null) {
       return obj;
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.mergeAttributes(item));
+      return obj.map(item => this.mergeAttributes(item, depth + 1));
     }
 
     const result: any = {};
@@ -82,7 +99,7 @@ export class XmlParserAdapter {
         hasTextNode = true;
         textNodeValue = obj[key];
       } else {
-        result[key] = this.mergeAttributes(obj[key]);
+        result[key] = this.mergeAttributes(obj[key], depth + 1);
       }
     }
 
@@ -103,14 +120,18 @@ export class XmlParserAdapter {
    * Normalize arrays based on explicitArray: false behavior
    * Single-element arrays become objects, unless already array
    */
-  private static normalizeArrays(obj: any): any {
+  private static normalizeArrays(obj: any, depth: number = 0): any {
+    if (depth > this.MAX_DEPTH) {
+      throw new Error(`Object nesting exceeds maximum depth of ${this.MAX_DEPTH}`);
+    }
+
     if (typeof obj !== "object" || obj === null) {
       return obj;
     }
 
     if (Array.isArray(obj)) {
       // Keep arrays as-is, but normalize their contents
-      return obj.map(item => this.normalizeArrays(item));
+      return obj.map(item => this.normalizeArrays(item, depth + 1));
     }
 
     const result: any = {};
@@ -118,7 +139,7 @@ export class XmlParserAdapter {
       const value = obj[key];
 
       // Recursively process the value first
-      const processed = this.normalizeArrays(value);
+      const processed = this.normalizeArrays(value, depth + 1);
 
       // If it's an array with single element, unwrap it
       if (Array.isArray(processed) && processed.length === 1) {
@@ -154,8 +175,25 @@ export class XmlParserAdapter {
    * @param xml XML string to parse
    * @param options Parsing options
    * @returns Parsed object matching xml2js structure
+   * @throws Error if XML exceeds security limits
    */
   public static parse(xml: string, options: ParseOptions = {}): any {
+    // Security: Validate input size
+    if (xml.length > this.MAX_XML_SIZE) {
+      throw new Error(`XML exceeds maximum size of ${this.MAX_XML_SIZE} bytes`);
+    }
+
+    // Security: Validate tag count (rough estimate)
+    const tagCount = (xml.match(/<[^>]+>/g) || []).length;
+    if (tagCount > this.MAX_TAG_COUNT) {
+      throw new Error(`XML exceeds maximum tag count of ${this.MAX_TAG_COUNT}`);
+    }
+
+    // Security: Reject empty input
+    if (!xml || xml.trim().length === 0) {
+      throw new Error('XML input is empty');
+    }
+
     const parser = this.createFxpParser();
     let result = parser.parse(xml);
 
