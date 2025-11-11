@@ -1,3 +1,16 @@
+## [2.17.66] (2025-11-11)
+
+### Docs: Next phase audit + plan update 📋
+
+* **Performance/Bug Audit**: 3 subagents identified next critical issues
+  - Bug: Async directory deletion not awaited (DATA LOSS, 40-50% users)
+  - Perf: Decorator overhead (@throttle+@globalSequentialize, 50-100% users, 1-2ms)
+  - Perf: Resource index rebuild (50-80% users, 5-15ms)
+* **IMPLEMENTATION_PLAN.md**: Updated with Phase 14-15 only
+  - Phase 14: Fix async deletion bug (CRITICAL, 30min)
+  - Phase 15: Remove decorator overhead (HIGH, 1-2h)
+  - Deferred: Resource rebuild, timeout UX, Open* bloat, AuthService, tests
+
 ## [2.17.65] (2025-11-11)
 
 ### Docs: Phases 12-13 Complete 📋

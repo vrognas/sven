@@ -1,6 +1,6 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.64
+**Version**: v2.17.65
 **Updated**: 2025-11-11
 **Status**: Phases 12-13 COMPLETE ✅
 
@@ -20,118 +20,121 @@
 
 ---
 
-## Phase 12: Status Update Performance 🔥 CRITICAL
+## Phase 14: Async Deletion Bug 🔥 CRITICAL
 
-**Target**: Eliminate redundant status updates (50% users)
-**Effort**: 1-2h
-**Impact**: CRITICAL - 200-500ms savings per change burst
+**Target**: Fix data loss risk in directory deletion
+**Effort**: 30min
+**Impact**: CRITICAL - 40-50% users, silent failures
 **Priority**: IMMEDIATE
 
 ### Issue
-**File**: `repository.ts:468` (updateModelState)
-**Problem**: Has @throttle + @globalSequentialize but no short-term cache. Multiple events within 2-3s trigger redundant SVN status calls.
-**Impact**: 50% active editors, 200-500ms per burst, 2-5x duplicate calls
+**File**: `commands/deleteUnversioned.ts:33`
+**Problem**: `deleteDirectory()` async but not awaited - fails silently
+**Impact**: Directory deletions fail in background, user sees no error
 
 ### Fix
 ```typescript
-// Add to Repository class
-private lastModelUpdate: number = 0;
-private readonly MODEL_CACHE_MS = 2000; // 2s cache
-
-@globalSequentialize
-@throttle(300)
-async updateModelState(): Promise<void> {
-  const now = Date.now();
-  if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) return;
-  this.lastModelUpdate = now;
-
-  // ... existing logic
+// Line 33
+if (stat.isDirectory()) {
+  await deleteDirectory(fsPath);  // ADD await
+} else {
+  await unlink(fsPath);
 }
 ```
 
-**Why 2s**: Bursts typically occur within 2-3s window. Longer cache risks stale UI.
-
 **Tests** (2 TDD):
-1. Multiple events within 2s trigger single update
-2. Events >2s apart trigger separate updates
+1. Directory deletion awaited and completes
+2. Errors properly caught by handleRepositoryOperation
 
 **Success Criteria**:
-- [x] updateModelState calls reduced 60-80% during bursts
-- [x] UI still responsive (<2s staleness acceptable)
-- [x] Tests pass (v2.17.63)
+- [ ] await added to deleteDirectory call
+- [ ] Directory deletion errors surface to user
+- [ ] Tests pass
 
 ---
 
-## Phase 13: Code Bloat Cleanup 🏗️ HIGH
+## Phase 15: Decorator Overhead ⚡ HIGH
 
-**Target**: Remove 260 lines defensive/duplicate code
-**Effort**: 2.5h
-**Impact**: HIGH - Maintainability, leverage Phase 11 work
+**Target**: Remove redundant decorator overhead
+**Effort**: 1-2h
+**Impact**: HIGH - 50-100% users, every operation
 **Priority**: HIGH
 
-### 13.1: Remove Defensive Null Checks ✅ (v2.17.64)
-**Pattern**: 5 commands had `if (!repository) return;`
-**Files**: commit.ts, patch.ts, pullIncomingChange.ts, resolved.ts, revertAll.ts (20 lines)
-**Fix**: Removed all unnecessary repository null guards
-**Result**: Command base already handles resolution ✓
+### Issue
+**File**: `repository.ts:469-471` (updateModelState)
+**Problem**: Dual decorators (@throttle + @globalSequentialize) create promise chains even when 2s cache prevents execution
+**Impact**: 1-2ms overhead per call, all status operations
 
-### 13.2: Extract Empty Selection Guards ✅ (v2.17.64)
-**Pattern**: 6 commands duplicate selection check (18 lines)
-**Files**: resolve.ts, revert.ts, patch.ts, remove.ts, deleteUnversioned.ts, addToIgnoreSCM.ts
-**Fix**: Added `getResourceStatesOrExit()` to Command base returning null on empty
-**Tests** (1 TDD):
-1. Returns null on empty selection, exits early ✓
+### Fix
+```typescript
+// Option 1: Remove @throttle (cache already handles throttling)
+@globalSequentialize("updateModelState")
+public async updateModelState(checkRemoteChanges: boolean = false) {
+  const now = Date.now();
+  if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) return;
+  // ...
+}
 
-### 13.3: Migrate to Phase 11 Error Helpers ✅ (v2.17.64)
-**Pattern**: 11 commands migrated (update, log, commit*, changeList, revert*, resolve*, search*, pull*)
-**Fix**: Converted try/catch blocks to use `handleRepositoryOperation()`
-**Result**: 17 commands total using Phase 11 helpers (up from 3)
+// Option 2: Move cache check BEFORE decorators (protected method)
+@globalSequentialize("updateModelState")
+public async updateModelState(checkRemoteChanges: boolean = false) {
+  const now = Date.now();
+  if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) return;
+  await this._updateModelStateUncached(checkRemoteChanges);
+}
+```
+
+**Tests** (1 perf):
+1. updateModelState <1ms overhead when cache hits
 
 **Success Criteria**:
-- [x] 45 total lines bloat removed (13.1: 20, 13.2+13.3: 25)
-- [x] Command base has getResourceStatesOrExit helper
-- [x] 17 commands using error helpers (up from 3)
-- [x] Build passes, no regressions
+- [ ] Decorator overhead eliminated on cache hits
+- [ ] updateModelState <1ms when skipped
+- [ ] Sequentialization still works for actual updates
 
 ---
 
-## Deferred (Low Priority)
+## Deferred (Medium Priority)
 
-**AuthService Extraction** (70 lines, 4-6h, HIGH risk):
-- Security isolation, but scattered logic risky to extract
-- Defer until stability window
+**Resource Index Rebuild** (2-3h, 50-80% users):
+- Unconditional rebuildResourceIndex() on every updateGroups()
+- 5-15ms waste on large repos
 
-**God Classes** (1,893 lines, LOW ROI):
-- Already extracted 3 services, diminishing returns
+**Timeout Error UX** (2-3h, 30-40% users):
+- Generic error messages for network timeouts
+- Should show "Network timeout - try again?"
 
-**Test Coverage** (21-23% → 50%+, 20-30h):
-- Command layer, SVN process, multi-repo (47 commands untested)
+**Open* Command Bloat** (2.5h, 74 lines):
+- 5 thin wrapper commands (openChangeHead/Base/Prev, openResourceHead/Base)
+- Refactor to factory pattern
+
+**AuthService Extraction** (4-6h, HIGH risk):
+- Security isolation, scattered logic
+- Defer until stability
+
+**Test Coverage** (20-30h):
+- 47 commands untested
 - Defer until features stabilize
-
-**SVN Timeout Config** (2-3h, 10-15% users):
-- Per-operation timeouts (status:10s, commit:60s)
-- Defer until Phase 12-13 complete
 
 ---
 
 ## Metrics
 
-| Metric | Before | Phase 12 Target | Phase 13 Target |
-|--------|--------|-----------------|-----------------|
-| updateModelState redundant | 60-80% | <20% | - |
-| Status burst latency | 200-500ms | <100ms | - |
-| Code bloat lines | 260 | - | 0 |
-| Commands refactored | 5 | - | 25 total |
+| Metric | Phase 14 Target | Phase 15 Target |
+|--------|-----------------|-----------------|
+| Directory deletion errors | 0% caught | 100% caught |
+| Data loss risk | CRITICAL | FIXED |
+| Decorator overhead | 1-2ms | <0.5ms |
+| Status operations | 100% affected | 100% faster |
 
 ---
 
 ## Execution Order
 
-**COMPLETE**: Phases 12-13 delivered (v2.17.63-64)
+**NEXT**: Phase 14 → Phase 15
 
-**Next Priority** (if needed):
-1. SVN Timeout Config (2-3h, 10-15% users, network issues)
-2. Test Coverage (20-30h, command layer untested)
-3. AuthService Extraction (4-6h, HIGH risk, defer)
+**Rationale**:
+1. Phase 14: CRITICAL bug fix (data loss, 30min)
+2. Phase 15: High-frequency optimization (all operations, 1-2h)
 
-**Total Effort**: 3.5-4.5h
+**Total Effort**: 1.5-2.5h
