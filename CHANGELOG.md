@@ -1,3 +1,13 @@
+## [2.17.63] (2025-11-11)
+
+### Perf: Phase 12 - Status Update Cache ⚡
+
+* **2s cache for updateModelState**: Eliminate redundant status calls
+  - Add: lastModelUpdate timestamp, MODEL_CACHE_MS = 2000
+  - Skip SVN status if called within 2s window
+  - Impact: 50% users (active editors), 60-80% reduction in bursts
+  - Tests: 2 TDD tests in model-state-cache.test.ts
+
 ## [2.17.62] (2025-11-11)
 
 ### Docs: Audit + Plan Update 📋

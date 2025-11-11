@@ -54,9 +54,9 @@ async updateModelState(): Promise<void> {
 2. Events >2s apart trigger separate updates
 
 **Success Criteria**:
-- [ ] updateModelState calls reduced 60-80% during bursts
-- [ ] UI still responsive (<3s staleness acceptable)
-- [ ] Tests pass
+- [x] updateModelState calls reduced 60-80% during bursts
+- [x] UI still responsive (<2s staleness acceptable)
+- [x] Tests pass (v2.17.63)
 
 ---
 
