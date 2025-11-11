@@ -1,3 +1,15 @@
+## [2.17.76] (2025-11-11)
+
+### Feat: Migrate logParser to fast-xml-parser (Phase 2.4/4) 🚀
+
+* **Migrate logParser.ts**: Replace xml2js with XmlParserAdapter
+  - Remove xml2js import, use XmlParserAdapter
+  - Improve error handling: specific error for missing logentry
+  - Keep logentry array normalization
+  - Keep paths structure normalization (flatten paths.path→paths)
+* **Tests**: All 3 logParser tests pass
+* **Progress**: 4/5 parsers migrated
+
 ## [2.17.75] (2025-11-11)
 
 ### Feat: Migrate infoParser to fast-xml-parser (Phase 2.3/4) 🚀
