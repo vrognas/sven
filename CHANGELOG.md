@@ -14,7 +14,10 @@
   - Pattern: `try/catch + console.log + showErrorMessage` → `handleRepositoryOperation()`
   - Result: 17 commands total using Phase 11 helpers
 
-* **Summary**: 17 commands refactored, 25 net lines removed (109-84)
+* **Phase 13.1**: Remove defensive null checks (5 commands, 20 lines)
+  - commit.ts, patch.ts, pullIncomingChange.ts, resolved.ts, revertAll.ts
+  - Command base already handles repository resolution
+* **Summary**: 17 commands refactored, 45 total lines removed (20+25)
 
 ## [2.17.63] (2025-11-11)
 
