@@ -1,20 +1,25 @@
-import { Minimatch, MinimatchOptions } from "minimatch";
+import picomatch from "picomatch";
 
 /**
  * Pre-compiled matcher cache for performance optimization
- * Reduces O(n²) overhead by reusing Minimatch instances
+ * Reduces O(n²) overhead by reusing picomatch instances
  */
+interface PicomatchOptions {
+  dot?: boolean;
+  matchBase?: boolean;
+}
+
 interface MatcherCache {
   patterns: readonly string[];
-  opts: MinimatchOptions;
-  matchers: Array<{ pattern: string; isExclusion: boolean; matcher: Minimatch }>;
+  opts: PicomatchOptions;
+  matchers: Array<{ pattern: string; isExclusion: boolean; matcher: picomatch.Matcher }>;
 }
 
 let cachedMatcher: MatcherCache | null = null;
 
 function getCachedMatchers(
   patterns: readonly string[],
-  opts: MinimatchOptions = {}
+  opts: PicomatchOptions = {}
 ): MatcherCache["matchers"] {
   const optsKey = JSON.stringify(opts);
 
@@ -31,7 +36,7 @@ function getCachedMatchers(
   const matchers = patterns.map(pattern => ({
     pattern,
     isExclusion: pattern[0] === "!",
-    matcher: new Minimatch(pattern, opts)
+    matcher: picomatch(pattern, opts)
   }));
 
   cachedMatcher = { patterns, opts, matchers };
@@ -41,7 +46,7 @@ function getCachedMatchers(
 export function matchAll(
   path: string,
   patterns: readonly string[],
-  opts: MinimatchOptions = {}
+  opts: PicomatchOptions = {}
 ): boolean {
   if (!patterns.length) {
     return false;
@@ -57,14 +62,14 @@ export function matchAll(
       continue;
     }
 
-    match = matcher.match(path);
+    match = matcher(path);
   }
 
   return match;
 }
 
 export function match(pattern: string) {
-  return new Minimatch(pattern);
+  return picomatch(pattern);
 }
 
 /**

@@ -1,3 +1,14 @@
+## [2.17.70] (2025-11-11)
+
+### Perf: Dependency optimization - minimatch → picomatch ⚡
+
+* **Replace minimatch with picomatch**: Reduce VSIX size and improve performance
+  - Replaced: minimatch (142 KB) → picomatch (54 KB)
+  - Updated: src/util/globMatch.ts, src/repository.ts, tests
+  - Impact: 88 KB reduction, faster glob matching
+  - VSIX size: 1.46 MB → 1.42 MB (2.7% reduction)
+  - Extended .vscodeignore for node_modules documentation files
+
 ## [2.17.69] (2025-11-11)
 
 ### Docs: PR prep - Phases 12-15 summary 📋
