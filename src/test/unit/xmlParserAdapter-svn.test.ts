@@ -119,7 +119,7 @@ suite("XmlParserAdapter - SVN XML Compatibility", () => {
     assert.strictEqual(result.log.logentry.paths.path[0].action, "M");
   });
 
-  test("parses SVN status with multiple entries and changelis", () => {
+  test("parses SVN status with multiple entries and changelist", () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <status>
   <target path=".">
