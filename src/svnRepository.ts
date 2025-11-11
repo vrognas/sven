@@ -44,6 +44,7 @@ export class Repository {
     [index: string]: ISvnInfo;
   } = {};
   private _info?: ISvnInfo;
+  private _infoCacheTimers = new Map<string, NodeJS.Timeout>(); // Phase 8.2 perf fix - track timers
 
   public username?: string;
   public password?: string;
@@ -138,16 +139,20 @@ export class Repository {
 
     const status: IFileStatus[] = await parseStatusXml(result.stdout);
 
-    for (const s of status) {
-      if (s.status === Status.EXTERNAL) {
-        try {
-          const info = await this.getInfo(s.path);
-          s.repositoryUuid = info.repository?.uuid;
-        } catch (error) {
-          console.error(error);
-        }
-      }
-    }
+    // Phase 10 perf fix - parallel external info fetching (was N+1 sequential)
+    await Promise.all(
+      status
+        .filter(s => s.status === Status.EXTERNAL)
+        .map(s =>
+          this.getInfo(s.path)
+            .then(info => {
+              s.repositoryUuid = info.repository?.uuid;
+            })
+            .catch(error => {
+              console.error(error);
+            })
+        )
+    );
 
     return status;
   }
@@ -188,10 +193,18 @@ export class Repository {
 
     this._infoCache[file] = await parseInfoXml(result.stdout);
 
+    // Phase 8.2 perf fix - track and cancel previous timer to prevent memory leak
+    const existingTimer = this._infoCacheTimers.get(file);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
     // Cache for 2 minutes
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       this.resetInfoCache(file);
+      this._infoCacheTimers.delete(file);
     }, 2 * 60 * 1000);
+    this._infoCacheTimers.set(file, timer);
 
     return this._infoCache[file];
   }
@@ -983,5 +996,14 @@ export class Repository {
     const result = await this.exec(args);
 
     return result.stdout;
+  }
+
+  /**
+   * Clear all info cache timers (Phase 8.2 perf fix - prevent memory leak)
+   * Should be called on repository disposal
+   */
+  public clearInfoCacheTimers(): void {
+    this._infoCacheTimers.forEach(timer => clearTimeout(timer));
+    this._infoCacheTimers.clear();
   }
 }

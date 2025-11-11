@@ -61,6 +61,7 @@ export class SourceControlManager implements IDisposable {
   private possibleSvnRepositoryPaths = new Set<string>();
   private ignoreList: string[] = [];
   private maxDepth: number = 0;
+  private excludedPathsCache = new Map<string, Set<string>>(); // Phase 15 perf fix
 
   private configurationChangeDisposable: Disposable;
 
@@ -262,10 +263,11 @@ export class SourceControlManager implements IDisposable {
   }
 
   private async scanWorkspaceFolders() {
-    for (const folder of workspace.workspaceFolders || []) {
-      const root = folder.uri.fsPath;
-      await this.tryOpenRepository(root);
-    }
+    // Phase 8.2 perf fix - parallel scanning instead of sequential
+    const folders = workspace.workspaceFolders || [];
+    await Promise.all(
+      folders.map(folder => this.tryOpenRepository(folder.uri.fsPath))
+    );
   }
 
   public async tryOpenRepository(path: string, level = 0): Promise<void> {
@@ -320,23 +322,24 @@ export class SourceControlManager implements IDisposable {
         return;
       }
 
-      for (const file of files) {
+      // Phase 8.2 perf fix - parallel stat + recursive calls instead of sequential
+      const tasks = files.map(async file => {
         const dir = path + "/" + file;
-        let stats: Stats;
 
         try {
-          stats = await stat(dir);
+          const stats = await stat(dir);
+          if (
+            stats.isDirectory() &&
+            !matchAll(dir, this.ignoreList, { dot: true })
+          ) {
+            await this.tryOpenRepository(dir, newLevel);
+          }
         } catch (error) {
-          continue;
+          // Ignore errors for individual files
         }
+      });
 
-        if (
-          stats.isDirectory() &&
-          !matchAll(dir, this.ignoreList, { dot: true })
-        ) {
-          await this.tryOpenRepository(dir, newLevel);
-        }
-      }
+      await Promise.all(tasks);
     }
   }
 
@@ -380,22 +383,13 @@ export class SourceControlManager implements IDisposable {
           return false;
         }
 
-        for (const external of liveRepository.repository.statusExternal) {
-          const externalPath = path.join(
-            liveRepository.repository.workspaceRoot,
-            external.path
-          );
-          if (isDescendant(externalPath, hint.fsPath)) {
-            return false;
-          }
-        }
-        for (const ignored of liveRepository.repository.statusIgnored) {
-          const ignoredPath = path.join(
-            liveRepository.repository.workspaceRoot,
-            ignored.path
-          );
-          if (isDescendant(ignoredPath, hint.fsPath)) {
-            return false;
+        // Phase 15 perf fix - O(n×m) → O(n×k) with cached Set lookup
+        const excludedPaths = this.excludedPathsCache.get(liveRepository.repository.workspaceRoot);
+        if (excludedPaths) {
+          for (const excluded of excludedPaths) {
+            if (isDescendant(excluded, hint.fsPath)) {
+              return false;
+            }
           }
         }
 
@@ -457,10 +451,24 @@ export class SourceControlManager implements IDisposable {
       this._onDidChangeStatusRepository.fire(repository);
     });
 
+    // Phase 15 perf fix - build excluded paths cache for O(1) lookup
+    const buildExcludedCache = () => {
+      const excluded = new Set<string>();
+      for (const ext of repository.statusExternal) {
+        excluded.add(path.join(repository.workspaceRoot, ext.path));
+      }
+      for (const ign of repository.statusIgnored) {
+        excluded.add(path.join(repository.workspaceRoot, ign.path));
+      }
+      this.excludedPathsCache.set(repository.workspaceRoot, excluded);
+    };
+
     const statusListener = repository.onDidChangeStatus(() => {
+      buildExcludedCache();
       this.scanExternals(repository);
       this.scanIgnored(repository);
     });
+    buildExcludedCache();
     this.scanExternals(repository);
     this.scanIgnored(repository);
 
@@ -472,9 +480,10 @@ export class SourceControlManager implements IDisposable {
       repository.dispose();
 
       this.openRepositories = this.openRepositories.filter(
-         
+
         e => e !== openRepository
       );
+      this.excludedPathsCache.delete(repository.workspaceRoot); // Phase 15 perf fix
       this._onDidCloseRepository.fire(repository);
     };
 
