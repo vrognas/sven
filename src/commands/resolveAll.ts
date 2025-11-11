@@ -1,6 +1,5 @@
 import { window } from "vscode";
 import { getConflictPickOptions } from "../conflictItems";
-import { ISvnErrorData } from "../common/types";
 import { Repository } from "../repository";
 import { Command } from "./command";
 

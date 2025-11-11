@@ -1,4 +1,4 @@
-import { SourceControlResourceGroup, window } from "vscode";
+import { SourceControlResourceGroup } from "vscode";
 import { checkAndPromptDepth, confirmRevert } from "../input/revert";
 import { Command } from "./command";
 

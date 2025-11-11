@@ -1,5 +1,5 @@
 import { posix as path } from "path";
-import { commands, Uri, window } from "vscode";
+import { commands, Uri } from "vscode";
 import { SvnUriAction } from "../common/types";
 import { Repository } from "../repository";
 import { toSvnUri } from "../uri";

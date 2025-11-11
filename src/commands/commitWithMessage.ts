@@ -1,7 +1,7 @@
 import * as path from "path";
 import { window } from "vscode";
 import { inputCommitFiles } from "../changelistItems";
-import { ISvnErrorData, Status } from "../common/types";
+import { Status } from "../common/types";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Resource } from "../resource";

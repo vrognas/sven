@@ -1,6 +1,6 @@
 import * as path from "path";
 import { SourceControlResourceState, Uri, window } from "vscode";
-import { ISvnErrorData, Status } from "../common/types";
+import { Status } from "../common/types";
 import { inputCommitMessage } from "../messages";
 import { Resource } from "../resource";
 import { Command } from "./command";
