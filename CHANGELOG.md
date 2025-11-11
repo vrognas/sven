@@ -1,3 +1,14 @@
+## [2.17.57] (2025-11-11)
+
+### Documentation (Design Decisions) 📋
+
+* **Resolved**: All Phase 10 & 11 unresolved questions via ultrathinking
+  - Phase 10.3: timestamp-based caching (`lastInfoUpdate: number`, 5s cache, 10x reduction)
+  - Phase 10.2: perf assertion in tests (<5ms target)
+  - Phase 11: LOW risk (additive only), 7 tests sufficient (core scenarios)
+  - Updated IMPLEMENTATION_PLAN.md: "Design Decisions (Resolved)" section
+  - All technical decisions documented, ready for implementation
+
 ## [2.17.56] (2025-11-11)
 
 ### Documentation (Performance Audit + Cleanup) 📋

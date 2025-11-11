@@ -1,6 +1,6 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.55
+**Version**: v2.17.56
 **Updated**: 2025-11-11
 **Status**: Phase 10 CRITICAL | Phase 11 HIGH
 
@@ -59,7 +59,7 @@ const repository = this.sourceControlManager.getRepository(uri);
 ```
 
 **Tests** (2 TDD):
-1. Command execution <5ms overhead
+1. Command execution <5ms overhead (perf assertion)
 2. Repository lookup works without IPC
 
 ### 10.3: Optimize updateInfo() Hot Path (30min)
@@ -67,20 +67,32 @@ const repository = this.sourceControlManager.getRepository(uri);
 **Issue**: `repository.updateInfo()` SVN exec on every file change despite @debounce(500)
 **Impact**: 30% users, 100-300ms per change burst, network/disk-bound
 
-**Fix**:
+**Fix** (time-based caching):
 ```typescript
-// Skip updateInfo when not needed
-if (!this.infoNeedsRefresh) return;
-this.infoNeedsRefresh = false;
+// Repository instance fields
+private lastInfoUpdate: number = 0;
+private readonly INFO_CACHE_MS = 5000; // 5s cache
+
+@debounce(500)
+async updateInfo(): Promise<void> {
+  const now = Date.now();
+  if (now - this.lastInfoUpdate < this.INFO_CACHE_MS) return;
+  this.lastInfoUpdate = now;
+  // ... SVN call
+}
 ```
 
+**Why timestamp > boolean**:
+- Self-expiring (no manual reset)
+- Reduces calls: every 500ms → max once per 5s (10x reduction)
+
 **Tests** (1 TDD):
-1. updateInfo skipped when info unchanged
+1. updateInfo skipped when cache fresh (<5s)
 
 **Success Criteria**:
-- [x] processConcurrently imported (regression fixed)
-- [x] Command overhead <5ms (IPC removed)
-- [x] updateInfo calls reduced 70%
+- [ ] processConcurrently imported (regression fixed)
+- [ ] Command overhead <5ms (IPC removed, perf test)
+- [ ] updateInfo calls reduced 90% (10x via 5s cache)
 
 ---
 
@@ -109,6 +121,7 @@ async executeOnResources(
 2. Groups by repository correctly
 3. Shows error message on failure
 
+**Risk**: LOW - Additive changes only, preserves existing patterns
 **Impact**: 105 lines removed, single point of change
 
 ### 11.2: Extract Error Handling Pattern (1h)
@@ -147,9 +160,10 @@ async executeRevert(
 **Impact**: 22 lines removed, single revert implementation
 
 **Success Criteria**:
-- [x] 207 lines code bloat removed
-- [x] 7 TDD tests passing
-- [x] Command implementations 50% smaller
+- [ ] 207 lines code bloat removed
+- [ ] 7 TDD tests passing (core scenarios only)
+- [ ] Command implementations 50% smaller
+- [ ] Existing command patterns still work (no breaking changes)
 
 ---
 
@@ -193,12 +207,23 @@ async executeRevert(
 
 ---
 
-## Unresolved Questions
+## Design Decisions (Resolved)
 
-Phase 10:
-- infoNeedsRefresh flag location (Repository field)?
-- Measure actual command overhead reduction?
+**Phase 10.3 - updateInfo() caching**:
+- ✅ Use timestamp (`lastInfoUpdate: number`) not boolean
+- ✅ 5s cache duration (self-expiring, no manual reset)
+- ✅ 10x reduction: debounce 500ms + cache 5s
 
-Phase 11:
-- Break existing command extensions?
-- Test coverage target for extracted methods?
+**Phase 10.2 - Command overhead**:
+- ✅ Add perf assertion in tests (<5ms target)
+- ✅ Optional: VS Code profiler for real-world validation
+
+**Phase 11 - Breaking changes**:
+- ✅ LOW risk: additive only (new protected helpers)
+- ✅ Preserves constructor, public API, overrideable methods
+- ✅ Test existing patterns continue working
+
+**Phase 11 - Test coverage**:
+- ✅ 7 tests sufficient (3 + 2 + 2)
+- ✅ Focus: happy path + error handling
+- ✅ Defer edge cases (add reactively if bugs emerge)
