@@ -910,7 +910,7 @@ export class Repository implements IRemoteRepository {
     };
 
     return shouldShowProgress(operation)
-      ? window.withProgress({ location: ProgressLocation.SourceControl }, run)
+      ? window.withProgress({ location: ProgressLocation.Notification, title: "SVN", cancellable: true }, run)
       : run();
   }
 
