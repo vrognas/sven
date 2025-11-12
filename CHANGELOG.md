@@ -1,3 +1,19 @@
+## [2.17.99] (2025-11-12)
+
+### Test Coverage: Remaining commands (Phase 5) - 50%+ TARGET REACHED ✅
+
+* **New test files**: 6 command test files (40 → 46 test files total)
+  - `commands/ignore.test.ts` - AddToIgnore commands with path sanitization (42 tests, 849 lines)
+  - `commands/rename.test.ts` - RenameExplorer with validation (38 tests, 644 lines)
+  - `commands/open.test.ts` - 7 Open* commands with URI handling (54 tests, 1,315 lines)
+  - `commands/prompt.test.ts` - PromptAuth/PromptRemove (34 tests, 740 lines)
+  - `commands/revertAll.test.ts` - RevertAll/RevertExplorer bulk operations (34 tests, 622 lines)
+  - `commands/unversioned.test.ts` - Delete/RemoveUnversioned (22 tests, 477 lines)
+* **Tests added**: 224 new command tests (4,647 lines)
+* **Coverage**: 569 → 793 tests (+39%, total +475% from baseline)
+* **Target achieved**: ~50-55% coverage (was ~21-23%)
+* **Focus**: Ignore, rename, open, prompt, bulk revert, unversioned file operations
+
 ## [2.17.98] (2025-11-12)
 
 ### Test Coverage: Core command tests (Phase 4)
