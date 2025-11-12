@@ -25,6 +25,7 @@ import { IsSvn19orGreater } from "./contexts/isSvn19orGreater";
 import { IsSvn18orGreater } from "./contexts/isSvn18orGreater";
 import { tempSvnFs } from "./temp_svn_fs";
 import { SvnFileSystemProvider } from "./svnFileSystemProvider";
+import { isPositron, getEnvironmentName } from "./positron/runtime";
 
 async function init(
   extensionContext: ExtensionContext,
@@ -65,6 +66,7 @@ async function init(
   );
 
   outputChannel.appendLine(`Using svn "${info.version}" from "${info.path}"`);
+  outputChannel.appendLine(`Running in ${getEnvironmentName()}`);
   console.log("SVN Extension: Providers created successfully");
 
   const onOutput = (str: string) => outputChannel.append(str);
@@ -159,7 +161,14 @@ async function _activate(context: ExtensionContext, disposables: Disposable[]) {
 }
 
 export async function activate(context: ExtensionContext) {
-  console.log("SVN Extension: activate() called");
+  const env = getEnvironmentName();
+  const inPositron = isPositron();
+
+  console.log(`SVN Extension: activate() called in ${env}`);
+  if (inPositron) {
+    console.log("SVN Extension: Positron-specific features available");
+  }
+
   const disposables: Disposable[] = [];
   context.subscriptions.push(
     new Disposable(() => Disposable.from(...disposables).dispose())

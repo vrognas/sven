@@ -1,3 +1,19 @@
+## [2.17.131] (2025-11-12)
+
+### Positron: Runtime detection (Phase 23.P0) ✅
+
+* **Runtime detection module**: src/positron/runtime.ts (70L)
+  - isPositron(): Detect Positron vs VS Code
+  - getPositronApi(): Safe API acquisition
+  - whenPositron(): Conditional feature activation helper
+  - getEnvironmentName(): For logging/telemetry
+* **Extension integration**: Detect environment at activation
+  - Logs "SVN Extension: activate() called in Positron" or "VS Code"
+  - Output channel shows: "Running in Positron"
+  - Foundation for conditional Positron features
+* **Tests**: +3 minimalist tests (runtime.test.ts)
+* **Next**: P1 Connections pane provider
+
 ## [2.17.130] (2025-11-12)
 
 ### Positron: Install API package (Phase 23 prep)

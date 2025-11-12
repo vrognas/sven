@@ -8,7 +8,7 @@
 
 ## Architecture
 
-See `ARCHITECTURE_ANALYSIS.md` for complete architecture details (v2.17.129).
+See `ARCHITECTURE_ANALYSIS.md` for complete architecture details (v2.17.131).
 
 ## Plans
 
