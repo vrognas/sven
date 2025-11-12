@@ -40,7 +40,6 @@ suite("Checkout Commands Tests", () => {
   let errorMessageResult: string | undefined;
   let infoMessageResult: string | undefined;
   let configGetResult: any = "/home/test";
-  let svnExecError: Error | null = null;
 
   setup(() => {
     // Clear tracking
@@ -62,7 +61,6 @@ suite("Checkout Commands Tests", () => {
     errorMessageResult = undefined;
     infoMessageResult = undefined;
     configGetResult = "/home/test";
-    svnExecError = null;
 
     // Mock validation.validateRepositoryUrl
     origValidateUrl = validation.validateRepositoryUrl;
@@ -134,9 +132,6 @@ suite("Checkout Commands Tests", () => {
         return {
           svn: {
             exec: async () => {
-              if (svnExecError) {
-                throw svnExecError;
-              }
               return { stdout: "Checked out", stderr: "", exitCode: 0 };
             }
           }

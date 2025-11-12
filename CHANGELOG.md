@@ -1,3 +1,12 @@
+## [2.17.103] (2025-11-12)
+
+### Code quality: Dead code removal in checkout tests
+
+* **Dead code removed**: Unreachable error handling in checkout.test.ts
+  - Removed: `svnExecError` variable (never set to non-null)
+  - Removed: Unreachable `if (svnExecError)` check (lines 135-137)
+* **Impact**: Cleaner test code, no functionality change
+
 ## [2.17.102] (2025-11-12)
 
 ### Security: Stderr sanitization (M-1 from security audit)
