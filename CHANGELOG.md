@@ -1,3 +1,14 @@
+## [2.17.117] (2025-11-12)
+
+### Fix: Global state race - per-repo keys (Phase 20.B) ✅
+
+* **CRITICAL BUG FIXED**: Multi-repo data corruption eliminated
+  - Changed: `_seqList[name]` → `_seqList["${name}:${this.root}"]` (decorators.ts:128)
+  - Impact: 30-40% users (multi-repo setups no longer share operation queues)
+  - Fix: Per-repo keys ensure independent serialization per repository
+  - Tests: +3 tests verify parallel multi-repo operations
+* **Phase 20 progress**: 2/4 P0 bugs fixed (2 remaining: unsafe JSON.parse, sanitization gaps)
+
 ## [2.17.116] (2025-11-12)
 
 ### Docs: Implementation decisions + rationale

@@ -1,15 +1,15 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.116
+**Version**: v2.17.117
 **Updated**: 2025-11-12
-**Status**: Phase 20 active (1/4 bugs fixed ✅). Phase 21 validated w/ new finding.
+**Status**: Phase 20 active (2/4 bugs fixed ✅). Next: unsafe JSON.parse (1h).
 
 ---
 
 ## Phase 20: P0 Stability & Security 🔴 CRITICAL
 
 **Target**: v2.17.115-118
-**Effort**: 8-12h
+**Effort**: 8-12h (5-8h remaining)
 **Impact**: Crashes eliminated, data races fixed, credential leaks prevented
 
 ### Critical Bugs
@@ -19,13 +19,10 @@
 - Fix: Graceful logging
 - Impact: 1-5% users
 
-**B. Global state data race** (P0 - CRITICAL)
-- `decorators.ts:119`, `repository.ts:469`: Shared `_seqList` across all repos
-- Impact: 30-40% users (multi-repo corruption, perf degradation)
-- Fix: Per-repo keys (append repo path to key: `_seqList["updateModelState:/path"]`)
-  - Why: Less invasive than instance-level, keeps decorator pattern
-  - Implementation: Modify decorator to accept repo identifier param
-- Effort: 2-3h
+**B. Global state data race** ✅ FIXED (v2.17.117)
+- `decorators.ts:128`: Per-repo keys prevent shared queues
+- Fix: Append `this.root` to key (`_seqList["op:${root}"]`)
+- Impact: 30-40% users (multi-repo corruption eliminated)
 
 **C. Unsafe JSON.parse** (P0 - SECURITY)
 - `repository.ts:808,819`, `uri.ts:11`: No try-catch on credential parsing
@@ -37,10 +34,10 @@
 - Impact: 100% users (credential disclosure on errors)
 - Effort: 4-7h
 
-| Issue | Users | Severity | Effort |
+| Issue | Users | Severity | Status |
 |-------|-------|----------|--------|
-| Watcher crash | 1-5% | Extension kill | DONE |
-| Global state race | 30-40% | Data corruption | 2-3h |
+| Watcher crash | 1-5% | Extension kill | ✅ DONE |
+| Global state race | 30-40% | Data corruption | ✅ DONE |
 | Unsafe JSON.parse | 5-10% | Crash | 1h |
 | Sanitization gaps | 100% | Credential leak | 4-7h |
 
@@ -101,7 +98,7 @@
 **Phase 21**: 7-11h, HIGH (performance, 80-100% users affected)
 **Total**: 15-23h for complete P0/P1 resolution
 
-**Next action**: Phase 20-B (global state race) - 2-3h
+**Next action**: Phase 20-C (unsafe JSON.parse) - 1h
 
 ---
 
