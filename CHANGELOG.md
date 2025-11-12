@@ -1,9 +1,31 @@
+## [2.17.134] (2025-11-12)
+
+### Fix: Reveal in File Explorer code review fixes ✅
+
+* **Type signature fix**: Changed `Resource[]` → `SourceControlResourceState[]`
+  - Matches codebase conventions (consistent with add, remove, revert commands)
+  - Proper type safety for SCM resource operations
+* **Error handling**: Added try-catch with logError
+  - Prevents crashes if `revealFileInOS` fails
+  - User-friendly error message: "Unable to reveal file in explorer"
+  - Credentials sanitized via logError utility
+* **Null check improvement**: Explicit early return for missing resourceUri
+  - More defensive coding pattern
+  - Prevents undefined errors
+* **Documentation**: Added comment explaining single-file behavior
+  - "Note: Only first file revealed when multiple selected (matches VS Code UX)"
+* **Tests improved**: Now test actual command behavior
+  - Test 1: Empty resources array handling
+  - Test 2: Missing URI handling
+  - Test 3: Multiple resource selection (first file processed)
+* **Impact**: Hardened implementation, better error handling, type safety
+
 ## [2.17.133] (2025-11-12)
 
 ### Feature: Reveal in File Explorer (QoL) ✅
 
 * **New command**: "Reveal in File Explorer" in SCM context menu
-  - src/commands/revealInExplorer.ts (30L)
+  - src/commands/revealInExplorer.ts (36L)
   - Right-click file in SCM "Changes" → "Reveal in File Explorer"
   - Same behavior as Explorer pane context menu
   - Uses VS Code's built-in `revealFileInOS` command

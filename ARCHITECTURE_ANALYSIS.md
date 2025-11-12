@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.133
+**Version**: 2.17.134
 **Updated**: 2025-11-12
 
 ---
@@ -197,5 +197,5 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.16
-**Updated**: 2025-11-12 (v2.17.133)
+**Version**: 3.17
+**Updated**: 2025-11-12 (v2.17.134)
