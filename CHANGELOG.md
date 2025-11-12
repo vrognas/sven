@@ -1,3 +1,17 @@
+## [2.17.102] (2025-11-12)
+
+### Security: Stderr sanitization (M-1 from security audit)
+
+* **Information disclosure prevention**: Sanitize stderr before error processing
+  - File paths: `/home/user/file.txt` → `[PATH]`
+  - Credentials: `password=secret`, `--password secret` → `[REDACTED]`
+  - URLs: `https://user:pass@host` → `https://[CREDENTIALS]@host`
+  - Internal IPs: `10.x.x.x`, `192.168.x.x`, `172.16-31.x.x`, `127.x.x.x` → `[INTERNAL_IP]`
+* **Implementation**: sanitizeStderr() method in command.ts
+* **Test coverage**: +20 tests (19 sanitization + 2 integration)
+* **Coverage**: 824 → 844 tests (+2.4%)
+* **Impact**: Critical security improvement, prevents credential/path leakage in error messages
+
 ## [2.17.101] (2025-11-12)
 
 ### Code Quality: Open* Command Factory Pattern

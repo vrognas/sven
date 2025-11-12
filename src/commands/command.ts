@@ -578,12 +578,38 @@ export abstract class Command implements Disposable {
   }
 
   /**
+   * Sanitize stderr to prevent information disclosure.
+   * Strips file paths, credentials, and internal URLs.
+   */
+  private sanitizeStderr(stderr: string): string {
+    if (!stderr) {
+      return "";
+    }
+
+    return stderr
+      // Strip absolute file paths (Unix and Windows)
+      .replace(/\/[^\s:]+/g, "[PATH]")
+      .replace(/[A-Za-z]:\\[^\s:]+/g, "[PATH]")
+      // Remove password parameters
+      .replace(/password[=:]\s*\S+/gi, "password=[REDACTED]")
+      .replace(/--password\s+\S+/gi, "--password [REDACTED]")
+      // Remove username parameters
+      .replace(/username[=:]\s*\S+/gi, "username=[REDACTED]")
+      .replace(/--username\s+\S+/gi, "--username [REDACTED]")
+      // Sanitize URLs (preserve protocol and domain, strip credentials)
+      .replace(/https?:\/\/[^:@\s]+:[^@\s]+@/g, "https://[CREDENTIALS]@")
+      // Strip internal IP addresses
+      .replace(/\b(?:10|127|172\.(?:1[6-9]|2[0-9]|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b/g, "[INTERNAL_IP]");
+  }
+
+  /**
    * Format user-friendly error message based on error type.
    * Provides actionable guidance for common errors (network, timeout, auth).
    */
   private formatErrorMessage(error: any, fallbackMsg: string): string {
     const errorStr = error?.message || error?.toString() || "";
-    const stderr = error?.stderr || error?.stderrFormated || "";
+    const rawStderr = error?.stderr || error?.stderrFormated || "";
+    const stderr = this.sanitizeStderr(rawStderr);
     const fullError = `${errorStr} ${stderr}`.toLowerCase();
 
     // Network/connection errors (E170013)

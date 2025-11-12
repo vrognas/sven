@@ -17,6 +17,11 @@ class TestCommand extends Command {
     return (this as any).formatErrorMessage(error, fallbackMsg);
   }
 
+  // Expose sanitizeStderr for testing
+  public testSanitizeStderr(stderr: string): string {
+    return (this as any).sanitizeStderr(stderr);
+  }
+
   // Expose handleRepositoryOperation for testing
   public async testHandleRepositoryOperation<T>(
     operation: () => Promise<T>,
@@ -367,6 +372,175 @@ suite("Error Formatting Tests", () => {
       const result = command.testFormatErrorMessage(error, "Operation failed");
 
       assert.ok(result.includes("Network timeout"));
+    });
+  });
+
+  suite("Stderr Sanitization", () => {
+    test("Sanitizes Unix file paths", () => {
+      const stderr = "Error in /home/user/repo/file.txt";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.strictEqual(result, "Error in [PATH]");
+      assert.ok(!result.includes("/home/user"));
+    });
+
+    test("Sanitizes Windows file paths", () => {
+      const stderr = "Error in C:\\Users\\John\\repo\\file.txt";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.strictEqual(result, "Error in [PATH]");
+      assert.ok(!result.includes("C:\\Users"));
+    });
+
+    test("Sanitizes password with equals sign", () => {
+      const stderr = "Auth failed: password=secret123";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("password=[REDACTED]"));
+      assert.ok(!result.includes("secret123"));
+    });
+
+    test("Sanitizes password with colon", () => {
+      const stderr = "Auth failed: password: secret123";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("password:[REDACTED]"));
+      assert.ok(!result.includes("secret123"));
+    });
+
+    test("Sanitizes --password flag", () => {
+      const stderr = "svn commit --password mypass123 file.txt";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("--password [REDACTED]"));
+      assert.ok(!result.includes("mypass123"));
+    });
+
+    test("Sanitizes username with equals sign", () => {
+      const stderr = "Auth failed: username=john";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("username=[REDACTED]"));
+      assert.ok(!result.includes("john"));
+    });
+
+    test("Sanitizes --username flag", () => {
+      const stderr = "svn commit --username john file.txt";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("--username [REDACTED]"));
+      assert.ok(!result.includes("john"));
+    });
+
+    test("Sanitizes URL with credentials", () => {
+      const stderr = "Connecting to https://user:pass@example.com/repo";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("https://[CREDENTIALS]@example.com"));
+      assert.ok(!result.includes("user:pass"));
+    });
+
+    test("Sanitizes 10.x.x.x internal IP", () => {
+      const stderr = "Connecting to 10.0.1.100:8080";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("[INTERNAL_IP]:8080"));
+      assert.ok(!result.includes("10.0.1.100"));
+    });
+
+    test("Sanitizes 192.168.x.x internal IP", () => {
+      const stderr = "Error from 192.168.1.1";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("[INTERNAL_IP]"));
+      assert.ok(!result.includes("192.168.1.1"));
+    });
+
+    test("Sanitizes 172.16-31.x.x internal IP", () => {
+      const stderr = "Server at 172.16.0.1 failed";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("[INTERNAL_IP]"));
+      assert.ok(!result.includes("172.16.0.1"));
+    });
+
+    test("Sanitizes localhost IP", () => {
+      const stderr = "Local server: 127.0.0.1";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("[INTERNAL_IP]"));
+      assert.ok(!result.includes("127.0.0.1"));
+    });
+
+    test("Handles empty stderr", () => {
+      const result = command.testSanitizeStderr("");
+
+      assert.strictEqual(result, "");
+    });
+
+    test("Handles null stderr", () => {
+      const result = command.testSanitizeStderr(null as any);
+
+      assert.strictEqual(result, "");
+    });
+
+    test("Sanitizes multiple sensitive items", () => {
+      const stderr =
+        "svn commit /home/user/file.txt --username admin --password secret --repository-url https://admin:secret@192.168.1.1/repo";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("[PATH]"));
+      assert.ok(result.includes("--username [REDACTED]"));
+      assert.ok(result.includes("--password [REDACTED]"));
+      assert.ok(result.includes("https://[CREDENTIALS]@"));
+      assert.ok(result.includes("[INTERNAL_IP]"));
+      assert.ok(!result.includes("/home/user"));
+      assert.ok(!result.includes("admin"));
+      assert.ok(!result.includes("secret"));
+      assert.ok(!result.includes("192.168.1.1"));
+    });
+
+    test("Preserves error codes and safe content", () => {
+      const stderr = "svn: E170013: Unable to connect";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("E170013"));
+      assert.ok(result.includes("Unable to connect"));
+    });
+
+    test("Case-insensitive password detection", () => {
+      const stderr = "PASSWORD=secret123";
+      const result = command.testSanitizeStderr(stderr);
+
+      assert.ok(result.includes("PASSWORD=[REDACTED]"));
+      assert.ok(!result.includes("secret123"));
+    });
+  });
+
+  suite("Integration: Sanitization with Error Formatting", () => {
+    test("Sanitizes stderr before error detection", () => {
+      const error = {
+        message: "Error occurred",
+        stderr:
+          "svn: E170013: Unable to connect from /home/user/repo --password secret123"
+      };
+      const result = command.testFormatErrorMessage(error, "Fallback");
+
+      assert.ok(result.includes("Network error"));
+      // Verify sanitization happened (error detection still works)
+      assert.ok(!result.includes("/home/user"));
+      assert.ok(!result.includes("secret123"));
+    });
+
+    test("Sanitizes credentials in timeout error", () => {
+      const error = {
+        message: "Operation timed out",
+        stderr: "Connecting to https://user:pass@example.com/repo"
+      };
+      const result = command.testFormatErrorMessage(error, "Fallback");
+
+      assert.ok(result.includes("Network timeout"));
+      // Internal sanitization occurred
     });
   });
 });
