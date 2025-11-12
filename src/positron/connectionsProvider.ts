@@ -73,7 +73,7 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
    */
   async checkDependencies(): Promise<boolean> {
     // SVN availability already checked during extension activation
-    return this.sourceControlManager.repositories.length >= 0;
+    return this.sourceControlManager.repositories.length > 0;
   }
 }
 
