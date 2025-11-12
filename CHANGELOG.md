@@ -1,3 +1,17 @@
+## [2.17.135] (2025-11-12)
+
+### Fix: Input validation for SVN URLs ✅
+
+* **URL validation**: Added validation to `generateCode` method in connections provider
+  - Validates URL is non-empty (prevents `svn checkout ` invalid command)
+  - Validates URL format (checks for http://, https://, svn://, svn+ssh://, file://)
+  - Throws descriptive errors for invalid inputs
+* **Tests**: Added comprehensive test coverage
+  - Test: Empty URL throws error
+  - Test: Invalid URL format throws error  
+  - Test: Valid URL schemes accepted (http, https, svn, svn+ssh, file)
+* **Impact**: Prevents invalid SVN checkout commands, better user experience
+
 ## [2.17.134] (2025-11-12)
 
 ### Fix: Reveal in File Explorer code review fixes ✅

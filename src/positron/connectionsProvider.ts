@@ -52,6 +52,20 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
     const url = inputs.find(i => i.id === "url")?.value || "";
     const target = inputs.find(i => i.id === "targetPath")?.value || "";
 
+    // Validate URL is non-empty
+    if (!url || url.trim() === "") {
+      throw new Error("Repository URL cannot be empty");
+    }
+
+    // Validate URL format (basic check for valid URL structure)
+    // SVN URLs can be: http://, https://, svn://, svn+ssh://, file://
+    const urlPattern = /^(https?|svn(\+ssh)?|file):\/\/.+/i;
+    if (!urlPattern.test(url.trim())) {
+      throw new Error(
+        "Invalid SVN URL format. URL must start with http://, https://, svn://, svn+ssh://, or file://"
+      );
+    }
+
     if (target) {
       return `svn checkout ${url} ${target}`;
     }
