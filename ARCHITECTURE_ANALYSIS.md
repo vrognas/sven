@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.111
+**Version**: 2.17.112
 **Updated**: 2025-11-12
 
 ---
@@ -14,8 +14,8 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Repository**: 923 lines (22% reduction via 3 extracted services)
 - **Commands**: 50+ (27 refactored, 150 lines removed via factory pattern)
 - **Coverage**: ~50-55% (856 tests, +12 from Phases 18-19) ✅ TARGET REACHED
-- **Performance**: ✅ Phases 18 & 19 COMPLETE (UI freezes eliminated, memory leak fixed, remote polling optimized)
-- **Security**: ✅ Phase 19 complete (esbuild vuln fixed), stderr sanitization complete
+- **Performance**: ✅ All P0 resolved. P1 bottlenecks identified (see below)
+- **Security**: ✅ esbuild vuln fixed, stderr sanitized. P2 issues: password CLI exposure, unsafe JSON.parse
 
 ---
 
@@ -56,21 +56,47 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ---
 
-## All P0 Issues Resolved ✅
+## Performance Analysis
 
-### Performance (All Fixed)
-- ✅ **UI blocking**: FIXED (v2.17.108-109) - Non-blocking progress + cancellation support
-- ✅ **Memory leak**: FIXED (v2.17.107) - Info cache LRU with 500 entry limit
-- ✅ **Remote polling**: FIXED (v2.17.107) - Smart check via `svn log -r BASE:HEAD --limit 1`
+### P0 Issues - Resolved ✅
+- ✅ **UI blocking**: FIXED (v2.17.108-109) - Non-blocking progress + cancellation
+- ✅ **Memory leak**: FIXED (v2.17.107) - LRU cache (500 limit)
+- ✅ **Remote polling**: FIXED (v2.17.107) - Smart check (95% faster)
 
-### Security (Fixed)
-- ✅ **esbuild vuln**: FIXED (v2.17.106) - Updated 0.24.2 → 0.27.0
+### P1 Issues - Identified
+**A. Quadratic descendant resolution** (`StatusService.ts:217-223`)
+- O(n*m) nested loop (100-500ms on 1000+ files)
+- 50-70% users affected
+- Fix: 1-2h
 
-### Code Quality (P1)
-- **248 `any` types**: Type safety compromised across 25 files
-- **Duplication**: show/showBuffer (139 lines 90% identical), 8 plain log methods
-- ✅ **Dead code**: PARTIAL - countNewCommit removed (v2.17.110), other items in use
-- ✅ **Encapsulation**: IMPROVED - 2 methods made private (v2.17.111)
+**B. Glob pattern matching** (`StatusService.ts:292,350-358`)
+- Per-item `matchAll()` calls (10-50ms on 500+ files)
+- 30-40% users affected
+- Fix: 2-3h
+
+**C. Batch operations** (`svnRepository.ts:615-618`)
+- No chunking for bulk ops (50-200ms overhead)
+- 20-30% users affected
+- Fix: 2-3h
+
+## Code Quality Analysis
+
+### Bloat Issues
+- **show/showBuffer duplication**: 139 lines, 90% identical (~95 removable)
+- **util.ts dumping ground**: 336 lines, 26 exports (split into 3 modules)
+- **Error handling**: 70 catch blocks, inconsistent (~40 lines removable)
+- **Large classes**: svnRepository 1086 lines, repository 969 lines
+
+### Type Safety Issues
+- **248 `any` types**: 25 files, zero safety (decorators, utils, managers)
+- **Unsafe casts**: `groups as any as ResourceGroup[]`
+- **Missing error guards**: 733 catch blocks, many untyped
+
+### Security Issues (P2)
+- **Password CLI exposure**: `svn.ts:110-113` (process list leak)
+- **Unsafe JSON.parse**: `repository.ts:808,819` (no try-catch)
+- ✅ **esbuild vuln**: FIXED (v2.17.106)
+- ✅ **stderr leaks**: FIXED (v2.17.102)
 
 ---
 
@@ -133,14 +159,13 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ## Next Actions
 
-All P0 issues resolved. Future opportunities (P1/P2):
-- Duplication fixes (show/showBuffer 139 lines, 8 plain log methods)
-- Type safety improvements (248 `any` types)
+**P0**: All resolved ✅
+**P1 (Phases 20-21)**: Performance optimization + code quality (17-23h)
+**P2/P3**: Type safety (80-120h), security (20-30h), architecture (16-20h)
 
-✅ **Phase 18 & 19**: COMPLETE (v2.17.106-109)
-✅ **Dead code cleanup**: COMPLETE (v2.17.110-111)
+See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.1
-**Updated**: 2025-11-12 (v2.17.111)
+**Version**: 3.2
+**Updated**: 2025-11-12 (v2.17.112)

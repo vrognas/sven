@@ -1,3 +1,23 @@
+## [2.17.112] (2025-11-12)
+
+### Docs: Tech debt audit + plan consolidation
+
+* **Performance audit**: Identified 3 P1 bottlenecks (Phase 20)
+  - Quadratic descendant resolution: 50-70% users, 100-500ms
+  - Glob pattern matching: 30-40% users, 10-50ms
+  - Batch operations: 20-30% users, 50-200ms
+* **Code bloat audit**: Identified ~200 removable lines (Phase 21)
+  - show/showBuffer duplication: 139 lines, 90% identical
+  - util.ts dumping ground: 336 lines, split needed
+  - Error handling: 70 catch blocks, inconsistent
+* **Tech debt audit**: Type safety + security issues catalogued
+  - 248 `any` types across 25 files
+  - Password CLI exposure (svn.ts:110-113)
+  - Unsafe JSON.parse (repository.ts:808,819)
+* **Doc cleanup**: Removed redundant DEV_WORKFLOW.md
+* **Plan update**: IMPLEMENTATION_PLAN.md → 2 critical phases only
+* **Architecture update**: ARCHITECTURE_ANALYSIS.md → v3.2 with findings
+
 ## [2.17.111] (2025-11-12)
 
 ### Code quality: Encapsulation improvements

@@ -1,102 +1,123 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.111
+**Version**: v2.17.112
 **Updated**: 2025-11-12
-**Status**: Phase 18 & 19 COMPLETE ✅, Dead code cleanup COMPLETE ✅
+**Status**: All P0 issues resolved ✅. 2 high-impact P1 phases planned.
 
 ---
 
-## Phase 18: UI Performance - Non-Blocking Operations ⚡ COMPLETE ✅
+## Phase 20: Performance - Critical Path Optimization ⚡
 
-**Completed**: 2025-11-12 (v2.17.108-109)
-**Effort**: 2h (under 4-6h estimate)
-**Impact**: 2-5s UI freezes eliminated, 50-100% users benefit
+**Target**: v2.17.113-115
+**Effort**: 5-8h
+**Impact**: 50-70% users, 2-5x faster status updates
 
-### Results
-**A. Non-blocking progress** ✅ (v2.17.108)
-- ProgressLocation.SourceControl → Notification
-- UI remains responsive during operations
-- +6 tests
+### Bottlenecks
 
-**B. CancellationToken support** ✅ (v2.17.109)
-- Users can cancel long ops (status, update, log)
-- Process.kill() on token.onCancellationRequested
-- Promise.race with cancellation
+**A. Quadratic descendant resolution** (P1 - CRITICAL)
+- Location: `StatusService.ts:217-223`
+- Issue: O(n*m) nested loop despite claiming "Phase 11 perf fix"
+- Impact: 100-500ms on 1000+ files
+- Fix: Build descendant set once, single iteration
+- Effort: 1-2h
 
-**Skipped** (existing solutions sufficient):
-- Step 3: Queue already has 500ms debounce
-- Step 4: Already has 2s cache
+**B. Repeated glob pattern matching** (P1)
+- Location: `StatusService.ts:292,350-358`
+- Issue: `matchAll()` per status item (10-50ms on 500+ files)
+- Fix: Pre-filter simple patterns, two-tier matching
+- Effort: 2-3h
 
----
+**C. Missing batch operations** (P1)
+- Location: `svnRepository.ts:615-618`
+- Issue: No chunking for bulk file ops (50-200ms overhead)
+- Fix: Batch SVN commands (50 files/chunk)
+- Effort: 2-3h
 
-## Phase 19: Memory + Security Fixes 🔒 COMPLETE ✅
+### Metrics
 
-**Completed**: 2025-11-12 (v2.17.106-107)
-**Effort**: 2.5h (as estimated)
-**Impact**: Security vuln fixed, memory leak prevented, 95% faster polls
-
-### Results
-**A. Info cache LRU** ✅ (v2.17.107)
-- 500 entry max, LRU eviction
-- lastAccessed tracking
-- +3 tests, prevents 100-500MB leak
-
-**B. esbuild update** ✅ (v2.17.106)
-- 0.24.2 → 0.27.0
-- GHSA-67mh-4wv8-2f99 fixed
-- 5 → 4 vulnerabilities
-
-**C. Smart remote polling** ✅ (v2.17.107)
-- `svn log -r BASE:HEAD --limit 1` check
-- 95% faster when no changes
-- +3 tests
+| Metric | Current | Target |
+|--------|---------|--------|
+| Status update (1000 files) | 100-500ms | 20-100ms |
+| Glob filtering (500 files) | 10-50ms | 3-15ms |
+| Bulk add (100 files) | 50-200ms | 20-80ms |
 
 ---
 
-## Metrics
+## Phase 21: Code Quality - Duplication & Modernization 🔧
 
-| Metric | Before | Phase 18 ✅ | Phase 19 ✅ |
-|--------|--------|-------------|-------------|
-| UI freeze | 2-5s | 0s ✅ | N/A |
-| Operations cancellable | No | Yes ✅ | N/A |
-| Memory growth (8h) | 100-500MB | N/A | <50MB ✅ |
-| Remote poll (no changes) | 5-300s | N/A | 0.1-15s ✅ |
-| Security vulns | 5 | N/A | 4 ✅ |
+**Target**: v2.17.116-118
+**Effort**: 12-15h
+**Impact**: ~200 lines removed, better maintainability
+
+### Quick Wins
+
+**A. Extract show/showBuffer encoding logic** (P1)
+- Duplication: 139 lines, 90% identical
+- Remove: ~95 lines via template method
+- Effort: 2h
+
+**B. Split util.ts into focused modules** (P1)
+- Current: 336 lines, 26 exports (dumping ground)
+- Split into: pathUtils, eventUtils, validation
+- Remove: ~180 lines reorganized
+- Effort: 3-4h
+
+**C. Standardize error handling** (P1)
+- Issue: 70 catch blocks, inconsistent patterns
+- Fix: Extract error handler utility
+- Remove: ~40 lines duplicate logic
+- Effort: 4-6h
+
+**D. Optional chaining modernization** (P2)
+- Replace: `&& obj && obj.prop` → `obj?.prop` (48 occurrences)
+- Effort: 2-3h
+
+### Metrics
+
+| Metric | Before | After |
+|--------|--------|-------|
+| svnRepository.ts | 1086 lines | ~990 lines |
+| util.ts | 336 lines | Split 3 files |
+| Duplicate code | 200+ lines | <50 lines |
+
+---
+
+## Completed Phases ✅
+
+**Phase 18 (v2.17.108-109)**: UI Performance
+- Non-blocking progress (ProgressLocation.Notification)
+- CancellationToken support
+- Impact: UI freezes eliminated (2-5s → 0s)
+
+**Phase 19 (v2.17.106-107)**: Memory + Security
+- Info cache LRU (500 entry limit)
+- esbuild update (vuln fix)
+- Smart remote polling (95% faster)
+- Impact: Memory stable (<50MB vs 100-500MB/8h)
+
+---
+
+## Future Opportunities (P2/P3)
+
+**Type Safety** (80-120h):
+- 248 `any` types across 25 files
+- Decorator type definitions
+- Error type guards
+
+**Security** (20-30h):
+- Password CLI exposure fix
+- Unsafe JSON.parse (2 locations)
+
+**Architecture** (16-20h):
+- Extract FileOperationsService
+- Extract DiffService
 
 ---
 
 ## Summary
 
-**Phases 18 & 19 Complete** - All P0 performance and security issues resolved.
+**P0**: All resolved ✅
+**P1 (Phases 20-21)**: 17-23h effort, high user impact
+**P2/P3**: 120-170h effort, lower priority
 
-**Total impact**:
-- 100% users: UI no longer freezes (0s vs 2-5s)
-- 100% users: Operations cancellable
-- 20-30% users: Memory stable (<50MB vs 100-500MB/8h)
-- 30-40% users: 95% faster remote polls
-- All users: Security vuln fixed (5 → 4)
-
-**Tests**: +12 (6 UI blocking + 6 memory/polling)
-**Versions**: 2.17.104 → 2.17.109
-**Effort**: 4.5h (2.5h Phase 19 + 2h Phase 18)
-
----
-
-## Code Quality Cleanup (v2.17.110-111) ✅
-
-**Dead code removal** (v2.17.110):
-- Removed countNewCommit (12 lines, 0 usages)
-
-**Encapsulation** (v2.17.111):
-- Made private: addFilesByIgnore, getCurrentIgnore
-
-**Note**: Audit identified items verified still in use (pathEquals, EmptyDisposable, list method).
-
----
-
-## Future Opportunities (P1/P2)
-
-- Duplication fixes (show/showBuffer 139 lines, 8 plain log methods)
-- Type safety (248 `any` types)
-- Worker threads for parsing
-- Progressive status updates
+**Next action**: Phase 20 (Performance optimization)
