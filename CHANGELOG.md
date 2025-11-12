@@ -1,3 +1,16 @@
+## [2.17.96] (2025-11-12)
+
+### Test Coverage: Additional command tests (Phase 3)
+
+* **New test files**: 4 command test files (31 → 35 test files total)
+  - `commands/update.test.ts` - Update command with config handling (30 tests, 586 lines)
+  - `commands/switch.test.ts` - SwitchBranch command with URL validation (33 tests, 747 lines)
+  - `commands/patch.test.ts` - Patch commands (Patch, PatchAll, PatchChangeList) (32 tests, 570 lines)
+  - `commands/merge.test.ts` - Merge command with conflict retry (21 tests, 520 lines)
+* **Tests added**: 116 new command tests (2,423 lines)
+* **Coverage**: 276 → 392 tests (+42%)
+* **Focus**: Update/switch/patch/merge commands, URL validation, config handling, conflict resolution
+
 ## [2.17.95] (2025-11-12)
 
 ### Test Coverage: Patch command tests

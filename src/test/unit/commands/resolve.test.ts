@@ -18,6 +18,7 @@ suite("Resolve Command Tests", () => {
     mockRepository = {
       resolve: async (paths: string[], action: string) => {
         resolveCalls.push({ paths, action });
+        return "Resolved";
       }
     };
 

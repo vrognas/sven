@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.94
+**Version**: v2.17.96
 **Updated**: 2025-11-12
-**Status**: Phases 1-16 + 17A + Test Coverage Phase 1-2 COMPLETE ✅
+**Status**: Phases 1-16 + 17A + Test Coverage Phase 1-3 COMPLETE ✅
 
 ---
 
@@ -24,6 +24,7 @@
 - Phase 17A: AuthService foundation (115 lines, 12 tests, 0 risk)
 - Test Coverage Phase 1: +37 tests (utilities + security)
 - Test Coverage Phase 2: +101 tests (command integration)
+- Test Coverage Phase 3: +116 tests (update, switch, patch, merge)
 
 ---
 
@@ -71,11 +72,11 @@ Integrate AuthService into repository.ts:
 **Open* Command Bloat** (2.5h, 74 lines):
 - 5 thin wrappers → factory pattern
 
-**Test Coverage** (10-15h remaining):
-- 138 → 276 tests (+138, +100%) - utilities, security, commands complete
-- Critical commands tested: commit, revert, add, remove, resolve
-- Remaining: update, switch, patch, merge commands
-- Target: 50%+ coverage (currently ~30-35%)
+**Test Coverage** (5-10h remaining):
+- 138 → 392 tests (+254, +184%) - utilities, security, commands complete
+- Critical commands tested: commit, revert, add, remove, resolve, update, switch, patch, merge
+- Remaining: log, checkout, cleanup, upgrade, refresh commands
+- Target: 50%+ coverage (currently ~35-40%)
 
 **God Classes** (6-8h, diminishing returns):
 - repository.ts: 969 lines
