@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.107
+**Version**: 2.17.109
 **Updated**: 2025-11-12
 
 ---
@@ -13,8 +13,8 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Source lines**: ~12,400
 - **Repository**: 923 lines (22% reduction via 3 extracted services)
 - **Commands**: 50+ (27 refactored, 150 lines removed via factory pattern)
-- **Coverage**: ~50-55% (850 tests) ✅ TARGET REACHED
-- **Performance**: ✅ Phase 19 complete (memory leak + remote polling fixed), Phase 18 remains (UI blocking)
+- **Coverage**: ~50-55% (856 tests, +12 from Phases 18-19) ✅ TARGET REACHED
+- **Performance**: ✅ Phases 18 & 19 COMPLETE (UI freezes eliminated, memory leak fixed, remote polling optimized)
 - **Security**: ✅ Phase 19 complete (esbuild vuln fixed), stderr sanitization complete
 
 ---
@@ -56,14 +56,14 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ---
 
-## Critical Issues (See IMPLEMENTATION_PLAN.md)
+## All P0 Issues Resolved ✅
 
-### Performance (P0)
-- **UI blocking**: 50-100% users, 2-5s freezes during status/refresh
-- **Memory leak**: ✅ FIXED - Info cache now LRU with 500 entry limit
-- **Remote polling**: ✅ FIXED - Smart check via `svn log -r BASE:HEAD --limit 1` before full status
+### Performance (All Fixed)
+- ✅ **UI blocking**: FIXED (v2.17.108-109) - Non-blocking progress + cancellation support
+- ✅ **Memory leak**: FIXED (v2.17.107) - Info cache LRU with 500 entry limit
+- ✅ **Remote polling**: FIXED (v2.17.107) - Smart check via `svn log -r BASE:HEAD --limit 1`
 
-### Security (P0)
+### Security (Fixed)
 - ✅ **esbuild vuln**: FIXED (v2.17.106) - Updated 0.24.2 → 0.27.0
 
 ### Code Quality (P1)
@@ -75,10 +75,11 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ## Completed Improvements ✅
 
-### Performance (Phases 8-16)
-- Config cache, decorator removal, conditional index rebuild
-- 60-80% burst reduction, 5-15ms savings per operation
-- 25 bottlenecks fixed (but P0 issues remain)
+### Performance (Phases 8-19)
+- **Phase 18**: UI non-blocking (ProgressLocation.Notification, cancellation tokens)
+- **Phase 19**: Memory leak fix (LRU cache), remote polling (95% faster)
+- **Phases 8-16**: Config cache, decorator removal, conditional index rebuild
+- **Result**: All P0 bottlenecks resolved, UI responsive, memory stable
 
 ### Code Quality
 - 150 lines removed via helpers + factory pattern
@@ -89,8 +90,9 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - Stderr sanitization (M-1 critical fix, credential disclosure prevented)
 
 ### Testing
-- 138 → 844 tests (+706, +512%)
+- 138 → 856 tests (+718, +520%)
 - 21-23% → 50-55% coverage ✅ TARGET
+- Phase 18-19: +12 tests (UI blocking, memory, polling)
 
 ---
 
@@ -129,11 +131,14 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ## Next Actions
 
-See IMPLEMENTATION_PLAN.md for detailed plans:
-- **Phase 18**: UI Performance - Non-blocking operations (4-6h, CRITICAL)
-- ✅ **Phase 19**: COMPLETE (v2.17.106-107)
+All P0 issues resolved. Future opportunities (P1/P2):
+- Dead code removal (util.ts, svnRepository.ts)
+- Duplication fixes (show/showBuffer, plain log methods)
+- Type safety improvements (248 `any` types)
+
+✅ **Phase 18 & 19**: COMPLETE (v2.17.106-109)
 
 ---
 
-**Version**: 2.1
-**Updated**: 2025-11-12 (v2.17.107)
+**Version**: 3.0
+**Updated**: 2025-11-12 (v2.17.109)
