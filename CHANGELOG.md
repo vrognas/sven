@@ -1,3 +1,13 @@
+## [2.17.95] (2025-11-12)
+
+### Test Coverage: Patch command tests
+
+* **New test file**: commands/patch.test.ts (31 → 32 test files)
+* **Tests added**: 32 tests covering patch creation (708 lines)
+* **Commands tested**: Patch, PatchAll, PatchChangeList
+* **Coverage**: Single/multiple files, all statuses, changelists, error handling, cancellations
+* **Total tests**: 276 → 308 tests (+12%)
+
 ## [2.17.94] (2025-11-12)
 
 ### Test Coverage: Command integration tests (Phase 2)
