@@ -1,3 +1,12 @@
+## [2.17.97] (2025-11-12)
+
+### Test Coverage: ChangeList command tests
+
+* **New test file**: commands/changelist.test.ts (35 → 36 test files)
+* **Tests added**: 33 tests covering changelist management (803 lines)
+* **Coverage**: Input handling (Resource/Uri/activeEditor), repository validation, create/add/remove/switch changelists, canRemove detection, user cancellation, error handling, path normalization, info messages, complex scenarios
+* **Total tests**: 392 → 425 tests (+8%)
+
 ## [2.17.96] (2025-11-12)
 
 ### Test Coverage: Additional command tests (Phase 3)
