@@ -73,7 +73,7 @@ async function init(
   // Register Positron-specific providers
   if (isPositron()) {
     console.log("SVN Extension: Registering Positron connections provider");
-    const connectionsDisposable = registerSvnConnectionsProvider(sourceControlManager);
+    const connectionsDisposable = registerSvnConnectionsProvider(sourceControlManager, outputChannel);
     if (connectionsDisposable) {
       disposables.push(connectionsDisposable);
       outputChannel.appendLine("Positron: SVN Connections provider registered");

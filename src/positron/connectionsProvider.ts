@@ -11,7 +11,7 @@ import type {
   ConnectionsDriverMetadata,
   ConnectionsInput
 } from "positron";
-import { commands, Disposable } from "vscode";
+import { commands, Disposable, OutputChannel } from "vscode";
 import type { SourceControlManager } from "../source_control_manager";
 import { getPositronApi } from "./runtime";
 
@@ -43,7 +43,10 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
     ]
   };
 
-  constructor(private sourceControlManager: SourceControlManager) {}
+  constructor(
+    private sourceControlManager: SourceControlManager,
+    private outputChannel: OutputChannel
+  ) {}
 
   /**
    * Generate SVN checkout code from user inputs
@@ -65,7 +68,7 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
     // Execute the generated SVN command
     // For now, show the command to user
     await commands.executeCommand("svn.showOutput");
-    console.log(`SVN Connection: Would execute: ${code}`);
+    this.outputChannel.appendLine(`SVN Connection: Would execute: ${code}`);
   }
 
   /**
@@ -81,17 +84,19 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
  * Register SVN connections provider with Positron
  *
  * @param sourceControlManager Source control manager instance
+ * @param outputChannel Output channel for logging
  * @returns Disposable to unregister the provider
  */
 export function registerSvnConnectionsProvider(
-  sourceControlManager: SourceControlManager
+  sourceControlManager: SourceControlManager,
+  outputChannel: OutputChannel
 ): Disposable | undefined {
   const api = getPositronApi();
   if (!api) {
     return undefined;
   }
 
-  const provider = new SvnConnectionsProvider(sourceControlManager);
+  const provider = new SvnConnectionsProvider(sourceControlManager, outputChannel);
 
   return api.connections.registerConnectionDriver(provider);
 }
