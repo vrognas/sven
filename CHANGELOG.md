@@ -1,3 +1,14 @@
+## [2.17.106] (2025-11-12)
+
+### Security: Update esbuild (GHSA-67mh-4wv8-2f99 fix)
+
+* **Dependency update**: esbuild 0.24.2 → 0.27.0
+* **Vulnerability fixed**: GHSA-67mh-4wv8-2f99 (moderate severity)
+  - Issue: Development server could accept cross-origin requests
+  - Impact: Reduced security vulnerabilities from 5 → 4
+* **Build verification**: All builds pass, no breaking changes
+* **Bundle size**: 253.4kb (unchanged)
+
 ## [2.17.104] (2025-11-12)
 
 ### Tech Debt Audit: Performance, bloat, modernization analysis
