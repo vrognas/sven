@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.100
+**Version**: v2.17.101
 **Updated**: 2025-11-12
-**Status**: Phases 1-16 + 17A + Test Coverage Phase 1-5 + Timeout UX COMPLETE ✅
+**Status**: Phases 1-16 + 17A + Test Coverage Phase 1-5 + Timeout UX + Open* Factory COMPLETE ✅
 
 ---
 
@@ -29,6 +29,7 @@
 - Test Coverage Phase 4b: +144 tests (log, checkout, cleanup, refresh)
 - Test Coverage Phase 5: +224 tests (ignore, rename, open, prompt, revertAll, unversioned) ✅ 50%+ TARGET
 - Timeout Error UX: Enhanced error messages (E170013, E175002, E170001, E155004), +31 tests
+- Open* Command Factory: 5 files → 1 file, 23 lines removed (31% reduction)
 
 ---
 
@@ -75,8 +76,10 @@ Integrate AuthService into repository.ts:
 - 31 comprehensive tests covering all error types and edge cases
 - formatErrorMessage() method in command.ts with intelligent error detection
 
-**Open* Command Bloat** (2.5h, 74 lines):
-- 5 thin wrappers → factory pattern
+**Open* Command Bloat** ✅ COMPLETE:
+- 5 thin wrapper files (74 lines) → single factory file (51 lines)
+- createOpenChangeCommand() + createOpenResourceCommand()
+- 23 lines removed (31% reduction), all 54 tests pass
 
 **Test Coverage** ✅ COMPLETE:
 - 138 → 793 tests (+655, +475%) - utilities, security, all major commands

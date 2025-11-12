@@ -1,3 +1,16 @@
+## [2.17.101] (2025-11-12)
+
+### Code Quality: Open* Command Factory Pattern
+
+* **Code consolidation**: 5 thin wrapper commands → single factory file
+  - Removed: openChangeBase.ts, openChangeHead.ts, openChangePrev.ts, openResourceBase.ts, openResourceHead.ts (74 lines)
+  - Created: openCommands.ts (51 lines)
+  - **Reduction**: 23 lines removed (31% smaller)
+* **Factory functions**: createOpenChangeCommand(), createOpenResourceCommand()
+* **Benefits**: Less duplication, easier maintenance, consistent pattern
+* **Impact**: Code quality improvement, no functionality change
+* **Tests**: All 54 existing Open* tests still pass ✅
+
 ## [2.17.100] (2025-11-12)
 
 ### UX: Enhanced timeout and network error messages

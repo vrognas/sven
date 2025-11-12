@@ -1,12 +1,14 @@
 import * as assert from "assert";
 import { commands, Uri, window, workspace } from "vscode";
 import { OpenFile } from "../../../commands/openFile";
-import { OpenChangeBase } from "../../../commands/openChangeBase";
-import { OpenChangeHead } from "../../../commands/openChangeHead";
-import { OpenChangePrev } from "../../../commands/openChangePrev";
+import {
+  OpenChangeBase,
+  OpenChangeHead,
+  OpenChangePrev,
+  OpenResourceBase,
+  OpenResourceHead
+} from "../../../commands/openCommands";
 import { OpenHeadFile } from "../../../commands/openHeadFile";
-import { OpenResourceBase } from "../../../commands/openResourceBase";
-import { OpenResourceHead } from "../../../commands/openResourceHead";
 import { Status } from "../../../common/types";
 import { Resource } from "../../../resource";
 import IncomingChangeNode from "../../../treeView/nodes/incomingChangeNode";
@@ -261,7 +263,7 @@ suite("Open Commands Tests", () => {
   });
 
   suite("OpenChangeBase Command", () => {
-    let openChangeBase: OpenChangeBase;
+    let openChangeBase: InstanceType<typeof OpenChangeBase>;
 
     setup(() => {
       openChangeBase = new OpenChangeBase();
@@ -361,7 +363,7 @@ suite("Open Commands Tests", () => {
   });
 
   suite("OpenChangeHead Command", () => {
-    let openChangeHead: OpenChangeHead;
+    let openChangeHead: InstanceType<typeof OpenChangeHead>;
 
     setup(() => {
       openChangeHead = new OpenChangeHead();
@@ -448,7 +450,7 @@ suite("Open Commands Tests", () => {
   });
 
   suite("OpenChangePrev Command", () => {
-    let openChangePrev: OpenChangePrev;
+    let openChangePrev: InstanceType<typeof OpenChangePrev>;
 
     setup(() => {
       openChangePrev = new OpenChangePrev();
@@ -636,7 +638,7 @@ suite("Open Commands Tests", () => {
   });
 
   suite("OpenResourceBase Command", () => {
-    let openResourceBase: OpenResourceBase;
+    let openResourceBase: InstanceType<typeof OpenResourceBase>;
 
     setup(() => {
       openResourceBase = new OpenResourceBase();
@@ -724,7 +726,7 @@ suite("Open Commands Tests", () => {
   });
 
   suite("OpenResourceHead Command", () => {
-    let openResourceHead: OpenResourceHead;
+    let openResourceHead: InstanceType<typeof OpenResourceHead>;
 
     setup(() => {
       openResourceHead = new OpenResourceHead();
