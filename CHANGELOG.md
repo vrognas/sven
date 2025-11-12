@@ -1,3 +1,14 @@
+## [2.17.140] (2025-11-13)
+
+### Debug: Add error logging for TortoiseSVN diff 🐛
+
+* **Diff command**: Enhanced error reporting
+  - Added stderr/error event listeners
+  - Added console.log to show command being executed
+  - Will help diagnose why nothing happens
+  - Check DevTools console for: "Launching TortoiseSVN: ..."
+  - Location: diffWithTortoiseSvn.ts:56-77
+
 ## [2.17.139] (2025-11-13)
 
 ### Fix: TortoiseSVN diff command parameters 🔧
