@@ -1,3 +1,17 @@
+## [2.17.98] (2025-11-12)
+
+### Test Coverage: Core command tests (Phase 4)
+
+* **New test files**: 4 command test files (36 → 40 test files total)
+  - `commands/log.test.ts` - Log command with URI construction (42 tests, 410 lines)
+  - `commands/checkout.test.ts` - Checkout with SSRF prevention (43 tests, 886 lines)
+  - `commands/cleanup.test.ts` - Cleanup and Upgrade commands (29 tests, 586 lines)
+  - `commands/refresh.test.ts` - Refresh and RefreshRemoteChanges (30 tests, 505 lines)
+* **Tests added**: 144 new command tests (2,387 lines)
+* **Coverage**: 425 → 569 tests (+34%)
+* **Focus**: Log, checkout, cleanup, upgrade, refresh commands
+* **Security**: SSRF prevention testing for checkout URL validation
+
 ## [2.17.97] (2025-11-12)
 
 ### Test Coverage: ChangeList command tests
