@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.91
+**Version**: v2.17.92
 **Updated**: 2025-11-11
-**Status**: Phases 1-16 COMPLETE ✅
+**Status**: Phases 1-16 + 17A COMPLETE ✅
 
 ---
 
@@ -21,51 +21,43 @@
 - Phase 15: Decorator overhead (1-2ms → <0.5ms)
 - XML Parser Migration: xml2js → fast-xml-parser (79% bundle reduction)
 - Phase 16: Conditional index rebuild (5-15ms eliminated, 50-80% users)
+- Phase 17A: AuthService foundation (115 lines, 12 tests, 0 risk)
 
 ---
 
-## Phase 17: AuthService Extraction 🔐 NEXT
+## Phase 17B: AuthService Integration 🔐 DEFERRED
 
-**Impact**: Security vulnerability, 20-30% repos fail auth
-**Effort**: 4-6h
-**Risk**: HIGH
+**Impact**: Security - completes Phase 17A infrastructure
+**Effort**: 2-3h
+**Risk**: HIGH (modifies repository.ts retry logic)
+**Status**: DEFERRED (low priority)
 
-### Problem
-Auth logic scattered across 40+ locations:
-- `svn.ts`: `getSvnErrorCode()`, `cpErrorHandler()`
-- `svnRepository.ts`: credential management
-- `repository.ts`: auth state
-- 15+ commands handle auth errors separately
+### Phase 17A Complete ✅
+- ✅ AuthService class (115 lines)
+- ✅ 12 comprehensive tests
+- ✅ ICredentialStorage abstraction
+- ✅ Zero breaking changes
 
-### Security Risk
-- No centralized validation
-- Inconsistent error handling
-- Credential leakage potential
-- Hard to audit
+### Phase 17B Scope (DEFERRED)
+Integrate AuthService into repository.ts:
+- Replace `loadStoredAuths()` → `authService.loadStoredCredentials()`
+- Replace `saveAuth()` → `authService.saveCredentials()`
+- Replace `promptAuth()` → `authService.promptForCredentials()`
+- Replace `retryRun()` → `authService.retryWithAuth()`
+- Wire SecretStorage adapter
 
-### Solution
-Extract AuthService (100-120 lines):
-```ts
-export class AuthService {
-  validateCredentials(repo: string): Promise<boolean>
-  handleAuthError(error: ISvnErrorData): AuthAction
-  requestCredentials(repo: string): Promise<Credentials>
-  clearCredentials(repo: string): void
-}
-```
+### Why Deferred
+- Infrastructure complete and tested
+- High integration risk (150+ lines in critical path)
+- Low incremental value (auth already works)
+- Can be adopted incrementally by new code
+- Phase 17A provides audit trail + abstraction
 
-### Files
-- NEW: `src/services/authService.ts` (~120 lines)
-- `src/svn.ts` (extract 40 lines)
-- `src/svnRepository.ts` (extract 30 lines)
-- `src/repository.ts` (extract 20 lines)
-- 15+ command files (refactor error handling)
-
-### Success Metrics
-- Single source of truth for auth
-- Consistent error messages
-- Audit trail for auth events
-- Zero credential leaks
+### Next Steps (When Needed)
+1. Create SecretStorage → ICredentialStorage adapter
+2. Inject AuthService into Repository constructor
+3. Migrate auth methods one at a time
+4. Extensive integration testing
 
 ---
 
@@ -100,13 +92,15 @@ export class AuthService {
 
 ## Execution Order
 
-**NEXT**: Phase 17
+**NEXT**: Quick wins (remote poll early exit, file watcher batching)
 
 **Rationale**:
 1. ✅ Phase 16: Performance - COMPLETE (conditional index rebuild)
-2. Phase 17: Security (4-6h, HIGH risk, critical for enterprise)
+2. ✅ Phase 17A: Security foundation - COMPLETE (AuthService infrastructure)
+3. Phase 17B: DEFERRED (high risk, low incremental value)
+4. Quick wins: Low-hanging performance fruit (30-60min each)
 
-**Total Effort**: 4-6h
+**Completed Effort**: Phase 16 (2h) + Phase 17A (1.5h) = 3.5h
 
 ---
 

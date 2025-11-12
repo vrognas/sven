@@ -1,3 +1,18 @@
+## [2.17.92] (2025-11-11)
+
+### Security: Phase 17A - AuthService foundation (infrastructure)
+
+* **AuthService**: Centralized auth logic abstraction (115 lines)
+  - `isAuthError()` - Detect auth failures
+  - `getCredentials()` / `setCredentials()` - Credential management
+  - `promptForCredentials()` - User prompts
+  - `loadStoredCredentials()` / `saveCredentials()` - Storage abstraction
+  - `retryWithAuth()` - Retry logic with auth attempts
+* **ICredentialStorage**: Storage interface for dependency injection
+* **Tests**: 12 comprehensive tests covering all auth paths
+* **Impact**: Security infrastructure ready, integration deferred to Phase 17B
+* **Risk**: ZERO (no existing code modified)
+
 ## [2.17.91] (2025-11-11)
 
 ### Performance: Phase 16 - Conditional resource index rebuild
