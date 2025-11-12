@@ -1,3 +1,13 @@
+## [2.17.124] (2025-11-12)
+
+### UX: Revert progress to Source Control view
+
+* **Progress location**: ProgressLocation.Notification → SourceControl
+  - Changed: repository.ts:934 reverted to SourceControl
+  - Removed: "SVN" title (not needed for SourceControl)
+  - Kept: cancellable: true (user can still cancel operations)
+  - Impact: Less distracting, progress shown in Source Control view instead of popup notification
+
 ## [2.17.123] (2025-11-12)
 
 ### Perf: Batch operations - adaptive chunking (Phase 21.D) ✅
