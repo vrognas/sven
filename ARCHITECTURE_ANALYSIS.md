@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.122
+**Version**: 2.17.123
 **Updated**: 2025-11-12
 
 ---
@@ -15,7 +15,7 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Commands**: 50+ (27 refactored, 150 lines removed via factory pattern)
 - **Coverage**: ~50-55% (856 tests, +12 from Phases 18-19) ✅ TARGET REACHED
 - **Stability**: 🟢 P0 foundation complete ✅ (4 bugs fixed/addressed)
-- **Performance**: 🟢 3/4 P1 bottlenecks fixed (commit 4-5x, status 3-5x, glob 3x faster)
+- **Performance**: 🟢 All P1 bottlenecks fixed ✅ (commit 4-5x, status 3-5x, glob 3x, batch 2-3x faster)
 - **Security**: 🟡 Critical paths sanitized (19%), 22 catch blocks remain
 - **Bloat**: ~500-1000 lines removable (duplicate methods, god classes)
 
@@ -105,7 +105,9 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - Two-tier matching: simple patterns → complex (`globMatch.ts:35-67`)
 - 30-40% users, 10-50ms → 3-15ms (3x faster)
 
-**D. Batch ops** (`svnRepository.ts:615-618`): 20-30% users, 50-200ms, 2-3h
+**D. Batch operations** ✅ FIXED (v2.17.123)
+- Adaptive chunking (`batchOperations.ts`, `svnRepository.ts:621-636,808-819`)
+- 20-30% users, 50-200ms → 20-80ms (2-3x faster)
 
 ---
 
@@ -194,5 +196,5 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.11
-**Updated**: 2025-11-12 (v2.17.122)
+**Version**: 3.12
+**Updated**: 2025-11-12 (v2.17.123)

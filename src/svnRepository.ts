@@ -618,13 +618,21 @@ export class Repository {
     return this.exec(["add", "--depth=empty", ...files]);
   }
 
-  public addFiles(files: string[]) {
+  public async addFiles(files: string[]) {
     const ignoreList = configuration.get<string[]>("sourceControl.ignore");
     if (ignoreList.length > 0) {
       return this.addFilesByIgnore(files, ignoreList);
     }
     files = files.map(file => this.removeAbsolutePath(file));
-    return this.exec(["add", ...files]);
+
+    // Phase 21.D: Adaptive batching for large file sets
+    const { executeBatched } = await import("./util/batchOperations");
+    const results = await executeBatched(files, async (chunk) => {
+      return this.exec(["add", ...chunk]);
+    });
+
+    // Combine results - return last non-empty stdout
+    return results.reverse().find(r => r.stdout)?.stdout || "";
   }
 
   public addChangelist(files: string[], changelist: string) {
@@ -799,8 +807,15 @@ export class Repository {
 
   public async revert(files: string[], depth: keyof typeof SvnDepth) {
     files = files.map(file => this.removeAbsolutePath(file));
-    const result = await this.exec(["revert", "--depth", depth, ...files]);
-    return result.stdout;
+
+    // Phase 21.D: Adaptive batching for large file sets
+    const { executeBatched } = await import("./util/batchOperations");
+    const results = await executeBatched(files, async (chunk) => {
+      return this.exec(["revert", "--depth", depth, ...chunk]);
+    });
+
+    // Combine results - return last non-empty stdout
+    return results.reverse().find(r => r.stdout)?.stdout || "";
   }
 
   public async update(ignoreExternals: boolean = true): Promise<string> {
