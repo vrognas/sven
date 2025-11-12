@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.109
+**Version**: 2.17.111
 **Updated**: 2025-11-12
 
 ---
@@ -68,8 +68,9 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ### Code Quality (P1)
 - **248 `any` types**: Type safety compromised across 25 files
-- **Dead code**: util.ts, svnRepository.ts (pathEquals, countNewCommit, etc.)
 - **Duplication**: show/showBuffer (139 lines 90% identical), 8 plain log methods
+- ✅ **Dead code**: PARTIAL - countNewCommit removed (v2.17.110), other items in use
+- ✅ **Encapsulation**: IMPROVED - 2 methods made private (v2.17.111)
 
 ---
 
@@ -82,9 +83,10 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - **Result**: All P0 bottlenecks resolved, UI responsive, memory stable
 
 ### Code Quality
-- 150 lines removed via helpers + factory pattern
+- 162 lines removed (150 helpers/factory + 12 dead code)
 - 3 services extracted (760 lines)
 - Repository.ts: 1,179 → 923 lines (22% reduction)
+- Encapsulation: 2 internal methods made private
 
 ### Security
 - Stderr sanitization (M-1 critical fix, credential disclosure prevented)
@@ -132,13 +134,13 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 ## Next Actions
 
 All P0 issues resolved. Future opportunities (P1/P2):
-- Dead code removal (util.ts, svnRepository.ts)
-- Duplication fixes (show/showBuffer, plain log methods)
+- Duplication fixes (show/showBuffer 139 lines, 8 plain log methods)
 - Type safety improvements (248 `any` types)
 
 ✅ **Phase 18 & 19**: COMPLETE (v2.17.106-109)
+✅ **Dead code cleanup**: COMPLETE (v2.17.110-111)
 
 ---
 
-**Version**: 3.0
-**Updated**: 2025-11-12 (v2.17.109)
+**Version**: 3.1
+**Updated**: 2025-11-12 (v2.17.111)

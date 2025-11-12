@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.109
+**Version**: v2.17.111
 **Updated**: 2025-11-12
-**Status**: Phase 18 & 19 COMPLETE ✅
+**Status**: Phase 18 & 19 COMPLETE ✅, Dead code cleanup COMPLETE ✅
 
 ---
 
@@ -82,10 +82,21 @@
 
 ---
 
+## Code Quality Cleanup (v2.17.110-111) ✅
+
+**Dead code removal** (v2.17.110):
+- Removed countNewCommit (12 lines, 0 usages)
+
+**Encapsulation** (v2.17.111):
+- Made private: addFilesByIgnore, getCurrentIgnore
+
+**Note**: Audit identified items verified still in use (pathEquals, EmptyDisposable, list method).
+
+---
+
 ## Future Opportunities (P1/P2)
 
-- Dead code removal (util.ts, svnRepository.ts)
-- Duplication fixes (show/showBuffer, plain log methods)
+- Duplication fixes (show/showBuffer 139 lines, 8 plain log methods)
 - Type safety (248 `any` types)
 - Worker threads for parsing
 - Progressive status updates
