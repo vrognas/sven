@@ -57,7 +57,7 @@ export class DiffWithTortoiseSvn extends Command {
 
       const child = spawn(
         tortoiseProcPath,
-        ["/command:diff", `/path:${filePath}`],
+        ["/command:diff", `/path:"${filePath}"`],
         {
           detached: true,
           stdio: ["ignore", "pipe", "pipe"]
