@@ -31,6 +31,7 @@ import {
   normalizePath,
   unwrap
 } from "./util";
+import { logError } from "./util/errorLogger";
 import { matchAll } from "./util/globMatch";
 import { parseDiffXml } from "./parser/diffParser";
 import {
@@ -84,7 +85,7 @@ export class Repository {
     try {
       this._info = await parseInfoXml(result.stdout);
     } catch (err) {
-      console.error(`Failed to parse repository info for ${this.workspaceRoot}:`, err);
+      logError(`Failed to parse repository info for ${this.workspaceRoot}`, err);
       throw new Error(`Repository info unavailable: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
@@ -193,7 +194,7 @@ export class Repository {
     try {
       status = await parseStatusXml(result.stdout);
     } catch (err) {
-      console.error(`Failed to parse status XML for ${this.workspaceRoot}:`, err);
+      logError(`Failed to parse status XML for ${this.workspaceRoot}`, err);
       throw new Error(`Status update failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
 
@@ -276,7 +277,7 @@ export class Repository {
     try {
       info = await parseInfoXml(result.stdout);
     } catch (err) {
-      console.error(`Failed to parse info XML for ${file}:`, err);
+      logError(`Failed to parse info XML for ${file}`, err);
       throw new Error(`File info unavailable for ${file}: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
 
@@ -1026,7 +1027,7 @@ export class Repository {
 
       currentIgnore = currentIgnoreResult.stdout.trim();
     } catch (error) {
-      console.error(error);
+      logError("Merge operation failed", error);
     }
 
     const ignores = currentIgnore.split(/[\r\n]+/);

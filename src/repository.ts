@@ -54,6 +54,7 @@ import {
   isReadOnly,
   timeout
 } from "./util";
+import { logError } from "./util/errorLogger";
 import { match } from "./util/globMatch";
 import { RepositoryFilesWatcher } from "./watchers/repositoryFilesWatcher";
 
@@ -810,7 +811,7 @@ export class Repository implements IRemoteRepository {
       const credentials = JSON.parse(secret) as Array<IStoredAuth>;
       return credentials;
     } catch (error) {
-      console.error("Failed to parse stored credentials:", error);
+      logError("Failed to parse stored credentials", error);
       return [];
     }
   }
@@ -825,7 +826,7 @@ export class Repository implements IRemoteRepository {
         try {
           credentials = JSON.parse(secret) as Array<IStoredAuth>;
         } catch (error) {
-          console.error("Failed to parse stored credentials:", error);
+          logError("Failed to parse stored credentials", error);
           credentials = [];
         }
       }
