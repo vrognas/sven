@@ -50,9 +50,10 @@ export class DiffWithTortoiseSvn extends Command {
       // Launch TortoiseSVN diff with the file
       // TortoiseProc will use the configured external diff tool (e.g., BeyondCompare)
       // from TortoiseSVN Settings -> Diff Viewer -> External
+      // Simple diff command compares working copy against BASE automatically
       spawn(
         tortoiseProcPath,
-        ["/command:diff", `/path:"${filePath}"`, "/startrev:BASE", "/endrev:WORKING"],
+        ["/command:diff", `/path:${filePath}`],
         {
           detached: true,
           stdio: "ignore"

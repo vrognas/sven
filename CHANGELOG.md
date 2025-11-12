@@ -1,3 +1,14 @@
+## [2.17.139] (2025-11-13)
+
+### Fix: TortoiseSVN diff command parameters 🔧
+
+* **Diff command**: Simplified TortoiseProc parameters
+  - Removed `/startrev` and `/endrev` params causing errors
+  - Now uses simple `/command:diff /path:file` format
+  - TortoiseSVN automatically compares working copy vs BASE
+  - Fixes "Subversion reported an error" popup
+  - Location: diffWithTortoiseSvn.ts:56
+
 ## [2.17.138] (2025-11-13)
 
 ### Feature: TortoiseSVN diff integration 🐢
