@@ -1,3 +1,14 @@
+## [2.17.128] (2025-11-12)
+
+### Security: Migrate parsers to logError() (Phase 22.B.1) ✅
+
+* **5 parser files migrated**: diffParser, infoParser, listParser, logParser, statusParser
+  - Replaced console.error(err) → logError("context", err)
+  - All parser error logging now sanitized
+  - Violations: 19 → 14 (5 fixed)
+* **Pattern**: Import logError, replace catch block logging
+* **Next**: Migrate commands, repos, utils (14 remaining)
+
 ## [2.17.127] (2025-11-12)
 
 ### Security: CI validator for error logging (Phase 22.A) ✅
