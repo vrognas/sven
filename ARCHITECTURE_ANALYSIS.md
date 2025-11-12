@@ -13,9 +13,9 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Source lines**: ~12,400
 - **Repository**: 923 lines (22% reduction via 3 extracted services)
 - **Commands**: 50+ (27 refactored, 150 lines removed via factory pattern)
-- **Coverage**: ~50-55% (844 tests) ✅ TARGET REACHED
-- **Performance**: ✅ 25 bottlenecks fixed, but P0 issues remain (UI freezes, memory leaks)
-- **Security**: ✅ Stderr sanitization complete, esbuild vuln pending
+- **Coverage**: ~50-55% (850 tests) ✅ TARGET REACHED
+- **Performance**: ✅ Phase 19 complete (memory leak + remote polling fixed), Phase 18 remains (UI blocking)
+- **Security**: ✅ Phase 19 complete (esbuild vuln fixed), stderr sanitization complete
 
 ---
 
@@ -64,7 +64,7 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - **Remote polling**: ✅ FIXED - Smart check via `svn log -r BASE:HEAD --limit 1` before full status
 
 ### Security (P0)
-- **esbuild 0.24.2**: GHSA-67mh-4wv8-2f99 (CORS bypass)
+- ✅ **esbuild vuln**: FIXED (v2.17.106) - Updated 0.24.2 → 0.27.0
 
 ### Code Quality (P1)
 - **248 `any` types**: Type safety compromised across 25 files
@@ -131,9 +131,9 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 See IMPLEMENTATION_PLAN.md for detailed plans:
 - **Phase 18**: UI Performance - Non-blocking operations (4-6h, CRITICAL)
-- **Phase 19**: Memory + Security fixes (2-3h, CRITICAL)
+- ✅ **Phase 19**: COMPLETE (v2.17.106-107)
 
 ---
 
-**Version**: 2.0
-**Updated**: 2025-11-12 (v2.17.104)
+**Version**: 2.1
+**Updated**: 2025-11-12 (v2.17.107)
