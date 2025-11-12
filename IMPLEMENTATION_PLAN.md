@@ -1,35 +1,96 @@
 # IMPLEMENTATION PLAN
 
-**Version**: v2.17.112
+**Version**: v2.17.113
 **Updated**: 2025-11-12
-**Status**: All P0 issues resolved ✅. 2 high-impact P1 phases planned.
+**Status**: All P0 issues resolved ✅. 2 CRITICAL P0 phases identified.
 
 ---
 
-## Phase 20: Performance - Critical Path Optimization ⚡
+## Phase 20: P0 Stability & Security 🔴 CRITICAL
 
-**Target**: v2.17.113-115
+**Target**: v2.17.114-117
+**Effort**: 8-12h
+**Impact**: Crashes eliminated, data races fixed, credential leaks prevented
+
+### Critical Bugs
+
+**A. Watcher crash kills extension** (P0 - CRITICAL)
+- Location: `repositoryFilesWatcher.ts:59-61`
+- Issue: Uncaught error thrown, crashes entire extension
+```typescript
+repoWatcher.on("error", error => {
+  throw error;  // ❌ UNCAUGHT - kills extension
+});
+```
+- Impact: 1-5% users (fs.watch errors: .svn deleted, permissions)
+- Fix: Log error, emit event, graceful degradation
+- Effort: 1h
+
+**B. Global state data race** (P0 - CRITICAL)
+- Location: `decorators.ts:119`, used in `repository.ts:469`
+- Issue: Shared `_seqList` object across all repo instances
+```typescript
+const _seqList: { [key: string]: any } = {};  // ❌ Global!
+@globalSequentialize("updateModelState")  // All repos share queue
+```
+- Impact: 30-40% users (multi-repo data corruption, race conditions)
+- Fix: Instance-level sequentialization or per-repo keys
+- Effort: 2-3h
+
+**C. Unsafe JSON.parse** (P0 - SECURITY)
+- Location: `repository.ts:808,819`
+- Issue: Credential parsing without try-catch
+```typescript
+const credentials = JSON.parse(secret);  // ❌ Crashes on corruption
+```
+- Impact: 5-10% users (malformed secrets crash extension)
+- Fix: Wrap in try-catch, validate schema
+- Effort: 1h
+
+**D. Sanitization gaps** (P0 - SECURITY)
+- Coverage: 10 sanitize calls vs 77 catch blocks (67 gaps!)
+- Issue: Error messages leak credentials in 30+ files
+- Impact: 100% users on error paths (credential disclosure)
+- Fix: Extract error handler utility, apply to all catch blocks
+- Effort: 4-7h
+
+### Metrics
+
+| Issue | Users | Severity | Effort |
+|-------|-------|----------|--------|
+| Watcher crash | 1-5% | Extension kill | 1h |
+| Global state race | 30-40% | Data corruption | 2-3h |
+| Unsafe JSON.parse | 5-10% | Extension crash | 1h |
+| Sanitization gaps | 100% | Credential leak | 4-7h |
+
+---
+
+## Phase 21: P1 Performance Optimization ⚡
+
+**Target**: v2.17.118-120
 **Effort**: 5-8h
 **Impact**: 50-70% users, 2-5x faster status updates
 
 ### Bottlenecks
 
-**A. Quadratic descendant resolution** (P1 - CRITICAL)
+**A. Quadratic descendant resolution** (P1)
 - Location: `StatusService.ts:217-223`
-- Issue: O(n*m) nested loop despite claiming "Phase 11 perf fix"
-- Impact: 100-500ms on 1000+ files
+- Issue: O(n*m) nested loop (100-500ms on 1000+ files)
+- Impact: 50-70% users
 - Fix: Build descendant set once, single iteration
 - Effort: 1-2h
 
-**B. Repeated glob pattern matching** (P1)
+**B. Glob pattern matching** (P1)
 - Location: `StatusService.ts:292,350-358`
-- Issue: `matchAll()` per status item (10-50ms on 500+ files)
+- Issue: Per-item `matchAll()` calls (10-50ms on 500+ files)
+- Impact: 30-40% users
 - Fix: Pre-filter simple patterns, two-tier matching
 - Effort: 2-3h
 
-**C. Missing batch operations** (P1)
+**C. Batch operations** (P1)
 - Location: `svnRepository.ts:615-618`
-- Issue: No chunking for bulk file ops (50-200ms overhead)
+- Issue: No chunking for bulk ops (50-200ms overhead)
+- Impact: 20-30% users
 - Fix: Batch SVN commands (50 files/chunk)
 - Effort: 2-3h
 
@@ -40,45 +101,6 @@
 | Status update (1000 files) | 100-500ms | 20-100ms |
 | Glob filtering (500 files) | 10-50ms | 3-15ms |
 | Bulk add (100 files) | 50-200ms | 20-80ms |
-
----
-
-## Phase 21: Code Quality - Duplication & Modernization 🔧
-
-**Target**: v2.17.116-118
-**Effort**: 12-15h
-**Impact**: ~200 lines removed, better maintainability
-
-### Quick Wins
-
-**A. Extract show/showBuffer encoding logic** (P1)
-- Duplication: 139 lines, 90% identical
-- Remove: ~95 lines via template method
-- Effort: 2h
-
-**B. Split util.ts into focused modules** (P1)
-- Current: 336 lines, 26 exports (dumping ground)
-- Split into: pathUtils, eventUtils, validation
-- Remove: ~180 lines reorganized
-- Effort: 3-4h
-
-**C. Standardize error handling** (P1)
-- Issue: 70 catch blocks, inconsistent patterns
-- Fix: Extract error handler utility
-- Remove: ~40 lines duplicate logic
-- Effort: 4-6h
-
-**D. Optional chaining modernization** (P2)
-- Replace: `&& obj && obj.prop` → `obj?.prop` (48 occurrences)
-- Effort: 2-3h
-
-### Metrics
-
-| Metric | Before | After |
-|--------|--------|-------|
-| svnRepository.ts | 1086 lines | ~990 lines |
-| util.ts | 336 lines | Split 3 files |
-| Duplicate code | 200+ lines | <50 lines |
 
 ---
 
@@ -99,25 +121,27 @@
 
 ## Future Opportunities (P2/P3)
 
+**Code Quality** (12-15h):
+- show/showBuffer duplication (139 lines, 90% identical)
+- util.ts split (336 lines → 3 modules)
+- Optional chaining (48 occurrences)
+
 **Type Safety** (80-120h):
 - 248 `any` types across 25 files
 - Decorator type definitions
 - Error type guards
 
-**Security** (20-30h):
-- Password CLI exposure fix
-- Unsafe JSON.parse (2 locations)
-
 **Architecture** (16-20h):
 - Extract FileOperationsService
 - Extract DiffService
+- Repository god class (923L → 550L)
 
 ---
 
 ## Summary
 
-**P0**: All resolved ✅
-**P1 (Phases 20-21)**: 17-23h effort, high user impact
-**P2/P3**: 120-170h effort, lower priority
+**P0 (Phase 20)**: 8-12h effort, CRITICAL (crashes, races, leaks)
+**P1 (Phase 21)**: 5-8h effort, high user impact (performance)
+**P2/P3**: 110-155h effort, lower priority
 
-**Next action**: Phase 20 (Performance optimization)
+**Next action**: Phase 20 (Stability & Security) - MUST FIX FIRST

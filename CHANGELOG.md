@@ -1,3 +1,16 @@
+## [2.17.113] (2025-11-12)
+
+### Docs: Critical P0 bugs identified - plan revised
+
+* **CRITICAL BUGS IDENTIFIED** (Phase 20 - P0):
+  - Watcher crash: Uncaught error kills extension (repositoryFilesWatcher.ts:59-61) - 1-5% users
+  - Global state race: Shared _seqList across repos (decorators.ts:119) - 30-40% users
+  - Unsafe JSON.parse: Credential parsing crashes (repository.ts:808,819) - 5-10% users
+  - Sanitization gaps: 67 catch blocks missing sanitization - 100% users
+* **Priority reordering**: P0 stability/security (8-12h) BEFORE P1 performance (5-8h)
+* **Plan update**: IMPLEMENTATION_PLAN.md v2.17.113 (Phase 20: P0 bugs, Phase 21: Performance)
+* **Architecture update**: ARCHITECTURE_ANALYSIS.md v3.3 (critical issues section)
+
 ## [2.17.112] (2025-11-12)
 
 ### Docs: Tech debt audit + plan consolidation

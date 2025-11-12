@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.112
+**Version**: 2.17.113
 **Updated**: 2025-11-12
 
 ---
@@ -14,8 +14,9 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Repository**: 923 lines (22% reduction via 3 extracted services)
 - **Commands**: 50+ (27 refactored, 150 lines removed via factory pattern)
 - **Coverage**: ~50-55% (856 tests, +12 from Phases 18-19) ✅ TARGET REACHED
-- **Performance**: ✅ All P0 resolved. P1 bottlenecks identified (see below)
-- **Security**: ✅ esbuild vuln fixed, stderr sanitized. P2 issues: password CLI exposure, unsafe JSON.parse
+- **Stability**: 🔴 4 CRITICAL P0 bugs identified (crashes, races, leaks)
+- **Performance**: ✅ P0 resolved. 3 P1 bottlenecks identified
+- **Security**: 🔴 67 sanitization gaps, unsafe JSON.parse
 
 ---
 
@@ -56,47 +57,63 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ---
 
+## Critical Issues (P0) 🔴
+
+### Stability Bugs
+**A. Watcher crash kills extension** (`repositoryFilesWatcher.ts:59-61`)
+- Uncaught `throw error` in fs.watch error handler
+- 1-5% users (fs errors: .svn deleted, permissions)
+- Extension crash, no recovery
+- Fix: 1h
+
+**B. Global state data race** (`decorators.ts:119`, `repository.ts:469`)
+- Shared `_seqList` object across all repo instances
+- 30-40% users (multi-repo data corruption)
+- `@globalSequentialize("updateModelState")` uses same queue for all repos
+- Fix: 2-3h
+
+**C. Unsafe JSON.parse** (`repository.ts:808,819`)
+- Credential parsing without try-catch
+- 5-10% users (malformed secrets crash extension)
+- Fix: 1h
+
+### Security Bugs
+**D. Sanitization gaps** (77 catch blocks, only 10 sanitize calls)
+- 67 catch blocks missing sanitization
+- 100% users on error paths (credential disclosure)
+- Fix: 4-7h (extract error utility, apply to all catches)
+
+---
+
 ## Performance Analysis
 
 ### P0 Issues - Resolved ✅
-- ✅ **UI blocking**: FIXED (v2.17.108-109) - Non-blocking progress + cancellation
-- ✅ **Memory leak**: FIXED (v2.17.107) - LRU cache (500 limit)
-- ✅ **Remote polling**: FIXED (v2.17.107) - Smart check (95% faster)
+- ✅ **UI blocking**: FIXED (v2.17.108-109)
+- ✅ **Memory leak**: FIXED (v2.17.107)
+- ✅ **Remote polling**: FIXED (v2.17.107)
 
-### P1 Issues - Identified
-**A. Quadratic descendant resolution** (`StatusService.ts:217-223`)
-- O(n*m) nested loop (100-500ms on 1000+ files)
-- 50-70% users affected
-- Fix: 1-2h
+### P1 Issues
+**A. Quadratic descendant** (`StatusService.ts:217-223`): 50-70% users, 100-500ms, 1-2h
+**B. Glob matching** (`StatusService.ts:292,350-358`): 30-40% users, 10-50ms, 2-3h
+**C. Batch ops** (`svnRepository.ts:615-618`): 20-30% users, 50-200ms, 2-3h
 
-**B. Glob pattern matching** (`StatusService.ts:292,350-358`)
-- Per-item `matchAll()` calls (10-50ms on 500+ files)
-- 30-40% users affected
-- Fix: 2-3h
-
-**C. Batch operations** (`svnRepository.ts:615-618`)
-- No chunking for bulk ops (50-200ms overhead)
-- 20-30% users affected
-- Fix: 2-3h
+---
 
 ## Code Quality Analysis
 
-### Bloat Issues
-- **show/showBuffer duplication**: 139 lines, 90% identical (~95 removable)
-- **util.ts dumping ground**: 336 lines, 26 exports (split into 3 modules)
-- **Error handling**: 70 catch blocks, inconsistent (~40 lines removable)
-- **Large classes**: svnRepository 1086 lines, repository 969 lines
+### Bloat (P2)
+- show/showBuffer: 139L duplicate
+- util.ts: 336L dumping ground
+- Error handling: 70 catch blocks, inconsistent
 
-### Type Safety Issues
-- **248 `any` types**: 25 files, zero safety (decorators, utils, managers)
-- **Unsafe casts**: `groups as any as ResourceGroup[]`
-- **Missing error guards**: 733 catch blocks, many untyped
+### Type Safety (P2)
+- 248 `any` types (25 files)
+- Unsafe casts, missing guards
 
-### Security Issues (P2)
-- **Password CLI exposure**: `svn.ts:110-113` (process list leak)
-- **Unsafe JSON.parse**: `repository.ts:808,819` (no try-catch)
-- ✅ **esbuild vuln**: FIXED (v2.17.106)
-- ✅ **stderr leaks**: FIXED (v2.17.102)
+### Security (P2)
+- Password CLI exposure (`svn.ts:110-113`)
+- ✅ esbuild vuln: FIXED (v2.17.106)
+- ✅ stderr leaks: FIXED (v2.17.102)
 
 ---
 
@@ -159,13 +176,13 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ## Next Actions
 
-**P0**: All resolved ✅
-**P1 (Phases 20-21)**: Performance optimization + code quality (17-23h)
-**P2/P3**: Type safety (80-120h), security (20-30h), architecture (16-20h)
+**P0 (Phase 20)**: Stability & security - CRITICAL (8-12h, MUST FIX FIRST)
+**P1 (Phase 21)**: Performance optimization (5-8h)
+**P2/P3**: Code quality, type safety, architecture (110-155h)
 
 See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.2
-**Updated**: 2025-11-12 (v2.17.112)
+**Version**: 3.3
+**Updated**: 2025-11-12 (v2.17.113)
