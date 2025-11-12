@@ -1,3 +1,14 @@
+## [2.17.108] (2025-11-12)
+
+### Performance: Non-blocking progress (ProgressLocation.Notification)
+
+* **UI responsiveness**: Status updates no longer block UI thread
+  - Changed: ProgressLocation.SourceControl → Notification in run() method
+  - Added: Cancellable flag for user control
+  - Added: "SVN" title for notification progress
+  - Impact: Eliminates 2-5s UI freezes during status/refresh operations
+  - Tests: 3 unit tests verify non-blocking behavior
+
 ## [2.17.107] (2025-11-12)
 
 ### Performance: Remote polling optimization + LRU cache (P0 fixes)
