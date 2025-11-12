@@ -1,3 +1,13 @@
+## [2.17.111] (2025-11-12)
+
+### Code quality: Encapsulation improvements
+
+* **Private methods**: Made internal-only methods private
+  - Changed: `addFilesByIgnore()` public → private
+  - Changed: `getCurrentIgnore()` public → private
+  - Impact: Better encapsulation, only called within class
+  - Verification: grep confirmed only internal calls
+
 ## [2.17.110] (2025-11-12)
 
 ### Code quality: Dead code removal

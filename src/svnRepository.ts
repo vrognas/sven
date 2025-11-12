@@ -587,7 +587,7 @@ export class Repository {
     return result.stdout;
   }
 
-  public async addFilesByIgnore(files: string[], ignoreList: string[]) {
+  private async addFilesByIgnore(files: string[], ignoreList: string[]) {
     const allFiles = async (file: string): Promise<string[]> => {
       if ((await stat(file)).isDirectory()) {
         return (
@@ -1010,7 +1010,7 @@ export class Repository {
     return parseSvnList(result.stdout);
   }
 
-  public async getCurrentIgnore(directory: string) {
+  private async getCurrentIgnore(directory: string) {
     directory = this.removeAbsolutePath(directory);
 
     let currentIgnore = "";
