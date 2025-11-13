@@ -2,7 +2,7 @@
     "name": "positron-svn",
     "displayName": "SVN (Positron)",
     "description": "Integrated Subversion source control - Positron fork with enhanced features",
-    "version": "2.17.140",
+    "version": "2.17.141",
     "publisher": "vrognas",
     "engines": {
         "vscode": "^1.74.0",
@@ -1097,6 +1097,17 @@
                     "type": "boolean",
                     "description": "Show diff changes using latest revision in the repository. Set false to use latest revision in local folder",
                     "default": true
+                },
+                "svn.diff.tool": {
+                    "type": ["string", "null"],
+                    "description": "Path to external diff tool (e.g., Beyond Compare). Used by 'Diff with External Tool' command.",
+                    "default": null,
+                    "scope": "machine"
+                },
+                "svn.diff.toolArguments": {
+                    "type": "string",
+                    "description": "Arguments for external diff tool. Variables: %base (BASE version), %mine (working copy), %bname (BASE filename), %yname (working filename)",
+                    "default": "%base %mine /title1=%bname /title2=%yname /leftreadonly"
                 },
                 "svn.enabled": {
                     "type": "boolean",

@@ -1,3 +1,14 @@
+## [2.17.141] (2025-11-13)
+
+### Feature: Configurable external diff tool ⚙️
+
+* **Settings**: Made external diff tool fully configurable
+  - Add `svn.diff.tool` setting for diff tool path
+  - Add `svn.diff.toolArguments` setting with variable substitution
+  - Supports %base, %mine, %bname, %yname variables
+  - Default args: `%base %mine /title1=%bname /title2=%yname /leftreadonly`
+  - Location: package.json:1101-1111, diffWithTortoiseSvn.ts:42-86
+
 ## [2.17.140] (2025-11-13)
 
 ### Debug: Add error logging for TortoiseSVN diff 🐛
