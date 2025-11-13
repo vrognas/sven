@@ -41,8 +41,18 @@ You can checkout a SVN repository with the `SVN: Checkout` command in the **Comm
 * Switch branches
 * Create patches
 * Diff changes
+* Diff with external tools (Beyond Compare, etc.)
 * Commit changes/changelists
 * See commit messages
+
+## External Diff Tools
+
+Configure external diff tools like Beyond Compare for large files (e.g., CSVs) where built-in diff is insufficient.
+
+**Setup:**
+1. Set `svn.diff.tool` to path of wrapper batch file (e.g., `bcsvn.bat`)
+2. Right-click file in Source Control → **Diff with External Tool**
+3. For Beyond Compare setup, see: https://www.scootersoftware.com/kb/vcs#svn
 
 ## Blame
 
@@ -83,6 +93,9 @@ Here are all of the extension settings with their default values. To change any 
 
   // Controls whether to automatically detect svn on ignored folders.
   "svn.detectIgnored": true,
+
+  // Path to external diff tool wrapper (e.g., batch file for Beyond Compare). Used with 'Diff with External Tool' command
+  "svn.diff.tool": null,
 
   // Show diff changes using latest revision in the repository. Set false to use latest revision in local folder
   "svn.diff.withHead": true,

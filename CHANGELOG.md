@@ -1,3 +1,11 @@
+## [2.17.146] (2025-11-13)
+
+### Docs: Update README with external diff feature 📝
+
+* **Documentation**: Add external diff to features list
+* **Documentation**: Document svn.diff.tool setting
+* **Package**: Bump version for publishing
+
 ## [2.17.145] (2025-11-13)
 
 ### Fix: Use sourceControlManager.svn.exec() 🔧
