@@ -1,3 +1,36 @@
+## [2.17.145] (2025-11-13)
+
+### Fix: Use sourceControlManager.svn.exec() 🔧
+
+* **Diff command**: Fix exec pattern to use sourceControlManager
+  - Change from `repository.svn.exec()` to `sourceControlManager.svn.exec()`
+  - Pattern found in checkout.ts:105
+  - Fixes: Cannot read properties of undefined (reading 'exec')
+
+## [2.17.144] (2025-11-13)
+
+### Fix: Fix repository lookup + Rename external diff command 🔧
+
+* **Diff command**: Fix `this.getRepository is not a function` error
+  - Get SourceControlManager via command or cached static
+  - Call `sourceControlManager.getRepository(Uri.file(path))`
+  - Add detailed logging for debugging
+  - Rename command: `svn.diffWithTortoiseSvn` → `svn.diffWithExternalTool`
+  - Rename class: `DiffWithTortoiseSvn` → `DiffWithExternalTool`
+  - Update menu label: "Diff with TortoiseSVN" → "Diff with External Tool"
+  - Location: diffWithExternalTool.ts (renamed from diffWithTortoiseSvn.ts)
+
+## [2.17.143] (2025-11-13)
+
+### Fix: Add error handling to external diff 🐛
+
+* **Diff command**: Wrap repository lookup and svn.exec in try-catch
+  - Catch errors from getRepository() call
+  - Catch errors from svn.exec() call
+  - Log all errors to console for debugging
+  - Show user-friendly error messages
+  - Location: diffWithTortoiseSvn.ts:69-99
+
 ## [2.17.142] (2025-11-13)
 
 ### Fix: Use SVN's native --diff-cmd mechanism 🔧
