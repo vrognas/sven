@@ -1,3 +1,14 @@
+## [2.17.142] (2025-11-13)
+
+### Fix: Use SVN's native --diff-cmd mechanism 🔧
+
+* **Diff command**: Rewrite to use `svn diff --diff-cmd`
+  - Creates temp wrapper script for Beyond Compare
+  - Uses SVN's built-in external diff mechanism
+  - Cleaner, more standard implementation
+  - Removed unused `svn.diff.toolArguments` setting
+  - Location: diffWithTortoiseSvn.ts
+
 ## [2.17.141] (2025-11-13)
 
 ### Feature: Configurable external diff tool ⚙️
