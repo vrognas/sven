@@ -1,3 +1,29 @@
+## [2.17.148] (2025-11-15)
+
+### Test: E2E revision expansion coverage ✅
+
+* **Added E2E test**: Full integration test for revision expansion
+  - File: test/unit/historyView/repoLogProvider.test.ts
+  - Tests: XML → parser → path.basename/dirname (crash points)
+  - Coverage: Multiple paths, empty commits, special characters
+  - Validates: pathElem._ accessible throughout flow
+* **Updated comment**: util.ts - fixed outdated #text reference
+
+## [2.17.147] (2025-11-15)
+
+### Fix: Revision expansion - path content parsing 🐛
+
+* **CRITICAL FIX**: Revision expansion failed - undefined path property
+  - Error: `TypeError: The "path" argument must be of type string. Received undefined`
+  - Root cause: XML parser used `#text` instead of `_` for text node names
+  - Fix: Changed XmlParserAdapter.textNodeName from `#text` to `_`
+  - Impact: Revisions now expand correctly to show changed files
+  - Files changed:
+    - xmlParserAdapter.ts - textNodeName config & mergeAttributes logic
+    - xmlParserAdapter.test.ts - updated test assertions
+    - xmlParserAdapter-svn.test.ts - updated test assertions
+    - logParser.test.ts - added test for path content parsing
+
 ## [2.17.146] (2025-11-13)
 
 ### Docs: Update README with external diff feature 📝
