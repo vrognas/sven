@@ -1,3 +1,18 @@
+## [2.17.137] (2025-11-15)
+
+### Fix: Revision expansion - path content parsing 🐛
+
+* **CRITICAL FIX**: Revision expansion failed - undefined path property
+  - Error: `TypeError: The "path" argument must be of type string. Received undefined`
+  - Root cause: XML parser used `#text` instead of `_` for text node names
+  - Fix: Changed XmlParserAdapter.textNodeName from `#text` to `_`
+  - Impact: Revisions now expand correctly to show changed files
+  - Files changed:
+    - xmlParserAdapter.ts - textNodeName config & mergeAttributes logic
+    - xmlParserAdapter.test.ts - updated test assertions
+    - xmlParserAdapter-svn.test.ts - updated test assertions
+    - logParser.test.ts - added test for path content parsing
+
 ## [2.17.136] (2025-11-12)
 
 ### Feature: Debug sanitization toggle 🔧
