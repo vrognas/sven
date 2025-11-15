@@ -41,6 +41,8 @@ import {
   transform,
   getCommitDescription
 } from "./common";
+import { revealFileInOS, diffWithExternalTool } from "../util/fileOperations";
+import { logError } from "../util/errorLogger";
 
 function getActionIcon(action: string) {
   let name: string | undefined;
@@ -113,6 +115,8 @@ export class RepoLogProvider
         this
       ),
       commands.registerCommand("svn.repolog.refresh", this.refresh, this),
+      commands.registerCommand("svn.repolog.revealInExplorer", this.revealInExplorerCmd, this),
+      commands.registerCommand("svn.repolog.diffWithExternalTool", this.diffWithExternalToolCmd, this),
       this.sourceControlManager.onDidChangeRepository(
         async (_e: RepositoryChangeEvent) => {
           return this.refresh();
@@ -271,6 +275,57 @@ export class RepoLogProvider
     }
 
     return openDiff(item.repo, remotePath, prevRev.revision, parent.revision);
+  }
+
+  public async revealInExplorerCmd(element: ILogTreeItem) {
+    if (element.kind !== LogTreeItemKind.CommitDetail) {
+      return;
+    }
+
+    try {
+      const commit = element.data as ISvnLogEntryPath;
+      const item = this.getCached(element);
+      const pathInfo = item.repo.getPathNormalizer().parse(commit._);
+
+      // Use local path if available
+      if (pathInfo.localFullPath) {
+        await revealFileInOS(pathInfo.localFullPath);
+      } else {
+        window.showWarningMessage("File not available locally");
+      }
+    } catch (error) {
+      logError("Failed to reveal file in explorer", error);
+      window.showErrorMessage("Could not reveal file in explorer");
+    }
+  }
+
+  public async diffWithExternalToolCmd(element: ILogTreeItem) {
+    if (element.kind !== LogTreeItemKind.CommitDetail) {
+      return;
+    }
+
+    try {
+      const commit = element.data as ISvnLogEntryPath;
+      const item = this.getCached(element);
+      const pathInfo = item.repo.getPathNormalizer().parse(commit._);
+
+      // Require local path for diff
+      if (!pathInfo.localFullPath) {
+        window.showWarningMessage("File not available locally for diff");
+        return;
+      }
+
+      // Get SourceControlManager for SVN exec
+      const scm = this.sourceControlManager;
+      await diffWithExternalTool(
+        pathInfo.localFullPath.fsPath,
+        pathInfo.localFullPath.fsPath,
+        scm.svn.exec.bind(scm.svn)
+      );
+    } catch (error) {
+      logError("Failed to open external diff", error);
+      window.showErrorMessage("Could not open external diff tool");
+    }
   }
 
   public async refresh(element?: ILogTreeItem, fetchMoreClick?: boolean) {

@@ -2,7 +2,7 @@
     "name": "positron-svn",
     "displayName": "SVN (Positron)",
     "description": "Integrated Subversion source control - Positron fork with enhanced features",
-    "version": "2.17.148",
+    "version": "2.17.149",
     "publisher": "vrognas",
     "engines": {
         "vscode": "^1.74.0",
@@ -397,6 +397,16 @@
                 "title": "Remove"
             },
             {
+                "command": "svn.repolog.revealInExplorer",
+                "category": "SVN",
+                "title": "Reveal in File Explorer"
+            },
+            {
+                "command": "svn.repolog.diffWithExternalTool",
+                "category": "SVN",
+                "title": "Diff with External Tool"
+            },
+            {
                 "command": "svn.resolve",
                 "title": "Resolve conflicts for selected",
                 "category": "SVN",
@@ -765,6 +775,16 @@
                 {
                     "command": "svn.repolog.openFileLocal",
                     "when": "view == repolog && viewItem == diffable"
+                },
+                {
+                    "command": "svn.repolog.revealInExplorer",
+                    "when": "view == repolog && viewItem == diffable",
+                    "group": "navigation"
+                },
+                {
+                    "command": "svn.repolog.diffWithExternalTool",
+                    "when": "view == repolog && viewItem == diffable",
+                    "group": "navigation"
                 },
                 {
                     "command": "svn.repolog.refresh",

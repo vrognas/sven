@@ -1,3 +1,21 @@
+## [2.17.149] (2025-11-16)
+
+### Add: Repo context menu - Reveal & Diff 🚀
+
+* **Repository tree**: Add context menu commands for file items
+  - "Reveal in File Explorer" - Opens OS explorer at file location
+  - "Diff with External Tool" - Opens configured external diff tool
+* **Code quality**: Extract shared utilities for DRY principle
+  - src/util/fileOperations.ts - revealFileInOS(), diffWithExternalTool()
+  - Refactored CHANGES commands to use shared utilities
+* **UX consistency**: Commands available in both CHANGES and REPOSITORIES views
+* **Files**:
+  - src/util/fileOperations.ts (new)
+  - src/commands/revealInExplorer.ts (refactored)
+  - src/commands/diffWithExternalTool.ts (refactored)
+  - src/historyView/repoLogProvider.ts (commands added)
+  - package.json (definitions + menus)
+
 ## [2.17.148] (2025-11-15)
 
 ### Test: E2E revision expansion coverage ✅

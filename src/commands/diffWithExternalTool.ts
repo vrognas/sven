@@ -1,9 +1,8 @@
-import { commands, SourceControlResourceState, Uri, window, workspace } from "vscode";
+import { commands, SourceControlResourceState, Uri, window } from "vscode";
 import { Resource } from "../resource";
 import { Command } from "./command";
-import { existsSync } from "fs";
-import { logError } from "../util/errorLogger";
 import { SourceControlManager } from "../source_control_manager";
+import { diffWithExternalTool } from "../util/fileOperations";
 
 /**
  * Command to open file diff with external diff tool using SVN's --diff-cmd
@@ -43,30 +42,6 @@ export class DiffWithExternalTool extends Command {
       return;
     }
 
-    // Read external diff tool configuration (path to bcsvn.bat)
-    const config = workspace.getConfiguration("svn");
-    const diffToolPath = config.get<string>("diff.tool");
-
-    console.log("Settings:", { diffToolPath });
-
-    if (!diffToolPath) {
-      console.log("ERROR: diff.tool not configured");
-      window.showErrorMessage(
-        "External diff tool not configured. Set svn.diff.tool to path of bcsvn.bat"
-      );
-      return;
-    }
-
-    console.log("Checking if batch file exists:", diffToolPath);
-    if (!existsSync(diffToolPath)) {
-      console.log("ERROR: Batch file does not exist");
-      window.showErrorMessage(
-        `External diff tool not found at: ${diffToolPath}`
-      );
-      return;
-    }
-    console.log("Batch file exists ✓");
-
     try {
       console.log("Getting repository for:", filePath);
 
@@ -89,21 +64,15 @@ export class DiffWithExternalTool extends Command {
       }
       console.log("Repository found ✓", repository.workspaceRoot);
 
-      console.log(`Calling svn diff --diff-cmd="${diffToolPath}" "${filePath}"`);
-
-      // Call svn diff with --diff-cmd pointing to bcsvn.bat
-      // SVN will invoke the batch file with the file paths
-      const result = await sourceControlManager.svn.exec(repository.workspaceRoot, [
-        "diff",
-        `--diff-cmd=${diffToolPath}`,
-        filePath
-      ]);
-
-      console.log("svn diff completed, result:", result);
+      // Use shared utility for diff
+      await diffWithExternalTool(
+        repository.workspaceRoot,
+        filePath,
+        repository.exec.bind(repository)
+      );
 
     } catch (error) {
       console.log("ERROR caught:", error);
-      logError("Failed to launch external diff", error);
       window.showErrorMessage(
         `Failed to launch external diff: ${error instanceof Error ? error.message : String(error)}`
       );
