@@ -4,9 +4,9 @@
  * Reveals a file from the SCM changes view in the file explorer
  */
 
-import { commands, SourceControlResourceState, window } from "vscode";
+import { SourceControlResourceState, window } from "vscode";
 import { Command } from "./command";
-import { logError } from "../util/errorLogger";
+import { revealFileInOS } from "../util/fileOperations";
 
 export class RevealInExplorer extends Command {
   constructor() {
@@ -26,9 +26,8 @@ export class RevealInExplorer extends Command {
     }
 
     try {
-      await commands.executeCommand("revealFileInOS", resource.resourceUri);
+      await revealFileInOS(resource.resourceUri);
     } catch (error) {
-      logError("Reveal in explorer failed", error);
       window.showErrorMessage("Unable to reveal file in explorer");
     }
   }

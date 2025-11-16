@@ -57,8 +57,15 @@ export function validateSearchPattern(pattern: string): boolean {
 const VALID_REVISION_KEYWORDS = ['HEAD', 'PREV', 'BASE', 'COMMITTED'] as const;
 
 /**
+ * Maximum allowed SVN revision number (1 billion)
+ * Prevents integer overflow and DoS via huge numbers
+ */
+const MAX_SVN_REVISION = 1000000000;
+
+/**
  * Validates revision parameter for SVN operations
  * Allows numeric revisions and standard SVN keywords
+ * Enforces upper bound to prevent overflow/DoS
  */
 export function validateRevision(revision: string): boolean {
   if (!revision || typeof revision !== 'string') {
@@ -71,7 +78,13 @@ export function validateRevision(revision: string): boolean {
   }
 
   // Check if it's a valid numeric revision (with optional + prefix)
-  return /^\+?(0|[1-9]\d*)$/.test(revision);
+  if (!/^\+?(0|[1-9]\d*)$/.test(revision)) {
+    return false;
+  }
+
+  // Enforce upper bound
+  const num = parseInt(revision.replace(/^\+/, ''), 10);
+  return num <= MAX_SVN_REVISION;
 }
 
 /**

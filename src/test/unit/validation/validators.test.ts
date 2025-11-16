@@ -170,6 +170,17 @@ suite('Validation Tests', () => {
       assert.strictEqual(validateRevision('0'), true); // zero is valid
       assert.strictEqual(validateRevision('+0'), true);
     });
+
+    test('enforces upper bound limit', () => {
+      // Max allowed: 1 billion
+      assert.strictEqual(validateRevision('1000000000'), true);
+      assert.strictEqual(validateRevision('999999999'), true);
+
+      // Exceeds limit
+      assert.strictEqual(validateRevision('1000000001'), false);
+      assert.strictEqual(validateRevision('9999999999'), false);
+      assert.strictEqual(validateRevision('99999999999999999999'), false);
+    });
   });
 
   suite('validateFilePath', () => {
