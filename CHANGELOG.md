@@ -1,3 +1,15 @@
+## [2.17.157] (2025-11-16)
+
+### Add: Phase 22.A - ESLint type safety enforcement
+
+* **Type Safety**: Change `no-explicit-any` from 'warn' to 'error'
+* **Strategy**: Gradual migration - whitelist 24 files with existing violations
+* **Protection**: New `any` types now blocked in non-whitelisted files
+* **Status**: 112 warnings (existing), 0 errors (new violations blocked)
+* **Files**: eslint.config.js
+* **Whitelisted**: decorators.ts (34), xmlParserAdapter.ts (13), svn.ts (10), util.ts (9), +16 others
+* **Next**: Phase 22.B - Fix decorators.ts and util.ts
+
 ## [2.17.156] (2025-11-16)
 
 ### Update: Architecture review & implementation plan
