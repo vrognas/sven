@@ -422,12 +422,22 @@ export class RepoLogProvider
       // TODO optional tree-view instead of flat
       const pathElem = element.data as ISvnLogEntryPath;
       const basename = path.basename(pathElem._);
-      ti = new TreeItem(basename, TreeItemCollapsibleState.None);
-      ti.description = path.dirname(pathElem._);
+      const dirname = path.dirname(pathElem._);
       const cached = this.getCached(element);
       const nm = cached.repo.getPathNormalizer();
-      ti.tooltip = nm.parse(pathElem._).relativeFromBranch;
-      ti.iconPath = getActionIcon(pathElem.action);
+      const parsedPath = nm.parse(pathElem._);
+
+      ti = new TreeItem(basename, TreeItemCollapsibleState.None);
+
+      // Show directory path with status badge at end (Git Graph style)
+      ti.description = dirname ? `${dirname} • ${pathElem.action}` : pathElem.action;
+      ti.tooltip = parsedPath.relativeFromBranch;
+
+      // Use resourceUri to show file type icon instead of status icon
+      if (parsedPath.localFullPath) {
+        ti.resourceUri = parsedPath.localFullPath;
+      }
+
       ti.contextValue = "diffable";
       ti.command = {
         command: "svn.repolog.openDiff",

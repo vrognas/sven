@@ -1,3 +1,13 @@
+## [2.17.160] (2025-11-17)
+
+### UX: Repository log file display matches Git Graph
+
+* **Display**: File type icon + filename + directory + status badge
+* **Icon**: Shows file extension icon (not status icon)
+* **Description**: Path and status badge at end (e.g., "src/components • M")
+* **Style**: Matches Git Graph extension display format
+* **File**: src/historyView/repoLogProvider.ts
+
 ## [2.17.159] (2025-11-17)
 
 ### Feature: Explorer file decorations
