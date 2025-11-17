@@ -1,3 +1,12 @@
+## [2.17.165] (2025-11-17)
+
+### UX: Enable folder decoration propagation
+
+* **Folders**: Parent folders now show status badges when containing modified files
+* **Behavior**: Matches Git extension (decorations propagate up folder tree)
+* **Change**: Set `propagate: true` in FileDecorationProvider
+* **File**: src/fileDecorationProvider.ts
+
 ## [2.17.164] (2025-11-17)
 
 ### Optimize: Package size reduction
