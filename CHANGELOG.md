@@ -1,3 +1,13 @@
+## [2.17.164] (2025-11-17)
+
+### Optimize: Package size reduction
+
+* **Size**: Reduced from 404 files to 37 files (151.79 KB)
+* **Fixed**: Excluded node_modules/** from package (already bundled)
+* **Added**: Exclusions for development plan files
+* **Result**: No more packaging warnings, faster loading
+* **File**: .vscodeignore
+
 ## [2.17.163] (2025-11-17)
 
 ### Fix: Show prominent "Commit" button via acceptInputCommand
