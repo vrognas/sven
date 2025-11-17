@@ -1,3 +1,12 @@
+## [2.17.171] (2025-11-17)
+
+### Fix: Set contextValue and inputBox.enabled for Commit button
+
+* **Fix**: Added sourceControl.contextValue = "repository" (required by Positron)
+* **Fix**: Added inputBox.enabled = true
+* **Debug**: Extended logging to verify all properties
+* **Files**: src/repository.ts:240-257
+
 ## [2.17.170] (2025-11-17)
 
 ### Debug: Add logging and cleanup for Commit button

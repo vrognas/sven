@@ -237,10 +237,12 @@ export class Repository implements IRemoteRepository {
       Uri.file(repository.workspaceRoot)
     );
 
+    this.sourceControl.contextValue = "repository";
     this.sourceControl.count = 0;
     this.sourceControl.inputBox.placeholder =
       "Message (press Ctrl+Enter to commit)";
     this.sourceControl.inputBox.visible = true;
+    this.sourceControl.inputBox.enabled = true;
     this.sourceControl.acceptInputCommand = {
       command: "svn.commitAll",
       title: "Commit",
@@ -252,7 +254,9 @@ export class Repository implements IRemoteRepository {
     console.log("[SVN] acceptInputCommand configured:", {
       command: this.sourceControl.acceptInputCommand?.command,
       title: this.sourceControl.acceptInputCommand?.title,
-      inputBoxVisible: this.sourceControl.inputBox.visible
+      contextValue: this.sourceControl.contextValue,
+      inputBoxVisible: this.sourceControl.inputBox.visible,
+      inputBoxEnabled: this.sourceControl.inputBox.enabled
     });
     this.disposables.push(this.sourceControl);
 
