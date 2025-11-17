@@ -66,7 +66,7 @@ export class SvnFileDecorationProvider
    * Refresh decorations for changed files
    */
   refresh(uris?: Uri | Uri[]): void {
-    this._onDidChangeFileDecorations.fire(uris || []);
+    this._onDidChangeFileDecorations.fire(uris);
   }
 
   private getBadge(status: string, renameUri?: Uri): string | undefined {
