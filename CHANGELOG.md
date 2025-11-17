@@ -1,3 +1,13 @@
+## [2.17.162] (2025-11-17)
+
+### Fix: File decorations now appear in Explorer and Repository Log
+
+* **Explorer**: Fixed decorations not appearing (was firing empty array instead of undefined)
+* **Repository Log**: Uses FileDecorationProvider badges instead of literal text
+* **Before**: Files showed "src/components • M" (text)
+* **After**: Files show "src/components" with M badge decoration
+* **Files**: src/fileDecorationProvider.ts, src/repository.ts, src/historyView/repoLogProvider.ts
+
 ## [2.17.161] (2025-11-17)
 
 ### UX: Add prominent Commit button to SCM title
