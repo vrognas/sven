@@ -1,3 +1,13 @@
+## [2.17.161] (2025-11-17)
+
+### UX: Add prominent Commit button to SCM title
+
+* **Button**: Large "Commit" button in SCM title bar (like Git)
+* **Removed**: Inline commit icon from Changes group header
+* **Command**: Uses svn.commitAll (goes directly to commit message)
+* **Style**: Prominent primary button, not small icon
+* **File**: package.json
+
 ## [2.17.160] (2025-11-17)
 
 ### UX: Repository log file display matches Git Graph
