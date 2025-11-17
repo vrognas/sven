@@ -434,8 +434,11 @@ export class RepoLogProvider
       ti.tooltip = parsedPath.relativeFromBranch;
 
       // Use resourceUri to show file type icon and trigger file decorations
+      // Add action as query param so FileDecorationProvider can decorate historical files
       if (parsedPath.localFullPath) {
-        ti.resourceUri = parsedPath.localFullPath;
+        ti.resourceUri = parsedPath.localFullPath.with({
+          query: `action=${pathElem.action}`
+        });
       }
 
       ti.contextValue = "diffable";

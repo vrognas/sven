@@ -32,7 +32,34 @@ export class SvnFileDecorationProvider
    * Provide decoration for a file URI
    */
   provideFileDecoration(uri: Uri): FileDecoration | undefined {
-    // Look up file status from repository
+    // Check if this is a historical file from repository log (has action query param)
+    const queryParams = new URLSearchParams(uri.query);
+    const action = queryParams.get('action');
+
+    if (action) {
+      // Historical file from repository log - use action directly
+      const status = this.actionToStatus(action);
+      if (!status) {
+        return undefined;
+      }
+
+      const badge = this.getBadge(status, undefined);
+      const color = this.getColor(status);
+      const tooltip = this.getTooltip(status, undefined);
+
+      if (!badge && !color) {
+        return undefined;
+      }
+
+      return {
+        badge,
+        tooltip,
+        color,
+        propagate: true
+      };
+    }
+
+    // Look up file status from repository (current working copy)
     const resource = this.repository.getResourceFromFile(uri.fsPath);
 
     if (!resource) {
@@ -67,6 +94,24 @@ export class SvnFileDecorationProvider
    */
   refresh(uris?: Uri | Uri[]): void {
     this._onDidChangeFileDecorations.fire(uris);
+  }
+
+  /**
+   * Convert repository log action to Status constant
+   */
+  private actionToStatus(action: string): string | undefined {
+    switch (action) {
+      case 'A':
+        return Status.ADDED;
+      case 'M':
+        return Status.MODIFIED;
+      case 'D':
+        return Status.DELETED;
+      case 'R':
+        return Status.REPLACED;
+      default:
+        return undefined;
+    }
   }
 
   private getBadge(status: string, renameUri?: Uri): string | undefined {

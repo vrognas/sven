@@ -1,3 +1,12 @@
+## [2.17.169] (2025-11-17)
+
+### Fix: Repository log file decorations
+
+* **Fix**: Historical files in repository log now show decoration badges (M, A, D, R)
+* **Approach**: Encode action as query param in resourceUri
+* **Provider**: FileDecorationProvider now handles historical files via action query param
+* **Files**: src/historyView/repoLogProvider.ts:439-441, src/fileDecorationProvider.ts:35-59, :102-114
+
 ## [2.17.168] (2025-11-17)
 
 ### Fix: Set inputBox.visible = true for Commit button
