@@ -1,3 +1,12 @@
+## [2.17.157] (2025-11-17)
+
+### UX: Add Commit All inline action to Changes group
+
+* **Action**: Commit All Changes icon in Changes group header
+* **Behavior**: Prompts for file selection, then commit message
+* **Location**: Appears next to Revert All Changes icon
+* **File**: package.json
+
 ## [2.17.156] (2025-11-17)
 
 ### UX: Consolidate views to built-in Source Control container
