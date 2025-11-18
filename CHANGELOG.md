@@ -1,3 +1,12 @@
+## [2.17.176] (2025-11-18)
+
+### Workaround: Add Commit button to scm/title menu
+
+* **Workaround**: Added svn.commitAll to scm/title as first navigation button
+* **Reason**: Positron doesn't fully support acceptInputCommand for non-Git providers
+* **Result**: Commit button now appears in SCM title bar
+* **File**: package.json:798-802
+
 ## [2.17.175] (2025-11-17)
 
 ### Debug: Enhanced logging for acceptInputCommand issue
