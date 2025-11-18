@@ -1,3 +1,17 @@
+## [2.17.194] (2025-11-18)
+
+### Add: BlameProvider - Phase 1 (gutter decorations)
+
+* **BlameProvider**: Gutter decoration management (per-repo instance)
+* **7 event handlers**: Active editor, text change, save, state, config, visible range, close
+* **Throttle/debounce**: Prevents decoration spam during edits/scrolling
+* **Template system**: Configurable gutter format (revision, author, date)
+* **Large file check**: Warns for files >5000 lines
+* **Cache**: Per-file blame data with version tracking
+* **Integration**: Auto-activated per repository via SourceControlManager
+* **TDD**: 3 E2E tests (show, hide, update on save)
+* **Relative dates**: "2d ago", "3mo ago" formatting
+
 ## [2.17.193] (2025-11-18)
 
 ### Add: UI layer design docs
