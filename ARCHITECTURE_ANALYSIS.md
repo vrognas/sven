@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 2.17.185
+**Version**: 2.17.186
 **Updated**: 2025-11-18
 
 ---
@@ -10,14 +10,15 @@
 Mature VS Code extension for SVN integration. Event-driven architecture, decorator-based commands, multi-repository management.
 
 **Stats**:
-- **Source lines**: ~12,650 (+30 reveal command)
+- **Source lines**: ~13,200 (+550 blame config system)
 - **Repository**: 923 lines (22% reduction via 3 extracted services)
-- **Commands**: 51 (28 refactored, revealInExplorer added)
-- **Coverage**: ~50-55% (865 tests) ✅ TARGET REACHED
+- **Commands**: 54 (+3 blame commands)
+- **Coverage**: ~50-55% (892 tests, +27 blame tests) ✅ TARGET REACHED
 - **Stability**: 🟢 P0 foundation complete ✅ (4 bugs fixed/addressed)
 - **Performance**: 🟢 All P1 bottlenecks fixed ✅ (commit 4-5x, status 3-5x, glob 3x, batch 2-3x faster)
 - **Security**: 🟢 All error logging sanitized ✅ (100% coverage, 0 violations)
 - **Positron**: 🟢 Runtime detection + Connections pane ✅
+- **Blame**: 🟡 Configuration system complete, implementation pending
 - **Bloat**: ~500-1000 lines removable (duplicate methods, god classes)
 
 ---
@@ -40,10 +41,11 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - File watcher coordination
 - Delegates to services
 
-**Services** (3 extracted):
+**Services** (4 extracted):
 - **StatusService** (355 lines): Model state updates
 - **ResourceGroupManager** (298 lines): VS Code resource groups
 - **RemoteChangeService** (107 lines): Polling timers
+- **Blame System** (286 lines config + state): Per-file blame tracking
 
 ### SVN Execution
 **Svn** (369 lines):
@@ -170,7 +172,8 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 **Entry**: extension.ts, source_control_manager.ts, commands.ts
 **Core**: repository.ts, svnRepository.ts, svn.ts
 **Services**: statusService.ts, resourceGroupManager.ts, remoteChangeService.ts
-**Commands**: command.ts (base), commands/*.ts (50+)
+**Blame**: blameConfiguration.ts, blameStateManager.ts, commands/blame/*.ts
+**Commands**: command.ts (base), commands/*.ts (54 total, 3 blame)
 **Parsing**: statusParser.ts, logParser.ts, infoParser.ts
 **Utils**: types.ts (323 lines), util.ts, decorators.ts
 
@@ -197,5 +200,18 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.17
-**Updated**: 2025-11-12 (v2.17.134)
+## Recent Additions (v2.17.186)
+
+### Blame Configuration System
+- **Complete**: 13 settings, 3 commands, 5 menu integrations
+- **Architecture**: BlameConfiguration (singleton), BlameStateManager (per-file tracking)
+- **State Management**: 3-level toggles (extension-wide, global, per-file)
+- **Tests**: 27 end-to-end tests across 3 suites
+- **Templates**: Customizable status bar/gutter with variable substitution
+- **Performance**: Large file warnings, optional log fetching (4-10x speedup)
+- **Design Doc**: BLAME_CONFIG_DESIGN.md (545 lines)
+
+---
+
+**Version**: 3.18
+**Updated**: 2025-11-18 (v2.17.186)

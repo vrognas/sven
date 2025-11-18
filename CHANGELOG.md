@@ -1,3 +1,19 @@
+## [2.17.186] (2025-11-18)
+
+### Feature: Blame configuration & settings system
+
+* **Added**: Complete config system for SVN blame (13 settings)
+* **Settings**: enabled, autoBlame, dateFormat, enableLogs, largeFileLimit, largeFileWarning, showWorkingCopyChanges
+* **Display**: statusBar (enabled, template), gutter (enabled, dateFormat, template)
+* **Commands**: toggleBlame, showBlame, clearBlame (3 commands)
+* **Menus**: editor/title, commandPalette, explorer/context integration
+* **State**: Per-file tracking via BlameStateManager (global + per-file toggles)
+* **Config**: BlameConfiguration singleton with helper methods
+* **Tests**: 27 end-to-end tests (3 test suites)
+* **Files**: blameConfiguration.ts (156L), blameStateManager.ts (112L), 3 commands (18L each), 3 test files
+* **Docs**: BLAME_CONFIG_DESIGN.md (545L complete design)
+* **Templates**: Customizable status bar/gutter templates with ${author}, ${revision}, ${date}, ${message}
+
 ## [2.17.185] (2025-11-18)
 
 ### Cleanup: Remove debug logging

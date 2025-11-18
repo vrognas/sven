@@ -2,7 +2,7 @@
     "name": "positron-svn",
     "displayName": "SVN (Positron)",
     "description": "Integrated Subversion source control - Positron fork with enhanced features",
-    "version": "2.17.185",
+    "version": "2.17.186",
     "publisher": "vrognas",
     "engines": {
         "vscode": "^1.74.0",
@@ -160,6 +160,24 @@
                 "command": "svn.addToIgnoreSCM",
                 "title": "Ignore file/ext from SVN (svn:ignore)",
                 "category": "SVN"
+            },
+            {
+                "command": "svn.blame.clearBlame",
+                "title": "Clear Blame",
+                "category": "SVN Blame",
+                "icon": "$(close)"
+            },
+            {
+                "command": "svn.blame.showBlame",
+                "title": "Show Blame",
+                "category": "SVN Blame",
+                "icon": "$(git-commit)"
+            },
+            {
+                "command": "svn.blame.toggleBlame",
+                "title": "Toggle Blame",
+                "category": "SVN Blame",
+                "icon": "$(eye)"
             },
             {
                 "command": "svn.branchchanges.openDiff",
@@ -484,6 +502,18 @@
                 {
                     "command": "svn.addToIgnoreSCM",
                     "when": "false"
+                },
+                {
+                    "command": "svn.blame.clearBlame",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0"
+                },
+                {
+                    "command": "svn.blame.showBlame",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0"
+                },
+                {
+                    "command": "svn.blame.toggleBlame",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0"
                 },
                 {
                     "command": "svn.branchchanges.openDiff",
@@ -1006,6 +1036,11 @@
             ],
             "editor/title": [
                 {
+                    "command": "svn.blame.toggleBlame",
+                    "group": "navigation",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0 && !isInDiffEditor && resourceScheme == file"
+                },
+                {
                     "command": "svn.openFile",
                     "group": "navigation",
                     "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && isInDiffEditor && resourceScheme != extension && resourceScheme != merge-conflicts.conflicts-diff"
@@ -1038,6 +1073,11 @@
                     "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
                 },
                 {
+                    "command": "svn.blame.toggleBlame",
+                    "group": "9_svn@1",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
+                },
+                {
                     "command": "svn.revertExplorer",
                     "group": "7_modification",
                     "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
@@ -1051,6 +1091,75 @@
                     "type": "boolean",
                     "description": "Whether auto refreshing is enabled",
                     "default": true
+                },
+                "svn.blame.enabled": {
+                    "type": "boolean",
+                    "description": "Enable SVN blame functionality",
+                    "default": true
+                },
+                "svn.blame.autoBlame": {
+                    "type": "boolean",
+                    "description": "Automatically blame files when opened",
+                    "default": false
+                },
+                "svn.blame.dateFormat": {
+                    "type": "string",
+                    "enum": [
+                        "relative",
+                        "absolute"
+                    ],
+                    "description": "Date format for blame annotations (relative: '2 days ago', absolute: '2025-11-18')",
+                    "default": "relative"
+                },
+                "svn.blame.enableLogs": {
+                    "type": "boolean",
+                    "description": "Fetch commit messages for blame (disabling speeds up blame significantly)",
+                    "default": true
+                },
+                "svn.blame.largeFileLimit": {
+                    "type": "number",
+                    "description": "Maximum number of lines before warning about large file (0 to disable)",
+                    "default": 100000,
+                    "minimum": 0
+                },
+                "svn.blame.largeFileWarning": {
+                    "type": "boolean",
+                    "description": "Show warning before blaming large files",
+                    "default": true
+                },
+                "svn.blame.showWorkingCopyChanges": {
+                    "type": "boolean",
+                    "description": "Show uncommitted changes in blame view",
+                    "default": true
+                },
+                "svn.blame.statusBar.enabled": {
+                    "type": "boolean",
+                    "description": "Show blame information in status bar",
+                    "default": true
+                },
+                "svn.blame.statusBar.template": {
+                    "type": "string",
+                    "description": "Status bar template. Available: ${author}, ${revision}, ${date}, ${message}",
+                    "default": "$(person) ${author}, $(clock) ${date} - ${message}"
+                },
+                "svn.blame.gutter.enabled": {
+                    "type": "boolean",
+                    "description": "Show blame annotations in editor gutter",
+                    "default": true
+                },
+                "svn.blame.gutter.dateFormat": {
+                    "type": "string",
+                    "enum": [
+                        "relative",
+                        "absolute"
+                    ],
+                    "description": "Date format for gutter annotations",
+                    "default": "relative"
+                },
+                "svn.blame.gutter.template": {
+                    "type": "string",
+                    "description": "Gutter template. Available: ${author}, ${revision}, ${date}, ${message}",
+                    "default": "${author} (${revision}) ${date}"
                 },
                 "svn.commit.changes.selectedAll": {
                     "type": "boolean",
