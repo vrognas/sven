@@ -1,3 +1,13 @@
+## [2.17.193] (2025-11-18)
+
+### Add: UI layer design docs
+
+* **5 subagents**: Analyzed VSCode Git, svn-blamer, architecture, status bar, hover
+* **BLAME_PROVIDER_DESIGN.md**: BlameProvider class (gutter decorations, 7 events, 52 tests)
+* **BLAME_HOVER_DESIGN.md**: Hover tooltip system (MarkdownString, lazy message fetch, 3-tier cache)
+* **BLAME_HOVER_IMPLEMENTATION_PLAN.md**: Quick reference for implementation
+* **Plan**: Gutter + status bar + hover (11-16h est)
+
 ## [2.17.192] (2025-11-18)
 
 ### Fix: Expose blame() in Repository class
