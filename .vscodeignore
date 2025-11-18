@@ -50,6 +50,7 @@ CONSOLIDATION_PLAN.md
 FILE_DECORATIONS_PLAN.md
 REPOLOG_DISPLAY_PLAN.md
 *_PLAN.md
+POSITRON_SCM_LIMITATIONS.md
 todos/**
 node_modules/**/CHANGELOG*
 node_modules/**/changelog*

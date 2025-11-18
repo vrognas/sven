@@ -1,3 +1,13 @@
+## [2.17.178] (2025-11-18)
+
+### Cleanup: Remove non-working acceptInputCommand code
+
+* **Removed**: acceptInputCommand configuration (doesn't work in Positron for non-Git)
+* **Removed**: Debug logging for SourceControl initialization
+* **Kept**: scm/title menu workaround (working solution)
+* **Lines removed**: 9 (repository.ts:244-248, 252-261)
+* **Reason**: Positron has incomplete SCM API support for non-Git providers
+
 ## [2.17.177] (2025-11-18)
 
 ### Fix: Actually add Commit button to scm/title menu
