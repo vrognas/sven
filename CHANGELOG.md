@@ -1,3 +1,15 @@
+## [2.17.189] (2025-11-18)
+
+### Feature: Blame command layer
+
+* **Commands**: Blame, ShowBlame, ToggleBlame, ClearBlame
+* **Registration**: All commands registered in commands.ts
+* **Blame command**: svn.blameFile with repository integration
+* **Pattern**: Extends Command base class, uses handleRepositoryOperation
+* **Integration**: Calls repository.blame(), handles Resource/Uri/activeEditor
+* **Error handling**: Proper error propagation via handleRepositoryOperation
+* **Package.json**: svn.blameFile command added to commands list
+
 ## [2.17.188] (2025-11-18)
 
 ### Feature: Blame repository layer

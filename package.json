@@ -2,7 +2,7 @@
     "name": "positron-svn",
     "displayName": "SVN (Positron)",
     "description": "Integrated Subversion source control - Positron fork with enhanced features",
-    "version": "2.17.188",
+    "version": "2.17.189",
     "publisher": "vrognas",
     "engines": {
         "vscode": "^1.74.0",
@@ -160,6 +160,12 @@
                 "command": "svn.addToIgnoreSCM",
                 "title": "Ignore file/ext from SVN (svn:ignore)",
                 "category": "SVN"
+            },
+            {
+                "command": "svn.blameFile",
+                "title": "Blame File",
+                "category": "SVN",
+                "icon": "$(git-commit)"
             },
             {
                 "command": "svn.blame.clearBlame",

@@ -52,6 +52,10 @@ import { SearchLogByText } from "./commands/search_log_by_text";
 import { RevealInExplorer } from "./commands/revealInExplorer";
 import { Merge } from "./commands/merge";
 import { DiffWithExternalTool } from "./commands/diffWithExternalTool";
+import { Blame } from "./commands/blame";
+import { ShowBlame } from "./commands/blame/showBlame";
+import { ToggleBlame } from "./commands/blame/toggleBlame";
+import { ClearBlame } from "./commands/blame/clearBlame";
 
 export function registerCommands(
   sourceControlManager: SourceControlManager,
@@ -109,4 +113,8 @@ export function registerCommands(
   disposables.push(new SearchLogByRevision());
   disposables.push(new SearchLogByText());
   disposables.push(new DiffWithExternalTool());
+  disposables.push(new Blame());
+  disposables.push(new ShowBlame());
+  disposables.push(new ToggleBlame());
+  disposables.push(new ClearBlame());
 }
