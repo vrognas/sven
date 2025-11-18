@@ -1,3 +1,15 @@
+## [2.17.181] (2025-11-18)
+
+### Performance: Repository Log cache preservation (Phase 3)
+
+* **Fix**: Preserve cached commit entries between refreshes (was clearing every time)
+* **Before**: Every refresh → cache cleared → svn log called (even with debouncing)
+* **After**: Cache preserved → svn log only on first load or explicit refresh
+* **Impact**: Eliminates unnecessary svn log calls on automatic refreshes
+* **Testing**: Debug logs confirmed debouncing works but cache was clearing
+* **Implementation**: Changed `entries: []` to `entries: prev?.entries || []`
+* **Files**: src/historyView/repoLogProvider.ts:424
+
 ## [2.17.180] (2025-11-18)
 
 ### Performance: Repository Log refresh optimization (98% reduction)

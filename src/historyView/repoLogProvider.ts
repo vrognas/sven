@@ -401,8 +401,8 @@ export class RepoLogProvider
       const cached = this.getCached(element);
       await fetchMore(cached);
     } else if (element === undefined) {
-      // Full refresh: clear cache and reload repos
-      console.log("[RepoLog] Full refresh - clearing cache");
+      // Full refresh: preserve cache, update repo list
+      console.log("[RepoLog] Full refresh - preserving cache");
       for (const [k, v] of this.logCache) {
         // Remove auto-added repositories
         if (!v.persisted.userAdded) {
@@ -421,7 +421,7 @@ export class RepoLogProvider
           persisted = prev.persisted;
         }
         this.logCache.set(repoUrl, {
-          entries: [],
+          entries: prev?.entries || [],
           isComplete: false,
           repo,
           svnTarget: remoteRoot,
@@ -429,7 +429,7 @@ export class RepoLogProvider
           order: this.logCache.size
         });
       }
-      console.log("[RepoLog] Cache cleared, entries set to []");
+      console.log("[RepoLog] Cache preserved, entries:", this.logCache.get(repo.branchRoot.toString(true))?.entries.length || 0);
     }
     console.log("[RepoLog] Firing _onDidChangeTreeData");
     this._onDidChangeTreeData.fire(element);
