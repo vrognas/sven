@@ -1,5 +1,7 @@
 .*
+!.vscodeignore
 .github/**
+node_modules/**
 .vscode-test/**
 .vscode/**
 **/*.map
@@ -44,6 +46,13 @@ DEPENDENCY_ASSESSMENT.md
 VERIFICATION_CHECKLIST.md
 UI_RESPONSIVENESS_ANALYSIS.md
 PERFORMANCE_ANALYSIS_MULTI_REPO.md
+CONSOLIDATION_PLAN.md
+FILE_DECORATIONS_PLAN.md
+REPOLOG_DISPLAY_PLAN.md
+*_PLAN.md
+POSITRON_SCM_LIMITATIONS.md
+REPOLOG_PERFORMANCE_ANALYSIS.md
+todos/**
 node_modules/**/CHANGELOG*
 node_modules/**/changelog*
 node_modules/**/.npmignore
@@ -55,5 +64,11 @@ node_modules/**/*.md
 node_modules/**/docs/**
 node_modules/**/examples/**
 node_modules/dayjs/locale/**
+images/subversion-logo.svg
 icons/subversion-logo.svg
+CLAUDE.md
+build.js
+eslint.config.js
+scripts/**
+CHANGELOG.md
 

@@ -95,6 +95,7 @@ export class Repository implements IRemoteRepository {
   private statusService: StatusService;
   private groupManager: ResourceGroupManager;
   private remoteChangeService: RemoteChangeService;
+  private fileDecorationProvider: any; // Imported below to avoid circular dependency
   private _configCache: RepositoryConfig | undefined;
 
   // Property accessors for backward compatibility
@@ -236,15 +237,12 @@ export class Repository implements IRemoteRepository {
       Uri.file(repository.workspaceRoot)
     );
 
-    this.sourceControl.count = 0;
-    this.sourceControl.inputBox.placeholder =
-      "Message (press Ctrl+Enter to commit)";
-    this.sourceControl.acceptInputCommand = {
-      command: "svn.commitWithMessage",
-      title: "commit",
-      arguments: [this.sourceControl]
-    };
+    this.sourceControl.contextValue = "repository";
+    this.sourceControl.inputBox.placeholder = "Commit message";
+    this.sourceControl.inputBox.visible = true;
+    this.sourceControl.inputBox.enabled = true;
     this.sourceControl.quickDiffProvider = this;
+    this.sourceControl.count = 0;
     this.disposables.push(this.sourceControl);
 
     this.statusBar = new StatusBarCommands(this);
@@ -271,6 +269,14 @@ export class Repository implements IRemoteRepository {
         )
       })
     );
+
+    // Initialize FileDecorationProvider for Explorer view decorations
+    const { SvnFileDecorationProvider } = require("./fileDecorationProvider");
+    this.fileDecorationProvider = new SvnFileDecorationProvider(this);
+    this.disposables.push(
+      window.registerFileDecorationProvider(this.fileDecorationProvider)
+    );
+    this.disposables.push(this.fileDecorationProvider);
 
     // For each deleted file, add to set (auto-deduplicates)
     this._fsWatcher.onDidWorkspaceDelete(
@@ -517,6 +523,16 @@ export class Repository implements IRemoteRepository {
     }
 
     this._onDidChangeStatus.fire();
+
+    // Refresh file decorations in Explorer view
+    if (this.fileDecorationProvider) {
+      // Always refresh all decorations - simpler and handles all cases:
+      // - Files added to changes
+      // - Files removed from changes (reverted)
+      // - Files moved between groups
+      // Passing undefined refreshes all tracked files efficiently
+      this.fileDecorationProvider.refresh(undefined);
+    }
 
     this.currentBranch = await this.getCurrentBranch();
 

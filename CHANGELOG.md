@@ -1,3 +1,287 @@
+## [2.17.185] (2025-11-18)
+
+### Cleanup: Remove debug logging
+
+* **Removed**: All console.log statements (14 total) from repoLogProvider
+* **Locations**: onDidChangeRepository, refresh(), getChildren()
+* **Reason**: Performance optimization complete, debugging no longer needed
+* **Files**: src/historyView/repoLogProvider.ts
+
+## [2.17.184] (2025-11-18)
+
+### UX: Explicit refresh clears cache
+
+* **Issue**: Clicking "Refresh log" button didn't fetch fresh data (cache preserved)
+* **Fix**: Distinguish explicit user refresh from automatic refresh
+* **Explicit refresh**: Clears cache, fetches fresh → `explicitRefreshCmd()`
+* **Automatic refresh**: Preserves cache → `refresh()` from onDidChangeRepository
+* **Implementation**: New `explicitRefresh` param + wrapper command
+* **Files**: src/historyView/repoLogProvider.ts:144,397-399,405-454
+
+## [2.17.183] (2025-11-18)
+
+### Fix: Cache preservation actually working now
+
+* **Bug**: Entries deleted before retrieval → `prev` undefined → `[]`
+* **Root cause**: Delete loop ran before save, so `prev?.entries` always undefined
+* **Fix**: Save entries to Map before deletion, restore from Map when rebuilding
+* **Testing showed**: "entries: 0" even with preservation attempt
+* **Implementation**: `savedEntries = new Map()` → preserve → rebuild
+* **Files**: src/historyView/repoLogProvider.ts:408-441
+
+## [2.17.182] (2025-11-18)
+
+### Fix: Logging error in cache preservation
+
+* **Bug**: `repo` undefined in console.log outside loop
+* **Fix**: Moved logging inside loop, use `repoUrl` and `prev`
+* **Files**: src/historyView/repoLogProvider.ts:431
+
+## [2.17.181] (2025-11-18)
+
+### Performance: Repository Log cache preservation (Phase 3)
+
+* **Fix**: Preserve cached commit entries between refreshes (was clearing every time)
+* **Before**: Every refresh → cache cleared → svn log called (even with debouncing)
+* **After**: Cache preserved → svn log only on first load or explicit refresh
+* **Impact**: Eliminates unnecessary svn log calls on automatic refreshes
+* **Testing**: Debug logs confirmed debouncing works but cache was clearing
+* **Implementation**: Changed `entries: []` to `entries: prev?.entries || []`
+* **Files**: src/historyView/repoLogProvider.ts:424
+
+## [2.17.180] (2025-11-18)
+
+### Performance: Repository Log refresh optimization (98% reduction)
+
+* **Phase 1**: Visibility check - skip refresh when view hidden (90% ↓)
+* **Phase 2**: Debounce events - batch rapid refreshes (2s window, 80% ↓ of remaining)
+* **Impact**: 20-50 svn log calls/min → 0-1 call/min (95-99% reduction)
+* **UX**: Eliminates extension host freezing during active development
+* **Implementation**: TreeView visibility tracking + setTimeout debouncing
+* **Files**: src/historyView/repoLogProvider.ts (lines 81-83, 112-115, 147-162, 167-170)
+
+## [2.17.179] (2025-11-18)
+
+### UX: Flatten Repository Log - show commits directly
+
+* **Removed**: Top-level repo folder in Repository Log view
+* **Change**: Commits now appear directly at root level (no expand needed)
+* **Reason**: Simplify UX for single-repo workflow
+* **Files**: src/historyView/repoLogProvider.ts (getChildren, getTreeItem, getCached, refresh)
+* **Lines changed**: ~50 (repo level removed, commits now at root)
+
+## [2.17.178] (2025-11-18)
+
+### Cleanup: Remove non-working acceptInputCommand code
+
+* **Removed**: acceptInputCommand configuration (doesn't work in Positron for non-Git)
+* **Removed**: Debug logging for SourceControl initialization
+* **Kept**: scm/title menu workaround (working solution)
+* **Lines removed**: 9 (repository.ts:244-248, 252-261)
+* **Reason**: Positron has incomplete SCM API support for non-Git providers
+
+## [2.17.177] (2025-11-18)
+
+### Fix: Actually add Commit button to scm/title menu
+
+* **Fix**: svn.commitAll now actually added to scm/title (was missing in v2.17.176)
+* **Button**: Appears as first navigation button in SCM title bar
+* **File**: package.json:803-807
+
+## [2.17.176] (2025-11-18)
+
+### Workaround: Add Commit button to scm/title menu (incomplete)
+
+* **Intent**: Add svn.commitAll to scm/title as first navigation button
+* **Issue**: Change documented but not applied to package.json
+* **Note**: Fixed in v2.17.177
+
+## [2.17.175] (2025-11-17)
+
+### Debug: Enhanced logging for acceptInputCommand issue
+
+* **Debug**: Added detailed SourceControl property logging
+* **Order**: Set inputBox properties before acceptInputCommand (matches Git)
+* **Logging**: Shows id, label, rootUri, contextValue, acceptInputCommand object
+* **File**: src/repository.ts:241-261
+
+## [2.17.174] (2025-11-17)
+
+### Fix: File decorations now refresh properly after revert
+
+* **Fix**: Decorations update when files are reverted/removed from changes
+* **Approach**: Refresh all decorations on every status update (simple & correct)
+* **Before**: Only refreshed files currently in changes/unversioned/conflicts
+* **After**: Refreshes all tracked files, clearing stale decorations
+* **File**: src/repository.ts:542-548
+
+## [2.17.173] (2025-11-17)
+
+### Fix: Reorder props and add icon for Commit button
+
+* **Fix**: Set acceptInputCommand before inputBox properties (order matters)
+* **Fix**: Added icon to svn.commitAll command definition
+* **Fix**: Corrected placeholder text to "Commit message"
+* **Files**: src/repository.ts:241-250, package.json:203-207
+
+## [2.17.172] (2025-11-17)
+
+### UX: Simplify commit message placeholder
+
+* **Change**: Placeholder text changed from "Message (press Ctrl+Enter to commit)" to "Commit message"
+* **Matches**: Git extension placeholder style
+* **File**: src/repository.ts:242
+
+## [2.17.171] (2025-11-17)
+
+### Fix: Set contextValue and inputBox.enabled for Commit button
+
+* **Fix**: Added sourceControl.contextValue = "repository" (required by Positron)
+* **Fix**: Added inputBox.enabled = true
+* **Debug**: Extended logging to verify all properties
+* **Files**: src/repository.ts:240-257
+
+## [2.17.170] (2025-11-17)
+
+### Debug: Add logging and cleanup for Commit button
+
+* **Fixed**: Removed duplicate svn.commitAll command registration
+* **Added**: commitAll to command palette for manual testing
+* **Debug**: Added console logging to verify acceptInputCommand setup
+* **Note**: If button doesn't appear, check if Positron supports acceptInputCommand API
+* **Files**: package.json, src/repository.ts:251-256
+
+## [2.17.169] (2025-11-17)
+
+### Fix: Repository log file decorations
+
+* **Fix**: Historical files in repository log now show decoration badges (M, A, D, R)
+* **Approach**: Encode action as query param in resourceUri
+* **Provider**: FileDecorationProvider now handles historical files via action query param
+* **Files**: src/historyView/repoLogProvider.ts:439-441, src/fileDecorationProvider.ts:35-59, :102-114
+
+## [2.17.168] (2025-11-17)
+
+### Fix: Set inputBox.visible = true for Commit button
+
+* **Fix**: Explicitly enable inputBox visibility (required for acceptInputCommand button)
+* **Change**: Set sourceControl.inputBox.visible = true in constructor
+* **File**: src/repository.ts:243
+
+## [2.17.167] (2025-11-17)
+
+### Optimize: Further package size reduction
+
+* **Size**: Reduced from 152 KB to 109 KB (31 files)
+* **Excluded**: CHANGELOG.md, logo SVGs, build/config files
+* **Savings**: 42.6 KB (28% reduction)
+* **File**: .vscodeignore
+
+## [2.17.166] (2025-11-17)
+
+### Fix: Register svn.commitAll command in package.json
+
+* **Fix**: Commit button now appears (command must be declared in package.json)
+* **Added**: svn.commitAll to commands array
+* **File**: package.json:203-206
+
+## [2.17.165] (2025-11-17)
+
+### UX: Enable folder decoration propagation
+
+* **Folders**: Parent folders now show status badges when containing modified files
+* **Behavior**: Matches Git extension (decorations propagate up folder tree)
+* **Change**: Set `propagate: true` in FileDecorationProvider
+* **File**: src/fileDecorationProvider.ts
+
+## [2.17.164] (2025-11-17)
+
+### Optimize: Package size reduction
+
+* **Size**: Reduced from 404 files to 37 files (151.79 KB)
+* **Fixed**: Excluded node_modules/** from package (already bundled)
+* **Added**: Exclusions for development plan files
+* **Result**: No more packaging warnings, faster loading
+* **File**: .vscodeignore
+
+## [2.17.163] (2025-11-17)
+
+### Fix: Show prominent "Commit" button via acceptInputCommand
+
+* **Button**: Uses VS Code's built-in yellow primary button UI
+* **Command**: acceptInputCommand now uses svn.commitAll
+* **Title**: Changed to "Commit" (capitalized, like Git)
+* **Removed**: Duplicate menu item from scm/title
+* **Files**: src/repository.ts, package.json
+
+## [2.17.162] (2025-11-17)
+
+### Fix: File decorations now appear in Explorer and Repository Log
+
+* **Explorer**: Fixed decorations not appearing (was firing empty array instead of undefined)
+* **Repository Log**: Uses FileDecorationProvider badges instead of literal text
+* **Before**: Files showed "src/components • M" (text)
+* **After**: Files show "src/components" with M badge decoration
+* **Files**: src/fileDecorationProvider.ts, src/repository.ts, src/historyView/repoLogProvider.ts
+
+## [2.17.161] (2025-11-17)
+
+### UX: Add prominent Commit button to SCM title
+
+* **Button**: Large "Commit" button in SCM title bar (like Git)
+* **Removed**: Inline commit icon from Changes group header
+* **Command**: Uses svn.commitAll (goes directly to commit message)
+* **Style**: Prominent primary button, not small icon
+* **File**: package.json
+
+## [2.17.160] (2025-11-17)
+
+### UX: Repository log file display matches Git Graph
+
+* **Display**: File type icon + filename + directory + status badge
+* **Icon**: Shows file extension icon (not status icon)
+* **Description**: Path and status badge at end (e.g., "src/components • M")
+* **Style**: Matches Git Graph extension display format
+* **File**: src/historyView/repoLogProvider.ts
+
+## [2.17.159] (2025-11-17)
+
+### Feature: Explorer file decorations
+
+* **Feature**: Show SVN status badges (M, A, D, etc.) on files in Explorer view
+* **Colors**: Uses Git theme colors for consistency
+* **Badges**: M=Modified, A=Added, D=Deleted, C=Conflicted, U=Unversioned, !=Missing, I=Ignored, R=Renamed
+* **Auto-refresh**: Updates when repository status changes
+* **Files**: src/fileDecorationProvider.ts, src/repository.ts
+
+## [2.17.158] (2025-11-17)
+
+### UX: Improve Commit All - direct to message entry
+
+* **Behavior**: Goes directly to commit message input (skips file selection)
+* **Title**: "Commit All Changes" hover text
+* **Flow**: Same as "Commit Selected" but for all changes
+* **Files**: src/commands/commitAll.ts, package.json
+
+## [2.17.157] (2025-11-17)
+
+### UX: Add Commit All inline action to Changes group
+
+* **Action**: Commit All Changes icon in Changes group header
+* **Behavior**: Prompts for file selection, then commit message
+* **Location**: Appears next to Revert All Changes icon
+* **File**: package.json
+
+## [2.17.156] (2025-11-17)
+
+### UX: Consolidate views to built-in Source Control container
+
+* **Views**: Moved all custom views to built-in SCM container
+* **Removed**: Separate "Subversion" Activity Bar icon
+* **Location**: Incoming Changes, Repo Log, File History, Branch Changes now in Source Control view
+* **Benefit**: Single location for all SCM features, follows VS Code conventions
+* **File**: package.json
+
 ## [2.17.155] (2025-11-16)
 
 ### Add: Security - UNC path rejection for Windows

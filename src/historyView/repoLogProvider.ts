@@ -8,6 +8,7 @@ import {
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  TreeView,
   Uri,
   window,
   workspace
@@ -77,18 +78,44 @@ export class RepoLogProvider
   private readonly logCache: Map<string, ICachedLog> = new Map();
   private _dispose: Disposable[] = [];
 
+  // Performance optimization: visibility tracking and debouncing
+  private treeView?: TreeView<ILogTreeItem>;
+  private refreshTimeout?: NodeJS.Timeout;
+  private readonly DEBOUNCE_MS = 2000;
+
   private getCached(maybeItem?: ILogTreeItem): ICachedLog {
+    // With flat structure, commits are at root level
+    // Walk up to find root, then return first cache entry
+    if (!maybeItem) {
+      // Return first repo in cache (should only be one workspace repo)
+      const first = this.logCache.values().next().value;
+      return unwrap(first);
+    }
+
     const item = unwrap(maybeItem);
     if (item.data instanceof SvnPath) {
       return unwrap(this.logCache.get(item.data.toString()));
     }
+
+    // For commits at root level, return first cache entry
+    if (!item.parent) {
+      const first = this.logCache.values().next().value;
+      return unwrap(first);
+    }
+
     return this.getCached(item.parent);
   }
 
   constructor(private sourceControlManager: SourceControlManager) {
     this.refresh();
+
+    // Create TreeView for visibility tracking
+    this.treeView = window.createTreeView("repolog", {
+      treeDataProvider: this
+    });
+
     this._dispose.push(
-      window.registerTreeDataProvider("repolog", this),
+      this.treeView,
       commands.registerCommand(
         "svn.repolog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
@@ -114,19 +141,33 @@ export class RepoLogProvider
         this.openFileLocal,
         this
       ),
-      commands.registerCommand("svn.repolog.refresh", this.refresh, this),
+      commands.registerCommand("svn.repolog.refresh", this.explicitRefreshCmd, this),
       commands.registerCommand("svn.repolog.revealInExplorer", this.revealInExplorerCmd, this),
       commands.registerCommand("svn.repolog.diffWithExternalTool", this.diffWithExternalToolCmd, this),
       this.sourceControlManager.onDidChangeRepository(
         async (_e: RepositoryChangeEvent) => {
-          return this.refresh();
-          // TODO refresh only required repo, need to pass element === getChildren()
+          // Performance: Skip refresh when view is hidden
+          if (!this.treeView?.visible) {
+            return;
+          }
+
+          // Performance: Debounce rapid events (2 second window)
+          if (this.refreshTimeout) {
+            clearTimeout(this.refreshTimeout);
+          }
+
+          this.refreshTimeout = setTimeout(() => {
+            this.refresh();
+          }, this.DEBOUNCE_MS);
         }
       )
     );
   }
 
   public dispose() {
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
     dispose(this._dispose);
   }
 
@@ -346,14 +387,36 @@ export class RepoLogProvider
     }
   }
 
-  public async refresh(element?: ILogTreeItem, fetchMoreClick?: boolean) {
-    if (element === undefined) {
+  // Wrapper for explicit user refresh (clears cache)
+  public async explicitRefreshCmd(element?: ILogTreeItem, fetchMoreClick?: boolean) {
+    return this.refresh(element, fetchMoreClick, true);
+  }
+
+  public async refresh(element?: ILogTreeItem, fetchMoreClick?: boolean, explicitRefresh?: boolean) {
+    if (fetchMoreClick) {
+      // Fetch more commits for current repo
+      const cached = this.getCached(element);
+      await fetchMore(cached);
+    } else if (element === undefined) {
+      // Determine if we should clear or preserve cache
+      const shouldClearCache = explicitRefresh === true;
+
+      // Save entries before modifying cache (if preserving)
+      const savedEntries = new Map<string, ISvnLogEntry[]>();
+      if (!shouldClearCache) {
+        for (const [k, v] of this.logCache) {
+          savedEntries.set(k, v.entries);
+        }
+      }
+
+      // Remove auto-added repositories
       for (const [k, v] of this.logCache) {
-        // Remove auto-added repositories
         if (!v.persisted.userAdded) {
           this.logCache.delete(k);
         }
       }
+
+      // Rebuild cache with preserved or empty entries
       for (const repo of this.sourceControlManager.repositories) {
         const remoteRoot = repo.branchRoot;
         const repoUrl = remoteRoot.toString(true);
@@ -365,8 +428,9 @@ export class RepoLogProvider
         if (prev) {
           persisted = prev.persisted;
         }
+        const entries = shouldClearCache ? [] : (savedEntries.get(repoUrl) || []);
         this.logCache.set(repoUrl, {
-          entries: [],
+          entries,
           isComplete: false,
           repo,
           svnTarget: remoteRoot,
@@ -374,41 +438,13 @@ export class RepoLogProvider
           order: this.logCache.size
         });
       }
-    } else if (element.kind === LogTreeItemKind.Repo) {
-      const cached = this.getCached(element);
-      if (fetchMoreClick) {
-        await fetchMore(cached);
-      } else {
-        cached.entries = [];
-        cached.isComplete = false;
-      }
     }
     this._onDidChangeTreeData.fire(element);
   }
 
   public async getTreeItem(element: ILogTreeItem): Promise<TreeItem> {
     let ti: TreeItem;
-    if (element.kind === LogTreeItemKind.Repo) {
-      const svnTarget = element.data as SvnPath;
-      const cached = this.getCached(element);
-      ti = new TreeItem(
-        svnTarget.toString(),
-        TreeItemCollapsibleState.Collapsed
-      );
-      if (cached.persisted.userAdded) {
-        ti.label = "∘ " + ti.label;
-        ti.contextValue = "userrepo";
-      } else {
-        ti.contextValue = "repo";
-      }
-      if (cached.repo instanceof Repository) {
-        ti.iconPath = new ThemeIcon("folder-opened");
-      } else {
-        ti.iconPath = new ThemeIcon("repo");
-      }
-      const from = cached.persisted.commitFrom || "HEAD";
-      ti.tooltip = `${svnTarget} since ${from}`;
-    } else if (element.kind === LogTreeItemKind.Commit) {
+    if (element.kind === LogTreeItemKind.Commit) {
       const commit = element.data as ISvnLogEntry;
       ti = new TreeItem(
         getCommitLabel(commit),
@@ -422,12 +458,25 @@ export class RepoLogProvider
       // TODO optional tree-view instead of flat
       const pathElem = element.data as ISvnLogEntryPath;
       const basename = path.basename(pathElem._);
-      ti = new TreeItem(basename, TreeItemCollapsibleState.None);
-      ti.description = path.dirname(pathElem._);
+      const dirname = path.dirname(pathElem._);
       const cached = this.getCached(element);
       const nm = cached.repo.getPathNormalizer();
-      ti.tooltip = nm.parse(pathElem._).relativeFromBranch;
-      ti.iconPath = getActionIcon(pathElem.action);
+      const parsedPath = nm.parse(pathElem._);
+
+      ti = new TreeItem(basename, TreeItemCollapsibleState.None);
+
+      // Show directory path (decoration badge added automatically by FileDecorationProvider)
+      ti.description = dirname;
+      ti.tooltip = parsedPath.relativeFromBranch;
+
+      // Use resourceUri to show file type icon and trigger file decorations
+      // Add action as query param so FileDecorationProvider can decorate historical files
+      if (parsedPath.localFullPath) {
+        ti.resourceUri = parsedPath.localFullPath.with({
+          query: `action=${pathElem.action}`
+        });
+      }
+
       ti.contextValue = "diffable";
       ti.command = {
         command: "svn.repolog.openDiff",
@@ -447,32 +496,22 @@ export class RepoLogProvider
     element: ILogTreeItem | undefined
   ): Promise<ILogTreeItem[]> {
     if (element === undefined) {
-      return transform(
-        Array.from(this.logCache.entries())
-          .sort(([_lk, lv], [_rk, rv]): number => {
-            if (lv.persisted.userAdded !== rv.persisted.userAdded) {
-              return lv.persisted.userAdded ? 1 : -1;
-            }
-            return lv.order - rv.order;
-          })
-          .map(([k, _v]) => new SvnPath(k)),
-        LogTreeItemKind.Repo
-      );
-    } else if (element.kind === LogTreeItemKind.Repo) {
+      // Show commits directly at root level (skip repo folder)
       const limit = getLimit();
-      const cached = this.getCached(element);
+      const cached = this.getCached();
       const logentries = cached.entries;
+
       if (logentries.length === 0) {
         await fetchMore(cached);
       }
-      const result = transform(logentries, LogTreeItemKind.Commit, element);
+      const result = transform(logentries, LogTreeItemKind.Commit, undefined);
       insertBaseMarker(cached, logentries, result);
       if (!cached.isComplete) {
         const ti = new TreeItem(`Load another ${limit} revisions`);
         ti.tooltip = "Paging size may be adjusted using log.length setting";
         ti.command = {
           command: "svn.repolog.refresh",
-          arguments: [element, true],
+          arguments: [undefined, true],
           title: "refresh element"
         };
         ti.iconPath = new ThemeIcon("unfold");

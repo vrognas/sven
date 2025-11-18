@@ -8,6 +8,7 @@ import { Cleanup } from "./commands/cleanup";
 import { Close } from "./commands/close";
 import { Commit } from "./commands/commit";
 import { CommitWithMessage } from "./commands/commitWithMessage";
+import { CommitAll } from "./commands/commitAll";
 import { DeleteUnversioned } from "./commands/deleteUnversioned";
 import { FileOpen } from "./commands/fileOpen";
 import { FinishCheckout } from "./commands/finishCheckout";
@@ -65,6 +66,7 @@ export function registerCommands(
   disposables.push(new RevealInExplorer());
   disposables.push(new PromptAuth());
   disposables.push(new CommitWithMessage());
+  disposables.push(new CommitAll());
   disposables.push(new Add());
   disposables.push(new ChangeList());
   disposables.push(new Refresh());
