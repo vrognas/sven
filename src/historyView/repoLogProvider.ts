@@ -78,10 +78,25 @@ export class RepoLogProvider
   private _dispose: Disposable[] = [];
 
   private getCached(maybeItem?: ILogTreeItem): ICachedLog {
+    // With flat structure, commits are at root level
+    // Walk up to find root, then return first cache entry
+    if (!maybeItem) {
+      // Return first repo in cache (should only be one workspace repo)
+      const first = this.logCache.values().next().value;
+      return unwrap(first);
+    }
+
     const item = unwrap(maybeItem);
     if (item.data instanceof SvnPath) {
       return unwrap(this.logCache.get(item.data.toString()));
     }
+
+    // For commits at root level, return first cache entry
+    if (!item.parent) {
+      const first = this.logCache.values().next().value;
+      return unwrap(first);
+    }
+
     return this.getCached(item.parent);
   }
 
@@ -347,7 +362,12 @@ export class RepoLogProvider
   }
 
   public async refresh(element?: ILogTreeItem, fetchMoreClick?: boolean) {
-    if (element === undefined) {
+    if (fetchMoreClick) {
+      // Fetch more commits for current repo
+      const cached = this.getCached(element);
+      await fetchMore(cached);
+    } else if (element === undefined) {
+      // Full refresh: clear cache and reload repos
       for (const [k, v] of this.logCache) {
         // Remove auto-added repositories
         if (!v.persisted.userAdded) {
@@ -374,41 +394,13 @@ export class RepoLogProvider
           order: this.logCache.size
         });
       }
-    } else if (element.kind === LogTreeItemKind.Repo) {
-      const cached = this.getCached(element);
-      if (fetchMoreClick) {
-        await fetchMore(cached);
-      } else {
-        cached.entries = [];
-        cached.isComplete = false;
-      }
     }
     this._onDidChangeTreeData.fire(element);
   }
 
   public async getTreeItem(element: ILogTreeItem): Promise<TreeItem> {
     let ti: TreeItem;
-    if (element.kind === LogTreeItemKind.Repo) {
-      const svnTarget = element.data as SvnPath;
-      const cached = this.getCached(element);
-      ti = new TreeItem(
-        svnTarget.toString(),
-        TreeItemCollapsibleState.Collapsed
-      );
-      if (cached.persisted.userAdded) {
-        ti.label = "∘ " + ti.label;
-        ti.contextValue = "userrepo";
-      } else {
-        ti.contextValue = "repo";
-      }
-      if (cached.repo instanceof Repository) {
-        ti.iconPath = new ThemeIcon("folder-opened");
-      } else {
-        ti.iconPath = new ThemeIcon("repo");
-      }
-      const from = cached.persisted.commitFrom || "HEAD";
-      ti.tooltip = `${svnTarget} since ${from}`;
-    } else if (element.kind === LogTreeItemKind.Commit) {
+    if (element.kind === LogTreeItemKind.Commit) {
       const commit = element.data as ISvnLogEntry;
       ti = new TreeItem(
         getCommitLabel(commit),
@@ -460,32 +452,21 @@ export class RepoLogProvider
     element: ILogTreeItem | undefined
   ): Promise<ILogTreeItem[]> {
     if (element === undefined) {
-      return transform(
-        Array.from(this.logCache.entries())
-          .sort(([_lk, lv], [_rk, rv]): number => {
-            if (lv.persisted.userAdded !== rv.persisted.userAdded) {
-              return lv.persisted.userAdded ? 1 : -1;
-            }
-            return lv.order - rv.order;
-          })
-          .map(([k, _v]) => new SvnPath(k)),
-        LogTreeItemKind.Repo
-      );
-    } else if (element.kind === LogTreeItemKind.Repo) {
+      // Show commits directly at root level (skip repo folder)
       const limit = getLimit();
-      const cached = this.getCached(element);
+      const cached = this.getCached();
       const logentries = cached.entries;
       if (logentries.length === 0) {
         await fetchMore(cached);
       }
-      const result = transform(logentries, LogTreeItemKind.Commit, element);
+      const result = transform(logentries, LogTreeItemKind.Commit, undefined);
       insertBaseMarker(cached, logentries, result);
       if (!cached.isComplete) {
         const ti = new TreeItem(`Load another ${limit} revisions`);
         ti.tooltip = "Paging size may be adjusted using log.length setting";
         ti.command = {
           command: "svn.repolog.refresh",
-          arguments: [element, true],
+          arguments: [undefined, true],
           title: "refresh element"
         };
         ti.iconPath = new ThemeIcon("unfold");

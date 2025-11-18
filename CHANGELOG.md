@@ -1,3 +1,13 @@
+## [2.17.179] (2025-11-18)
+
+### UX: Flatten Repository Log - show commits directly
+
+* **Removed**: Top-level repo folder in Repository Log view
+* **Change**: Commits now appear directly at root level (no expand needed)
+* **Reason**: Simplify UX for single-repo workflow
+* **Files**: src/historyView/repoLogProvider.ts (getChildren, getTreeItem, getCached, refresh)
+* **Lines changed**: ~50 (repo level removed, commits now at root)
+
 ## [2.17.178] (2025-11-18)
 
 ### Cleanup: Remove non-working acceptInputCommand code
