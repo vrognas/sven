@@ -8,6 +8,7 @@ import {
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  TreeView,
   Uri,
   window,
   workspace
@@ -77,6 +78,11 @@ export class RepoLogProvider
   private readonly logCache: Map<string, ICachedLog> = new Map();
   private _dispose: Disposable[] = [];
 
+  // Performance optimization: visibility tracking and debouncing
+  private treeView?: TreeView<ILogTreeItem>;
+  private refreshTimeout?: NodeJS.Timeout;
+  private readonly DEBOUNCE_MS = 2000;
+
   private getCached(maybeItem?: ILogTreeItem): ICachedLog {
     // With flat structure, commits are at root level
     // Walk up to find root, then return first cache entry
@@ -102,8 +108,14 @@ export class RepoLogProvider
 
   constructor(private sourceControlManager: SourceControlManager) {
     this.refresh();
+
+    // Create TreeView for visibility tracking
+    this.treeView = window.createTreeView("repolog", {
+      treeDataProvider: this
+    });
+
     this._dispose.push(
-      window.registerTreeDataProvider("repolog", this),
+      this.treeView,
       commands.registerCommand(
         "svn.repolog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
@@ -134,14 +146,28 @@ export class RepoLogProvider
       commands.registerCommand("svn.repolog.diffWithExternalTool", this.diffWithExternalToolCmd, this),
       this.sourceControlManager.onDidChangeRepository(
         async (_e: RepositoryChangeEvent) => {
-          return this.refresh();
-          // TODO refresh only required repo, need to pass element === getChildren()
+          // Performance: Skip refresh when view is hidden
+          if (!this.treeView?.visible) {
+            return;
+          }
+
+          // Performance: Debounce rapid events (2 second window)
+          if (this.refreshTimeout) {
+            clearTimeout(this.refreshTimeout);
+          }
+
+          this.refreshTimeout = setTimeout(() => {
+            this.refresh();
+          }, this.DEBOUNCE_MS);
         }
       )
     );
   }
 
   public dispose() {
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
     dispose(this._dispose);
   }
 

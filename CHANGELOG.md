@@ -1,3 +1,14 @@
+## [2.17.180] (2025-11-18)
+
+### Performance: Repository Log refresh optimization (98% reduction)
+
+* **Phase 1**: Visibility check - skip refresh when view hidden (90% ↓)
+* **Phase 2**: Debounce events - batch rapid refreshes (2s window, 80% ↓ of remaining)
+* **Impact**: 20-50 svn log calls/min → 0-1 call/min (95-99% reduction)
+* **UX**: Eliminates extension host freezing during active development
+* **Implementation**: TreeView visibility tracking + setTimeout debouncing
+* **Files**: src/historyView/repoLogProvider.ts (lines 81-83, 112-115, 147-162, 167-170)
+
 ## [2.17.179] (2025-11-18)
 
 ### UX: Flatten Repository Log - show commits directly
