@@ -1,3 +1,11 @@
+## [2.17.198] (2025-11-19)
+
+### Fix: BlameProvider Phase 2.5 critical bugs
+
+* **shouldDecorate() logic**: Check ANY decoration type enabled (not just gutter)
+* **Inline range positioning**: Use actual line.end.character (not MAX_SAFE_INTEGER)
+* **Config change race condition**: Create new types before disposing old ones
+
 ## [2.17.197] (2025-11-19)
 
 ### Add: BlameProvider Phase 2.5 (multi-decoration support)

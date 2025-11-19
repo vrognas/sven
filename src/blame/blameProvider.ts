@@ -245,20 +245,30 @@ export class BlameProvider implements Disposable {
   }
 
   private async onConfigurationChange(_event: any): Promise<void> {
-    // Dispose all 3 decoration types
-    this.decorationTypes.gutter.dispose();
-    this.decorationTypes.icon.dispose();
-    this.decorationTypes.inline.dispose();
+    // Save old decoration types
+    const oldTypes = this.decorationTypes;
+
+    // Create new decoration types first
+    this.decorationTypes = this.createDecorationTypes();
+
+    // Clear decorations using old types before disposing
+    if (window.activeTextEditor) {
+      window.activeTextEditor.setDecorations(oldTypes.gutter, []);
+      window.activeTextEditor.setDecorations(oldTypes.icon, []);
+      window.activeTextEditor.setDecorations(oldTypes.inline, []);
+    }
+
+    // Now safe to dispose old types
+    oldTypes.gutter.dispose();
+    oldTypes.icon.dispose();
+    oldTypes.inline.dispose();
 
     // Clear caches (colors/templates may have changed)
     this.authorColors.clear();
     this.svgCache.clear();
     // Keep messageCache (revision messages don't change)
 
-    // Recreate all 3 types
-    this.decorationTypes = this.createDecorationTypes();
-
-    // Refresh all editors
+    // Refresh all editors with new decoration types
     if (window.activeTextEditor) {
       await this.updateDecorations(window.activeTextEditor);
     }
@@ -277,8 +287,13 @@ export class BlameProvider implements Disposable {
       return false;
     }
 
-    // Check configuration
-    if (!blameConfiguration.isEnabled() || !blameConfiguration.isGutterEnabled()) {
+    // Check configuration - at least one decoration type must be enabled
+    const anyDecorationEnabled =
+      blameConfiguration.isGutterEnabled() ||
+      blameConfiguration.isGutterIconEnabled() ||
+      blameConfiguration.isInlineEnabled();
+
+    if (!blameConfiguration.isEnabled() || !anyDecorationEnabled) {
       return false;
     }
 
@@ -395,12 +410,13 @@ export class BlameProvider implements Disposable {
 
         const inlineText = this.formatInlineText(blameLine, message);
 
+        const line = editor.document.lineAt(lineIndex);
         inlineDecorations.push({
           range: new Range(
             lineIndex,
-            Number.MAX_SAFE_INTEGER,
+            line.range.end.character,
             lineIndex,
-            Number.MAX_SAFE_INTEGER
+            line.range.end.character
           ),
           renderOptions: {
             after: {
