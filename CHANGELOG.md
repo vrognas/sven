@@ -1,3 +1,13 @@
+## [2.17.220] (2025-11-19)
+
+### Fix: Config defaults + shouldDecorate logic
+
+* **Opacity default**: 0.2→0.5 for inline blame
+* **Gutter default**: enabled=true (was false, caused icons hidden)
+* **Inline code default**: true (matched package.json)
+* **shouldDecorate fix**: Gutter requires master switch + sub-feature
+* **Code**: blameConfiguration.ts:173,190, blameProvider.ts:598-601, package.json:1167,1211
+
 ## [2.17.219] (2025-11-19)
 
 ### Feat: Untracked file icon + opacity fix + config defaults

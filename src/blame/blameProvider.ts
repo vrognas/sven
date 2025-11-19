@@ -596,8 +596,8 @@ export class BlameProvider implements Disposable {
 
     // Check configuration - at least one decoration type must be enabled
     const anyDecorationEnabled =
-      blameConfiguration.isGutterEnabled() ||
-      blameConfiguration.isGutterIconEnabled() ||
+      (blameConfiguration.isGutterEnabled() &&
+       (blameConfiguration.isGutterTextEnabled() || blameConfiguration.isGutterIconEnabled())) ||
       blameConfiguration.isInlineEnabled();
 
     if (!blameConfiguration.isEnabled() || !anyDecorationEnabled) {

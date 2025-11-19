@@ -170,7 +170,7 @@ class BlameConfiguration {
    * Check if inline annotations are enabled
    */
   public isInlineEnabled(): boolean {
-    return this.get<boolean>("inline.enabled", false);
+    return this.get<boolean>("inline.enabled", true);
   }
 
   /**
@@ -187,7 +187,7 @@ class BlameConfiguration {
    * Get inline annotation opacity
    */
   public getInlineOpacity(): number {
-    return this.get<number>("inline.opacity", 0.2);
+    return this.get<number>("inline.opacity", 0.5);
   }
 
   /**
