@@ -62,8 +62,9 @@ export class BlameProvider implements Disposable {
         after: {
           color: new ThemeColor("editorCodeLens.foreground"),
           margin: "0 0 0 3em",
-          fontStyle: "italic",
-          fontWeight: "normal"
+          fontStyle: "normal",
+          fontWeight: "normal",
+          opacity: "0.6"
         },
         isWholeLine: false
       })

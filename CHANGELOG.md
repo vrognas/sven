@@ -1,3 +1,11 @@
+## [2.17.204] (2025-11-19)
+
+### Improve: Inline blame styling (GitLens-style)
+
+* **Remove italics**: fontStyle: "normal" (was "italic")
+* **Add opacity**: 0.6 for subtle appearance
+* **Match GitLens**: Cleaner, more professional inline annotations
+
 ## [2.17.203] (2025-11-19)
 
 ### Fix: Exclude all .md from VSIX (except readme.md)
