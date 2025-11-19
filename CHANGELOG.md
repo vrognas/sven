@@ -1,3 +1,11 @@
+## [2.17.205] (2025-11-19)
+
+### Add: Config for current-line-only inline blame
+
+* **Config**: svn.blame.inline.currentLineOnly (boolean, default: true)
+* **Config getter**: isInlineCurrentLineOnly() in blameConfiguration.ts
+* **Prepares**: Cursor tracking implementation
+
 ## [2.17.204] (2025-11-19)
 
 ### Improve: Inline blame styling (GitLens-style)

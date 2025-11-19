@@ -184,6 +184,13 @@ class BlameConfiguration {
   }
 
   /**
+   * Check if inline should only show on current line
+   */
+  public isInlineCurrentLineOnly(): boolean {
+    return this.get<boolean>("inline.currentLineOnly", true);
+  }
+
+  /**
    * Check if inline should show commit messages
    */
   public shouldShowInlineMessage(): boolean {
