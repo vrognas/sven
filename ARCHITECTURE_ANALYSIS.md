@@ -200,9 +200,19 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-## Recent Additions (v2.17.186)
+## Recent Additions (v2.17.215)
 
-### Blame Configuration System
+### Blame Performance Optimizations
+- **Progressive rendering**: 10-20x faster (v2.17.208)
+- **Template compilation**: 10-20x faster (v2.17.209)
+- **Batch log fetching**: 50x faster (v2.17.210)
+- **Scroll handler removal**: Eliminates 100-200ms lag (v2.17.211)
+- **Icon type leak fix**: Prevents unbounded growth (v2.17.212)
+- **Document flicker fix**: No visible flicker during typing (v2.17.213)
+- **Cursor tracking**: 60-80% faster (v2.17.214)
+- **LRU cache eviction**: MAX_CACHE_SIZE=20, MAX_MESSAGE_CACHE_SIZE=500 (v2.17.215)
+
+### Blame Configuration System (v2.17.186)
 - **Complete**: 13 settings, 3 commands, 5 menu integrations
 - **Architecture**: BlameConfiguration (singleton), BlameStateManager (per-file tracking)
 - **State Management**: 3-level toggles (extension-wide, global, per-file)
@@ -213,5 +223,5 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.18
-**Updated**: 2025-11-18 (v2.17.186)
+**Version**: 3.19
+**Updated**: 2025-11-19 (v2.17.215)

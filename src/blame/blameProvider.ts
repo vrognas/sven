@@ -34,9 +34,14 @@ export class BlameProvider implements Disposable {
   private svgCache = new Map<string, Uri>();  // color → SVG data URI
   private messageCache = new Map<string, string>();  // revision → commit message
   private inFlightMessageFetches = new Map<string, Promise<void>>();  // uri → fetch promise
+  private cacheAccessOrder = new Map<string, number>();  // uri → timestamp for LRU
   private currentLineNumber?: number;  // Track cursor position for current-line-only mode
   private disposables: Disposable[] = [];
   private isActivated = false;
+
+  // LRU cache limits
+  private readonly MAX_CACHE_SIZE = 20;  // Keep last 20 files (prevents unbounded growth)
+  private readonly MAX_MESSAGE_CACHE_SIZE = 500;  // Keep last 500 revision messages
 
   // Template compilation cache (performance optimization)
   private compiledGutterTemplate?: { template: string; fn: CompiledTemplateFn };
@@ -207,9 +212,57 @@ export class BlameProvider implements Disposable {
    * Clear cache for URI
    */
   public clearCache(uri: Uri): void {
-    this.blameCache.delete(uri.toString());
+    const key = uri.toString();
+    this.blameCache.delete(key);
+    this.cacheAccessOrder.delete(key);  // Clean up access tracking
     // Cancel any in-flight message fetches for this URI
-    this.inFlightMessageFetches.delete(uri.toString());
+    this.inFlightMessageFetches.delete(key);
+  }
+
+  /**
+   * Evict oldest blame cache entry (LRU policy)
+   * Prevents unbounded memory growth during long editing sessions
+   */
+  private evictOldestCache(): void {
+    if (this.blameCache.size <= this.MAX_CACHE_SIZE) {
+      return;  // Within limit, no eviction needed
+    }
+
+    // Find least recently used entry (oldest timestamp)
+    let oldestKey: string | undefined;
+    let oldestTime = Infinity;
+
+    for (const [key, timestamp] of this.cacheAccessOrder) {
+      if (timestamp < oldestTime) {
+        oldestTime = timestamp;
+        oldestKey = key;
+      }
+    }
+
+    // Evict oldest entry
+    if (oldestKey) {
+      this.blameCache.delete(oldestKey);
+      this.cacheAccessOrder.delete(oldestKey);
+      this.inFlightMessageFetches.delete(oldestKey);
+    }
+  }
+
+  /**
+   * Evict message cache entries when exceeding limit
+   * Uses simple eviction (remove first entries) since messages are immutable
+   */
+  private evictMessageCache(): void {
+    if (this.messageCache.size <= this.MAX_MESSAGE_CACHE_SIZE) {
+      return;  // Within limit, no eviction needed
+    }
+
+    // Evict oldest 25% of entries (batch eviction for efficiency)
+    const toRemove = Math.ceil(this.messageCache.size * 0.25);
+    const keys = Array.from(this.messageCache.keys()).slice(0, toRemove);
+
+    for (const key of keys) {
+      this.messageCache.delete(key);
+    }
   }
 
   /**
@@ -550,6 +603,8 @@ export class BlameProvider implements Disposable {
     // Check cache
     const cached = this.blameCache.get(key);
     if (cached) {
+      // Update access time for LRU
+      this.cacheAccessOrder.set(key, Date.now());
       return cached.data;
     }
 
@@ -559,6 +614,12 @@ export class BlameProvider implements Disposable {
 
       // Cache with document version
       this.blameCache.set(key, { data, version: 0 });
+
+      // Track access time for LRU
+      this.cacheAccessOrder.set(key, Date.now());
+
+      // Evict oldest entry if cache exceeds limit
+      this.evictOldestCache();
 
       return data;
     } catch (err) {
@@ -922,6 +983,10 @@ export class BlameProvider implements Disposable {
       const log = await this.repository.log(revision, revision, 1);
       const message = log[0]?.msg || "";
       this.messageCache.set(revision, message);
+
+      // Evict message cache if exceeding limit
+      this.evictMessageCache();
+
       return message;
     } catch (err) {
       console.error(`BlameProvider: Failed to fetch message for r${revision}`, err);
@@ -956,6 +1021,9 @@ export class BlameProvider implements Disposable {
           this.messageCache.set(entry.revision, entry.msg);
         }
       }
+
+      // Evict message cache if exceeding limit
+      this.evictMessageCache();
     } catch (err) {
       console.error("BlameProvider: Batch message fetch failed, falling back to sequential", err);
 
