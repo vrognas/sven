@@ -1,3 +1,13 @@
+## [2.17.212] (2025-11-19)
+
+### Fix: Icon decoration type memory leak
+
+* **Issue**: Icon decoration types created but never disposed (16 per file)
+* **Leak**: 16 types × 100 files = 1,600 uncleaned decoration types
+* **Fix**: Dispose and clear iconTypes Map in clearDecorations()
+* **Impact**: Prevents unbounded memory growth during file switching
+* **Trade-off**: Recreates 16 types per file (negligible vs leak)
+
 ## [2.17.211] (2025-11-19)
 
 ### Perf: Remove scroll handler (eliminate scroll lag)

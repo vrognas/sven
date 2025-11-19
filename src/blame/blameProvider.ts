@@ -188,6 +188,11 @@ export class BlameProvider implements Disposable {
       target.setDecorations(this.decorationTypes.icon, []);
       target.setDecorations(this.decorationTypes.inline, []);
       this.clearIconDecorations(target);
+
+      // Dispose and clear icon decoration types to prevent memory leak
+      // (16 types per file × 100 files = 1600 uncleaned types)
+      this.iconTypes.forEach(type => type.dispose());
+      this.iconTypes.clear();
     }
   }
 
