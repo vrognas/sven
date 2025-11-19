@@ -36,6 +36,7 @@ import {
   processConcurrently
 } from "./util";
 import { matchAll } from "./util/globMatch";
+import { BlameProvider } from "./blame/blameProvider";
 
 type State = "uninitialized" | "initialized";
 
@@ -438,7 +439,7 @@ export class SourceControlManager implements IDisposable {
       repository.onDidChangeState,
       state => state === RepositoryState.Disposed
     );
-     
+
     const disappearListener = onDidDisappearRepository(() => dispose());
 
     const changeListener = repository.onDidChangeRepository(uri =>
@@ -448,6 +449,10 @@ export class SourceControlManager implements IDisposable {
     const changeStatus = repository.onDidChangeStatus(() => {
       this._onDidChangeStatusRepository.fire(repository);
     });
+
+    // Initialize blame provider for this repository
+    const blameProvider = new BlameProvider(repository);
+    blameProvider.activate();
 
     // Phase 15 perf fix - build excluded paths cache for O(1) lookup
     const buildExcludedCache = () => {
@@ -475,6 +480,7 @@ export class SourceControlManager implements IDisposable {
       changeListener.dispose();
       changeStatus.dispose();
       statusListener.dispose();
+      blameProvider.dispose();
       repository.dispose();
 
       this.openRepositories = this.openRepositories.filter(

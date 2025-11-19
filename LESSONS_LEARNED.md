@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: v2.17.137
-**Updated**: 2025-11-15
+**Version**: v2.17.215
+**Updated**: 2025-11-19
 
 ---
 
@@ -185,6 +185,54 @@ catch (err) {
 
 ---
 
+### 11. Batch Operations: Trade Bandwidth for Latency
+**Lesson**: Fetching extra data is faster than multiple network calls.
+
+**Example** (v2.17.210 - Batch SVN log):
+- Before: 50 sequential `svn log -r REV:REV` commands = 5-10s
+- After: 1 command `svn log -r MIN:MAX` = 0.1-0.2s
+- Trade-off: 2x bandwidth for 50x speed
+
+**Pattern**:
+1. Find min/max range of requested items
+2. Fetch entire range in single call
+3. Filter results to requested items
+4. Cache all fetched data for future use
+
+**When to use**:
+- ✅ High latency operations (network calls)
+- ✅ Cheap filtering on client side
+- ✅ Sparse data across small range
+- ❌ Huge ranges (>1000x requested items)
+
+**Rule**: For N network calls, consider single batch + filter if latency >> bandwidth.
+
+---
+
+### 7. Cache Eviction: LRU Policy
+**Lesson**: Unbounded caches cause memory leaks; use LRU eviction to cap growth.
+
+**Example** (v2.17.215 - Blame cache):
+- Before: Unlimited blameCache + messageCache = 700KB+ per 100 files
+- After: MAX_CACHE_SIZE=20, MAX_MESSAGE_CACHE_SIZE=500 = bounded memory
+- Implementation: cacheAccessOrder Map tracks access time, evictOldestCache()
+
+**Pattern**:
+1. Add Map<key, timestamp> to track access order
+2. Update timestamp on cache hit/miss
+3. Evict oldest entry when size exceeds limit
+4. For immutable caches, simple FIFO eviction works (batch 25%)
+
+**When to use**:
+- ✅ Long-running sessions (editors, servers)
+- ✅ Large cache entries (>1KB per item)
+- ✅ Unpredictable access patterns
+- ❌ Short-lived processes (startup scripts)
+
+**Rule**: Cache without eviction = eventual memory leak. Set explicit limits.
+
+---
+
 ## Quick Reference
 
 **Starting extension**: tsc + strict mode + Positron template
@@ -207,5 +255,5 @@ catch (err) {
 
 ---
 
-**Document Version**: 2.0 (condensed from 892 → 185 lines)
-**Last Updated**: 2025-11-12
+**Document Version**: 2.1
+**Last Updated**: 2025-11-19

@@ -70,5 +70,7 @@ CLAUDE.md
 build.js
 eslint.config.js
 scripts/**
-CHANGELOG.md
+*.md
+!readme.md
+docs/**
 

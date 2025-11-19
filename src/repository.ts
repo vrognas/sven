@@ -237,6 +237,7 @@ export class Repository implements IRemoteRepository {
       Uri.file(repository.workspaceRoot)
     );
 
+    // @ts-expect-error - contextValue exists at runtime but not in types
     this.sourceControl.contextValue = "repository";
     this.sourceControl.inputBox.placeholder = "Commit message";
     this.sourceControl.inputBox.visible = true;
@@ -749,6 +750,12 @@ export class Repository implements IRemoteRepository {
     );
   }
 
+  public async logBatch(revisions: string[], target?: string | Uri) {
+    return this.run(Operation.Log, () =>
+      this.repository.logBatch(revisions, target)
+    );
+  }
+
   public async logByUser(user: string) {
     return this.run(Operation.Log, () => this.repository.logByUser(user));
   }
@@ -771,6 +778,12 @@ export class Repository implements IRemoteRepository {
 
   public async getChanges(): Promise<ISvnPathChange[]> {
     return this.run(Operation.Changes, () => this.repository.getChanges());
+  }
+
+  public async blame(path: string, revision?: string) {
+    return this.run(Operation.Blame, () =>
+      this.repository.blame(path, revision)
+    );
   }
 
   public async finishCheckout() {
