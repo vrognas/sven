@@ -1,6 +1,7 @@
 "use strict";
 
 import {
+  ColorThemeKind,
   Disposable,
   Range,
   TextEditor,
@@ -508,9 +509,10 @@ export class BlameProvider implements Disposable {
   }
 
   /**
-   * Get gradient color for revision (red → yellow → green)
-   * Red (oldest) → Yellow (medium) → Green (newest)
-   * Formula: hue interpolates from 0 (red) to 120 (green)
+   * Get gradient color for revision (blue → purple)
+   * Blue (oldest) → Purple (newest)
+   * Formula: hue 200→280, saturation 35%, lightness theme-aware
+   * Quantized to 16 discrete buckets for performance
    */
   private getRevisionColor(revision: string, range: { min: number; max: number }): string {
     if (this.revisionColors.has(revision)) {
@@ -519,8 +521,8 @@ export class BlameProvider implements Disposable {
 
     const revNum = parseInt(revision, 10);
     if (isNaN(revNum) || range.max === range.min) {
-      // Fallback for invalid or single revision
-      const color = this.hslToHex(60, 70, 50); // Yellow
+      // Fallback for invalid or single revision: mid-point blue-purple
+      const color = this.hslToHex(240, 35, this.getThemeAwareLightness());
       this.revisionColors.set(revision, color);
       return color;
     }
@@ -528,14 +530,26 @@ export class BlameProvider implements Disposable {
     // Normalize revision to 0-1 range
     const normalized = (revNum - range.min) / (range.max - range.min);
 
-    // Interpolate hue: 0 (red) → 60 (yellow) → 120 (green)
-    const hue = Math.round(normalized * 120);
-    const saturation = 70;
-    const lightness = 50;
+    // Quantize to 16 discrete buckets (reduces decoration types for performance)
+    const bucket = Math.floor(normalized * 15.99); // 0-15 inclusive
+    const quantizedNormalized = bucket / 15;
+
+    // Interpolate hue: 200 (cyan-blue) → 280 (violet)
+    const hue = Math.round(200 + (quantizedNormalized * 80));
+    const saturation = 35;  // Low saturation for subtlety
+    const lightness = this.getThemeAwareLightness();
 
     const color = this.hslToHex(hue, saturation, lightness);
     this.revisionColors.set(revision, color);
     return color;
+  }
+
+  /**
+   * Get theme-aware lightness (darker for light themes, lighter for dark themes)
+   */
+  private getThemeAwareLightness(): number {
+    const theme = window.activeColorTheme.kind;
+    return theme === ColorThemeKind.Light ? 40 : 60;
   }
 
   /**

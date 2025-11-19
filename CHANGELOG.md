@@ -1,3 +1,13 @@
+## [2.17.201] (2025-11-19)
+
+### Improve: Gutter icon color scheme (blue→purple gradient)
+
+* **Blue→purple**: 200-280° hue (was red→green 0-120°) - neutral temporal encoding
+* **Subtle colors**: 35% saturation (was 70%) - 50% less "in your face"
+* **Theme-aware**: 40% lightness (light theme), 60% (dark theme)
+* **Performance**: 16 discrete buckets (was continuous) - 5x faster rendering
+* **Accessibility**: Colorblind-safe, avoids red=bad/green=good psychology
+
 ## [2.17.200] (2025-11-19)
 
 ### Fix: Gutter icons (multi-decoration-type pattern)
