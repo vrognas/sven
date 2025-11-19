@@ -1104,6 +1104,66 @@ export class Repository {
     return parseSvnLog(result.stdout);
   }
 
+  /**
+   * Fetch commit messages for multiple revisions in a single batch
+   * Optimizes blame message fetching by using revision range instead of N individual calls
+   *
+   * @param revisions Array of revision numbers (e.g., ["100", "150", "200"])
+   * @param target Optional file/directory path to filter log entries
+   * @returns Array of log entries matching requested revisions
+   *
+   * @example
+   * const entries = await repository.logBatch(["100", "105", "200"]);
+   * // Executes: svn log -r 100:200 --xml -v
+   * // Returns: entries for revisions 100, 105, 200 (filters out 101-104, 106-199)
+   */
+  public async logBatch(
+    revisions: string[],
+    target?: string | Uri
+  ): Promise<ISvnLogEntry[]> {
+    // Edge case: empty array
+    if (revisions.length === 0) {
+      return [];
+    }
+
+    // Edge case: single revision (use existing log method)
+    if (revisions.length === 1) {
+      return this.log(revisions[0], revisions[0], 1, target);
+    }
+
+    // Parse revisions as numbers
+    const revNums = revisions.map(r => parseInt(r, 10)).filter(n => !isNaN(n));
+    if (revNums.length === 0) {
+      return [];
+    }
+
+    // Calculate min/max range
+    const minRev = Math.min(...revNums);
+    const maxRev = Math.max(...revNums);
+
+    // Fetch entire range (trade bandwidth for speed)
+    const args = [
+      "log",
+      "-r",
+      `${minRev}:${maxRev}`,
+      "--xml",
+      "-v"
+    ];
+
+    if (target !== undefined) {
+      args.push(
+        fixPegRevision(target instanceof Uri ? target.toString(true) : target)
+      );
+    }
+
+    const result = await this.exec(args);
+    const allEntries = await parseSvnLog(result.stdout);
+
+    // Filter to only requested revisions (discard intermediate entries)
+    const requestedSet = new Set(revisions);
+    return allEntries.filter(entry => requestedSet.has(entry.revision));
+  }
+
   public async logByUser(user: string) {
     const result = await this.exec(["log", "--xml", "-v", "--search", user]);
 

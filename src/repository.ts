@@ -750,6 +750,12 @@ export class Repository implements IRemoteRepository {
     );
   }
 
+  public async logBatch(revisions: string[], target?: string | Uri) {
+    return this.run(Operation.Log, () =>
+      this.repository.logBatch(revisions, target)
+    );
+  }
+
   public async logByUser(user: string) {
     return this.run(Operation.Log, () => this.repository.logByUser(user));
   }
