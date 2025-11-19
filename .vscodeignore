@@ -71,4 +71,8 @@ build.js
 eslint.config.js
 scripts/**
 CHANGELOG.md
+BLAME_*.md
+DECORATION_*.md
+PERFORMANCE_RECOMMENDATION.md
+docs/**
 

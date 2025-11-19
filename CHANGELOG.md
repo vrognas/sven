@@ -1,3 +1,11 @@
+## [2.17.202] (2025-11-19)
+
+### Fix: VSIX optimization (exclude internal docs)
+
+* **Excluded**: BLAME_*.md, DECORATION_*.md, docs/ (~189KB removed)
+* **Size reduction**: Internal design documents excluded from package
+* **.vscodeignore**: Updated patterns for better packaging
+
 ## [2.17.201] (2025-11-19)
 
 ### Improve: Gutter icon color scheme (blue→purple gradient)
