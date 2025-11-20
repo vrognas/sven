@@ -27,6 +27,9 @@ export const svnErrorCodes: { [key: string]: string } = {
   NetworkTimeout: "E175002"
 };
 
+// Path separator pattern for cross-platform path splitting
+const PATH_SEPARATOR_PATTERN = /[\\\/]+/;
+
 function getSvnErrorCode(stderr: string): string | undefined {
   for (const name in svnErrorCodes) {
     if (svnErrorCodes.hasOwnProperty(name)) {
@@ -100,7 +103,7 @@ export class Svn {
     if (options.log !== false) {
       const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
       this.logOutput(
-        `[${this.lastCwd.split(/[\\\/]+/).pop()}]$ svn ${argsOut.join(" ")}\n`
+        `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
       );
     }
 
@@ -244,7 +247,7 @@ export class Svn {
     const decodedStdout = iconv.decode(stdout, encoding);
 
     if (options.log !== false && stderr.length > 0) {
-      const name = this.lastCwd.split(/[\\\/]+/).pop();
+      const name = this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop();
       const err = stderr
         .split("\n")
         .filter((line: string) => line)
@@ -283,7 +286,7 @@ export class Svn {
     if (options.log !== false) {
       const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
       this.logOutput(
-        `[${this.lastCwd.split(/[\\\/]+/).pop()}]$ svn ${argsOut.join(" ")}\n`
+        `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
       );
     }
 
@@ -384,7 +387,7 @@ export class Svn {
     dispose(disposables);
 
     if (options.log !== false && stderr.length > 0) {
-      const name = this.lastCwd.split(/[\\\/]+/).pop();
+      const name = this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop();
       const err = stderr
         .split("\n")
         .filter((line: string) => line)
