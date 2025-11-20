@@ -1,3 +1,15 @@
+## [2.17.227] (2025-11-20)
+
+### Fix: Clean file handling + toggle (root cause)
+
+* **BlameProvider**: Remove early return for null resource - clean files now show blame
+* **BlameIconState**: Check state manager for clean files - icon reflects actual state
+* **Path normalization**: Use normalizePath() for consistent Windows paths (c: vs C:, \\ vs /)
+* **Why**: Resource index only tracks changed files, clean files returned null
+* **Root cause**: Null resource = clean file, not untracked - v2.17.226 broke toggle
+* **Result**: Toggle works, clean files show blame, gutter icons appear
+* **Code**: blameProvider.ts:159-174, blameIconState.ts:67-80, ResourceGroupManager.ts:5,278,293
+
 ## [2.17.226] (2025-11-20)
 
 ### Fix: Race conditions + config bugs (gutter icons now show)

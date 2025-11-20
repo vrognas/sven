@@ -156,22 +156,22 @@ export class BlameProvider implements Disposable {
       file: target.document.fileName
     });
 
-    if (!resource) {
-      console.log("[BlameProvider] Early return: No resource (repo indexing or untracked)");
-      return;
+    // Only check status if resource exists (null means clean file, not untracked)
+    if (resource) {
+      const { Status } = await import("../common/types");
+      if (resource.type === Status.UNVERSIONED ||
+          resource.type === Status.IGNORED ||
+          resource.type === Status.NONE) {
+        console.log("[BlameProvider] Early return: Untracked file", {
+          status: resource.type,
+          file: target.document.fileName
+        });
+        this.clearDecorations(target);
+        return;
+      }
     }
 
-    const { Status } = await import("../common/types");
-    if (resource.type === Status.UNVERSIONED ||
-        resource.type === Status.IGNORED ||
-        resource.type === Status.NONE) {
-      console.log("[BlameProvider] Early return: Untracked file", {
-        status: resource.type,
-        file: target.document.fileName
-      });
-      this.clearDecorations(target);
-      return;
-    }
+    // Continue to blame fetch (works for both clean and changed files)
 
     // Large file check
     if (blameConfiguration.isFileTooLarge(target.document.lineCount) && blameConfiguration.shouldWarnLargeFile()) {

@@ -2,7 +2,7 @@ import { Disposable, SourceControl, Uri } from "vscode";
 import { ISvnResourceGroup } from "../common/types";
 import { Resource } from "../resource";
 import { StatusResult } from "./StatusService";
-import { toDisposable } from "../util";
+import { normalizePath, toDisposable } from "../util";
 
 /**
  * Configuration for resource group updates
@@ -275,8 +275,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
     // Build index
     for (const resource of allResources) {
       if (resource instanceof Resource) {
-        const uriString = resource.resourceUri.toString();
-        this._resourceIndex.set(uriString, resource);
+        const normalizedPath = normalizePath(resource.resourceUri.fsPath);
+        this._resourceIndex.set(normalizedPath, resource);
       }
     }
   }
@@ -290,8 +290,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
       uri = Uri.file(uri);
     }
 
-    const uriString = uri.toString();
-    return this._resourceIndex.get(uriString);
+    const normalizedPath = normalizePath(uri.fsPath);
+    return this._resourceIndex.get(normalizedPath);
   }
 
   /**

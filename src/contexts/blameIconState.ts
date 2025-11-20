@@ -65,12 +65,17 @@ export class BlameIconState implements IDisposable {
 
     // Resource not loaded yet - repository still indexing OR file not tracked
     if (!resource) {
-      console.log("[BlameIconState] Resource not found:", {
+      console.log("[BlameIconState] Resource not found (clean file):", {
         file: editor.document.uri.fsPath,
         repoPath: repository.root,
         resourceCount: repository.getResourceMap()?.size || 0
       });
-      await setVscodeContext("svnBlameActiveForFile", false);
+
+      // No resource = clean file (not in change index)
+      // Check state manager for actual blame state
+      const isEnabled = blameStateManager.isBlameEnabled(editor.document.uri);
+      console.log("[BlameIconState] Clean file, blame enabled:", isEnabled);
+      await setVscodeContext("svnBlameActiveForFile", isEnabled);
       await setVscodeContext("svnBlameUntrackedFile", false);
       return;
     }
