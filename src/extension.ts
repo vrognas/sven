@@ -27,6 +27,7 @@ import { IsSvn18orGreater } from "./contexts/isSvn18orGreater";
 import { tempSvnFs } from "./temp_svn_fs";
 import { SvnFileSystemProvider } from "./svnFileSystemProvider";
 import { isPositron, getEnvironmentName } from "./positron/runtime";
+import { logError } from "./util/errorLogger";
 import { registerSvnConnectionsProvider } from "./positron/connectionsProvider";
 import { BlameStatusBar } from "./blame/blameStatusBar";
 
@@ -202,7 +203,7 @@ export async function activate(context: ExtensionContext) {
   );
 
   await _activate(context, disposables).catch(err => {
-    console.error("SVN Extension: Activation failed", err);
+    logError("SVN Extension: Activation failed", err);
     window.showErrorMessage(`SVN Extension activation failed: ${err.message || err}`);
   });
   console.log("SVN Extension: activation complete");

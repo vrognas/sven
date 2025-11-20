@@ -215,7 +215,7 @@ export class Repository {
               s.repositoryUuid = info.repository?.uuid;
             })
             .catch(error => {
-              console.error(error);
+              logError(`Failed to fetch external repository info for ${s.path}`, error);
             })
         )
     );

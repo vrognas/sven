@@ -117,7 +117,7 @@ export abstract class Command implements Disposable {
       });
 
       return result.catch(err => {
-        console.error(err);
+        logError("Command execution failed", err);
       });
     };
 
