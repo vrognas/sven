@@ -1,17 +1,24 @@
 - In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision.
-- Its important for each implementation to begin with writing and reviewing tests before moving on to implementation (TDD test-driven development).
+- Do not write any code until you're fully ready to implement it.
+- It's IMPORTANT for each implementation to begin with writing and reviewing tests BEFORE moving on to implementation (TDD test-driven development).
   Write minimalist tests. Don't overdo it - about three general end-to-end tests per implementation is enough.
-- Commit often, with small and focused commits.
-- Update the version number and the changelog with every commit.
-- For every commit, go over `CLAUDE.md`, `docs/ARCHITECTURE_ANALYSIS.md`, and `docs/LESSONS_LEARNED.md` to see if everything is up-to-date.
-- For simple queries, use under five tool calls, but for more complex queries you can use up to 15 tool calls.
-
-## Architecture
-
-See `docs/ARCHITECTURE_ANALYSIS.md` for complete architecture details (v2.17.210).
-
-## Plans
-
+- Before writing tests, write a concise implementation plan with numbered steps.
 - At the end of each plan, give me a list of unresolved questions to answer, if any.
   Make the questions extremely concise.
   Sacrifice grammar for the sake of concision.
+- After implementation, run all tests to ensure nothing is broken.
+- After implementation, write concise documentation updates if necessary.
+- After implementation, write a concise changelog entry summarizing the changes made.
+- After implementation, update the version number according to semantic versioning rules.
+- Follow all steps in the implementation plan methodically.
+- After implementation, review the entire codebase for any necessary refactoring or cleanup.
+- Before each implementation, review `docs/LESSONS_LEARNED.md` for any relevant insights.
+- Before each implementation, review `docs/ARCHITECTURE_ANALYSIS.md` for any relevant architectural considerations.
+- Before each implementation, review `CLAUDE.md` for any relevant guidelines.
+- After each implementation, review `docs/LESSONS_LEARNED.md` to add any new insights gained.
+- After each implementation, review `docs/ARCHITECTURE_ANALYSIS.md` to update any architectural considerations.
+- After each implementation, review `CLAUDE.md` to update any relevant guidelines.
+- Always prioritize code quality and maintainability.
+- Commit often, with small and focused commits.
+- Write concise commit messages that clearly describe the changes made.
+- For simple queries, use under five tool calls, but for more complex queries you can use up to 15 tool calls.
