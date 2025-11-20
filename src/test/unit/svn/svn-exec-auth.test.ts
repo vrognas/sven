@@ -115,6 +115,7 @@ suite("Svn.exec() - Auth Integration Tests", () => {
 
       authCacheStub.writeCredential.callsFake(async () => {
         cacheWriteTime = Date.now();
+        return "/tmp/credential-file";
       });
 
       spawnStub.callsFake(() => {

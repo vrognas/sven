@@ -260,6 +260,7 @@ suite("Authentication - Regression Tests", () => {
         if (attempts < 5) {
           throw new Error("Auth failed");
         }
+        return "/tmp/credential-file";
       });
 
       try {
@@ -278,14 +279,7 @@ suite("Authentication - Regression Tests", () => {
     test("5.1: SecretStorage read/write still works", async () => {
       // Test that existing SecretStorage integration is not broken
       // SecretStorage is separate from SVN auth cache
-
-      // Mock SecretStorage (implementation in authService.ts)
-      const mockStorage = {
-        load: sinon.stub().resolves([
-          { account: "alice", password: "stored_pass" }
-        ]),
-        save: sinon.stub().resolves()
-      };
+      // Note: Actual SecretStorage testing is in authService.test.ts
 
       // Execute command with stored credentials
       await svn.exec("/repo", ["update"], {

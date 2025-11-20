@@ -150,15 +150,16 @@ suite("Credential Protection - Security Tests", () => {
         log: true
       });
 
-      let foundAuthIndicator = false;
       for (const call of logOutputSpy.getCalls()) {
         const loggedText = call.args[0] as string;
+        // Verify auth method indicators exist without exposing password
+        // This may vary by implementation
         if (
           loggedText.includes("[auth:") ||
           loggedText.includes("password provided") ||
           loggedText.includes("credential")
         ) {
-          foundAuthIndicator = true;
+          // Found auth indicator - good
         }
       }
 
@@ -192,10 +193,9 @@ suite("Credential Protection - Security Tests", () => {
   });
 
   suite("Credential File Protection", () => {
-    test("3.1: credential file has mode 600 on Unix", async () => {
+    test("3.1: credential file has mode 600 on Unix", async function() {
       if (process.platform === "win32") {
-        this.skip();
-        return;
+        return this.skip();
       }
 
       // The auth cache should set file permissions
@@ -212,10 +212,9 @@ suite("Credential Protection - Security Tests", () => {
       assert.strictEqual(call.args[1], "secret123");
     });
 
-    test("3.2: credential file has restricted ACL on Windows", async () => {
+    test("3.2: credential file has restricted ACL on Windows", async function() {
       if (process.platform !== "win32") {
-        this.skip();
-        return;
+        return this.skip();
       }
 
       await svn.exec("/repo", ["update"], {

@@ -58,10 +58,9 @@ suite("SvnAuthCache - Unit Tests", () => {
       assert.ok(content.includes("END"), "Should end with END marker");
     });
 
-    test("1.2: sets file permissions to mode 600 on Unix", async () => {
+    test("1.2: sets file permissions to mode 600 on Unix", async function() {
       if (process.platform === "win32") {
-        this.skip(); // Skip on Windows
-        return;
+        return this.skip(); // Skip on Windows
       }
 
       await authCache.writeCredential("bob", "pass456", "https://svn.test.com:443");
@@ -73,10 +72,9 @@ suite("SvnAuthCache - Unit Tests", () => {
       assert.strictEqual(mode, 0o600, "File should have mode 600 (owner read/write only)");
     });
 
-    test("1.3: sets restricted ACL on Windows", async () => {
+    test("1.3: sets restricted ACL on Windows", async function() {
       if (process.platform !== "win32") {
-        this.skip(); // Skip on non-Windows
-        return;
+        return this.skip(); // Skip on non-Windows
       }
 
       await authCache.writeCredential("charlie", "win_pass", "https://svn.corp.com:443");
@@ -283,10 +281,9 @@ suite("SvnAuthCache - Unit Tests", () => {
   });
 
   suite("Error Handling", () => {
-    test("4.1: handles write failure due to permission denied", async () => {
+    test("4.1: handles write failure due to permission denied", async function() {
       if (process.platform === "win32") {
-        this.skip(); // Skip on Windows (ACL handling different)
-        return;
+        return this.skip(); // Skip on Windows (ACL handling different)
       }
 
       // Create cache directory with no write permissions
@@ -306,10 +303,9 @@ suite("SvnAuthCache - Unit Tests", () => {
       }
     });
 
-    test("4.2: handles read failure due to permission denied", async () => {
+    test("4.2: handles read failure due to permission denied", async function() {
       if (process.platform === "win32") {
-        this.skip(); // Skip on Windows
-        return;
+        return this.skip(); // Skip on Windows
       }
 
       await authCache.writeCredential("user", "pass", "https://svn.example.com:443");
@@ -434,10 +430,9 @@ suite("SvnAuthCache - Unit Tests", () => {
   });
 
   suite("Cross-Platform Paths", () => {
-    test("6.1: uses correct cache directory on Linux", () => {
+    test("6.1: uses correct cache directory on Linux", function() {
       if (process.platform !== "linux") {
-        this.skip();
-        return;
+        return this.skip();
       }
 
       const cacheDir = authCache.getCacheDirectory();
@@ -445,10 +440,9 @@ suite("SvnAuthCache - Unit Tests", () => {
       assert.ok(cacheDir.startsWith(testCacheDir));
     });
 
-    test("6.2: uses correct cache directory on macOS", () => {
+    test("6.2: uses correct cache directory on macOS", function() {
       if (process.platform !== "darwin") {
-        this.skip();
-        return;
+        return this.skip();
       }
 
       const cacheDir = authCache.getCacheDirectory();
@@ -456,10 +450,9 @@ suite("SvnAuthCache - Unit Tests", () => {
       assert.ok(cacheDir.startsWith(testCacheDir));
     });
 
-    test("6.3: uses correct cache directory on Windows", () => {
+    test("6.3: uses correct cache directory on Windows", function() {
       if (process.platform !== "win32") {
-        this.skip();
-        return;
+        return this.skip();
       }
 
       const cacheDir = authCache.getCacheDirectory();
