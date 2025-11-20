@@ -56,6 +56,9 @@ import { Blame } from "./commands/blame";
 import { ShowBlame } from "./commands/blame/showBlame";
 import { ToggleBlame } from "./commands/blame/toggleBlame";
 import { ClearBlame } from "./commands/blame/clearBlame";
+import { EnableBlame } from "./commands/blame/enableBlame";
+import { DisableBlame } from "./commands/blame/disableBlame";
+import { UntrackedInfo } from "./commands/blame/untrackedInfo";
 
 export function registerCommands(
   sourceControlManager: SourceControlManager,
@@ -117,4 +120,7 @@ export function registerCommands(
   disposables.push(new ShowBlame());
   disposables.push(new ToggleBlame());
   disposables.push(new ClearBlame());
+  disposables.push(new EnableBlame());
+  disposables.push(new DisableBlame());
+  disposables.push(new UntrackedInfo());
 }

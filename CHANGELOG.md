@@ -1,3 +1,149 @@
+## [2.17.229] (2025-11-20)
+
+### Fix: Per-file revision coloring
+
+* **Hybrid colors**: Based on file's unique revisions, not global revision numbers
+* **Example**: pkpd_1201.qmd with r1314, r1315, r1338 → Red (r1338), Orange (r1315), Yellow (r1314)
+* **Top 5 unique revisions**: Categorical colors (newest→oldest in file)
+* **Rest**: Gradient heatmap based on position in file's revision history
+* **Why**: Previous used global revision range, not file-specific context
+* **Code**: blameProvider.ts:871-957
+
+## [2.17.228] (2025-11-20)
+
+### Improve: Hybrid color scheme (categorical + gradient)
+
+* **Recent 5 revisions**: Distinct categorical colors (red, orange, yellow, green, blue)
+* **Older revisions**: Blue→purple gradient heatmap (8 buckets)
+* **Saturation**: Increased 35%→45% for better visibility
+* **Why**: Similar colors in 16-bucket gradient were hard to distinguish
+* **Result**: Recent changes highly visible, older history contextual
+* **Code**: blameProvider.ts:888-943
+
+## [2.17.227] (2025-11-20)
+
+### Fix: Clean file handling + toggle (root cause)
+
+* **BlameProvider**: Remove early return for null resource - clean files now show blame
+* **BlameIconState**: Check state manager for clean files - icon reflects actual state
+* **Path normalization**: Use normalizePath() for consistent Windows paths (c: vs C:, \\ vs /)
+* **Why**: Resource index only tracks changed files, clean files returned null
+* **Root cause**: Null resource = clean file, not untracked - v2.17.226 broke toggle
+* **Result**: Toggle works, clean files show blame, gutter icons appear
+* **Code**: blameProvider.ts:159-174, blameIconState.ts:67-80, ResourceGroupManager.ts:5,278,293
+
+## [2.17.226] (2025-11-20)
+
+### Fix: Race conditions + config bugs (gutter icons now show)
+
+* **Icon context null checks**: Repository/resource null during init no longer shows wrong icon
+* **onDidOpenRepository listener**: Icon state updates when repo discovered (not just status changes)
+* **Resource null handling**: Don't clear decorations when indexing, wait for status update
+* **largeFileLimit fix**: Use config method (3000), remove hardcoded 5000
+* **Why**: 3 race conditions caused icons/decorations to fail on startup
+* **Result**: Gutter icons show reliably on first file open
+* **Code**: blameIconState.ts:24-65, blameProvider.ts:137-140,152, blameConfiguration.ts:89
+
+## [2.17.225] (2025-11-19)
+
+### Fix: Gutter text default + untracked file errors
+
+* **Gutter text**: Default false (only colored icons shown)
+* **Untracked fix**: Skip blaming if resource undefined or untracked status
+* **Why**: getResourceFromFile() returns null for untracked, was causing SVN errors
+* **Result**: No console errors when viewing untracked files
+* **Code**: blameProvider.ts:137-149, blameConfiguration.ts:159, package.json:1200
+
+## [2.17.224] (2025-11-19)
+
+### Fix: Dynamic icons + inline blame state
+
+* **Dynamic icons**: 3 separate commands (enableBlame, disableBlame, untrackedInfo)
+* **Why**: VS Code doesn't support multiple menu entries with same command
+* **Inline fix**: updateInlineDecorationsForCursor now checks shouldDecorate()
+* **Result**: Icon toggles correctly, inline respects per-file state
+* **Tests**: +4 tests for commands + 1 E2E for cursor state check
+* **Code**: commands/blame/{enableBlame,disableBlame,untrackedInfo}.ts, blameProvider.ts:411-414, package.json:1062-1074
+
+## [2.17.223] (2025-11-19)
+
+### Fix: Add fallback icon for toggleBlame
+
+* **Fallback icon**: eye-closed as default in command definition
+* **Why**: VS Code needs base icon, menu contributions override it
+* **Result**: Icon visible with dynamic changes (eye/eye-closed/circle-slash)
+* **Code**: package.json:186
+
+## [2.17.222] (2025-11-19)
+
+### Fix: Remove static icon from toggleBlame command
+
+* **Dynamic icons**: Removed static icon from command definition
+* **Why**: Static icon in command overrides dynamic menu icons
+* **Result**: Now eye/eye-closed/circle-slash icons change based on context
+* **Code**: package.json:183-186
+
+## [2.17.221] (2025-11-19)
+
+### Debug: Add logging to icon context updates
+
+* **Debug logging**: Console logs in updateIconContext to trace execution
+* **Void fix**: Explicit void for async constructor call
+* **Investigation**: Determine why icon not changing on toggle/untracked
+* **Code**: blameIconState.ts:32,37,40,62,67
+
+## [2.17.220] (2025-11-19)
+
+### Fix: Config defaults + shouldDecorate logic
+
+* **Opacity default**: 0.2→0.5 for inline blame
+* **Gutter default**: enabled=true (was false, caused icons hidden)
+* **Inline code default**: true (matched package.json)
+* **shouldDecorate fix**: Gutter requires master switch + sub-feature
+* **Code**: blameConfiguration.ts:173,190, blameProvider.ts:598-601, package.json:1167,1211
+
+## [2.17.219] (2025-11-19)
+
+### Feat: Untracked file icon + opacity fix + config defaults
+
+* **Untracked icon**: circle-slash icon for untracked files (3rd menu state)
+* **Context**: svnBlameUntrackedFile context tracks UNVERSIONED/IGNORED/NONE
+* **Opacity fix**: Inline decorations use rgba color instead of decoration type opacity
+* **autoBlame default**: Changed from false to true
+* **largeFileLimit**: Changed default from 100000 to 3000 lines
+* **Gutter logic**: Both isGutterEnabled() AND feature flags now checked
+* **Code**: blameIconState.ts:28-65, blameProvider.ts:381-450,687-733, package.json:1047-1060,1122,1141
+
+## [2.17.218] (2025-11-19)
+
+### Fix: Skip blame for untracked files
+
+* **Fix**: Skip UNVERSIONED/IGNORED/NONE files before SVN blame call
+* **Impact**: Eliminates console error spam for untracked files
+* **Check**: Both BlameProvider and BlameStatusBar skip untracked files
+* **Code**: blameProvider.ts:135-145, blameStatusBar.ts:242-251
+
+## [2.17.217] (2025-11-19)
+
+### Fix: Icon toggle race + default inline current-line
+
+* **Icon fix**: setVscodeContext now returns promise, updateIconContext awaits
+* **Race fix**: Eliminated context update race - icon now toggles correctly
+* **Default inline**: Changed default from gutter to inline current-line only
+* **Removed auto-enable**: Unnecessary with default=true, caused timing issues
+* **Code**: util.ts:297, blameIconState.ts:27-36, package.json:1161,1190
+
+## [2.17.216] (2025-11-19)
+
+### Feature: Blame enabled by default + dynamic toggle icon
+
+* **Default enabled**: Per-file blame defaults to enabled (was disabled)
+* **Dynamic icon**: Toggle icon changes eye ↔ eye-closed based on state
+* **Context tracking**: New BlameIconState sets svnBlameActiveForFile context
+* **Clear fix**: Async operations now clear decorations when toggled off
+* **Auto-enable**: Open files auto-enabled on extension startup
+* **Code**: blameStateManager.ts:27, contexts/blameIconState.ts, blameProvider.ts:113-118,304-310
+
 ## [2.17.215] (2025-11-19)
 
 ### Perf: LRU cache eviction (prevent unbounded growth)

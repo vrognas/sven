@@ -86,7 +86,7 @@ class BlameConfiguration {
    * Check if file exceeds large file limit
    */
   public isFileTooLarge(lines: number): boolean {
-    const limit = this.get<number>("largeFileLimit", 100000);
+    const limit = this.get<number>("largeFileLimit", 3000);
     return lines > limit;
   }
 
@@ -156,7 +156,7 @@ class BlameConfiguration {
    * Check if gutter text annotations are enabled
    */
   public isGutterTextEnabled(): boolean {
-    return this.get<boolean>("gutter.showText", true);
+    return this.get<boolean>("gutter.showText", false);
   }
 
   /**
@@ -170,7 +170,7 @@ class BlameConfiguration {
    * Check if inline annotations are enabled
    */
   public isInlineEnabled(): boolean {
-    return this.get<boolean>("inline.enabled", false);
+    return this.get<boolean>("inline.enabled", true);
   }
 
   /**
@@ -187,7 +187,7 @@ class BlameConfiguration {
    * Get inline annotation opacity
    */
   public getInlineOpacity(): number {
-    return this.get<number>("inline.opacity", 0.2);
+    return this.get<number>("inline.opacity", 0.5);
   }
 
   /**

@@ -434,4 +434,65 @@ suite("BlameProvider Cursor Tracking Optimization", () => {
     assert.ok(contentText.includes("jane"), "Should show author");
     assert.ok(contentText.includes("1235"), "Should show revision");
   });
+
+  test("cursor update respects per-file blame state", async () => {
+    // Arrange
+    const testUri = Uri.file("/test/file.txt");
+    const blameData: ISvnBlameLine[] = [
+      { lineNumber: 1, revision: "1234", author: "john", date: "2025-11-18T10:00:00Z" },
+      { lineNumber: 2, revision: "1235", author: "jane", date: "2025-11-18T11:00:00Z" }
+    ];
+
+    mockRepository.blame.resolves(blameData);
+
+    provider = new BlameProvider(mockRepository as any);
+    provider.activate();
+
+    // Enable blame initially
+    blameStateManager.setBlameEnabled(testUri, true);
+    sandbox.stub(blameConfiguration, "isEnabled").returns(true);
+    sandbox.stub(blameConfiguration, "isInlineEnabled").returns(true);
+    sandbox.stub(blameConfiguration, "isInlineCurrentLineOnly").returns(true);
+    sandbox.stub(blameConfiguration, "shouldShowInlineMessage").returns(false);
+    sandbox.stub(blameConfiguration, "isGutterEnabled").returns(false);
+    sandbox.stub(blameConfiguration, "isGutterTextEnabled").returns(false);
+    sandbox.stub(blameConfiguration, "isGutterIconEnabled").returns(false);
+
+    const mockEditor = {
+      document: {
+        uri: testUri,
+        lineCount: 2,
+        lineAt: () => ({ range: { end: { character: 10 } } })
+      },
+      selection: { active: { line: 0 } },
+      setDecorations: sandbox.stub(),
+      visibleRanges: [{ start: { line: 0 }, end: { line: 2 } }]
+    } as any;
+
+    // Act 1 - Initial load with blame enabled
+    await provider.updateDecorations(mockEditor);
+    const initialCallCount = mockEditor.setDecorations.callCount;
+
+    // Disable blame for file
+    blameStateManager.setBlameEnabled(testUri, false);
+
+    // Simulate cursor movement
+    mockEditor.selection = { active: { line: 1 } };
+    await (provider as any).updateInlineDecorationsForCursor(mockEditor);
+
+    // Assert - Should clear decorations (not render new ones)
+    assert.strictEqual(
+      mockEditor.setDecorations.callCount,
+      initialCallCount + 1,
+      "Should call setDecorations to clear"
+    );
+
+    const lastCall = mockEditor.setDecorations.lastCall;
+    const decorations = lastCall.args[1];
+    assert.strictEqual(
+      decorations.length,
+      0,
+      "Should have 0 decorations when blame disabled for file"
+    );
+  });
 });

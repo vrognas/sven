@@ -2,7 +2,7 @@
     "name": "positron-svn",
     "displayName": "SVN (Positron)",
     "description": "Integrated Subversion source control - Positron fork with enhanced features",
-    "version": "2.17.215",
+    "version": "2.17.229",
     "publisher": "vrognas",
     "engines": {
         "vscode": "^1.74.0",
@@ -182,8 +182,25 @@
             {
                 "command": "svn.blame.toggleBlame",
                 "title": "Toggle Blame",
+                "category": "SVN Blame"
+            },
+            {
+                "command": "svn.blame.enableBlame",
+                "title": "Enable Blame",
+                "category": "SVN Blame",
+                "icon": "$(eye-closed)"
+            },
+            {
+                "command": "svn.blame.disableBlame",
+                "title": "Disable Blame",
                 "category": "SVN Blame",
                 "icon": "$(eye)"
+            },
+            {
+                "command": "svn.blame.untrackedInfo",
+                "title": "File Not Tracked",
+                "category": "SVN Blame",
+                "icon": "$(circle-slash)"
             },
             {
                 "command": "svn.branchchanges.openDiff",
@@ -1042,9 +1059,19 @@
             ],
             "editor/title": [
                 {
-                    "command": "svn.blame.toggleBlame",
+                    "command": "svn.blame.disableBlame",
                     "group": "navigation",
-                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0 && !isInDiffEditor && resourceScheme == file"
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0 && !isInDiffEditor && resourceScheme == file && svnBlameActiveForFile && !svnBlameUntrackedFile"
+                },
+                {
+                    "command": "svn.blame.enableBlame",
+                    "group": "navigation",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0 && !isInDiffEditor && resourceScheme == file && !svnBlameActiveForFile && !svnBlameUntrackedFile"
+                },
+                {
+                    "command": "svn.blame.untrackedInfo",
+                    "group": "navigation",
+                    "when": "config.svn.blame.enabled && svnOpenRepositoryCount != 0 && !isInDiffEditor && resourceScheme == file && svnBlameUntrackedFile"
                 },
                 {
                     "command": "svn.openFile",
@@ -1106,7 +1133,7 @@
                 "svn.blame.autoBlame": {
                     "type": "boolean",
                     "description": "Automatically blame files when opened",
-                    "default": false
+                    "default": true
                 },
                 "svn.blame.dateFormat": {
                     "type": "string",
@@ -1125,7 +1152,7 @@
                 "svn.blame.largeFileLimit": {
                     "type": "number",
                     "description": "Maximum number of lines before warning about large file (0 to disable)",
-                    "default": 100000,
+                    "default": 3000,
                     "minimum": 0
                 },
                 "svn.blame.largeFileWarning": {
@@ -1170,7 +1197,7 @@
                 "svn.blame.gutter.showText": {
                     "type": "boolean",
                     "description": "Show text annotations in gutter (author, revision, date)",
-                    "default": true
+                    "default": false
                 },
                 "svn.blame.gutter.showIcons": {
                     "type": "boolean",
@@ -1180,7 +1207,7 @@
                 "svn.blame.inline.enabled": {
                     "type": "boolean",
                     "description": "Show inline blame annotations at end of each line (GitLens-style)",
-                    "default": false
+                    "default": true
                 },
                 "svn.blame.inline.template": {
                     "type": "string",
@@ -1194,8 +1221,8 @@
                 },
                 "svn.blame.inline.opacity": {
                     "type": "number",
-                    "description": "Opacity of inline blame annotations (0.0 to 1.0, default: 0.2)",
-                    "default": 0.2,
+                    "description": "Opacity of inline blame annotations (0.0 to 1.0, default: 0.5)",
+                    "default": 0.5,
                     "minimum": 0,
                     "maximum": 1
                 },
