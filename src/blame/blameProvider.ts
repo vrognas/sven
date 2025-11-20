@@ -1016,7 +1016,7 @@ export class BlameProvider implements Disposable {
   private applyIconDecorations(
     editor: TextEditor,
     blameData: ISvnBlameLine[],
-    revisionRange: { min: number; max: number }
+    revisionRange: { min: number; max: number; uniqueRevisions: number[] }
   ): void {
     const gutterEnabled = blameConfiguration.isGutterEnabled();
     const iconsEnabled = blameConfiguration.isGutterIconEnabled();
