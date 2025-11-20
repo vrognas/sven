@@ -86,7 +86,7 @@ class BlameConfiguration {
    * Check if file exceeds large file limit
    */
   public isFileTooLarge(lines: number): boolean {
-    const limit = this.get<number>("largeFileLimit", 100000);
+    const limit = this.get<number>("largeFileLimit", 3000);
     return lines > limit;
   }
 

@@ -21,7 +21,14 @@ export class BlameIconState implements IDisposable {
       this.disposables
     );
 
-    // Listen to repository changes (for file status updates)
+    // Listen to repository discovery
+    sourceControlManager.onDidOpenRepository(
+      () => this.updateIconContext(),
+      this,
+      this.disposables
+    );
+
+    // Listen to repository status changes (for file status updates)
     sourceControlManager.onDidChangeStatusRepository(
       () => this.updateIconContext(),
       this,
@@ -43,19 +50,32 @@ export class BlameIconState implements IDisposable {
       return;
     }
 
-    // Check if file is untracked in SVN
+    // Check if file is tracked in SVN
     const repository = this.sourceControlManager.getRepository(editor.document.uri);
-    let isUntracked = false;
 
-    if (repository) {
-      const resource = repository.getResourceFromFile(editor.document.uri);
-      if (resource) {
-        const { Status } = await import("../common/types");
-        isUntracked = resource.type === Status.UNVERSIONED ||
-                      resource.type === Status.IGNORED ||
-                      resource.type === Status.NONE;
-      }
+    // No repository found - file not in SVN workspace
+    if (!repository) {
+      console.log("[BlameIconState] No repository found, hiding icons");
+      await setVscodeContext("svnBlameActiveForFile", false);
+      await setVscodeContext("svnBlameUntrackedFile", false);
+      return;
     }
+
+    const resource = repository.getResourceFromFile(editor.document.uri);
+
+    // Resource not loaded yet - repository still indexing
+    if (!resource) {
+      console.log("[BlameIconState] Resource not loaded (indexing), hiding icons");
+      await setVscodeContext("svnBlameActiveForFile", false);
+      await setVscodeContext("svnBlameUntrackedFile", false);
+      return;
+    }
+
+    // Check if file is untracked
+    const { Status } = await import("../common/types");
+    const isUntracked = resource.type === Status.UNVERSIONED ||
+                        resource.type === Status.IGNORED ||
+                        resource.type === Status.NONE;
 
     // Set context variables
     if (isUntracked) {

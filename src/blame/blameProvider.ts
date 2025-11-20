@@ -135,8 +135,8 @@ export class BlameProvider implements Disposable {
     // Skip untracked files (prevents SVN errors for UNVERSIONED/IGNORED files)
     const resource = this.repository.getResourceFromFile(target.document.uri);
     if (!resource) {
-      // No resource = file not tracked by SVN
-      this.clearDecorations(target);
+      // No resource - repository might still be indexing
+      // Don't clear decorations, wait for status update event
       return;
     }
 
@@ -149,7 +149,7 @@ export class BlameProvider implements Disposable {
     }
 
     // Large file check
-    if (target.document.lineCount > 5000 && blameConfiguration.shouldWarnLargeFile()) {
+    if (blameConfiguration.isFileTooLarge(target.document.lineCount) && blameConfiguration.shouldWarnLargeFile()) {
       window.showWarningMessage(
         `File too large for blame (${target.document.lineCount} lines). Consider disabling blame.`
       );

@@ -1,3 +1,15 @@
+## [2.17.226] (2025-11-20)
+
+### Fix: Race conditions + config bugs (gutter icons now show)
+
+* **Icon context null checks**: Repository/resource null during init no longer shows wrong icon
+* **onDidOpenRepository listener**: Icon state updates when repo discovered (not just status changes)
+* **Resource null handling**: Don't clear decorations when indexing, wait for status update
+* **largeFileLimit fix**: Use config method (3000), remove hardcoded 5000
+* **Why**: 3 race conditions caused icons/decorations to fail on startup
+* **Result**: Gutter icons show reliably on first file open
+* **Code**: blameIconState.ts:24-65, blameProvider.ts:137-140,152, blameConfiguration.ts:89
+
 ## [2.17.225] (2025-11-19)
 
 ### Fix: Gutter text default + untracked file errors
