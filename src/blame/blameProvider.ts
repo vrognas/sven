@@ -122,21 +122,42 @@ export class BlameProvider implements Disposable {
   @throttle
   public async updateDecorations(editor?: TextEditor): Promise<void> {
     const target = editor || window.activeTextEditor;
+    console.log("[BlameProvider] updateDecorations called:", {
+      hasTarget: !!target,
+      file: target?.document.fileName
+    });
+
     if (!target) {
+      console.log("[BlameProvider] Early return: No target editor");
       return;
     }
 
     // Check if should decorate
-    if (!this.shouldDecorate(target)) {
+    const shouldDec = this.shouldDecorate(target);
+    console.log("[BlameProvider] shouldDecorate check:", {
+      result: shouldDec,
+      scheme: target.document.uri.scheme,
+      enabled: blameConfiguration.isEnabled(),
+      gutterEnabled: blameConfiguration.isGutterEnabled(),
+      inlineEnabled: blameConfiguration.isInlineEnabled()
+    });
+
+    if (!shouldDec) {
+      console.log("[BlameProvider] Early return: shouldDecorate=false");
       this.clearDecorations(target);
       return;
     }
 
     // Skip untracked files (prevents SVN errors for UNVERSIONED/IGNORED files)
     const resource = this.repository.getResourceFromFile(target.document.uri);
+    console.log("[BlameProvider] Resource check:", {
+      hasResource: !!resource,
+      resourceType: resource?.type,
+      file: target.document.fileName
+    });
+
     if (!resource) {
-      // No resource - repository might still be indexing
-      // Don't clear decorations, wait for status update event
+      console.log("[BlameProvider] Early return: No resource (repo indexing or untracked)");
       return;
     }
 
@@ -144,12 +165,20 @@ export class BlameProvider implements Disposable {
     if (resource.type === Status.UNVERSIONED ||
         resource.type === Status.IGNORED ||
         resource.type === Status.NONE) {
+      console.log("[BlameProvider] Early return: Untracked file", {
+        status: resource.type,
+        file: target.document.fileName
+      });
       this.clearDecorations(target);
       return;
     }
 
     // Large file check
     if (blameConfiguration.isFileTooLarge(target.document.lineCount) && blameConfiguration.shouldWarnLargeFile()) {
+      console.log("[BlameProvider] Early return: File too large", {
+        lineCount: target.document.lineCount,
+        file: target.document.fileName
+      });
       window.showWarningMessage(
         `File too large for blame (${target.document.lineCount} lines). Consider disabling blame.`
       );
@@ -159,7 +188,14 @@ export class BlameProvider implements Disposable {
     try {
       // Fetch blame data (with cache)
       const blameData = await this.getBlameData(target.document.uri);
+      console.log("[BlameProvider] Blame data fetched:", {
+        hasData: !!blameData,
+        lines: blameData?.length,
+        file: target.document.fileName
+      });
+
       if (!blameData) {
+        console.log("[BlameProvider] Early return: No blame data");
         this.clearDecorations(target);
         return;
       }
@@ -171,6 +207,14 @@ export class BlameProvider implements Disposable {
 
       // Calculate revision range for icon colors
       const revisionRange = this.getRevisionRange(blameData);
+
+      console.log("[BlameProvider] Reached decoration phase:", {
+        blameLines: blameData.length,
+        revisionRange,
+        gutterDecorations: decorations.gutter.length,
+        inlineDecorations: decorations.inline.length,
+        file: target.document.fileName
+      });
 
       // PHASE 1: Apply decorations immediately (gutter + icons + inline without messages)
       target.setDecorations(
