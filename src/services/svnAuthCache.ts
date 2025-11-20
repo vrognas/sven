@@ -154,7 +154,8 @@ export class SvnAuthCache {
           fs.unlinkSync(filePath);
         }
       } catch (err) {
-        console.error(`[SvnAuthCache] Failed to delete ${filePath}:`, err);
+        // Security: Don't log raw error (may contain sensitive paths)
+        console.error(`[SvnAuthCache] Failed to delete credential file: ${(err as Error).message}`);
       }
     }
     this.writtenFiles.clear();
