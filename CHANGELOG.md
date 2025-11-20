@@ -1,3 +1,16 @@
+## [2.17.230] (2025-11-20)
+
+### Improve: Markdown consolidation
+
+* **Consolidated**: 27 → 9 files (67% reduction)
+* **Blame docs**: 11 files → docs/BLAME_SYSTEM.md (~13KB)
+* **Performance docs**: 6 files → docs/PERFORMANCE.md (~10KB)
+* **Core docs**: Moved to docs/ (ARCHITECTURE_ANALYSIS, LESSONS_LEARNED, IMPLEMENTATION_PLAN, POSITRON_SCM_LIMITATIONS)
+* **Removed**: Completed plan files (CONSOLIDATION_PLAN, FILE_DECORATIONS_PLAN, REPOLOG_DISPLAY_PLAN)
+* **Root**: Only README, CHANGELOG, CLAUDE.md remain
+* **Archive**: Local branch archive/pre-consolidation-markdown created
+* **Result**: Clean hierarchy, single source of truth per topic
+
 ## [2.17.229] (2025-11-20)
 
 ### Fix: Per-file revision coloring
