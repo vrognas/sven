@@ -104,7 +104,7 @@
         "prettier": "^3.6.2",
         "prettylint": "^2.0.0",
         "sass": "^1.83.0",
-        "semantic-release": "^25.0.2",
+        "semantic-release": "^24.2.9",
         "semantic-release-vsce": "^6.0.13",
         "sinon": "^21.0.0",
         "size-limit": "^11.2.0",
@@ -118,7 +118,10 @@
         }
     },
     "overrides": {
-        "prettier": "^3.6.2"
+        "prettier": "^3.6.2",
+        "npm": {
+            "glob": "^10.5.0"
+        }
     },
     "contributes": {
         "views": {
