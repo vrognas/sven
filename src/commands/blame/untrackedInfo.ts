@@ -1,0 +1,19 @@
+"use strict";
+
+import { Uri, window } from "vscode";
+import { Command } from "../command";
+
+/**
+ * Command shown for untracked files (circle-slash icon)
+ * Shows info message, does not toggle state
+ */
+export class UntrackedInfo extends Command {
+  constructor() {
+    super("svn.blame.untrackedInfo");
+  }
+
+  async execute(_uri?: Uri): Promise<void> {
+    // Show subtle info message
+    window.showInformationMessage("File not tracked by SVN");
+  }
+}

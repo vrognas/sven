@@ -407,6 +407,12 @@ export class BlameProvider implements Disposable {
       return;
     }
 
+    // Check if decorations should be shown (respects per-file state)
+    if (!this.shouldDecorate(editor)) {
+      editor.setDecorations(this.decorationTypes.inline, []);
+      return;
+    }
+
     // Get cached blame data (don't re-fetch)
     const blameData = await this.getBlameData(editor.document.uri);
     if (!blameData) {

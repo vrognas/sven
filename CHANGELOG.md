@@ -1,3 +1,14 @@
+## [2.17.224] (2025-11-19)
+
+### Fix: Dynamic icons + inline blame state
+
+* **Dynamic icons**: 3 separate commands (enableBlame, disableBlame, untrackedInfo)
+* **Why**: VS Code doesn't support multiple menu entries with same command
+* **Inline fix**: updateInlineDecorationsForCursor now checks shouldDecorate()
+* **Result**: Icon toggles correctly, inline respects per-file state
+* **Tests**: +4 tests for commands + 1 E2E for cursor state check
+* **Code**: commands/blame/{enableBlame,disableBlame,untrackedInfo}.ts, blameProvider.ts:411-414, package.json:1062-1074
+
 ## [2.17.223] (2025-11-19)
 
 ### Fix: Add fallback icon for toggleBlame

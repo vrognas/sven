@@ -68,4 +68,74 @@ suite("Blame Commands Tests", () => {
       assert.strictEqual(stateManager.getEnabledFiles().length, 0);
     });
   });
+
+  suite("EnableBlame Command", () => {
+    test("should enable blame for file when disabled", () => {
+      stateManager.setBlameEnabled(testUri, false);
+      stateManager.setBlameEnabled(testUri, true);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), true);
+    });
+
+    test("should keep blame enabled when already enabled", () => {
+      stateManager.setBlameEnabled(testUri, true);
+      stateManager.setBlameEnabled(testUri, true);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), true);
+    });
+
+    test("should fire state change event", () => {
+      let eventFired = false;
+      stateManager.onDidChangeState(() => { eventFired = true; });
+      stateManager.setBlameEnabled(testUri, true);
+      assert.strictEqual(eventFired, true);
+    });
+  });
+
+  suite("DisableBlame Command", () => {
+    test("should disable blame for file when enabled", () => {
+      stateManager.setBlameEnabled(testUri, true);
+      stateManager.setBlameEnabled(testUri, false);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), false);
+    });
+
+    test("should keep blame disabled when already disabled", () => {
+      stateManager.setBlameEnabled(testUri, false);
+      stateManager.setBlameEnabled(testUri, false);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), false);
+    });
+
+    test("should fire state change event", () => {
+      let eventFired = false;
+      stateManager.onDidChangeState(() => { eventFired = true; });
+      stateManager.setBlameEnabled(testUri, false);
+      assert.strictEqual(eventFired, true);
+    });
+  });
+
+  suite("Icon State Integration", () => {
+    test("should show enable icon when blame disabled", () => {
+      stateManager.setBlameEnabled(testUri, false);
+      const isEnabled = stateManager.isBlameEnabled(testUri);
+      assert.strictEqual(isEnabled, false); // Show enableBlame command (eye-closed)
+    });
+
+    test("should show disable icon when blame enabled", () => {
+      stateManager.setBlameEnabled(testUri, true);
+      const isEnabled = stateManager.isBlameEnabled(testUri);
+      assert.strictEqual(isEnabled, true); // Show disableBlame command (eye)
+    });
+
+    test("should toggle between states correctly", () => {
+      // Start disabled
+      stateManager.setBlameEnabled(testUri, false);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), false);
+
+      // Enable
+      stateManager.setBlameEnabled(testUri, true);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), true);
+
+      // Disable
+      stateManager.setBlameEnabled(testUri, false);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), false);
+    });
+  });
 });
