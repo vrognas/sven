@@ -11,7 +11,7 @@ export function done<T>(promise: Promise<T>): Promise<void> {
   return promise.then<void>(() => void 0);
 }
 
-export function dispose(disposables: any[]): any[] {
+export function dispose(disposables: IDisposable[]): IDisposable[] {
   disposables.forEach(disposable => disposable.dispose());
 
   return [];
@@ -26,9 +26,9 @@ export function combinedDisposable(disposables: IDisposable[]): IDisposable {
 }
 
 export function anyEvent<T>(...events: Array<Event<T>>): Event<T> {
-  return (listener: any, thisArgs = null, disposables?: any) => {
+  return (listener: (e: T) => any, thisArgs = null, disposables?: IDisposable[]) => {
     const result = combinedDisposable(
-      events.map(event => event((i: any) => listener.call(thisArgs, i)))
+      events.map(event => event((i: T) => listener.call(thisArgs, i)))
     );
 
     if (disposables) {
@@ -43,9 +43,9 @@ export function filterEvent<T>(
   event: Event<T>,
   filter: (e: T) => boolean
 ): Event<T> {
-  return (listener: any, thisArgs = null, disposables?: any) =>
+  return (listener: (e: T) => any, thisArgs = null, disposables?: IDisposable[]) =>
     event(
-      (e: any) => filter(e) && listener.call(thisArgs, e),
+      (e: T) => filter(e) && listener.call(thisArgs, e),
       null,
       disposables
     );
@@ -56,7 +56,7 @@ export function filterEvent<T>(
  * Collects events and fires the latest after a delay
  */
 export function throttleEvent<T>(event: Event<T>, delay: number): Event<T> {
-  return (listener: any, thisArgs = null, disposables?: any) => {
+  return (listener: (e: T) => any, thisArgs = null, disposables?: IDisposable[]) => {
     let timer: NodeJS.Timeout | undefined;
     let latestEvent: T | undefined;
 
@@ -92,9 +92,9 @@ export function throttleEvent<T>(event: Event<T>, delay: number): Event<T> {
 }
 
 export function onceEvent<T>(event: Event<T>): Event<T> {
-  return (listener: any, thisArgs = null, disposables?: any) => {
+  return (listener: (e: T) => any, thisArgs = null, disposables?: IDisposable[]) => {
     const result = event(
-      (e: any) => {
+      (e: T) => {
         result.dispose();
         return listener.call(thisArgs, e);
       },
@@ -293,7 +293,7 @@ export async function isSvnFolder(
   return isSvnFolder(parent, true);
 }
 
-export function setVscodeContext(key: string, value: any) {
+export function setVscodeContext(key: string, value: unknown) {
   return commands.executeCommand("setContext", key, value);
 }
 
