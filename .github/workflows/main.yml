@@ -34,20 +34,23 @@ jobs:
         run: npm ci
         shell: bash
 
-      - name: Install Subversion
+      - name: Install Subversion (Linux)
+        if: runner.os == 'Linux'
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update -qq
-            sudo apt-get install -y subversion
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install subversion
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            choco install svn -y
-          fi
-        shell: bash
+          sudo apt-get update -qq
+          sudo apt-get install -y subversion
 
-      - name: Compile sources for tests
-        run: npm run test-compile
+      - name: Install Subversion (macOS)
+        if: runner.os == 'macOS'
+        run: brew install subversion
+
+      - name: Install Subversion (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install svn -y
+
+      - name: Build extension
+        run: npm run build
 
       - name: Cache VSCode binary
         id: cache-vscode
@@ -61,17 +64,19 @@ jobs:
 
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a node --max-old-space-size=6144 ./node_modules/.bin/vscode-test
+        run: xvfb-run -a npx vscode-test
         env:
           CODE_VERSION: ${{ matrix.version }}
+          VSCODE_TEST_VERSION: ${{ matrix.version }}
           NODE_OPTIONS: --max-old-space-size=6144
         continue-on-error: ${{ matrix.version == 'insiders' }}
 
       - name: Run tests (macOS/Windows)
         if: runner.os != 'Linux'
-        run: node --max-old-space-size=6144 ./node_modules/.bin/vscode-test
+        run: npx vscode-test
         env:
           CODE_VERSION: ${{ matrix.version }}
+          VSCODE_TEST_VERSION: ${{ matrix.version }}
           NODE_OPTIONS: --max-old-space-size=6144
         continue-on-error: ${{ matrix.version == 'insiders' }}
 
