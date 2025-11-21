@@ -1,3 +1,35 @@
+## [2.17.234] (2025-11-21)
+
+### ADDED: Add/Remove Command E2E Tests
+
+* **Test coverage for add/remove commands**: Added 6 e2e tests (3 per command)
+  - Add command (src/test/commands/add.test.ts):
+    - Single file add: Verifies file added to SVN
+    - Batch add: Verifies multiple files added in single operation
+    - Error handling: Verifies error messages shown on failure
+  - Remove command (src/test/commands/remove.test.ts):
+    - Single file remove: Verifies file removed with --keep-local flag
+    - Batch remove: Verifies multiple files removed
+    - Error handling: Verifies error messages and dialog behavior
+  - Integration approach: Tests command → repository → SVN exec flow
+  - Stubbed SVN exec for predictable e2e testing
+  - Minimalist: 6 total tests covering core scenarios
+
+---
+
+## [2.17.233] (2025-11-21)
+
+### ADDED: SvnFinder E2E Tests
+
+* **Test coverage for SVN binary detection**: Added 3 e2e tests for svnFinder.ts
+  - SVN binary found: Verifies detection returns valid path and version
+  - SVN not found: Verifies proper error handling
+  - Version check: Verifies version parsing including SlickSVN compatibility
+  - Uses real SVN binary for e2e validation
+  - Minimalist approach: 3 tests covering core scenarios
+
+---
+
 ## [2.17.232] (2025-11-20)
 
 ### ADDED: Debug Authentication Indicators
