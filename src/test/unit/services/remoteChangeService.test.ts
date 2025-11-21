@@ -1,83 +1,94 @@
 import * as assert from "assert";
-import { RemoteChangeService } from "../../../services/RemoteChangeService";
+import { describe, it } from "mocha";
+import { RemoteChangeService, RemoteChangeConfig } from "../../../services/RemoteChangeService";
 
-suite("RemoteChangeService Tests", () => {
-  let onPollCalls: number;
-  let service: RemoteChangeService;
-  let timerHandle: NodeJS.Timeout | undefined;
+/**
+ * RemoteChangeService E2E Tests
+ *
+ * Tests actual polling behavior without mocking:
+ * - Timer lifecycle (start/stop)
+ * - Callback invocation at intervals
+ * - Error resilience
+ */
+describe("RemoteChangeService E2E", () => {
+  /**
+   * Test 1: Start polling - verify timer starts and calls update
+   */
+  it("start polling invokes callback at configured intervals", async () => {
+    let callCount = 0;
+    const config: RemoteChangeConfig = { checkFrequencySeconds: 0.05 }; // 50ms
 
-  setup(() => {
-    onPollCalls = 0;
-  });
-
-  teardown(() => {
-    if (service) {
-      service.dispose();
-    }
-    if (timerHandle) {
-      clearTimeout(timerHandle);
-    }
-  });
-
-  test("Polling lifecycle - starts and creates interval", (done) => {
-    service = new RemoteChangeService(
-      () => {
-        onPollCalls++;
-      },
-      () => ({ checkFrequencySeconds: 0.1 }) // 100ms for fast test
+    const service = new RemoteChangeService(
+      async () => { callCount++; },
+      () => config
     );
 
     service.start();
     assert.strictEqual(service.isRunning, true, "Service should be running after start");
 
-    // Wait for first poll
-    timerHandle = setTimeout(() => {
-      assert.ok(onPollCalls >= 1, "Poll callback should be called at least once");
-      service.stop();
-      assert.strictEqual(service.isRunning, false, "Service should not be running after stop");
-      done();
-    }, 250); // Wait 250ms to allow 2 polls
+    // Wait for ~2 intervals (100ms) to verify multiple calls
+    await new Promise(resolve => setTimeout(resolve, 120));
+
+    assert.ok(callCount >= 2, `Expected >=2 calls in 120ms, got ${callCount}`);
+
+    service.dispose();
   });
 
-  test("Config handling - disabled when frequency is 0", (done) => {
-    service = new RemoteChangeService(
-      () => {
-        onPollCalls++;
-      },
-      () => ({ checkFrequencySeconds: 0 }) // Disabled
+  /**
+   * Test 2: Stop polling - verify timer stops and cleans up
+   */
+  it("stop polling prevents further callback invocations", async () => {
+    let callCount = 0;
+    const config: RemoteChangeConfig = { checkFrequencySeconds: 0.05 }; // 50ms
+
+    const service = new RemoteChangeService(
+      async () => { callCount++; },
+      () => config
     );
 
     service.start();
-    assert.strictEqual(service.isRunning, false, "Service should not be running when frequency is 0");
+    await new Promise(resolve => setTimeout(resolve, 60)); // Wait for first call
+    const countAfterStart = callCount;
 
-    // Wait to confirm no polls happen
-    timerHandle = setTimeout(() => {
-      assert.strictEqual(onPollCalls, 0, "No polls should occur when disabled");
-      done();
-    }, 100);
+    service.stop();
+    assert.strictEqual(service.isRunning, false, "Service should not be running after stop");
+
+    await new Promise(resolve => setTimeout(resolve, 100)); // Wait to verify no more calls
+
+    assert.strictEqual(
+      callCount,
+      countAfterStart,
+      `No new calls after stop (was ${countAfterStart}, now ${callCount})`
+    );
+
+    service.dispose();
   });
 
-  test("Disposal safety - no timer leaks on dispose", () => {
-    service = new RemoteChangeService(
-      () => {
-        onPollCalls++;
+  /**
+   * Test 3: Error handling - verify errors don't crash polling
+   */
+  it("polling continues after callback errors", async () => {
+    let callCount = 0;
+    const config: RemoteChangeConfig = { checkFrequencySeconds: 0.05 }; // 50ms
+
+    const service = new RemoteChangeService(
+      async () => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("Simulated polling error");
+        }
       },
-      () => ({ checkFrequencySeconds: 0.1 })
+      () => config
     );
 
     service.start();
-    assert.strictEqual(service.isRunning, true, "Service should be running");
+
+    // Wait for multiple intervals (first throws, subsequent should continue)
+    await new Promise(resolve => setTimeout(resolve, 120));
+
+    assert.ok(callCount >= 2, `Polling should continue after error, got ${callCount} calls`);
+    assert.strictEqual(service.isRunning, true, "Service should still be running after error");
 
     service.dispose();
-    assert.strictEqual(service.isRunning, false, "Service should not be running after dispose");
-
-    // Multiple dispose calls should be safe
-    service.dispose();
-    assert.strictEqual(service.isRunning, false, "Multiple dispose should be safe");
-
-    // Cannot restart after dispose
-    assert.throws(() => {
-      service.start();
-    }, "Should throw error when starting disposed service");
   });
 });

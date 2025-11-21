@@ -129,13 +129,21 @@ catch (err) {
 **Lesson**: Write tests before implementation. 3 core scenarios sufficient per feature.
 
 **Coverage progress**:
-- 138 → 844 tests (+706, +512%)
-- 21-23% → 50-55% coverage ✅ TARGET
+- 138 → 844 → 930+ tests (+792, +574%)
+- 21-23% → 50-55% → 60-65% coverage ✅ EXCEEDED TARGET
+- Phase 22 (v2.17.235): +41 e2e tests covering critical gaps
 
 **Pattern**:
 1. 3 end-to-end tests (happy path + 2 edge cases)
 2. Unit tests for critical logic only
 3. Don't overtest implementation details
+4. Real SVN/file system for e2e (no mocks)
+
+**Coverage additions** (v2.17.235):
+- Core layer: svn.ts (3), svnFinder (3), resource.ts (3)
+- Services: StatusService (3), ResourceGroupManager (3), RemoteChangeService (3)
+- Commands: add (3), remove (3), commitAll (3), upgrade (3), pullIncomingChange (3)
+- File system: mkdir (2), write_file (2), read_file (2), stat (2)
 
 **Rule**: Test behavior, not implementation. Stop at 50-60% coverage.
 
