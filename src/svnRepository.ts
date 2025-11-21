@@ -521,7 +521,14 @@ export class Repository {
     return changes;
   }
 
-  public async show(file: string | Uri, revision?: string): Promise<string> {
+  /**
+   * Prepare arguments for 'svn cat' command
+   * @private
+   */
+  private async prepareCatArgs(
+    file: string | Uri,
+    revision?: string
+  ): Promise<{ args: string[]; uri: Uri; filePath: string }> {
     const args = ["cat"];
 
     let uri: Uri;
@@ -557,6 +564,12 @@ export class Repository {
     }
 
     args.push(target);
+
+    return { args, uri, filePath };
+  }
+
+  public async show(file: string | Uri, revision?: string): Promise<string> {
+    const { args, uri, filePath } = await this.prepareCatArgs(file, revision);
 
     /**
      * ENCODE DETECTION
@@ -621,44 +634,8 @@ export class Repository {
     file: string | Uri,
     revision?: string
   ): Promise<Buffer> {
-    const args = ["cat"];
-
-    let uri: Uri;
-    let filePath: string;
-
-    if (file instanceof Uri) {
-      uri = file;
-      filePath = file.toString(true);
-    } else {
-      uri = Uri.file(file);
-      filePath = file;
-    }
-
-    const isChild =
-      uri.scheme === "file" && isDescendant(this.workspaceRoot, uri.fsPath);
-
-    let target: string = filePath;
-
-    if (isChild) {
-      target = this.removeAbsolutePath(target);
-    }
-
-    if (revision) {
-      args.push("-r", revision);
-      if (
-        isChild &&
-        !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
-      ) {
-        const info = await this.getInfo();
-        target = info.url + "/" + target.replace(/\\/g, "/");
-        // TODO move to SvnRI
-      }
-    }
-
-    args.push(target);
-
+    const { args } = await this.prepareCatArgs(file, revision);
     const result = await this.execBuffer(args);
-
     return result.stdout;
   }
 
