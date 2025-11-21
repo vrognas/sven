@@ -32,7 +32,11 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
-        shell: bash
+
+      - name: Log environment
+        run: |
+          node --version
+          npm --version
 
       - name: Install Subversion (Linux)
         if: runner.os == 'Linux'
