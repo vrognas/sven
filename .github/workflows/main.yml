@@ -52,6 +52,8 @@ jobs:
       # Consolidated checks (merged from separate jobs)
       - name: Lint check
         run: npm run lint --silent -- -f stylish
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Security validation
         run: npm run security:validate-errors
