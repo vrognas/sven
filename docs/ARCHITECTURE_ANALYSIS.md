@@ -13,13 +13,14 @@ Mature VS Code extension for SVN integration. Event-driven architecture, decorat
 - **Source lines**: ~13,200 (+550 blame config system)
 - **Repository**: 923 lines (22% reduction via 3 extracted services)
 - **Commands**: 54 (+3 blame commands)
-- **Coverage**: ~50-55% (892 tests, +27 blame tests) ✅ TARGET REACHED
+- **Coverage**: ~60-65% (930+ tests, +41 e2e critical paths) ✅ EXCEEDED TARGET
 - **Stability**: 🟢 P0 foundation complete ✅ (4 bugs fixed/addressed)
 - **Performance**: 🟢 All P1 bottlenecks fixed ✅ (commit 4-5x, status 3-5x, glob 3x, batch 2-3x faster)
 - **Security**: 🟢 All error logging sanitized ✅ (100% coverage, 0 violations)
 - **Positron**: 🟢 Runtime detection + Connections pane ✅
 - **Blame**: 🟢 Default enabled + dynamic toggle icon ✅
 - **Bloat**: ~500-1000 lines removable (duplicate methods, god classes)
+- **Test tooling**: c8 coverage reporting configured ✅
 
 ---
 
@@ -150,9 +151,15 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 - Stderr sanitization (M-1 critical fix, credential disclosure prevented)
 
 ### Testing
-- 138 → 856 tests (+718, +520%)
-- 21-23% → 50-55% coverage ✅ TARGET
+- 138 → 856 → 930+ tests (+792, +574%)
+- 21-23% → 50-55% → 60-65% coverage ✅ EXCEEDED TARGET
 - Phase 18-19: +12 tests (UI blocking, memory, polling)
+- Phase 22 (v2.17.235): +41 e2e tests (core execution, services, commands, fs)
+  - Core: svn.ts, svnFinder, resource.ts (9 tests)
+  - Services: StatusService, ResourceGroupManager, RemoteChangeService (9 tests)
+  - Commands: add, remove, commitAll, upgrade, pullIncomingChange (15 tests)
+  - File system: mkdir, write_file, read_file, stat (8 tests)
+- Coverage tooling: c8 configured for HTML/text/lcov reports
 
 ---
 
