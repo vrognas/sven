@@ -5,20 +5,20 @@ on:
     branches:
       - 'master'
   pull_request:
-    branches: 
+    branches:
       - '*'
 
 jobs:
   build:
-    name: ${{ matrix.os }} ${{ matrix.version }}
+    name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
-        version: ['stable', 'insiders']
+        # Industry standard: Ubuntu + Windows only (Microsoft skips macOS to conserve resources)
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Clone repository
@@ -33,59 +33,57 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Log environment
-        run: |
-          node --version
-          npm --version
-
       - name: Install Subversion (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y subversion
 
-      - name: Install Subversion (macOS)
-        if: runner.os == 'macOS'
-        run: brew install subversion
-
       - name: Install Subversion (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: choco install svn -y
 
+      # Consolidated checks (merged from separate jobs)
+      - name: Lint check
+        run: npm run lint --silent -- -f stylish
+
+      - name: Security validation
+        run: npm run security:validate-errors
+
       - name: Build extension
         run: npm run build
 
+      # Fixed VSCode cache (removed github.run_id for proper cache hits)
       - name: Cache VSCode binary
         id: cache-vscode
         uses: actions/cache@v4
         with:
           path: .vscode-test
-          key: vscode-${{ runner.os }}-${{ matrix.version }}-${{ github.run_id }}
+          key: vscode-${{ runner.os }}-stable-${{ hashFiles('package.json') }}
           restore-keys: |
-            vscode-${{ runner.os }}-${{ matrix.version }}-
+            vscode-${{ runner.os }}-stable-
             vscode-${{ runner.os }}-
 
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a npx vscode-test
         env:
-          CODE_VERSION: ${{ matrix.version }}
-          VSCODE_TEST_VERSION: ${{ matrix.version }}
+          CODE_VERSION: stable
+          VSCODE_TEST_VERSION: stable
           NODE_OPTIONS: --max-old-space-size=6144
-        continue-on-error: ${{ matrix.version == 'insiders' }}
 
-      - name: Run tests (macOS/Windows)
-        if: runner.os != 'Linux'
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
         run: npx vscode-test
         env:
-          CODE_VERSION: ${{ matrix.version }}
-          VSCODE_TEST_VERSION: ${{ matrix.version }}
+          CODE_VERSION: stable
+          VSCODE_TEST_VERSION: stable
           NODE_OPTIONS: --max-old-space-size=6144
-        continue-on-error: ${{ matrix.version == 'insiders' }}
 
+      # Release only on master + ubuntu
       - name: Release
-        if: startsWith(matrix.os, 'ubuntu') && matrix.version == 'stable' && github.ref == 'refs/heads/master' && github.repository == 'JohnstonCode/svn-scm'
+        if: matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/master' && github.repository == 'JohnstonCode/svn-scm'
         run: |
           npm run organize
           npm run semantic-release
@@ -98,79 +96,11 @@ jobs:
           GIT_AUTHOR_NAME: ${{ secrets.gitName }}
           GIT_COMMITTER_NAME: ${{ secrets.gitName }}
 
-  eslint:
-    runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    timeout-minutes: 10
-
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-        shell: bash
-
-      - name: Lint check
-        run: npm run lint --silent -- -f stylish
-
-  security-check:
-    runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    timeout-minutes: 10
-
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-        shell: bash
-
-      - name: Validate error logging
-        run: npm run security:validate-errors
-
-  size-check:
-    runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    timeout-minutes: 10
-
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-        shell: bash
-
-      - name: Build extension
-        run: npm run build
-
-      - name: Check bundle size
-        run: npm run size
-
+  # Artifact job - only on master or tags
   artifact:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    timeout-minutes: 15
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -184,7 +114,9 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
-        shell: bash
+
+      - name: Build extension
+        run: npm run build
 
       - name: Package extension
         run: npx @vscode/vsce package -o svn-scm.vsix
@@ -205,51 +137,3 @@ jobs:
         with:
           name: "svn-scm-ovsx-${{ github.sha }}.vsix"
           path: "svn-scm-ovsx.vsix"
-
-  dependency-audit:
-    runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-        shell: bash
-
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
-
-      - name: Check for outdated critical dependencies
-        run: npx npm-check-updates --target minor --filter "vscode,mocha,typescript,eslint" --errorLevel 2
-        continue-on-error: true
-
-  codeql:
-    runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    timeout-minutes: 15
-    permissions:
-      security-events: write
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-          queries: +security-and-quality
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3

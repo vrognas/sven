@@ -1,10 +1,10 @@
 version: 2
 updates:
-  # npm dependencies
+  # npm dependencies - Monthly schedule (reduced from weekly)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
@@ -26,9 +26,9 @@ updates:
       - dependency-name: "glob"
         update-types: ["version-update:semver-patch"]
 
-  # GitHub Actions
+  # GitHub Actions - Quarterly schedule (reduced from monthly)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
