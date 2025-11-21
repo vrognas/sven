@@ -7,19 +7,34 @@
 
 import { done } from "./util";
 
-function decorate(
-  decorator: (fn: (...args: any[]) => void, key: string) => void
+// Type definitions for method signatures
+type AnyMethod = (...args: any[]) => any;
+type AsyncMethod = (...args: any[]) => Promise<any>;
+
+/**
+ * Generic decorator factory that wraps method or getter descriptors
+ * @param decorator Function that wraps the original method/getter
+ * @returns TypeScript decorator function
+ *
+ * Note: TypeScript's decorator type system requires flexible typing here.
+ * The decorator wraps functions (methods or getters), but getters can return
+ * non-function values (Uri, string, etc.), which TypeScript's strict checking
+ * doesn't naturally accommodate. We use careful type assertions to preserve
+ * as much type safety as possible while maintaining backward compatibility.
+ */
+function decorate<T extends AnyMethod>(
+  decorator: (fn: T, key: string) => any
 ): (_target: any, key: string, descriptor: any) => void {
   return (_target: any, key: string, descriptor: any) => {
-    let fnKey: string | null = null;
-    let fn: ((...args: any[]) => void) | null = null;
+    let fnKey: "value" | "get" | null = null;
+    let fn: T | null = null;
 
     if (typeof descriptor.value === "function") {
       fnKey = "value";
-      fn = descriptor.value;
+      fn = descriptor.value as T;
     } else if (typeof descriptor.get === "function") {
       fnKey = "get";
-      fn = descriptor.get;
+      fn = descriptor.get as T;
     }
 
     if (!fn || !fnKey) {
@@ -30,13 +45,17 @@ function decorate(
   };
 }
 
-function _memoize(
-  fn: (...args: any[]) => void,
+/**
+ * Memoize decorator implementation - caches first call result
+ * Preserves method return type using generics
+ */
+function _memoize<T extends AnyMethod>(
+  fn: T,
   key: string
-): (this: any, ...args: any[]) => any {
+): (...args: Parameters<T>) => ReturnType<T> {
   const memoizeKey = `$memoize$${key}`;
 
-  return function (this: any, ...args: any[]) {
+  return function (this: any, ...args: Parameters<T>): ReturnType<T> {
     if (!this.hasOwnProperty(memoizeKey)) {
       Object.defineProperty(this, memoizeKey, {
         configurable: false,
@@ -47,19 +66,26 @@ function _memoize(
     }
 
     return this[memoizeKey];
-  };
+  } as T;
 }
 
 export const memoize = decorate(_memoize);
 
-function _throttle(
-  fn: (...args: any[]) => void,
+/**
+ * Throttle decorator implementation - queues async operations
+ * Constrains to async methods, preserves Promise return type
+ */
+function _throttle<T extends AsyncMethod>(
+  fn: T,
   key: string
-): (this: any, ...args: any[]) => any {
+): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
   const currentKey = `$throttle$current$${key}`;
   const nextKey = `$throttle$next$${key}`;
 
-  const trigger = function (this: any, ...args: any[]) {
+  const trigger = function (
+    this: any,
+    ...args: Parameters<T>
+  ): Promise<Awaited<ReturnType<T>>> {
     if (this[nextKey]) {
       return this[nextKey];
     }
@@ -81,48 +107,64 @@ function _throttle(
     return this[currentKey];
   };
 
-  return trigger;
+  return trigger as T;
 }
 
 export const throttle = decorate(_throttle);
 
-function _sequentialize(
-  fn: (...args: any[]) => void,
+/**
+ * Sequentialize decorator implementation - serializes async operations
+ * Constrains to async methods, preserves Promise return type
+ */
+function _sequentialize<T extends AsyncMethod>(
+  fn: T,
   key: string
-): (this: any, ...args: any[]) => any {
+): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
   const currentKey = `__$sequence$${key}`;
 
-  return function (this: any, ...args: any[]) {
+  return function (
+    this: any,
+    ...args: Parameters<T>
+  ): Promise<Awaited<ReturnType<T>>> {
     const currentPromise =
       (this[currentKey] as Promise<any>) || Promise.resolve(null);
     const run = async () => fn.apply(this, args);
     this[currentKey] = currentPromise.then(run, run);
     return this[currentKey];
-  };
+  } as T;
 }
 
 export const sequentialize = decorate(_sequentialize);
 
+/**
+ * Debounce decorator - delays method execution
+ * @param delay Milliseconds to delay
+ */
 export function debounce(
   delay: number
 ): (_target: any, key: string, descriptor: any) => void {
   return decorate((fn, key) => {
     const timerKey = `$debounce$${key}`;
 
-    return function (this: any, ...args: any[]) {
+    return function (this: any, ...args: any[]): void {
       clearTimeout(this[timerKey]);
       this[timerKey] = setTimeout(() => fn.apply(this, args), delay);
-    };
+    } as any;
   });
 }
 
 const _seqList: { [key: string]: any } = {};
 
+/**
+ * Global sequentialize decorator - serializes async operations across instances
+ * Constrains to async methods, uses per-repo keys to prevent race conditions
+ * @param name Unique key for the operation queue
+ */
 export function globalSequentialize(
   name: string
 ): (_target: any, key: string, descriptor: any) => void {
   return decorate((fn, _key) => {
-    return function (this: any, ...args: any[]) {
+    return function (this: any, ...args: any[]): Promise<any> {
       // Phase 20.B fix: Use per-repo keys to prevent multi-repo race conditions
       // Append repo root if available, ensuring each repo has independent queue
       const repoKey = this.root ? `${name}:${this.root}` : name;
@@ -131,6 +173,6 @@ export function globalSequentialize(
       const run = async () => fn.apply(this, args);
       _seqList[repoKey] = currentPromise.then(run, run);
       return _seqList[repoKey];
-    };
+    } as any;
   });
 }
