@@ -1,3 +1,15 @@
+## [2.17.239] (2025-11-27)
+
+### FIX: Auth Retry Logic Bugs
+
+- **Bug 1 Fix**: Account cycling now works correctly
+  - Before: Always tried last stored account (`index = accounts.length - 1`)
+  - After: Cycles through accounts (`index = attempt`)
+- **Bug 2 Fix**: Pre-set credentials from stored accounts
+  - Before: First attempt ran with empty credentials in remote sessions
+  - After: Pre-loads first stored account if no credentials set
+- **Tests**: Added retryRun auth logic tests
+
 ## [2.17.238] (2025-11-27)
 
 ### FIX: Authentication Error Detection in Remote Sessions
