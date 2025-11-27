@@ -99,10 +99,6 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GIT_AUTHOR_EMAIL: ${{ secrets.GIT_EMAIL }}
-          GIT_COMMITTER_EMAIL: ${{ secrets.GIT_EMAIL }}
-          GIT_AUTHOR_NAME: ${{ secrets.GIT_NAME }}
-          GIT_COMMITTER_NAME: ${{ secrets.GIT_NAME }}
 
   # Artifact job - only on master or tags
   artifact:
