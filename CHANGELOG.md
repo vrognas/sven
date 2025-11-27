@@ -1,3 +1,13 @@
+## [2.17.240] (2025-11-27)
+
+### FIX: Resource Leak in commitFiles
+
+- **Fix**: Temp file cleanup on error in `commitFiles()`
+  - Before: If `exec()` threw, temp file was never deleted (resource leak)
+  - After: try-finally ensures `tmpFile.removeCallback()` always called
+  - Affected: Commit with multiline/unicode messages that fail
+- **Tests**: Added 3 commitFiles tests (cleanup on error, success, temp file usage)
+
 ## [2.17.239] (2025-11-27)
 
 ### FIX: Auth Retry Logic Bugs
