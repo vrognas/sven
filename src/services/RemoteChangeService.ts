@@ -2,6 +2,11 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import { generateId, isOlderThan } from "../util/uuidv7";
+
+// Minimum poll interval (ms) to prevent rapid-fire polling
+const MIN_POLL_INTERVAL_MS = 1000;
+
 /**
  * Configuration for remote change polling
  */
@@ -60,10 +65,12 @@ export interface IRemoteChangeService {
 
 /**
  * Implementation of remote change polling service
+ * Uses UUIDv7 for poll deduplication (prevents rapid-fire polling)
  */
 export class RemoteChangeService implements IRemoteChangeService {
   private interval?: NodeJS.Timeout;
   private disposed: boolean = false;
+  private lastPollId?: string; // UUIDv7 for poll timing (deduplication)
 
   /**
    * @param onPoll Callback invoked at each poll interval
@@ -91,8 +98,19 @@ export class RemoteChangeService implements IRemoteChangeService {
     }
 
     this.interval = setInterval(() => {
+      // Deduplication: Skip if last poll was too recent (prevents overlapping polls)
+      if (
+        this.lastPollId &&
+        !isOlderThan(this.lastPollId, MIN_POLL_INTERVAL_MS)
+      ) {
+        return; // Skip this poll cycle
+      }
+
+      // Record poll start time via UUIDv7
+      this.lastPollId = generateId();
+
       void Promise.resolve(this.onPoll()).catch((err: any) => {
-        console.error('[RemoteChangeService] Polling failed:', err);
+        console.error("[RemoteChangeService] Polling failed:", err);
         // Continue polling despite errors
       });
     }, frequencyMs);
@@ -103,6 +121,7 @@ export class RemoteChangeService implements IRemoteChangeService {
       clearInterval(this.interval);
       this.interval = undefined;
     }
+    this.lastPollId = undefined; // Reset poll tracking
   }
 
   restart(): void {

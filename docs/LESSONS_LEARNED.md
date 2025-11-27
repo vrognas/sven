@@ -385,6 +385,40 @@ for (const code of errorCodes) { ... } // Generic codes
 
 ---
 
+### 15. UUIDv7 for Time-Based Tracking
+
+**Lesson**: UUIDv7 provides combined ID + timestamp in single field, simplifying time-based logic.
+
+**Benefits**:
+
+- Time-ordered: Lexicographic sort = chronological order
+- Single field: No separate timestamp needed for LRU/stale detection
+- Extractable: `extractTimestamp(id)` recovers creation time
+
+**Pattern** (v2.17.244 - UUIDv7 integration):
+
+```typescript
+// Before: Separate ID and timestamp
+const cache = new Map<string, { data: T; timestamp: number }>();
+cache.set(key, { data, timestamp: Date.now() });
+
+// After: UUIDv7 embeds timestamp
+const cache = new Map<string, { data: T; cacheId: string }>();
+cache.set(key, { data, cacheId: generateId() });
+// Sort by cacheId = chronological order
+```
+
+**Use cases**:
+
+- ✅ LRU cache eviction (sort by ID)
+- ✅ Stale operation detection (`isOlderThan(id, ms)`)
+- ✅ Request timing visibility (extract start time from ID)
+- ✅ Polling deduplication (skip if ID too recent)
+
+**Rule**: Use UUIDv7 when both unique ID and timestamp are needed.
+
+---
+
 ## Quick Reference
 
 **Starting extension**: tsc + strict mode + Positron template
@@ -407,5 +441,5 @@ for (const code of errorCodes) { ... } // Generic codes
 
 ---
 
-**Document Version**: 2.2
+**Document Version**: 2.3
 **Last Updated**: 2025-11-27

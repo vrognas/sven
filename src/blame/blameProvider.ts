@@ -28,6 +28,15 @@ import {
   CompiledTemplateFn
 } from "./templateCompiler";
 import { logError } from "../util/errorLogger";
+import { generateId, compareIds, isOlderThan } from "../util/uuidv7";
+
+// Slow fetch warning threshold (ms)
+const SLOW_FETCH_THRESHOLD_MS = 5000;
+
+/**
+ * In-flight fetch tracking with UUIDv7 for timing visibility
+ */
+type InFlightFetch = { id: string; promise: Promise<void> };
 
 /**
  * BlameProvider manages gutter decorations for SVN blame
@@ -42,13 +51,13 @@ export class BlameProvider implements Disposable {
   private iconTypes = new Map<string, TextEditorDecorationType>(); // color → decoration type
   private blameCache = new Map<
     string,
-    { data: ISvnBlameLine[]; version: number }
-  >();
+    { data: ISvnBlameLine[]; cacheId: string }
+  >(); // cacheId is UUIDv7 (embeds creation timestamp)
   private revisionColors = new Map<string, string>(); // revision → gradient color
   private svgCache = new Map<string, Uri>(); // color → SVG data URI
   private messageCache = new Map<string, string>(); // revision → commit message
-  private inFlightMessageFetches = new Map<string, Promise<void>>(); // uri → fetch promise
-  private cacheAccessOrder = new Map<string, number>(); // uri → timestamp for LRU
+  private inFlightMessageFetches = new Map<string, InFlightFetch>(); // uri → fetch with timing
+  private cacheAccessOrder = new Map<string, string>(); // uri → UUIDv7 for LRU (sort by ID = chronological)
   private currentLineNumber?: number; // Track cursor position for current-line-only mode
   private disposables: Disposable[] = [];
   private isActivated = false;
@@ -314,6 +323,7 @@ export class BlameProvider implements Disposable {
 
   /**
    * Evict oldest blame cache entry (LRU policy)
+   * Uses UUIDv7 lexicographic comparison (oldest ID = oldest access)
    * Prevents unbounded memory growth during long editing sessions
    */
   private evictOldestCache(): void {
@@ -321,13 +331,14 @@ export class BlameProvider implements Disposable {
       return; // Within limit, no eviction needed
     }
 
-    // Find least recently used entry (oldest timestamp)
+    // Find least recently used entry via UUIDv7 comparison
+    // UUIDv7 IDs are time-ordered: lexicographic sort = chronological
     let oldestKey: string | undefined;
-    let oldestTime = Infinity;
+    let oldestId: string | undefined;
 
-    for (const [key, timestamp] of this.cacheAccessOrder) {
-      if (timestamp < oldestTime) {
-        oldestTime = timestamp;
+    for (const [key, accessId] of this.cacheAccessOrder) {
+      if (!oldestId || compareIds(accessId, oldestId) < 0) {
+        oldestId = accessId;
         oldestKey = key;
       }
     }
@@ -361,6 +372,7 @@ export class BlameProvider implements Disposable {
   /**
    * Prefetch commit messages progressively (non-blocking)
    * Fetches messages in background and updates inline decorations when done
+   * Uses UUIDv7 for fetch timing visibility (slow fetch detection)
    *
    * OPTIMIZED: Can accept pre-computed uniqueRevisions to avoid re-iteration
    */
@@ -375,7 +387,7 @@ export class BlameProvider implements Disposable {
     // Check if already fetching messages for this file
     const existingFetch = this.inFlightMessageFetches.get(uriKey);
     if (existingFetch) {
-      return existingFetch; // Reuse existing fetch
+      return existingFetch.promise; // Reuse existing fetch
     }
 
     // Use pre-computed unique revisions or extract them
@@ -389,11 +401,21 @@ export class BlameProvider implements Disposable {
       return; // Skip if no revisions or too many
     }
 
+    // Generate fetch ID for timing (UUIDv7 embeds start time)
+    const fetchId = generateId();
+
     // Create fetch promise
     const fetchPromise = (async () => {
       try {
         // Fetch all messages
         await this.prefetchMessages(uniqueRevisions);
+
+        // Warn if fetch was slow (>5s)
+        if (isOlderThan(fetchId, SLOW_FETCH_THRESHOLD_MS)) {
+          console.warn(
+            `[BlameProvider] Slow message fetch for ${uriKey} (>${SLOW_FETCH_THRESHOLD_MS}ms)`
+          );
+        }
 
         // Check if blame still enabled and editor still active
         if (!blameStateManager.isBlameEnabled(uri)) {
@@ -416,8 +438,11 @@ export class BlameProvider implements Disposable {
       }
     })();
 
-    // Track this fetch
-    this.inFlightMessageFetches.set(uriKey, fetchPromise);
+    // Track this fetch with ID for timing visibility
+    this.inFlightMessageFetches.set(uriKey, {
+      id: fetchId,
+      promise: fetchPromise
+    });
 
     return fetchPromise;
   }
@@ -718,6 +743,7 @@ export class BlameProvider implements Disposable {
 
   /**
    * Get blame data for URI (with caching)
+   * Uses UUIDv7 for cache versioning and LRU access tracking
    */
   private async getBlameData(uri: Uri): Promise<ISvnBlameLine[] | undefined> {
     const key = uri.toString();
@@ -725,8 +751,8 @@ export class BlameProvider implements Disposable {
     // Check cache
     const cached = this.blameCache.get(key);
     if (cached) {
-      // Update access time for LRU
-      this.cacheAccessOrder.set(key, Date.now());
+      // Update access ID for LRU (new UUIDv7 = newer access time)
+      this.cacheAccessOrder.set(key, generateId());
       return cached.data;
     }
 
@@ -734,11 +760,12 @@ export class BlameProvider implements Disposable {
     try {
       const data = await this.repository.blame(uri.fsPath);
 
-      // Cache with document version
-      this.blameCache.set(key, { data, version: 0 });
+      // Cache with UUIDv7 ID (embeds creation timestamp)
+      const cacheId = generateId();
+      this.blameCache.set(key, { data, cacheId });
 
-      // Track access time for LRU
-      this.cacheAccessOrder.set(key, Date.now());
+      // Track access ID for LRU
+      this.cacheAccessOrder.set(key, cacheId);
 
       // Evict oldest entry if cache exceeds limit
       this.evictOldestCache();

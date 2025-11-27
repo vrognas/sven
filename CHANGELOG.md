@@ -1,3 +1,24 @@
+## [2.17.244] (2025-11-27)
+
+### PERF: UUIDv7-Based Performance Optimizations
+
+- **LRU Cache**: Blame cache now uses UUIDv7 for access tracking
+  - Lexicographic comparison for O(n) LRU eviction (no numeric timestamp comparison)
+  - Single ID serves as both key identifier and access timestamp
+- **Operation Tracking**: `globalSequentialize` now detects stale operations (>30s)
+  - UUIDv7 IDs embed start time, enabling timing visibility
+  - Warns on stale operations to help debug hanging SVN commands
+- **In-Flight Request Tracking**: Message fetches now track timing via UUIDv7
+  - Warns on slow fetches (>5s) for performance visibility
+  - Prevents duplicate concurrent fetches per file
+- **Cache Versioning**: Blame cache entries now use UUIDv7 cacheId
+  - Creation timestamp embedded in ID (replaces numeric version field)
+  - Enables stale cache detection without extra timestamp storage
+- **Polling Deduplication**: Remote change polling skips overlapping polls
+  - Prevents rapid-fire polling via UUIDv7 timestamp comparison
+- **Dependencies**: Added `uuidv7` package (2KB, zero deps, RFC 9562)
+- **Tests**: Added 10 UUIDv7 integration tests
+
 ## [2.17.241] (2025-11-27)
 
 ### FIX: Blame Errors on Newly Added Files

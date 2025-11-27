@@ -6,6 +6,10 @@
 "use strict";
 
 import { done } from "./util";
+import { generateId, isOlderThan } from "./util/uuidv7";
+
+// Stale operation warning threshold (ms)
+const STALE_OPERATION_THRESHOLD_MS = 30000;
 
 // Type definitions for method signatures
 // These types require 'any' for TypeScript decorator type inference to work correctly
@@ -156,10 +160,16 @@ export function debounce(
   });
 }
 
-const _seqList: Record<string, Promise<unknown>> = {};
+/**
+ * Tracked operation with UUIDv7 for timing visibility
+ */
+type TrackedOperation = { id: string; promise: Promise<unknown> };
+
+const _seqList: Record<string, TrackedOperation> = {};
 
 /**
  * Global sequentialize decorator - serializes async operations across instances
+ * Uses UUIDv7 for operation tracking (stale detection, timing visibility)
  * Constrains to async methods, uses per-repo keys to prevent race conditions
  * @param name Unique key for the operation queue
  */
@@ -171,11 +181,24 @@ export function globalSequentialize(
       // Phase 20.B fix: Use per-repo keys to prevent multi-repo race conditions
       // Append repo root if available, ensuring each repo has independent queue
       const repoKey = this.root ? `${name}:${this.root}` : name;
-      const currentPromise =
-        (_seqList[repoKey] as Promise<any>) || Promise.resolve(null);
+
+      // Check if previous operation is stale (>30s)
+      const existing = _seqList[repoKey];
+      if (existing && isOlderThan(existing.id, STALE_OPERATION_THRESHOLD_MS)) {
+        console.warn(
+          `[globalSequentialize] Stale operation detected: ${repoKey} (>${STALE_OPERATION_THRESHOLD_MS}ms)`
+        );
+      }
+
+      const currentPromise = existing?.promise || Promise.resolve(null);
+
+      // Generate new operation ID (UUIDv7 embeds start time)
+      const opId = generateId();
       const run = async () => fn.apply(this, args);
-      _seqList[repoKey] = currentPromise.then(run, run);
-      return _seqList[repoKey];
+      const newPromise = currentPromise.then(run, run);
+
+      _seqList[repoKey] = { id: opId, promise: newPromise };
+      return newPromise;
     } as any;
   });
 }
