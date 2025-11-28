@@ -1,4 +1,4 @@
-name: build
+name: CI
 
 on:
   push:
@@ -87,18 +87,6 @@ jobs:
           CODE_VERSION: stable
           VSCODE_TEST_VERSION: stable
           NODE_OPTIONS: --max-old-space-size=6144
-
-      # Release only on master + ubuntu
-      - name: Release
-        if: matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/master' && github.repository == 'vrognas/positron-svn'
-        run: |
-          npm run organize
-          npm run semantic-release
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Artifact job - only on master or tags
   artifact:
