@@ -828,18 +828,29 @@ export class Repository implements IRemoteRepository {
     return new PathNormalizer(this.repository.info);
   }
 
+  /**
+   * Get credential storage key based on server (not repo path).
+   * This allows multiple repos on same server to share credentials.
+   * e.g., https://svn.example.com/repoA and /repoB both use
+   * key "vscode.positron-svn:https://svn.example.com"
+   */
   protected getCredentialServiceName() {
-    let key = "vscode.positron-svn";
-
     const info = this.repository.info;
+    const repoUrl = info.repository?.root || info.url;
 
-    if (info.repository?.root) {
-      key += ":" + info.repository.root;
-    } else if (info.url) {
-      key += ":" + info.url;
+    if (repoUrl) {
+      try {
+        const url = new URL(repoUrl);
+        // Use scheme + host + port (if non-default)
+        const server = `${url.protocol}//${url.host}`;
+        return `vscode.positron-svn:${server}`;
+      } catch {
+        // Invalid URL, fall back to full URL
+        return `vscode.positron-svn:${repoUrl}`;
+      }
     }
 
-    return key;
+    return "vscode.positron-svn";
   }
 
   public async loadStoredAuths(): Promise<Array<IStoredAuth>> {

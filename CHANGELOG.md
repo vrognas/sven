@@ -1,3 +1,13 @@
+## [2.18.7] (2025-11-28)
+
+### FIX: Multi-Repo Same-Server Credential Sharing
+
+- **Fix**: Repos on same server now share credentials
+  - Previously: Each repo had separate credential storage
+  - Now: Credentials keyed by server (scheme://host:port), not repo path
+  - `https://svn.example.com/repoA` and `/repoB` share same credentials
+  - Eliminates duplicate prompts for same-server repos
+
 ## [2.18.6] (2025-11-28)
 
 ### FIX: Race Conditions in Auth Flow
