@@ -1,3 +1,15 @@
+## [2.22.0] (2025-11-28)
+
+### SECURITY: Password Hidden from Process List (SVN 1.10+)
+
+- **New**: Uses `--password-from-stdin` on SVN 1.10+ to hide password from `ps aux`
+  - Previously: `svn --password "secret"` visible to all users on system
+  - Now: Password piped via stdin, not visible in process list
+  - Falls back to `--password` on SVN < 1.10
+- **Log indicator**: Shows `[auth: extension-only (stdin)]` or `(--password)`
+
+**Security improvement**: On multi-user systems (especially remote SSH servers), other users could previously see your SVN password by running `ps aux`. This fix prevents that exposure on SVN 1.10+.
+
 ## [2.21.0] (2025-11-28)
 
 ### IMPROVED: Clear Saved Credentials Command
