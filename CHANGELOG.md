@@ -1,3 +1,13 @@
+## [2.18.2] (2025-11-28)
+
+### FIX: Native Store Mode Now Passes User-Provided Credentials
+
+- **Fix**: Password prompt no longer cycles when using native store mode
+  - Previously: Extension didn't pass password to SVN in native store mode
+  - Now: Passes user-provided password while keeping native stores enabled
+  - SVN can authenticate AND cache credentials in gpg-agent/keyring
+- **Improved**: Auth logging shows `[auth: native store + password (will cache)]`
+
 ## [2.18.1] (2025-11-28)
 
 ### FEAT: Auth Failure Notification for GPG-Agent

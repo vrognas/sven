@@ -162,8 +162,12 @@ export class Svn {
       }
 
       if (useNativeStore) {
-        // Native store mode: Let SVN handle credentials via gpg-agent, etc.
-        // Don't pass --password or disable stores - SVN will use cached credentials
+        // Native store mode: Pass user-provided password but keep native stores enabled
+        // This allows SVN to authenticate AND cache credentials in gpg-agent/keyring
+        if (options.password && !credentialCacheFile) {
+          args.push("--password", options.password);
+        }
+        // Don't disable stores - let SVN cache credentials for future use
       } else {
         // Extension-managed mode: Use credential cache file or --password
         if (options.password && !credentialCacheFile) {
@@ -190,7 +194,9 @@ export class Svn {
       const configuredTimeoutMs = timeoutSeconds * 1000;
 
       // Debug authentication indicators (never expose password values)
-      if (useNativeStore && options.log !== false) {
+      if (useNativeStore && options.password && options.log !== false) {
+        this.logOutput(`[auth: native store + password (will cache)]\n`);
+      } else if (useNativeStore && options.log !== false) {
         this.logOutput(`[auth: native store (gpg-agent/keyring)]\n`);
       } else if (credentialCacheFile && options.log !== false) {
         this.logOutput(`[auth: credential cache]\n`);
@@ -442,8 +448,12 @@ export class Svn {
       }
 
       if (useNativeStore) {
-        // Native store mode: Let SVN handle credentials via gpg-agent, etc.
-        // Don't pass --password or disable stores - SVN will use cached credentials
+        // Native store mode: Pass user-provided password but keep native stores enabled
+        // This allows SVN to authenticate AND cache credentials in gpg-agent/keyring
+        if (options.password && !credentialCacheFile) {
+          args.push("--password", options.password);
+        }
+        // Don't disable stores - let SVN cache credentials for future use
       } else {
         // Extension-managed mode: Use credential cache file or --password
         if (options.password && !credentialCacheFile) {
@@ -470,7 +480,9 @@ export class Svn {
       const configuredTimeoutMs = timeoutSeconds * 1000;
 
       // Debug authentication indicators (never expose password values)
-      if (useNativeStore && options.log !== false) {
+      if (useNativeStore && options.password && options.log !== false) {
+        this.logOutput(`[auth: native store + password (will cache)]\n`);
+      } else if (useNativeStore && options.log !== false) {
         this.logOutput(`[auth: native store (gpg-agent/keyring)]\n`);
       } else if (credentialCacheFile && options.log !== false) {
         this.logOutput(`[auth: credential cache]\n`);
