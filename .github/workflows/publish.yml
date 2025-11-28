@@ -79,6 +79,9 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
+      - name: Compile tools
+        run: npm run build:ts
+
       - name: Package extension
         run: npm run organize && npx @vscode/vsce package -o positron-svn.vsix
 
