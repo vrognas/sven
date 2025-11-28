@@ -834,7 +834,7 @@ export class Repository implements IRemoteRepository {
    * e.g., https://svn.example.com/repoA and /repoB both use
    * key "vscode.positron-svn:https://svn.example.com"
    */
-  protected getCredentialServiceName() {
+  public getCredentialServiceName() {
     const info = this.repository.info;
     const repoUrl = info.repository?.root || info.url;
 

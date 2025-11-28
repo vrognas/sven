@@ -1,3 +1,13 @@
+## [2.21.0] (2025-11-28)
+
+### IMPROVED: Clear Saved Credentials Command
+
+- **Enhanced**: `SVN: Clear Saved Credentials` now in Command Palette
+  - Previously only in SCM menu
+  - Now accessible via Ctrl/Cmd+Shift+P
+  - Clears credentials for all open repositories (deduped by server)
+  - Shows confirmation with server count
+
 ## [2.20.0] (2025-11-28)
 
 ### FEATURE: Separate Credential Storage Controls
