@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.18.2",
+  "version": "2.18.3",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.74.0",
@@ -394,6 +394,12 @@
         "title": "Refresh",
         "category": "SVN",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "svn.clearCredentials",
+        "title": "Clear Saved Credentials",
+        "category": "SVN",
+        "icon": "$(key)"
       },
       {
         "command": "svn.refreshRemoteChanges",

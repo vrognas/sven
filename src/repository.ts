@@ -891,6 +891,20 @@ export class Repository implements IRemoteRepository {
     }
   }
 
+  /**
+   * Clear all saved credentials for this repository
+   * Removes from SecretStorage and clears runtime credentials
+   */
+  public async clearCredentials(): Promise<void> {
+    // Clear SecretStorage
+    await this.secrets.delete(this.getCredentialServiceName());
+
+    // Clear runtime credentials
+    this.username = undefined;
+    this.password = undefined;
+    this.canSaveAuth = false;
+  }
+
   public async promptAuth(): Promise<IAuth | undefined> {
     // Prevent multiple prompts for auth
     if (this.lastPromptAuth) {

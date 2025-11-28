@@ -1,3 +1,13 @@
+## [2.18.3] (2025-11-28)
+
+### FEAT: Clear Saved Credentials Command
+
+- **New Command**: `SVN: Clear Saved Credentials`
+  - Clears all stored credentials for the current repository
+  - Removes from SecretStorage and clears runtime credentials
+  - Next SVN operation will prompt for credentials again
+  - Useful for testing auth flow or switching accounts
+
 ## [2.18.2] (2025-11-28)
 
 ### FIX: Native Store Mode Now Passes User-Provided Credentials
