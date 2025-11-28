@@ -116,8 +116,6 @@ export class Svn {
     args: any[],
     options: ICpOptions = {}
   ): Promise<IExecutionResult> {
-    let credentialCacheFile: string | undefined;
-
     try {
       if (cwd) {
         this.lastCwd = cwd;
@@ -137,25 +135,8 @@ export class Svn {
         true
       );
 
-      // Handle credential cache for secure password passing (only when not using native store)
-      if (
-        !useNativeStore &&
-        options.password &&
-        options.realmUrl &&
-        options.username
-      ) {
-        try {
-          credentialCacheFile = await this.authCache.writeCredential(
-            options.username,
-            options.password,
-            options.realmUrl
-          );
-        } catch (err) {
-          console.warn(
-            `[SVN] Failed to write credential cache: ${(err as Error).message}, falling back to --password`
-          );
-        }
-      }
+      // Note: Credential cache file approach removed - realm string varies per server
+      // and we cannot compute the correct hash without server cooperation.
 
       if (options.username) {
         args.push("--username", options.username);
@@ -164,20 +145,20 @@ export class Svn {
       if (useNativeStore) {
         // Native store mode: Pass user-provided password but keep native stores enabled
         // This allows SVN to authenticate AND cache credentials in gpg-agent/keyring
-        if (options.password && !credentialCacheFile) {
+        if (options.password) {
           args.push("--password", options.password);
         }
         // Don't disable stores - let SVN cache credentials for future use
       } else {
-        // Extension-managed mode: Use credential cache file or --password
-        if (options.password && !credentialCacheFile) {
-          // Only use insecure --password if cache write failed or no realmUrl provided
+        // Extension-managed mode: Always use --password and disable native stores
+        // Each SVN operation will require fresh credentials (no caching)
+        if (options.password) {
           args.push("--password", options.password);
         }
 
-        if ((options.username || options.password) && !credentialCacheFile) {
+        if (options.username || options.password) {
           // Configuration format: FILE:SECTION:OPTION=[VALUE]
-          // Only disable password stores if not using credential cache
+          // Disable all password stores to prevent credential confusion
           args.push("--config-option", "config:auth:password-stores=");
           args.push("--config-option", "servers:global:store-auth-creds=no");
         }
@@ -198,14 +179,8 @@ export class Svn {
         this.logOutput(`[auth: native store + password (will cache)]\n`);
       } else if (useNativeStore && options.log !== false) {
         this.logOutput(`[auth: native store (gpg-agent/keyring)]\n`);
-      } else if (credentialCacheFile && options.log !== false) {
-        this.logOutput(`[auth: credential cache]\n`);
-      } else if (
-        options.password &&
-        !options.realmUrl &&
-        options.log !== false
-      ) {
-        this.logOutput(`[auth: password (insecure - no realmUrl)]\n`);
+      } else if (!useNativeStore && options.password && options.log !== false) {
+        this.logOutput(`[auth: extension-managed (--password)]\n`);
       } else if (
         options.username &&
         !options.password &&
@@ -383,17 +358,8 @@ export class Svn {
       }
 
       return { exitCode, stdout: decodedStdout, stderr };
-    } finally {
-      // RAII pattern: Always cleanup credential file even if command fails
-      if (credentialCacheFile && options.realmUrl) {
-        try {
-          await this.authCache.deleteCredential(options.realmUrl);
-        } catch (err) {
-          console.error(
-            `[SVN] Failed to cleanup credential cache: ${(err as Error).message}`
-          );
-        }
-      }
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -402,8 +368,6 @@ export class Svn {
     args: any[],
     options: ICpOptions = {}
   ): Promise<BufferResult> {
-    let credentialCacheFile: string | undefined;
-
     try {
       if (cwd) {
         this.lastCwd = cwd;
@@ -423,25 +387,8 @@ export class Svn {
         true
       );
 
-      // Handle credential cache for secure password passing (only when not using native store)
-      if (
-        !useNativeStore &&
-        options.password &&
-        options.realmUrl &&
-        options.username
-      ) {
-        try {
-          credentialCacheFile = await this.authCache.writeCredential(
-            options.username,
-            options.password,
-            options.realmUrl
-          );
-        } catch (err) {
-          console.warn(
-            `[SVN] Failed to write credential cache: ${(err as Error).message}, falling back to --password`
-          );
-        }
-      }
+      // Note: Credential cache file approach removed - realm string varies per server
+      // and we cannot compute the correct hash without server cooperation.
 
       if (options.username) {
         args.push("--username", options.username);
@@ -450,20 +397,20 @@ export class Svn {
       if (useNativeStore) {
         // Native store mode: Pass user-provided password but keep native stores enabled
         // This allows SVN to authenticate AND cache credentials in gpg-agent/keyring
-        if (options.password && !credentialCacheFile) {
+        if (options.password) {
           args.push("--password", options.password);
         }
         // Don't disable stores - let SVN cache credentials for future use
       } else {
-        // Extension-managed mode: Use credential cache file or --password
-        if (options.password && !credentialCacheFile) {
-          // Only use insecure --password if cache write failed or no realmUrl provided
+        // Extension-managed mode: Always use --password and disable native stores
+        // Each SVN operation will require fresh credentials (no caching)
+        if (options.password) {
           args.push("--password", options.password);
         }
 
-        if ((options.username || options.password) && !credentialCacheFile) {
+        if (options.username || options.password) {
           // Configuration format: FILE:SECTION:OPTION=[VALUE]
-          // Only disable password stores if not using credential cache
+          // Disable all password stores to prevent credential confusion
           args.push("--config-option", "config:auth:password-stores=");
           args.push("--config-option", "servers:global:store-auth-creds=no");
         }
@@ -484,14 +431,8 @@ export class Svn {
         this.logOutput(`[auth: native store + password (will cache)]\n`);
       } else if (useNativeStore && options.log !== false) {
         this.logOutput(`[auth: native store (gpg-agent/keyring)]\n`);
-      } else if (credentialCacheFile && options.log !== false) {
-        this.logOutput(`[auth: credential cache]\n`);
-      } else if (
-        options.password &&
-        !options.realmUrl &&
-        options.log !== false
-      ) {
-        this.logOutput(`[auth: password (insecure - no realmUrl)]\n`);
+      } else if (!useNativeStore && options.password && options.log !== false) {
+        this.logOutput(`[auth: extension-managed (--password)]\n`);
       } else if (
         options.username &&
         !options.password &&
@@ -599,17 +540,8 @@ export class Svn {
       }
 
       return { exitCode, stdout, stderr };
-    } finally {
-      // RAII pattern: Always cleanup credential file even if command fails
-      if (credentialCacheFile && options.realmUrl) {
-        try {
-          await this.authCache.deleteCredential(options.realmUrl);
-        } catch (err) {
-          console.error(
-            `[SVN] Failed to cleanup credential cache: ${(err as Error).message}`
-          );
-        }
-      }
+    } catch (err) {
+      throw err;
     }
   }
 

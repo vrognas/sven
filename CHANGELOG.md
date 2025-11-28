@@ -1,3 +1,17 @@
+## [2.18.4] (2025-11-28)
+
+### FIX: Extension-Managed Mode Auth Cycling
+
+- **Fix**: Credentials no longer cycle when `useNativeStore: false`
+  - Root cause: Credential cache realm hash didn't match server's actual realm
+  - Server uses realm like `<https://host:443> Login Account`
+  - We computed `<https://host:443> Authentication Realm` (wrong hash)
+  - SVN couldn't find our cached credentials → auth failed → retry loop
+- **Solution**: Removed credential cache file approach for extension-managed mode
+  - Now uses `--password` flag directly (works reliably)
+  - Credentials still stored in SecretStorage and reused across operations
+- **Log**: Shows `[auth: extension-managed (--password)]` in output
+
 ## [2.18.3] (2025-11-28)
 
 ### FEAT: Clear Saved Credentials Command
