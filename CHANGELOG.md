@@ -1,3 +1,13 @@
+## [2.17.244] (2025-11-28)
+
+### FIX: Marketplace Auto-Publish
+
+- **Fix**: Switch from semantic-release to HaaLeo/publish-vscode-extension
+  - More reliable publishing to VS Code Marketplace and Open VSX
+  - Tag-triggered releases (push `v*` tag to publish)
+  - Manual workflow dispatch also supported
+- **Removed**: semantic-release config (`.releaserc.json`)
+
 ## [2.17.241] (2025-11-27)
 
 ### FIX: Blame Errors on Newly Added Files
