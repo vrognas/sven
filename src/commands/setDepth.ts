@@ -96,6 +96,10 @@ export class SetDepth extends Command {
         window.showInformationMessage(
           `Folder depth set to "${selected.depth}"`
         );
+      } else {
+        window.showErrorMessage(
+          `Failed to set depth: ${result.stderr || "Unknown error"}`
+        );
       }
     } catch (error) {
       window.showErrorMessage(`Failed to set depth: ${error}`);

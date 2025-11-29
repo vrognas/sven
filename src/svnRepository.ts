@@ -47,7 +47,9 @@ import { parseDiffXml } from "./parser/diffParser";
 import {
   validateChangelist,
   validateAcceptAction,
-  validateSearchPattern
+  validateSearchPattern,
+  validateFilePath,
+  validateLockComment
 } from "./validation";
 
 export class Repository {
@@ -1338,6 +1340,18 @@ export class Repository {
   ): Promise<IExecutionResult> {
     files = files.map(file => this.removeAbsolutePath(file));
 
+    // Validate paths to prevent path traversal
+    for (const file of files) {
+      if (!validateFilePath(file)) {
+        throw new Error(`Invalid file path: ${file}`);
+      }
+    }
+
+    // Validate comment to prevent command injection
+    if (options.comment && !validateLockComment(options.comment)) {
+      throw new Error("Invalid characters in lock comment");
+    }
+
     const args = ["lock"];
 
     if (options.comment) {
@@ -1366,6 +1380,13 @@ export class Repository {
     options: IUnlockOptions = {}
   ): Promise<IExecutionResult> {
     files = files.map(file => this.removeAbsolutePath(file));
+
+    // Validate paths to prevent path traversal
+    for (const file of files) {
+      if (!validateFilePath(file)) {
+        throw new Error(`Invalid file path: ${file}`);
+      }
+    }
 
     const args = ["unlock"];
 
@@ -1413,7 +1434,18 @@ export class Repository {
     folderPath: string,
     depth: keyof typeof SvnDepth
   ): Promise<IExecutionResult> {
+    // Validate depth is a valid SvnDepth key
+    const validDepths = Object.keys(SvnDepth);
+    if (!validDepths.includes(depth)) {
+      throw new Error(`Invalid depth: ${depth}`);
+    }
+
     folderPath = this.removeAbsolutePath(folderPath);
+
+    // Validate path to prevent path traversal
+    if (!validateFilePath(folderPath)) {
+      throw new Error(`Invalid folder path: ${folderPath}`);
+    }
 
     const args = ["update", "--set-depth", depth, folderPath];
 

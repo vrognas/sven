@@ -30,6 +30,10 @@ export class Lock extends Command {
         const result = await repository.lock(paths, comment ? { comment } : {});
         if (result.exitCode === 0) {
           window.showInformationMessage(`Locked ${paths.length} file(s)`);
+        } else {
+          window.showErrorMessage(
+            `Lock failed: ${result.stderr || "Unknown error"}`
+          );
         }
       },
       "Unable to lock files"

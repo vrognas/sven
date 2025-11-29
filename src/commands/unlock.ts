@@ -19,6 +19,10 @@ export class Unlock extends Command {
         const result = await repository.unlock(paths);
         if (result.exitCode === 0) {
           window.showInformationMessage(`Unlocked ${paths.length} file(s)`);
+        } else {
+          window.showErrorMessage(
+            `Unlock failed: ${result.stderr || "Unknown error"}`
+          );
         }
       },
       "Unable to unlock files"
@@ -54,6 +58,10 @@ export class BreakLock extends Command {
         if (result.exitCode === 0) {
           window.showInformationMessage(
             `Broke lock on ${paths.length} file(s)`
+          );
+        } else {
+          window.showErrorMessage(
+            `Break lock failed: ${result.stderr || "Unknown error"}`
           );
         }
       },
