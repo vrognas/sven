@@ -5,6 +5,7 @@
 - **Fix**: "Open Diff" now works for files renamed, moved, or deleted after the viewed revision
   - Uses SVN peg revision (`path@revision`) to find path as it existed at that point
   - Previously failed with "Failed to execute svn" error (E160013: path not found)
+  - Fixed in both `svn log` queries and `svn cat` (file content) commands
 - **Fix**: Added files (action=A) now show diff against empty file
   - Title shows "(added in rXXX)" instead of revision range
   - Previously failed trying to find non-existent previous version

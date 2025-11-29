@@ -591,6 +591,17 @@ export class Repository {
       }
     }
 
+    // Add peg revision for non-working-copy revisions to handle renamed/moved/deleted files
+    // SVN syntax: path@revision tells SVN to look at path as it existed at that revision
+    if (
+      revision &&
+      !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
+    ) {
+      target = fixPegRevision(target) + "@" + revision;
+    } else {
+      target = fixPegRevision(target);
+    }
+
     args.push(target);
 
     return { args, uri, filePath };
