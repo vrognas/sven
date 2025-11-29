@@ -261,5 +261,32 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.19
-**Updated**: 2025-11-19 (v2.17.215)
+### File Locking System (v2.24.0)
+
+- **Commands**: `svn.lock`, `svn.unlock`, `svn.breakLock`
+- **Parser**: `lockParser.ts` extracts lock info from `svn info --xml`
+- **Types**: `ISvnLockInfo`, `ILockOptions`, `IUnlockOptions`
+- **API Layer**: `Repository.lock()`, `Repository.unlock()`, `Repository.getLockInfo()`
+- **UI**: Lock status in tooltips (🔒), Explorer context menu integration
+- **Directory Support**: Locks can be applied to both files and directories
+
+---
+
+### Sparse Checkout Manager (v2.25.0)
+
+- **Tree View**: `sparseCheckout` in SCM sidebar
+- **Provider**: `sparseCheckoutProvider.ts` (~310 lines)
+- **Node**: `sparseItemNode.ts` for tree items
+- **Types**: `ISparseItem`, `SparseDepthKey`
+- **Features**:
+  - Shows local items with depth labels (Full, Shallow, Files Only, Empty)
+  - Shows ghost items (not checked out) with cloud icon
+  - Lazy-loads children on expand via `svn list`
+  - Checkout command for ghost items (pick depth)
+  - Exclude command for local items
+- **Commands**: `svn.sparse.refresh`, `svn.sparse.checkout`, `svn.sparse.exclude`
+
+---
+
+**Version**: 3.21
+**Updated**: 2025-11-29 (v2.25.0)

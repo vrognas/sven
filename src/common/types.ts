@@ -43,6 +43,7 @@ export interface ISvnInfo {
   wcInfo?: {
     wcrootAbspath?: string;
     uuid: string;
+    depth?: string;
   };
   commit: {
     revision: string;
@@ -115,6 +116,7 @@ export enum Operation {
   CurrentBranch = "CurrentBranch",
   Info = "Info",
   Ignore = "Ignore",
+  Lock = "Lock",
   Log = "Log",
   Merge = "Merge",
   NewBranch = "NewBranch",
@@ -129,6 +131,7 @@ export enum Operation {
   Status = "Status",
   StatusRemote = "StatusRemote",
   SwitchBranch = "SwitchBranch",
+  Unlock = "Unlock",
   Update = "Update",
   List = "List"
 }
@@ -141,6 +144,28 @@ export interface ISvnResourceGroup extends SourceControlResourceGroup {
 export interface IWcStatus {
   locked: boolean;
   switched: boolean;
+  /** Lock owner username (from repos-status) */
+  lockOwner?: string;
+  /** True if we hold the lock token locally (K), false if locked by others (O) */
+  hasLockToken?: boolean;
+  /** True if server was checked for lock status (via svn status -u) */
+  serverChecked?: boolean;
+  /** Lock status badge: K=mine, O=other, B=broken, T=stolen */
+  lockStatus?: LockStatus;
+}
+
+/**
+ * SVN lock status indicators per svn status --show-updates
+ * K = Locked by this working copy
+ * O = Locked by another working copy
+ * B = Lock broken (our token is stale, server has no lock)
+ * T = Lock stolen (our token is stale, someone else has lock)
+ */
+export enum LockStatus {
+  K = "K", // Locked by us
+  O = "O", // Locked by other
+  B = "B", // Broken - our lock was broken
+  T = "T" // Stolen - our lock was stolen
 }
 
 export interface IFileStatus {
@@ -332,10 +357,21 @@ export interface ISvnLogEntry {
 }
 
 export enum SvnDepth {
+  exclude = "exclude from working copy",
   empty = "only the target itself",
   files = "the target and any immediate file children thereof",
   immediates = "the target and any immediate children thereof",
   infinity = "the target and all of its descendants—full recursion"
+}
+
+export type SparseDepthKey = keyof typeof SvnDepth;
+
+export interface ISparseItem {
+  name: string;
+  path: string;
+  kind: "file" | "dir";
+  depth?: SparseDepthKey;
+  isGhost: boolean;
 }
 
 export interface LineChange {
@@ -343,4 +379,30 @@ export interface LineChange {
   readonly originalEndLineNumber: number;
   readonly modifiedStartLineNumber: number;
   readonly modifiedEndLineNumber: number;
+}
+
+/** SVN lock information from svn info --xml or svn status -u --xml */
+export interface ISvnLockInfo {
+  /** Lock owner username */
+  owner: string;
+  /** Opaque lock token (e.g., "opaquelocktoken:12345-67890") */
+  token: string;
+  /** Optional lock comment */
+  comment?: string;
+  /** ISO 8601 creation timestamp */
+  created: string;
+}
+
+/** Options for svn lock command */
+export interface ILockOptions {
+  /** Lock comment (--message) */
+  comment?: string;
+  /** Force steal lock from another user (--force) */
+  force?: boolean;
+}
+
+/** Options for svn unlock command */
+export interface IUnlockOptions {
+  /** Force break lock owned by another user (--force) */
+  force?: boolean;
 }

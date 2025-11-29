@@ -1,3 +1,45 @@
+## [2.25.0] (2025-11-29)
+
+### FEAT: Sparse Checkout Manager Tree View
+
+- **New**: Dedicated tree view in SCM sidebar for managing sparse checkouts
+  - Shows local items with depth labels (Full, Shallow, Files Only, Empty)
+  - Shows ghost items (not checked out) with cloud icon
+  - Lazy-loads children on expand via `svn list`
+- **New**: Commands for sparse checkout management
+  - `svn.sparse.checkout` - Checkout ghost items with depth picker
+  - `svn.sparse.exclude` - Exclude local items from working copy
+  - `svn.sparse.refresh` - Refresh the view
+- **Types**: Added `ISparseItem`, `SparseDepthKey` interfaces
+- **Provider**: `SparseCheckoutProvider` with ghost detection logic
+
+## [2.24.0] (2025-11-29)
+
+### FEAT: SVN File Locking System
+
+- **New**: Lock/Unlock commands for files and directories
+  - `SVN: Lock File` - Lock with optional comment
+  - `SVN: Unlock File` - Unlock your own locks
+  - `SVN: Break Lock (Force)` - Break locks owned by others
+- **New**: Lock status display
+  - 🔒 Lock indicator in SCM view tooltips
+  - Lock owner shown in file decorations
+  - Explorer context menu integration
+- **New**: Lock parser (`parseLockInfo`) extracts lock details from `svn info --xml`
+- **Types**: Added `ISvnLockInfo`, `ILockOptions`, `IUnlockOptions` interfaces
+- **API**: Repository methods: `lock()`, `unlock()`, `getLockInfo()`
+
+### FEAT: Sparse Checkout Support
+
+- **New**: `SVN: Set Folder Depth...` command for sparse checkouts
+  - Exclude: Remove folder from working copy entirely
+  - Empty: Keep only folder, remove all contents
+  - Files: Keep folder and immediate files only
+  - Immediates: Keep files and empty subfolders
+  - Infinity: Full recursive checkout (restore)
+- **UI**: Explorer context menu (folders only)
+- **API**: Repository method: `setDepth(path, depth)`
+
 ## [2.23.1] (2025-11-29)
 
 ### CHORE: Fix TypeScript `any` Type Warnings

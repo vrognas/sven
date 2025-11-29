@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.23.1",
+  "version": "2.25.0",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.74.0",
@@ -58,7 +58,7 @@
     "style-check": "prettylint 'src/**/*.ts'",
     "style-fix": "prettier --write \"src/**/*.ts\"",
     "pretest": "npm-run-all --parallel build:ts lint",
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run test:unit && if [ \"$CI\" = \"true\" ]; then npm run test:e2e; fi",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",
@@ -171,6 +171,11 @@
         {
           "id": "branchchanges",
           "name": "Branch Changes",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
+          "id": "sparseCheckout",
+          "name": "Sparse Checkout",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         }
       ]
@@ -417,6 +422,60 @@
         "command": "svn.remove",
         "title": "Remove Selected",
         "category": "SVN"
+      },
+      {
+        "command": "svn.lock",
+        "title": "Lock",
+        "category": "SVN",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "svn.unlock",
+        "title": "Unlock",
+        "category": "SVN",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "svn.breakLock",
+        "title": "Break Lock",
+        "category": "SVN",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "svn.stealLock",
+        "title": "Steal Lock",
+        "category": "SVN",
+        "icon": "$(key)"
+      },
+      {
+        "command": "svn.toggleNeedsLock",
+        "title": "Toggle Needs-Lock Property",
+        "category": "SVN",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "svn.setDepth",
+        "title": "Sparse Checkout...",
+        "category": "SVN",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "svn.sparse.refresh",
+        "title": "Refresh",
+        "category": "SVN",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "svn.sparse.checkout",
+        "title": "Checkout...",
+        "category": "SVN",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "svn.sparse.exclude",
+        "title": "Exclude",
+        "category": "SVN",
+        "icon": "$(eye-closed)"
       },
       {
         "command": "svn.removeUnversioned",
@@ -813,9 +872,29 @@
           "command": "svn.branchchanges.refresh",
           "when": "view == branchchanges",
           "group": "navigation"
+        },
+        {
+          "command": "svn.sparse.refresh",
+          "when": "view == sparseCheckout",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
+        {
+          "command": "svn.sparse.checkout",
+          "when": "viewItem =~ /sparseGhost/",
+          "group": "inline"
+        },
+        {
+          "command": "svn.sparse.exclude",
+          "when": "viewItem =~ /sparseLocal/",
+          "group": "inline"
+        },
+        {
+          "command": "svn.setDepth",
+          "when": "viewItem == sparseLocalDir",
+          "group": "1_sparse"
+        },
         {
           "command": "svn.openHEADFile",
           "when": "viewItem =~ /incomingChange:(added|modified)/"
@@ -1052,6 +1131,26 @@
           "group": "1_modification"
         },
         {
+          "command": "svn.lock",
+          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
+          "group": "1_modification@5"
+        },
+        {
+          "command": "svn.unlock",
+          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
+          "group": "1_modification@6"
+        },
+        {
+          "command": "svn.stealLock",
+          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
+          "group": "1_modification@7"
+        },
+        {
+          "command": "svn.toggleNeedsLock",
+          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
+          "group": "1_modification@8"
+        },
+        {
           "command": "svn.commit",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != conflicts && scmResourceGroup != remotechanges",
           "group": "1_modification"
@@ -1155,6 +1254,26 @@
           "command": "svn.revertExplorer",
           "group": "7_modification",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "svn.lock",
+          "group": "9_svn@2",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "svn.unlock",
+          "group": "9_svn@3",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "svn.toggleNeedsLock",
+          "group": "9_svn@4",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
+        },
+        {
+          "command": "svn.setDepth",
+          "group": "9_svn@5",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && explorerResourceIsFolder"
         }
       ]
     },

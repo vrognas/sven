@@ -10,7 +10,7 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { PropStatus, Status } from "./common/types";
+import { LockStatus, PropStatus, Status } from "./common/types";
 import { memoize } from "./decorators";
 import { configuration } from "./helpers/configuration";
 
@@ -52,7 +52,11 @@ export class Resource implements SourceControlResourceState {
     private _type: string,
     private _renameResourceUri?: Uri,
     private _props?: string,
-    private _remote: boolean = false
+    private _remote: boolean = false,
+    private _locked: boolean = false,
+    private _lockOwner?: string,
+    private _hasLockToken: boolean = false,
+    private _lockStatus?: LockStatus
   ) {}
 
   @memoize
@@ -73,6 +77,24 @@ export class Resource implements SourceControlResourceState {
 
   get remote(): boolean {
     return this._remote;
+  }
+
+  get locked(): boolean {
+    return this._locked;
+  }
+
+  get lockOwner(): string | undefined {
+    return this._lockOwner;
+  }
+
+  /** True if we hold the lock token (K), false if locked by others (O) */
+  get hasLockToken(): boolean {
+    return this._hasLockToken;
+  }
+
+  /** Lock status: K=mine, O=other, B=broken, T=stolen */
+  get lockStatus(): LockStatus | undefined {
+    return this._lockStatus;
   }
 
   get decorations(): SourceControlResourceDecorations {
@@ -138,21 +160,30 @@ export class Resource implements SourceControlResourceState {
   }
 
   private get tooltip(): string {
-    if (this.type === Status.ADDED && this.renameResourceUri) {
-      return "Renamed from " + this.renameResourceUri.fsPath;
-    }
+    let tip = "";
 
-    if (
+    if (this.type === Status.ADDED && this.renameResourceUri) {
+      tip = "Renamed from " + this.renameResourceUri.fsPath;
+    } else if (
       this.type === Status.NORMAL &&
       this.props &&
       this.props !== PropStatus.NONE
     ) {
-      return (
-        "Property " + this.props.charAt(0).toUpperCase() + this.props.slice(1)
-      );
+      tip =
+        "Property " + this.props.charAt(0).toUpperCase() + this.props.slice(1);
+    } else {
+      tip = this.type.charAt(0).toUpperCase() + this.type.slice(1);
     }
 
-    return this.type.charAt(0).toUpperCase() + this.type.slice(1);
+    // Add lock info to tooltip
+    if (this._locked) {
+      const lockInfo = this._lockOwner
+        ? `🔒 Locked by ${this._lockOwner}`
+        : "🔒 Locked";
+      tip = `${tip} (${lockInfo})`;
+    }
+
+    return tip;
   }
 
   private get strikeThrough(): boolean {

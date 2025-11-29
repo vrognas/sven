@@ -2,7 +2,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from 'path';
+import * as path from "path";
 
 /**
  * Input validation framework to prevent command injection attacks
@@ -13,7 +13,7 @@ import * as path from 'path';
  * Allows only alphanumeric characters, hyphens, and underscores
  */
 export function validateChangelist(name: string): boolean {
-  if (!name || typeof name !== 'string') {
+  if (!name || typeof name !== "string") {
     return false;
   }
   return /^[a-zA-Z0-9_-]+$/.test(name);
@@ -23,15 +23,15 @@ export function validateChangelist(name: string): boolean {
  * Valid accept actions for SVN merge operations
  */
 const VALID_ACCEPT_ACTIONS = [
-  'postpone',
-  'base',
-  'mine-conflict',
-  'theirs-conflict',
-  'mine-full',
-  'theirs-full',
-  'edit',
-  'launch',
-  'working'
+  "postpone",
+  "base",
+  "mine-conflict",
+  "theirs-conflict",
+  "mine-full",
+  "theirs-full",
+  "edit",
+  "launch",
+  "working"
 ] as const;
 
 /**
@@ -39,10 +39,12 @@ const VALID_ACCEPT_ACTIONS = [
  * Uses strict allowlist to prevent command injection
  */
 export function validateAcceptAction(action: string): boolean {
-  if (!action || typeof action !== 'string') {
+  if (!action || typeof action !== "string") {
     return false;
   }
-  return VALID_ACCEPT_ACTIONS.includes(action as typeof VALID_ACCEPT_ACTIONS[number]);
+  return VALID_ACCEPT_ACTIONS.includes(
+    action as (typeof VALID_ACCEPT_ACTIONS)[number]
+  );
 }
 
 /**
@@ -50,7 +52,7 @@ export function validateAcceptAction(action: string): boolean {
  * Rejects shell metacharacters that could be exploited
  */
 export function validateSearchPattern(pattern: string): boolean {
-  if (!pattern || typeof pattern !== 'string') {
+  if (!pattern || typeof pattern !== "string") {
     return false;
   }
   // Reject shell metacharacters: | ; $ ( ) [ ] { } ` \
@@ -60,7 +62,7 @@ export function validateSearchPattern(pattern: string): boolean {
 /**
  * Valid SVN revision keywords
  */
-const VALID_REVISION_KEYWORDS = ['HEAD', 'PREV', 'BASE', 'COMMITTED'] as const;
+const VALID_REVISION_KEYWORDS = ["HEAD", "PREV", "BASE", "COMMITTED"] as const;
 
 /**
  * Maximum allowed SVN revision number (1 billion)
@@ -74,12 +76,16 @@ const MAX_SVN_REVISION = 1000000000;
  * Enforces upper bound to prevent overflow/DoS
  */
 export function validateRevision(revision: string): boolean {
-  if (!revision || typeof revision !== 'string') {
+  if (!revision || typeof revision !== "string") {
     return false;
   }
 
   // Check if it's a valid keyword
-  if (VALID_REVISION_KEYWORDS.includes(revision as typeof VALID_REVISION_KEYWORDS[number])) {
+  if (
+    VALID_REVISION_KEYWORDS.includes(
+      revision as (typeof VALID_REVISION_KEYWORDS)[number]
+    )
+  ) {
     return true;
   }
 
@@ -89,7 +95,7 @@ export function validateRevision(revision: string): boolean {
   }
 
   // Enforce upper bound
-  const num = parseInt(revision.replace(/^\+/, ''), 10);
+  const num = parseInt(revision.replace(/^\+/, ""), 10);
   return num <= MAX_SVN_REVISION;
 }
 
@@ -99,7 +105,7 @@ export function validateRevision(revision: string): boolean {
  * Protects against URL-encoded bypass attempts (e.g., %2e%2e, ..%2f)
  */
 export function validateFilePath(filePath: string): boolean {
-  if (!filePath || typeof filePath !== 'string') {
+  if (!filePath || typeof filePath !== "string") {
     return false;
   }
 
@@ -115,7 +121,7 @@ export function validateFilePath(filePath: string): boolean {
   // Reject paths with parent directory references
   // Split on separators to check for '..' as a discrete segment
   const segments = normalized.split(path.sep);
-  return !segments.includes('..');
+  return !segments.includes("..");
 }
 
 /**
@@ -124,11 +130,11 @@ export function validateFilePath(filePath: string): boolean {
  * Rejects file:// protocol to prevent local file access
  */
 export function validateRepositoryUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') {
+  if (!url || typeof url !== "string") {
     return false;
   }
 
-  const allowedProtocols = ['http:', 'https:', 'svn:', 'svn+ssh:'];
+  const allowedProtocols = ["http:", "https:", "svn:", "svn+ssh:"];
 
   try {
     const parsed = new URL(url);
@@ -139,7 +145,10 @@ export function validateRepositoryUrl(url: string): boolean {
     }
 
     // Reject URLs with shell metacharacters in hostname/path
-    if (/[;&|`$()]/.test(parsed.hostname) || /[;&|`$()]/.test(parsed.pathname)) {
+    if (
+      /[;&|`$()]/.test(parsed.hostname) ||
+      /[;&|`$()]/.test(parsed.pathname)
+    ) {
       return false;
     }
 
@@ -150,11 +159,28 @@ export function validateRepositoryUrl(url: string): boolean {
   }
 }
 
+/**
+ * Validates lock comment to prevent command injection
+ * Rejects shell metacharacters while allowing normal text
+ */
+export function validateLockComment(comment: string): boolean {
+  if (typeof comment !== "string") {
+    return false;
+  }
+  // Empty comment is valid (optional)
+  if (comment === "") {
+    return true;
+  }
+  // Reject shell metacharacters: ; & | $ ( ) ` { } \
+  return !/[;&|$(){}`\\]/.test(comment);
+}
+
 export const validators = {
   changelist: validateChangelist,
   acceptAction: validateAcceptAction,
   searchPattern: validateSearchPattern,
   revision: validateRevision,
   filePath: validateFilePath,
-  repositoryUrl: validateRepositoryUrl
+  repositoryUrl: validateRepositoryUrl,
+  lockComment: validateLockComment
 };

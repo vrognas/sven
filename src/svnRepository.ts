@@ -10,8 +10,11 @@ import {
   ICpOptions,
   IExecutionResult,
   IFileStatus,
+  ILockOptions,
   ISvnInfo,
+  ISvnLockInfo,
   ISvnLogEntry,
+  IUnlockOptions,
   Status,
   SvnDepth,
   ISvnPathChange,
@@ -26,6 +29,7 @@ import { getBranchName } from "./helpers/branch";
 import { configuration } from "./helpers/configuration";
 import { parseInfoXml } from "./parser/infoParser";
 import { parseSvnList } from "./parser/listParser";
+import { parseLockInfo } from "./parser/lockParser";
 import { parseSvnLog } from "./parser/logParser";
 import { parseStatusXml } from "./parser/statusParser";
 import { parseSvnBlame } from "./parser/blameParser";
@@ -43,7 +47,9 @@ import { parseDiffXml } from "./parser/diffParser";
 import {
   validateChangelist,
   validateAcceptAction,
-  validateSearchPattern
+  validateSearchPattern,
+  validateFilePath,
+  validateLockComment
 } from "./validation";
 
 export class Repository {
@@ -1318,6 +1324,178 @@ export class Repository {
     const result = await this.exec(args);
 
     return result.stdout;
+  }
+
+  /**
+   * Lock files or directories to prevent concurrent modifications.
+   * Supports both files and directories.
+   *
+   * @param files Array of file/directory paths to lock
+   * @param options Lock options (comment, force)
+   * @returns SVN lock output
+   */
+  public async lock(
+    files: string[],
+    options: ILockOptions = {}
+  ): Promise<IExecutionResult> {
+    files = files.map(file => this.removeAbsolutePath(file));
+
+    // Validate paths to prevent path traversal
+    for (const file of files) {
+      if (!validateFilePath(file)) {
+        throw new Error(`Invalid file path: ${file}`);
+      }
+    }
+
+    // Validate comment to prevent command injection
+    if (options.comment && !validateLockComment(options.comment)) {
+      throw new Error("Invalid characters in lock comment");
+    }
+
+    const args = ["lock"];
+
+    if (options.comment) {
+      args.push("--message", options.comment);
+    }
+
+    if (options.force) {
+      args.push("--force");
+    }
+
+    args.push(...files);
+
+    return this.exec(args);
+  }
+
+  /**
+   * Unlock files or directories.
+   * Use force option to break locks owned by other users.
+   *
+   * @param files Array of file/directory paths to unlock
+   * @param options Unlock options (force to break others' locks)
+   * @returns SVN unlock output
+   */
+  public async unlock(
+    files: string[],
+    options: IUnlockOptions = {}
+  ): Promise<IExecutionResult> {
+    files = files.map(file => this.removeAbsolutePath(file));
+
+    // Validate paths to prevent path traversal
+    for (const file of files) {
+      if (!validateFilePath(file)) {
+        throw new Error(`Invalid file path: ${file}`);
+      }
+    }
+
+    const args = ["unlock"];
+
+    if (options.force) {
+      args.push("--force");
+    }
+
+    args.push(...files);
+
+    return this.exec(args);
+  }
+
+  /**
+   * Get lock information for a file or directory.
+   * Returns null if the path is not locked.
+   *
+   * @param filePath Path to check for lock
+   * @returns Lock info or null if not locked
+   */
+  public async getLockInfo(filePath: string): Promise<ISvnLockInfo | null> {
+    filePath = this.removeAbsolutePath(filePath);
+
+    try {
+      const result = await this.exec([
+        "info",
+        "--xml",
+        fixPegRevision(filePath)
+      ]);
+      return parseLockInfo(result.stdout);
+    } catch (err) {
+      logError(`Failed to get lock info for ${filePath}`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Set the depth of a working copy folder for sparse checkouts.
+   * Use this to exclude large directories or selectively include content.
+   *
+   * @param folderPath Path to the folder
+   * @param depth One of: exclude, empty, files, immediates, infinity
+   * @returns SVN update output
+   */
+  public async setDepth(
+    folderPath: string,
+    depth: keyof typeof SvnDepth
+  ): Promise<IExecutionResult> {
+    // Validate depth is a valid SvnDepth key
+    const validDepths = Object.keys(SvnDepth);
+    if (!validDepths.includes(depth)) {
+      throw new Error(`Invalid depth: ${depth}`);
+    }
+
+    folderPath = this.removeAbsolutePath(folderPath);
+
+    // Validate path to prevent path traversal
+    if (!validateFilePath(folderPath)) {
+      throw new Error(`Invalid folder path: ${folderPath}`);
+    }
+
+    const args = ["update", "--set-depth", depth, folderPath];
+
+    return this.exec(args);
+  }
+
+  /**
+   * Check if a file has the svn:needs-lock property set.
+   * Files with this property are read-only until locked.
+   */
+  public async hasNeedsLock(filePath: string): Promise<boolean> {
+    filePath = this.removeAbsolutePath(filePath);
+
+    if (!validateFilePath(filePath)) {
+      throw new Error(`Invalid file path: ${filePath}`);
+    }
+
+    try {
+      const result = await this.exec(["propget", "svn:needs-lock", filePath]);
+      return result.stdout.trim() !== "";
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Set the svn:needs-lock property on a file.
+   * This makes the file read-only until locked.
+   */
+  public async setNeedsLock(filePath: string): Promise<IExecutionResult> {
+    filePath = this.removeAbsolutePath(filePath);
+
+    if (!validateFilePath(filePath)) {
+      throw new Error(`Invalid file path: ${filePath}`);
+    }
+
+    return this.exec(["propset", "svn:needs-lock", "*", filePath]);
+  }
+
+  /**
+   * Remove the svn:needs-lock property from a file.
+   */
+  public async removeNeedsLock(filePath: string): Promise<IExecutionResult> {
+    filePath = this.removeAbsolutePath(filePath);
+
+    if (!validateFilePath(filePath)) {
+      throw new Error(`Invalid file path: ${filePath}`);
+    }
+
+    return this.exec(["propdel", "svn:needs-lock", filePath]);
   }
 
   /**

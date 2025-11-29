@@ -10,7 +10,7 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { Status } from "./common/types";
+import { LockStatus, Status } from "./common/types";
 import { Repository } from "./repository";
 
 /**
@@ -37,7 +37,7 @@ export class SvnFileDecorationProvider
   provideFileDecoration(uri: Uri): FileDecoration | undefined {
     // Check if this is a historical file from repository log (has action query param)
     const queryParams = new URLSearchParams(uri.query);
-    const action = queryParams.get('action');
+    const action = queryParams.get("action");
 
     if (action) {
       // Historical file from repository log - use action directly
@@ -76,9 +76,33 @@ export class SvnFileDecorationProvider
       return undefined;
     }
 
-    const badge = this.getBadge(status, resource.renameResourceUri);
+    let badge = this.getBadge(status, resource.renameResourceUri);
     const color = this.getColor(status);
-    const tooltip = this.getTooltip(status, resource.renameResourceUri);
+    let tooltip = this.getTooltip(status, resource.renameResourceUri);
+
+    // Add lock info to tooltip and badge (K/O/B/T per SVN convention)
+    if (resource.lockStatus) {
+      const lockInfo = this.getLockTooltip(
+        resource.lockStatus,
+        resource.lockOwner
+      );
+      tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
+      // Show lock badge if no other badge
+      if (!badge) {
+        badge = resource.lockStatus;
+      }
+    } else if (resource.locked) {
+      // Fallback for legacy lock detection without lockStatus
+      const lockInfo = resource.hasLockToken
+        ? "Locked by you"
+        : resource.lockOwner
+          ? `Locked by ${resource.lockOwner}`
+          : "Locked by others";
+      tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
+      if (!badge) {
+        badge = resource.hasLockToken ? "K" : "O";
+      }
+    }
 
     if (!badge && !color) {
       return undefined;
@@ -105,13 +129,13 @@ export class SvnFileDecorationProvider
    */
   private actionToStatus(action: string): string | undefined {
     switch (action) {
-      case 'A':
+      case "A":
         return Status.ADDED;
-      case 'M':
+      case "M":
         return Status.MODIFIED;
-      case 'D':
+      case "D":
         return Status.DELETED;
-      case 'R':
+      case "R":
         return Status.REPLACED;
       default:
         return undefined;
@@ -163,6 +187,21 @@ export class SvnFileDecorationProvider
         return new ThemeColor("gitDecoration.conflictingResourceForeground");
       default:
         return undefined;
+    }
+  }
+
+  private getLockTooltip(lockStatus: LockStatus, lockOwner?: string): string {
+    switch (lockStatus) {
+      case LockStatus.K:
+        return "Locked by you";
+      case LockStatus.O:
+        return lockOwner ? `Locked by ${lockOwner}` : "Locked by others";
+      case LockStatus.B:
+        return "Lock broken (your lock was removed)";
+      case LockStatus.T:
+        return lockOwner
+          ? `Lock stolen by ${lockOwner}`
+          : "Lock stolen by another user";
     }
   }
 
