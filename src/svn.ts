@@ -172,12 +172,13 @@ export class Svn {
           }
         }
 
-        if (options.username || options.password) {
-          // Configuration format: FILE:SECTION:OPTION=[VALUE]
-          // Disable all password stores to prevent credential confusion
-          args.push("--config-option", "config:auth:password-stores=");
-          args.push("--config-option", "servers:global:store-auth-creds=no");
-        }
+        // ALWAYS disable native stores when useExtensionStorage=true
+        // This prevents SVN from using stale credentials from TortoiseSVN or other
+        // native credential managers. Without this, first-run auth fails because
+        // SVN tries cached credentials before the extension can prompt.
+        // Configuration format: FILE:SECTION:OPTION=[VALUE]
+        args.push("--config-option", "config:auth:password-stores=");
+        args.push("--config-option", "servers:global:store-auth-creds=no");
       }
 
       // Force non interactive environment
@@ -213,7 +214,9 @@ export class Svn {
         !options.password &&
         options.log !== false
       ) {
-        this.logOutput(`[auth: none - will prompt if needed]\n`);
+        this.logOutput(
+          `[auth: extension-only (no creds yet, native stores disabled)]\n`
+        );
       }
 
       let encoding: string | undefined | null = options.encoding;
@@ -450,12 +453,13 @@ export class Svn {
           }
         }
 
-        if (options.username || options.password) {
-          // Configuration format: FILE:SECTION:OPTION=[VALUE]
-          // Disable all password stores to prevent credential confusion
-          args.push("--config-option", "config:auth:password-stores=");
-          args.push("--config-option", "servers:global:store-auth-creds=no");
-        }
+        // ALWAYS disable native stores when useExtensionStorage=true
+        // This prevents SVN from using stale credentials from TortoiseSVN or other
+        // native credential managers. Without this, first-run auth fails because
+        // SVN tries cached credentials before the extension can prompt.
+        // Configuration format: FILE:SECTION:OPTION=[VALUE]
+        args.push("--config-option", "config:auth:password-stores=");
+        args.push("--config-option", "servers:global:store-auth-creds=no");
       }
 
       // Force non interactive environment
@@ -491,7 +495,9 @@ export class Svn {
         !options.password &&
         options.log !== false
       ) {
-        this.logOutput(`[auth: none - will prompt if needed]\n`);
+        this.logOutput(
+          `[auth: extension-only (no creds yet, native stores disabled)]\n`
+        );
       }
 
       const defaults: cp.SpawnOptions = {
