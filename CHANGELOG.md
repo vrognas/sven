@@ -1,3 +1,11 @@
+## [2.22.4] (2025-11-29)
+
+### FIX: Peg Revision for External Diff Tool
+
+- **Fix**: External diff tool now works for renamed/moved/deleted files
+  - Uses peg revision when comparing historical revisions
+  - Previously failed silently or showed wrong file content
+
 ## [2.22.3] (2025-11-28)
 
 ### FIX: Peg Revision for Blame and Info Commands
