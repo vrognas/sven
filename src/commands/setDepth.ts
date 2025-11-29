@@ -85,7 +85,7 @@ export class SetDepth extends Command {
     if (selected.depth !== "infinity") {
       const warningMessages: Record<string, string> = {
         exclude:
-          "This will remove the folder and all its contents from your computer. " +
+          "This will remove the folder and all its contents locally. " +
           "The files still exist on the server and can be restored later.",
         empty:
           "This will remove all files and subfolders inside this folder. " +
