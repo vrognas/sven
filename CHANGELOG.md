@@ -1,3 +1,12 @@
+## [2.22.3] (2025-11-28)
+
+### FIX: Peg Revision for Blame and Info Commands
+
+- **Fix**: `svn blame` with specific revision now works on renamed/moved files
+  - Uses peg revision for non-HEAD revisions
+- **Fix**: `svn info` with specific revision now works on renamed/moved files
+  - Uses peg revision for non-working-copy revisions
+
 ## [2.22.2] (2025-11-28)
 
 ### FIX: Repository Log Diff for Renamed/Moved/Deleted Files
