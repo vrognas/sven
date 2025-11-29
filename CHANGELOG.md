@@ -1,3 +1,22 @@
+## [2.23.1] (2025-11-29)
+
+### CHORE: Fix TypeScript `any` Type Warnings
+
+- **Type Safety**: Removed 12 `@typescript-eslint/no-explicit-any` warnings
+  - configuration.ts: `value: any` → `value: unknown`
+  - historyView/common.ts: clipboard type guard
+  - input/revert.ts: enum dynamic access with proper typing
+  - parser/blameParser.ts: XML result with `Record<string, unknown>`
+  - parser/statusParser.ts: XML result with `Record<string, unknown>`
+  - resource.ts: icons map with `Record<string, Record<string, Uri>>`
+  - RemoteChangeService.ts: error in catch → `unknown`
+  - svnError.ts: removed unnecessary cast, use Error.stack
+  - svnFileSystemProvider.ts: error type guard for stderr check
+  - svnFinder.ts: error callback → `unknown`
+  - svnRepository.ts: catch blocks → `unknown`, Promise.all type inference
+  - util/fileOperations.ts: svnExec → `Promise<IExecutionResult>`
+- **No Runtime Changes**: Type-only changes, all 104 unit tests pass
+
 ## [2.23.0] (2025-11-29)
 
 ### CHORE: Migrate Unit Tests to Vitest
