@@ -964,21 +964,35 @@ export class Repository implements IRemoteRepository {
   }
 
   public async promptAuth(): Promise<IAuth | undefined> {
+    console.log("[promptAuth] Called:", {
+      hasActivePrompt: !!this.lastPromptAuth,
+      inCooldown: this.promptAuthCooldown
+    });
+
     // Prevent multiple prompts: active prompt or cooldown period
     if (this.lastPromptAuth || this.promptAuthCooldown) {
       if (this.lastPromptAuth) {
+        console.log("[promptAuth] Returning existing prompt");
         return this.lastPromptAuth;
       }
+      console.log("[promptAuth] In cooldown, skipping");
       return undefined; // During cooldown, skip prompting
     }
 
+    console.log("[promptAuth] Showing prompt dialog");
     this.lastPromptAuth = commands.executeCommand("svn.promptAuth");
     const result = await this.lastPromptAuth;
+
+    console.log("[promptAuth] Dialog result:", {
+      gotResult: !!result,
+      username: result?.username || "(none)"
+    });
 
     if (result) {
       this.username = result.username;
       this.password = result.password;
       this.canSaveAuth = true;
+      console.log("[promptAuth] Credentials set on repository");
     }
 
     // Cooldown: prevent rapid re-prompting after dialog closes
@@ -1067,21 +1081,42 @@ export class Repository implements IRemoteRepository {
     // Phase 8.2 perf fix - pre-load accounts before retry loop to avoid blocking
     const accounts: IStoredAuth[] = await this.loadStoredAuths();
 
+    console.log("[retryRun] Starting:", {
+      storedAccounts: accounts.length,
+      hasUsername: !!this.username,
+      hasPassword: !!this.password
+    });
+
     // Fix Bug 2: Pre-set credentials from first stored account if none set
     // Prevents first attempt failing with empty credentials in remote sessions
     if (!this.username && !this.password && accounts.length > 0) {
       this.username = accounts[0].account;
       this.password = accounts[0].password;
+      console.log("[retryRun] Pre-set creds from stored account");
     }
 
     while (true) {
       try {
         attempt++;
+        console.log("[retryRun] Attempt", attempt, {
+          hasUsername: !!this.username,
+          hasPassword: !!this.password
+        });
         const result = await runOperation();
         this.saveAuth();
+        console.log("[retryRun] Success on attempt", attempt);
         return result;
       } catch (err) {
         const svnError = err as ISvnErrorData;
+        console.log("[retryRun] Error on attempt", attempt, {
+          errorCode: svnError.svnErrorCode,
+          isAuthError:
+            svnError.svnErrorCode === svnErrorCodes.AuthorizationFailed,
+          accountsLength: accounts.length,
+          maxStoredAttempts: accounts.length,
+          maxPromptAttempts: 3 + accounts.length
+        });
+
         if (
           svnError.svnErrorCode === svnErrorCodes.RepositoryIsLocked &&
           attempt <= 10
@@ -1093,6 +1128,7 @@ export class Repository implements IRemoteRepository {
           attempt <= accounts.length
         ) {
           // Backoff before trying next stored account (prevent server hammering)
+          console.log("[retryRun] Trying next stored account");
           await timeout(500);
           // Fix Bug 1: Cycle through stored accounts properly
           // attempt 1 failed with accounts[0], try accounts[1], etc.
@@ -1106,12 +1142,19 @@ export class Repository implements IRemoteRepository {
           attempt <= 3 + accounts.length
         ) {
           // Backoff before prompting user (prevent server hammering)
+          console.log("[retryRun] Prompting user for auth");
           await timeout(1000);
           const result = await this.promptAuth();
+          console.log("[retryRun] Prompt result:", {
+            gotResult: !!result,
+            hasUsername: result ? !!result.username : false
+          });
           if (!result) {
+            console.log("[retryRun] User cancelled prompt, throwing error");
             throw err;
           }
         } else {
+          console.log("[retryRun] Max retries exceeded, throwing error");
           throw err;
         }
       }
