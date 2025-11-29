@@ -1144,7 +1144,9 @@ export class Repository implements IRemoteRepository {
    * @returns Lock info or null if not locked
    */
   public async getLockInfo(filePath: string): Promise<ISvnLockInfo | null> {
-    return this.repository.getLockInfo(filePath);
+    return this.run(Operation.Info, () =>
+      this.repository.getLockInfo(filePath)
+    );
   }
 
   /**

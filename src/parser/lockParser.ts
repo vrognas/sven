@@ -24,59 +24,44 @@ interface ParsedInfo {
  * Parse lock information from svn info --xml output.
  * Returns lock info if file is locked, null otherwise.
  */
-export async function parseLockInfo(
-  content: string
-): Promise<ISvnLockInfo | null> {
-  return new Promise<ISvnLockInfo | null>((resolve, reject) => {
-    if (!content || content.trim() === "") {
-      reject(new Error("Cannot parse lock info: empty XML content"));
-      return;
+export function parseLockInfo(content: string): ISvnLockInfo | null {
+  if (!content || content.trim() === "") {
+    throw new Error("Cannot parse lock info: empty XML content");
+  }
+
+  try {
+    const result = XmlParserAdapter.parse(content, {
+      mergeAttrs: true,
+      explicitRoot: false,
+      explicitArray: false,
+      camelcase: true
+    }) as ParsedInfo;
+
+    if (!result.entry) {
+      throw new Error("Invalid info XML: missing entry element");
     }
 
-    try {
-      const result = XmlParserAdapter.parse(content, {
-        mergeAttrs: true,
-        explicitRoot: false,
-        explicitArray: false,
-        camelcase: true
-      }) as ParsedInfo;
-
-      if (!result.entry) {
-        reject(new Error("Invalid info XML: missing entry element"));
-        return;
-      }
-
-      const lock = result.entry.lock;
-      if (!lock) {
-        // File is not locked
-        resolve(null);
-        return;
-      }
-
-      // Validate required lock fields
-      if (!lock.owner || !lock.token || !lock.created) {
-        logError("Incomplete lock data in XML", {
-          hasOwner: !!lock.owner,
-          hasToken: !!lock.token,
-          hasCreated: !!lock.created
-        });
-        resolve(null);
-        return;
-      }
-
-      resolve({
-        owner: lock.owner,
-        token: lock.token,
-        comment: lock.comment,
-        created: lock.created
-      });
-    } catch (err) {
-      logError("parseLockInfo error", err);
-      reject(
-        new Error(
-          `Failed to parse lock XML: ${err instanceof Error ? err.message : "Unknown error"}`
-        )
-      );
+    const lock = result.entry.lock;
+    if (!lock) {
+      // File is not locked
+      return null;
     }
-  });
+
+    // Validate required lock fields
+    if (!lock.owner || !lock.token || !lock.created) {
+      throw new Error("Incomplete lock data: missing required fields");
+    }
+
+    return {
+      owner: lock.owner,
+      token: lock.token,
+      comment: lock.comment,
+      created: lock.created
+    };
+  } catch (err) {
+    logError("parseLockInfo error", err);
+    throw err instanceof Error
+      ? err
+      : new Error(`Failed to parse lock XML: Unknown error`);
+  }
 }

@@ -77,15 +77,15 @@ export class SetDepth extends Command {
       return; // User cancelled
     }
 
-    // Confirm for destructive operations
-    if (selected.depth === "exclude" || selected.depth === "empty") {
+    // Confirm for destructive operations (all except infinity add content)
+    if (selected.depth !== "infinity") {
       const confirm = await window.showWarningMessage(
-        `This will remove local files. Continue?`,
+        `Setting depth to "${selected.depth}" may remove local files.`,
         { modal: true },
-        "Yes",
-        "No"
+        "Change Depth",
+        "Cancel"
       );
-      if (confirm !== "Yes") {
+      if (confirm !== "Change Depth") {
         return;
       }
     }

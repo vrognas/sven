@@ -76,19 +76,23 @@ export class SvnFileDecorationProvider
       return undefined;
     }
 
-    const badge = this.getBadge(status, resource.renameResourceUri);
+    let badge = this.getBadge(status, resource.renameResourceUri);
     const color = this.getColor(status);
     let tooltip = this.getTooltip(status, resource.renameResourceUri);
 
-    // Add lock info to tooltip
+    // Add lock info to tooltip and badge
     if (resource.locked) {
       const lockInfo = resource.lockOwner
-        ? `🔒 Locked by ${resource.lockOwner}`
-        : "🔒 Locked";
+        ? `Locked by ${resource.lockOwner}`
+        : "Locked";
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
+      // Show lock badge if no other badge (L = Locked, per VS Code convention)
+      if (!badge) {
+        badge = "L";
+      }
     }
 
-    if (!badge && !color && !resource.locked) {
+    if (!badge && !color) {
       return undefined;
     }
 

@@ -3,7 +3,7 @@ import { parseLockInfo } from "../../../src/parser/lockParser";
 
 describe("Lock Parser", () => {
   describe("Basic Parsing", () => {
-    it("parses file lock info from svn info --xml", async () => {
+    it("parses file lock info from svn info --xml", () => {
       const xml = `<?xml version="1.0"?>
 <info>
   <entry kind="file" path="data.csv" revision="150">
@@ -31,7 +31,7 @@ describe("Lock Parser", () => {
   </entry>
 </info>`;
 
-      const result = await parseLockInfo(xml);
+      const result = parseLockInfo(xml);
 
       expect(result).toBeTruthy();
       expect(result?.owner).toBe("alice");
@@ -40,7 +40,7 @@ describe("Lock Parser", () => {
       expect(result?.created).toBe("2025-11-28T10:00:00.000000Z");
     });
 
-    it("returns null for unlocked file", async () => {
+    it("returns null for unlocked file", () => {
       const xml = `<?xml version="1.0"?>
 <info>
   <entry kind="file" path="readme.txt" revision="100">
@@ -57,12 +57,12 @@ describe("Lock Parser", () => {
   </entry>
 </info>`;
 
-      const result = await parseLockInfo(xml);
+      const result = parseLockInfo(xml);
 
       expect(result).toBeNull();
     });
 
-    it("parses lock without comment", async () => {
+    it("parses lock without comment", () => {
       const xml = `<?xml version="1.0"?>
 <info>
   <entry kind="file" path="model.rds" revision="200">
@@ -84,7 +84,7 @@ describe("Lock Parser", () => {
   </entry>
 </info>`;
 
-      const result = await parseLockInfo(xml);
+      const result = parseLockInfo(xml);
 
       expect(result).toBeTruthy();
       expect(result?.owner).toBe("charlie");
@@ -93,7 +93,7 @@ describe("Lock Parser", () => {
   });
 
   describe("Directory Locking", () => {
-    it("parses directory lock info", async () => {
+    it("parses directory lock info", () => {
       const xml = `<?xml version="1.0"?>
 <info>
   <entry kind="dir" path="data" revision="175">
@@ -121,7 +121,7 @@ describe("Lock Parser", () => {
   </entry>
 </info>`;
 
-      const result = await parseLockInfo(xml);
+      const result = parseLockInfo(xml);
 
       expect(result).toBeTruthy();
       expect(result?.owner).toBe("dave");
@@ -130,16 +130,16 @@ describe("Lock Parser", () => {
   });
 
   describe("Error Handling", () => {
-    it("handles malformed XML gracefully", async () => {
+    it("handles malformed XML gracefully", () => {
       const xml = `<info><unclosed>`;
 
-      await expect(parseLockInfo(xml)).rejects.toThrow();
+      expect(() => parseLockInfo(xml)).toThrow();
     });
 
-    it("handles empty XML", async () => {
+    it("handles empty XML", () => {
       const xml = "";
 
-      await expect(parseLockInfo(xml)).rejects.toThrow();
+      expect(() => parseLockInfo(xml)).toThrow();
     });
   });
 });

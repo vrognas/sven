@@ -1086,11 +1086,6 @@
           "group": "1_modification@6"
         },
         {
-          "command": "svn.breakLock",
-          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
-          "group": "1_modification@7"
-        },
-        {
           "command": "svn.commit",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != conflicts && scmResourceGroup != remotechanges",
           "group": "1_modification"
@@ -1203,11 +1198,6 @@
         {
           "command": "svn.unlock",
           "group": "9_svn@3",
-          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
-        },
-        {
-          "command": "svn.breakLock",
-          "group": "9_svn@4",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },
         {
