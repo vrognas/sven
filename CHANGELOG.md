@@ -1,3 +1,19 @@
+## [2.23.0] (2025-11-29)
+
+### CHORE: Migrate Unit Tests to Vitest
+
+- **New**: Unit tests now run on Vitest (104 tests, ~1.5s)
+  - 6-10x faster than Mocha (no TS compilation needed)
+  - Better error messages with object diffs
+  - Watch mode: `npm run test:unit:watch`
+  - Built-in coverage: `npm run test:unit:coverage`
+- **Dual framework**: E2E tests stay on Mocha + @vscode/test-electron
+  - Unit tests: `npm run test:unit` (Vitest)
+  - E2E tests: `npm run test:e2e` (Mocha)
+  - Full suite: `npm run test`
+- **CI**: GitHub Actions runs both frameworks
+- **Deps**: Added vitest, @vitest/coverage-v8
+
 ## [2.22.4] (2025-11-29)
 
 ### FIX: Peg Revision for External Diff Tool
