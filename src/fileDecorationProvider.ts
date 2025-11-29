@@ -10,7 +10,7 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { Status } from "./common/types";
+import { LockStatus, Status } from "./common/types";
 import { Repository } from "./repository";
 
 /**
@@ -80,15 +80,25 @@ export class SvnFileDecorationProvider
     const color = this.getColor(status);
     let tooltip = this.getTooltip(status, resource.renameResourceUri);
 
-    // Add lock info to tooltip and badge (K=mine, O=others per SVN convention)
-    if (resource.locked) {
+    // Add lock info to tooltip and badge (K/O/B/T per SVN convention)
+    if (resource.lockStatus) {
+      const lockInfo = this.getLockTooltip(
+        resource.lockStatus,
+        resource.lockOwner
+      );
+      tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
+      // Show lock badge if no other badge
+      if (!badge) {
+        badge = resource.lockStatus;
+      }
+    } else if (resource.locked) {
+      // Fallback for legacy lock detection without lockStatus
       const lockInfo = resource.hasLockToken
         ? "Locked by you"
         : resource.lockOwner
           ? `Locked by ${resource.lockOwner}`
           : "Locked by others";
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
-      // Show lock badge if no other badge
       if (!badge) {
         badge = resource.hasLockToken ? "K" : "O";
       }
@@ -177,6 +187,21 @@ export class SvnFileDecorationProvider
         return new ThemeColor("gitDecoration.conflictingResourceForeground");
       default:
         return undefined;
+    }
+  }
+
+  private getLockTooltip(lockStatus: LockStatus, lockOwner?: string): string {
+    switch (lockStatus) {
+      case LockStatus.K:
+        return "Locked by you";
+      case LockStatus.O:
+        return lockOwner ? `Locked by ${lockOwner}` : "Locked by others";
+      case LockStatus.B:
+        return "Lock broken (your lock was removed)";
+      case LockStatus.T:
+        return lockOwner
+          ? `Lock stolen by ${lockOwner}`
+          : "Lock stolen by another user";
     }
   }
 

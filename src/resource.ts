@@ -10,7 +10,7 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { PropStatus, Status } from "./common/types";
+import { LockStatus, PropStatus, Status } from "./common/types";
 import { memoize } from "./decorators";
 import { configuration } from "./helpers/configuration";
 
@@ -55,7 +55,8 @@ export class Resource implements SourceControlResourceState {
     private _remote: boolean = false,
     private _locked: boolean = false,
     private _lockOwner?: string,
-    private _hasLockToken: boolean = false
+    private _hasLockToken: boolean = false,
+    private _lockStatus?: LockStatus
   ) {}
 
   @memoize
@@ -89,6 +90,11 @@ export class Resource implements SourceControlResourceState {
   /** True if we hold the lock token (K), false if locked by others (O) */
   get hasLockToken(): boolean {
     return this._hasLockToken;
+  }
+
+  /** Lock status: K=mine, O=other, B=broken, T=stolen */
+  get lockStatus(): LockStatus | undefined {
+    return this._lockStatus;
   }
 
   get decorations(): SourceControlResourceDecorations {

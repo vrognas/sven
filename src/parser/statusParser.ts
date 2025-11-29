@@ -3,7 +3,7 @@
 // Licensed under MIT License
 
 import { XmlParserAdapter } from "./xmlParserAdapter";
-import { IEntry, IFileStatus, IWcStatus } from "../common/types";
+import { IEntry, IFileStatus, IWcStatus, LockStatus } from "../common/types";
 import { logError } from "../util/errorLogger";
 
 function processEntry(
@@ -23,8 +23,11 @@ function processEntry(
 
   // Extract lock owner from repos-status if available
   let lockOwner: string | undefined;
-  if (entry.reposStatus?.lock) {
-    const lock = entry.reposStatus.lock as Record<string, unknown>;
+  const serverChecked = !!entry.reposStatus;
+  const serverHasLock = !!entry.reposStatus?.lock;
+
+  if (serverHasLock) {
+    const lock = entry.reposStatus!.lock as Record<string, unknown>;
     if (lock.owner && typeof lock.owner === "string") {
       lockOwner = lock.owner;
     }
@@ -34,11 +37,34 @@ function processEntry(
   const hasLockToken =
     !!entry.wcStatus.wcLocked && entry.wcStatus.wcLocked === "true";
 
+  // Compute lock status: K, O, B, T
+  let lockStatus: LockStatus | undefined;
+  if (hasLockToken) {
+    if (serverChecked && !serverHasLock) {
+      // We have token but server shows no lock - broken
+      lockStatus = LockStatus.B;
+    } else if (serverChecked && serverHasLock && lockOwner) {
+      // We have token and server has lock by someone
+      // TODO: Compare lockOwner with current user for T detection
+      // For now, if we have token and server has lock, assume it's ours (K)
+      // T would be: hasLockToken && serverHasLock && lockOwner !== currentUser
+      lockStatus = LockStatus.K;
+    } else {
+      // No server check or server shows our lock
+      lockStatus = LockStatus.K;
+    }
+  } else if (serverHasLock) {
+    // We don't have token but server has lock - locked by other
+    lockStatus = LockStatus.O;
+  }
+
   const wcStatus: IWcStatus = {
-    locked: hasLockToken || !!(entry.reposStatus && entry.reposStatus.lock),
+    locked: hasLockToken || serverHasLock,
     switched: !!entry.wcStatus.switched && entry.wcStatus.switched === "true",
     lockOwner,
-    hasLockToken
+    hasLockToken,
+    serverChecked,
+    lockStatus
   };
 
   const r: IFileStatus = {

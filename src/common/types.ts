@@ -147,6 +147,24 @@ export interface IWcStatus {
   lockOwner?: string;
   /** True if we hold the lock token locally (K), false if locked by others (O) */
   hasLockToken?: boolean;
+  /** True if server was checked for lock status (via svn status -u) */
+  serverChecked?: boolean;
+  /** Lock status badge: K=mine, O=other, B=broken, T=stolen */
+  lockStatus?: LockStatus;
+}
+
+/**
+ * SVN lock status indicators per svn status --show-updates
+ * K = Locked by this working copy
+ * O = Locked by another working copy
+ * B = Lock broken (our token is stale, server has no lock)
+ * T = Lock stolen (our token is stale, someone else has lock)
+ */
+export enum LockStatus {
+  K = "K", // Locked by us
+  O = "O", // Locked by other
+  B = "B", // Broken - our lock was broken
+  T = "T" // Stolen - our lock was stolen
 }
 
 export interface IFileStatus {
