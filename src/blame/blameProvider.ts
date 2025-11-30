@@ -764,7 +764,13 @@ export class BlameProvider implements Disposable {
           )
           .then(choice => {
             if (choice === "Authenticate") {
-              commands.executeCommand("svn.promptAuth");
+              const repoUrl = this.repository.repository.info?.url;
+              commands.executeCommand(
+                "svn.promptAuth",
+                undefined,
+                undefined,
+                repoUrl
+              );
             }
           });
       }
