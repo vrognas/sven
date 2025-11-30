@@ -1,3 +1,18 @@
+## [2.26.8] (2025-11-30)
+
+### UX: Checkout Progress Polish
+
+- **UX**: User-friendly terminology - "Downloading" instead of "Checking out"
+- **UX**: Success notification when download completes (was silent before)
+- **UX**: Improved large file warning dialog
+  - Leads with total size (most important info first)
+  - Shows threshold value in dialog (e.g., ">10 MB")
+  - Shows 5 large files instead of 3
+  - Action button uses "Download" instead of "Continue"
+- **UX**: Clearer cancellation message - "not downloaded" vs "skipped"
+- **UX**: "Show Output" button added to partial failure warnings
+- **Perf**: Repository lookup optimization (single pass instead of double)
+
 ## [2.26.7] (2025-11-30)
 
 ### UX: Checkout Progress and Large File Warning
@@ -10,7 +25,7 @@
   - Shows file names and total size in modal dialog
   - New setting: `svn.sparse.largeFileWarningMb` (0 to disable)
 - **New**: Total size estimate shown in progress notification
-  - Format: "Checking out 5 items (125.3 MB)"
+  - Format: "Downloading 5 items (125.3 MB)"
 - **UX**: Always use notification (not status bar) for checkout progress
   - Required for cancellation button visibility
 

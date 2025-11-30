@@ -539,23 +539,27 @@ export default class SparseCheckoutProvider
   }
 
   /**
-   * Checkout multiple items (restore from server)
+   * Download items from server (sparse checkout)
    * - Shows progress with cancellation support
-   * - Warns about large files (>10MB)
+   * - Warns about large files (configurable threshold)
    */
   private async checkoutItems(nodes: SparseItemNode[]): Promise<void> {
-    // Filter valid nodes
+    // Filter valid nodes and pre-fetch repositories (single lookup per node)
     const validNodes = nodes.filter(n => n?.fullPath);
     if (validNodes.length === 0) {
       window.showErrorMessage("No valid items selected. Please try again.");
       return;
     }
 
-    // Check all nodes have a repository
-    const firstRepo = this.sourceControlManager.getRepository(
-      Uri.file(validNodes[0].fullPath)
-    );
-    if (!firstRepo) {
+    // Pre-fetch all repositories once (O(n) instead of O(2n))
+    const nodeRepos = validNodes.map(n => ({
+      node: n,
+      repo: this.sourceControlManager.getRepository(Uri.file(n.fullPath))
+    }));
+
+    // Validate all nodes have repositories
+    const invalidCount = nodeRepos.filter(nr => !nr.repo).length;
+    if (invalidCount === validNodes.length) {
       window.showErrorMessage("No SVN repository found for selected items");
       return;
     }
@@ -575,23 +579,32 @@ export default class SparseCheckoutProvider
       const largeFiles = fileSizes.filter(f => f.size > thresholdBytes);
       if (largeFiles.length > 0) {
         const largeTotal = largeFiles.reduce((sum, f) => sum + f.size, 0);
+        // Show up to 5 large files for better visibility
         const fileList = largeFiles
-          .slice(0, 3)
+          .slice(0, 5)
           .map(f => `• ${f.name} (${formatBytes(f.size)})`)
           .join("\n");
         const more =
-          largeFiles.length > 3
-            ? `\n... and ${largeFiles.length - 3} more`
+          largeFiles.length > 5
+            ? `\n... and ${largeFiles.length - 5} more`
+            : "";
+
+        // Lead with total download size (most important info first)
+        const totalLabel =
+          totalSize > largeTotal
+            ? `Total download: ${formatBytes(totalSize)}\n\n`
             : "";
 
         const proceed = await window.showWarningMessage(
-          `Large files detected (total ${formatBytes(largeTotal)}):\n${fileList}${more}\n\nProceed with checkout?`,
+          `Download ${formatBytes(largeTotal)} of large files?\n\n` +
+            `${totalLabel}` +
+            `Large files (>${thresholdMb} MB):\n${fileList}${more}`,
           { modal: true },
-          "Continue",
+          "Download",
           "Cancel"
         );
 
-        if (proceed !== "Continue") return;
+        if (proceed !== "Download") return;
       }
     }
 
@@ -626,7 +639,7 @@ export default class SparseCheckoutProvider
       const result = await window.withProgress(
         {
           location: ProgressLocation.Notification,
-          title: `Checking out ${label}${sizeLabel}`,
+          title: `Downloading ${label}${sizeLabel}`,
           cancellable: true
         },
         async (progress, token: CancellationToken) => {
@@ -634,17 +647,14 @@ export default class SparseCheckoutProvider
           let failed = 0;
           let cancelled = false;
 
-          for (let i = 0; i < validNodes.length; i++) {
+          for (let i = 0; i < nodeRepos.length; i++) {
             // Check cancellation before each item
             if (token.isCancellationRequested) {
               cancelled = true;
               break;
             }
 
-            const node = validNodes[i];
-            const repo = this.sourceControlManager.getRepository(
-              Uri.file(node.fullPath)
-            );
+            const { node, repo } = nodeRepos[i];
             if (!repo) {
               failed++;
               continue;
@@ -652,9 +662,9 @@ export default class SparseCheckoutProvider
 
             progress.report({
               message: isBatch
-                ? `(${i + 1}/${validNodes.length}) ${path.basename(node.fullPath)}`
+                ? `(${i + 1}/${nodeRepos.length}) ${path.basename(node.fullPath)}`
                 : path.basename(node.fullPath),
-              increment: 100 / validNodes.length
+              increment: 100 / nodeRepos.length
             });
 
             try {
@@ -678,19 +688,34 @@ export default class SparseCheckoutProvider
       this.refresh();
 
       // Show appropriate message based on outcome
+      const totalItems = nodeRepos.length;
+      const remaining = totalItems - result.success - result.failed;
       if (result.cancelled) {
         window.showInformationMessage(
-          `Checkout cancelled. ${result.success} completed, ${validNodes.length - result.success - result.failed} skipped.`
+          `Download cancelled. ${result.success} of ${totalItems} completed, ${remaining} not downloaded.`
         );
       } else if (result.failed > 0) {
-        window.showWarningMessage(
-          `Checkout: ${result.success} succeeded, ${result.failed} failed`
+        window
+          .showWarningMessage(
+            `Download completed with errors: ${result.success} succeeded, ${result.failed} failed`,
+            "Show Output"
+          )
+          .then(choice => {
+            if (choice === "Show Output") {
+              commands.executeCommand("svn.showOutputChannel");
+            }
+          });
+      } else if (result.success > 0) {
+        // Success notification - users need positive feedback
+        const sizeInfo = totalSize > 0 ? ` (${formatBytes(totalSize)})` : "";
+        window.showInformationMessage(
+          `Downloaded ${result.success} ${result.success === 1 ? "item" : "items"}${sizeInfo}`
         );
       }
     } catch (err) {
       logError("Sparse checkout failed", err);
       window
-        .showErrorMessage(`Checkout failed: ${err}`, "Show Output")
+        .showErrorMessage(`Download failed: ${err}`, "Show Output")
         .then(choice => {
           if (choice === "Show Output") {
             commands.executeCommand("svn.showOutputChannel");
