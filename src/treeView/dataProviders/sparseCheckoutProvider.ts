@@ -926,6 +926,9 @@ export default class SparseCheckoutProvider
           cancellable: true
         },
         async (progress, token: CancellationToken) => {
+          // Immediate feedback that download is starting
+          progress.report({ message: "Starting download..." });
+
           let success = 0;
           let failed = 0;
           let cancelled = false;
@@ -1009,6 +1012,12 @@ export default class SparseCheckoutProvider
                 );
               const preScanTimeoutMs = preScanTimeoutSeconds * 1000;
 
+              // Show scanning progress (user feedback that something is happening)
+              const folderName = path.basename(node.fullPath);
+              progress.report({
+                message: `Scanning ${folderName}...`
+              });
+
               try {
                 // Pre-scan folder to get expected file count (with configurable timeout)
                 const folderContents = await repo.listRecursive(
@@ -1018,6 +1027,11 @@ export default class SparseCheckoutProvider
                 expectedFileCount = folderContents.filter(
                   f => f.kind === "file"
                 ).length;
+
+                // Show file count found
+                progress.report({
+                  message: `Found ${expectedFileCount} files in ${folderName}`
+                });
               } catch (err) {
                 // Pre-scan failed - log error, continue without progress tracking
                 logError("Pre-scan failed for folder progress", err);
@@ -1079,6 +1093,18 @@ export default class SparseCheckoutProvider
             }
 
             try {
+              // Show that actual download is starting (after pre-scan)
+              const itemName = path.basename(node.fullPath);
+              if (node.kind === "dir" && expectedFileCount > 0) {
+                progress.report({
+                  message: `Downloading ${itemName} (${expectedFileCount} files)...`
+                });
+              } else {
+                progress.report({
+                  message: `Downloading ${itemName}...`
+                });
+              }
+
               const res = await repo.setDepth(node.fullPath, depth, {
                 parents: true,
                 timeout: downloadTimeoutMs

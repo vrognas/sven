@@ -1,3 +1,12 @@
+## [2.26.21] (2025-11-30)
+
+### UX: Immediate Download Feedback
+
+- **UX**: "Starting download..." message shows immediately
+- **UX**: "Scanning {folder}..." during pre-scan phase
+- **UX**: "Found X files in {folder}" after scan completes
+- **UX**: "Downloading {item} (X files)..." when SVN update begins
+
 ## [2.26.20] (2025-11-30)
 
 ### Fix: Suppress Status Updates During Downloads
