@@ -1,6 +1,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import * as fs from "fs";
 import * as path from "path";
 import {
   CancellationToken,
@@ -108,6 +109,51 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024)
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+/** Polling interval for file size monitoring (ms) */
+const FILE_POLL_INTERVAL_MS = 500;
+
+/**
+ * Monitor file size growth during download.
+ * Returns cleanup function and getters for speed/size.
+ */
+function createFileSizeMonitor(filePath: string): {
+  stop: () => void;
+  getSpeed: () => number;
+  getSize: () => number;
+} {
+  let lastSize = 0;
+  let lastTime = Date.now();
+  let currentSpeed = 0;
+  let currentSize = 0;
+
+  const poll = () => {
+    try {
+      const stats = fs.statSync(filePath);
+      const now = Date.now();
+      const sizeDelta = stats.size - lastSize;
+      const timeDelta = (now - lastTime) / 1000;
+
+      if (timeDelta > 0 && sizeDelta > 0) {
+        currentSpeed = sizeDelta / timeDelta;
+      }
+
+      currentSize = stats.size;
+      lastSize = stats.size;
+      lastTime = now;
+    } catch {
+      // File may not exist yet or be locked - ignore
+    }
+  };
+
+  const interval = setInterval(poll, FILE_POLL_INTERVAL_MS);
+
+  return {
+    stop: () => clearInterval(interval),
+    getSpeed: () => currentSpeed,
+    getSize: () => currentSize
+  };
 }
 
 export default class SparseCheckoutProvider
@@ -710,11 +756,41 @@ export default class SparseCheckoutProvider
             const fileSize = fileSizes.find(
               f => f.name === path.basename(node.fullPath)
             );
+            const expectedSize = fileSize?.size ?? 0;
+
+            // Start file monitor for real-time speed (files only, >1MB)
+            const monitor =
+              node.kind === "file" && expectedSize > 1024 * 1024
+                ? createFileSizeMonitor(node.fullPath)
+                : undefined;
+
+            // Progress update interval during download
+            let progressInterval: ReturnType<typeof setInterval> | undefined;
+            if (monitor && expectedSize > 0) {
+              progressInterval = setInterval(() => {
+                const realSpeed = monitor.getSpeed();
+                const downloaded = monitor.getSize();
+                if (realSpeed > 0) {
+                  const remaining = expectedSize - downloaded;
+                  const eta = remaining > 0 ? remaining / realSpeed : 0;
+                  const speedLabel = `${formatBytes(realSpeed)}/s`;
+                  const etaLabel = eta > 2 ? ` ~${formatDuration(eta)}` : "";
+                  progress.report({
+                    message: `${path.basename(node.fullPath)} ${speedLabel}${etaLabel}`
+                  });
+                }
+              }, FILE_POLL_INTERVAL_MS);
+            }
 
             try {
               const res = await repo.setDepth(node.fullPath, depth, {
                 parents: true
               });
+
+              // Cleanup monitor and interval
+              monitor?.stop();
+              if (progressInterval) clearInterval(progressInterval);
+
               if (res.exitCode === 0) {
                 success++;
                 if (fileSize) {
@@ -724,6 +800,8 @@ export default class SparseCheckoutProvider
                 failed++;
               }
             } catch {
+              monitor?.stop();
+              if (progressInterval) clearInterval(progressInterval);
               failed++;
             }
           }

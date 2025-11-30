@@ -1,3 +1,14 @@
+## [2.26.10] (2025-11-30)
+
+### UX: Real-Time Download Speed Monitoring
+
+- **New**: File system watching for accurate download speed
+  - Monitors file size growth during large file downloads (>1MB)
+  - Shows real-time speed: "data.csv 5.2 MB/s ~12s"
+  - Updates every 500ms during active downloads
+- **Perf**: Minimal overhead - polling only for files being downloaded
+- **Cleanup**: Automatic resource cleanup after download completes
+
 ## [2.26.9] (2025-11-30)
 
 ### UX: Download ETA and Speed Tracking
