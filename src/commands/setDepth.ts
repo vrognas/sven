@@ -1,10 +1,21 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { commands, QuickPickItem, Uri, window } from "vscode";
+import {
+  CancellationToken,
+  commands,
+  ProgressLocation,
+  QuickPickItem,
+  Uri,
+  window,
+  workspace
+} from "vscode";
 import { SvnDepth } from "../common/types";
 import { Command } from "./command";
 import { SourceControlManager } from "../source_control_manager";
+
+/** Default download timeout in minutes */
+const DEFAULT_DOWNLOAD_TIMEOUT_MINUTES = 10;
 
 export interface DepthQuickPickItem extends QuickPickItem {
   depth: keyof typeof SvnDepth;
@@ -125,8 +136,65 @@ export class SetDepth extends Command {
       }
     }
 
+    // Get configurable timeout
+    const timeoutMinutes = workspace
+      .getConfiguration("svn.sparse")
+      .get<number>("downloadTimeoutMinutes", DEFAULT_DOWNLOAD_TIMEOUT_MINUTES);
+    const downloadTimeoutMs = timeoutMinutes * 60 * 1000;
+
+    // Suppress status updates during download (prevents WC lock conflicts)
+    repository.sparseDownloadInProgress = true;
+
     try {
-      const result = await repository.setDepth(uri.fsPath, selected.depth);
+      // Show progress with cancellation support for infinity depth (downloads)
+      const isDownload = selected.depth === "infinity";
+
+      const result = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: isDownload
+            ? `Downloading "${folderName}"...`
+            : `Setting depth for "${folderName}"...`,
+          cancellable: isDownload
+        },
+        async (progress, token: CancellationToken) => {
+          // Immediate feedback
+          progress.report({
+            message: isDownload ? "Starting download..." : "Applying changes..."
+          });
+
+          // Check for cancellation before starting
+          if (token.isCancellationRequested) {
+            return { exitCode: -1, cancelled: true, stderr: "" };
+          }
+
+          try {
+            const res = await repository.setDepth(uri.fsPath, selected.depth, {
+              parents: true,
+              timeout: downloadTimeoutMs
+            });
+
+            // Check if cancelled during operation
+            if (token.isCancellationRequested) {
+              return { ...res, cancelled: true };
+            }
+
+            return { ...res, cancelled: false };
+          } catch (err) {
+            return {
+              exitCode: 1,
+              cancelled: token.isCancellationRequested,
+              stderr: String(err)
+            };
+          }
+        }
+      );
+
+      if (result.cancelled) {
+        window.showInformationMessage(`Operation cancelled`);
+        return;
+      }
+
       if (result.exitCode === 0) {
         const successMessages: Record<string, string> = {
           exclude: `"${folderName}" excluded`,
@@ -147,6 +215,9 @@ export class SetDepth extends Command {
       }
     } catch (error) {
       window.showErrorMessage(`Failed to change checkout: ${error}`);
+    } finally {
+      // Re-enable status updates
+      repository.sparseDownloadInProgress = false;
     }
   }
 }

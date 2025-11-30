@@ -1,3 +1,12 @@
+## [2.26.22] (2025-11-30)
+
+### Fix: Set Depth Command Progress & Cancellation
+
+- **Fix**: "Set Depth" command now shows progress notification
+- **Fix**: Cancellable for "infinity" depth downloads
+- **Fix**: Suppresses `svn info` calls during operation (no more spam)
+- **Fix**: Uses configurable timeout (`svn.sparse.downloadTimeoutMinutes`)
+
 ## [2.26.21] (2025-11-30)
 
 ### UX: Immediate Download Feedback
