@@ -66,6 +66,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 /** Max cache entries before forced cleanup */
 const MAX_CACHE_SIZE = 100;
 
+/** Debounce delay for visual refresh (ms) */
+const REFRESH_DEBOUNCE_MS = 100;
+
 export default class SparseCheckoutProvider
   implements TreeDataProvider<BaseNode>, Disposable
 {
@@ -83,6 +86,9 @@ export default class SparseCheckoutProvider
     string,
     CacheEntry<SparseDepthKey | undefined>
   >();
+
+  /** Pending debounced refresh timeout */
+  private refreshTimeout: ReturnType<typeof setTimeout> | undefined;
 
   public readonly onDidChangeTreeData: Event<BaseNode | undefined> =
     this._onDidChangeTreeData.event;
@@ -107,9 +113,16 @@ export default class SparseCheckoutProvider
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  /** Trigger tree refresh without clearing caches (for visual updates) */
+  /** Trigger tree refresh without clearing caches (for visual updates, debounced) */
   public triggerRefresh(): void {
-    this._onDidChangeTreeData.fire(undefined);
+    // Debounce to avoid multiple rapid refreshes when expanding folders
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
+    this.refreshTimeout = setTimeout(() => {
+      this.refreshTimeout = undefined;
+      this._onDidChangeTreeData.fire(undefined);
+    }, REFRESH_DEBOUNCE_MS);
   }
 
   public getTreeItem(element: BaseNode): TreeItem | Promise<TreeItem> {
@@ -178,13 +191,19 @@ export default class SparseCheckoutProvider
   /**
    * Filter local filesystem items to only include tracked items (on server).
    * This excludes untracked items like .vscode, .idea, node_modules, etc.
+   * Uses case-insensitive comparison for Windows/macOS compatibility.
    */
   private filterToTrackedItems(
     localItems: ISparseItem[],
     serverItems: { name: string; kind: "file" | "dir" }[]
   ): ISparseItem[] {
-    const serverNames = new Set(serverItems.map(s => s.name));
-    return localItems.filter(item => serverNames.has(item.name));
+    // Case-insensitive Set for Windows/macOS compatibility
+    const serverNamesLower = new Set(
+      serverItems.map(s => s.name.toLowerCase())
+    );
+    return localItems.filter(item =>
+      serverNamesLower.has(item.name.toLowerCase())
+    );
   }
 
   /**
@@ -251,7 +270,8 @@ export default class SparseCheckoutProvider
     repo: Repository,
     folderPath: string
   ): Promise<SparseDepthKey | undefined> {
-    const cacheKey = folderPath;
+    // Include repo root in cache key for multi-repo safety
+    const cacheKey = `${repo.root}:${folderPath}`;
     const now = Date.now();
 
     // Check cache
@@ -339,9 +359,10 @@ export default class SparseCheckoutProvider
     serverItems: { name: string; kind: "file" | "dir" }[],
     relativeFolder: string
   ): ISparseItem[] {
-    const localNames = new Set(localItems.map(i => i.name));
+    // Case-insensitive Set for Windows/macOS compatibility
+    const localNamesLower = new Set(localItems.map(i => i.name.toLowerCase()));
     return serverItems
-      .filter(s => !localNames.has(s.name))
+      .filter(s => !localNamesLower.has(s.name.toLowerCase()))
       .map(s => ({
         name: s.name,
         path: relativeFolder ? path.join(relativeFolder, s.name) : s.name,
@@ -470,6 +491,9 @@ export default class SparseCheckoutProvider
   }
 
   public dispose(): void {
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
     dispose(this._disposables);
   }
 }

@@ -2,6 +2,11 @@
 
 ### FIX: Sparse Checkout List Performance
 
+- **Fix**: Case-insensitive name comparison for Windows/macOS
+  - Previously: Files with different case (README.md vs readme.md) could be filtered incorrectly
+  - Now: Uses case-insensitive comparison for tracked item detection and ghost computation
+- **Fix**: Depth cache key includes repo root for multi-repo safety
+- **Perf**: Debounced visual refresh to prevent UI flicker when expanding multiple folders
 - **Fix**: "Change depth" now works from sparse checkout tree
   - Previously: Command expected Uri, failed with "No SVN repository found"
   - Now: Accepts both Uri (explorer) and SparseItemNode (tree view)
