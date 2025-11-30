@@ -1492,7 +1492,7 @@ export class Repository {
   public async setDepth(
     folderPath: string,
     depth: keyof typeof SvnDepth,
-    options?: { parents?: boolean }
+    options?: { parents?: boolean; timeout?: number }
   ): Promise<IExecutionResult> {
     // Validate depth is a valid SvnDepth key
     const validDepths = Object.keys(SvnDepth);
@@ -1516,7 +1516,11 @@ export class Repository {
 
     args.push(folderPath);
 
-    return this.exec(args);
+    // Pass timeout option for long-running downloads
+    return this.exec(
+      args,
+      options?.timeout ? { timeout: options.timeout } : {}
+    );
   }
 
   /**

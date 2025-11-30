@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.26.16",
+  "version": "2.26.17",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.74.0",
@@ -1465,6 +1465,13 @@
           "default": 10,
           "minimum": 0,
           "maximum": 1000
+        },
+        "svn.sparse.downloadTimeoutMinutes": {
+          "type": "number",
+          "description": "Timeout for download operations in minutes. Large folders may need longer timeouts.",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 60
         },
         "svn.commit.changes.selectedAll": {
           "type": "boolean",

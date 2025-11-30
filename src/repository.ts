@@ -1241,11 +1241,12 @@ export class Repository implements IRemoteRepository {
    * @param folderPath Path to folder
    * @param depth One of: exclude, empty, files, immediates, infinity
    * @param options.parents Restore parent folders if excluded
+   * @param options.timeout Custom timeout in ms for long downloads
    */
   public async setDepth(
     folderPath: string,
     depth: keyof typeof SvnDepth,
-    options?: { parents?: boolean }
+    options?: { parents?: boolean; timeout?: number }
   ) {
     return this.run(Operation.Update, () =>
       this.repository.setDepth(folderPath, depth, options)

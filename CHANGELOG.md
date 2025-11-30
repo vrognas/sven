@@ -1,3 +1,11 @@
+## [2.26.17] (2025-11-30)
+
+### Fix: Download Timeout for Large Folders
+
+- **New**: `svn.sparse.downloadTimeoutMinutes` setting (default: 10 min, max: 60 min)
+- **Fix**: Large folder downloads no longer timeout after 60s
+- **Refactor**: `setDepth` now accepts timeout option
+
 ## [2.26.16] (2025-11-30)
 
 ### Feature: Outdated File Detection

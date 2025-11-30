@@ -82,6 +82,9 @@ const REFRESH_DEBOUNCE_MS = 500;
 /** Default large file warning threshold in MB (configurable via svn.sparse.largeFileWarningMb) */
 const DEFAULT_LARGE_FILE_WARNING_MB = 10;
 
+/** Default download timeout in minutes (configurable via svn.sparse.downloadTimeoutMinutes) */
+const DEFAULT_DOWNLOAD_TIMEOUT_MINUTES = 10;
+
 /** Default download speed estimate (bytes/sec) - conservative 1 MB/s */
 const DEFAULT_SPEED_BPS = 1 * 1024 * 1024;
 
@@ -714,6 +717,12 @@ export default class SparseCheckoutProvider
       .get<number>("largeFileWarningMb", DEFAULT_LARGE_FILE_WARNING_MB);
     const thresholdBytes = thresholdMb * 1024 * 1024;
 
+    // Get configurable timeout for downloads (in minutes, convert to ms)
+    const timeoutMinutes = workspace
+      .getConfiguration("svn.sparse")
+      .get<number>("downloadTimeoutMinutes", DEFAULT_DOWNLOAD_TIMEOUT_MINUTES);
+    const downloadTimeoutMs = timeoutMinutes * 60 * 1000;
+
     // Build file size map for O(1) lookups (fixes basename collision + O(n²))
     const fileSizeMap = this.getFileSizeMap(validNodes);
 
@@ -894,7 +903,8 @@ export default class SparseCheckoutProvider
 
             try {
               const res = await repo.setDepth(node.fullPath, depth, {
-                parents: true
+                parents: true,
+                timeout: downloadTimeoutMs
               });
 
               cleanup();
