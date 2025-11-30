@@ -28,6 +28,19 @@ const POLL_INTERVAL_MS = 500;
 /** Max recursion depth for file counting */
 const MAX_RECURSION_DEPTH = 100;
 
+/** Format seconds into human-readable duration */
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  }
+  const h = Math.floor(seconds / 3600);
+  const m = Math.round((seconds % 3600) / 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 /**
  * Count files recursively in a directory.
  * Used for tracking folder download progress.
@@ -247,6 +260,7 @@ export class SetDepth extends Command {
 
               // Start progress polling for downloads
               if (expectedFileCount > 0) {
+                const startTime = Date.now();
                 progress.report({
                   message: `Downloading ${folderName} (0/${expectedFileCount} files)...`
                 });
@@ -257,8 +271,21 @@ export class SetDepth extends Command {
                   const pct = Math.round(
                     (currentCount / expectedFileCount) * 100
                   );
+
+                  // Calculate ETA based on current speed
+                  let etaLabel = "";
+                  if (currentCount > 0) {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const speed = currentCount / elapsed; // files/sec
+                    const remaining = expectedFileCount - currentCount;
+                    if (speed > 0 && remaining > 0) {
+                      const eta = remaining / speed;
+                      etaLabel = ` ~${formatDuration(eta)}`;
+                    }
+                  }
+
                   progress.report({
-                    message: `${folderName}: ${currentCount}/${expectedFileCount} files (${pct}%)`
+                    message: `${folderName}: ${currentCount}/${expectedFileCount} files (${pct}%)${etaLabel}`
                   });
                 }, POLL_INTERVAL_MS);
               } else {
@@ -269,6 +296,7 @@ export class SetDepth extends Command {
               initialFileCount = countFilesInFolder(uri.fsPath);
 
               if (initialFileCount > 0) {
+                const startTime = Date.now();
                 const actionLabel =
                   selected.depth === "exclude" ? "Excluding" : "Removing files";
                 progress.report({
@@ -279,8 +307,17 @@ export class SetDepth extends Command {
                   const remaining = countFilesInFolder(uri.fsPath);
                   const removed = initialFileCount - remaining;
                   if (removed > 0) {
+                    // Calculate ETA
+                    let etaLabel = "";
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const speed = removed / elapsed; // files/sec
+                    if (speed > 0 && remaining > 0) {
+                      const eta = remaining / speed;
+                      etaLabel = ` ~${formatDuration(eta)}`;
+                    }
+
                     progress.report({
-                      message: `${actionLabel}: ${removed}/${initialFileCount} removed`
+                      message: `${actionLabel}: ${removed}/${initialFileCount} removed${etaLabel}`
                     });
                   }
                 }, POLL_INTERVAL_MS);
