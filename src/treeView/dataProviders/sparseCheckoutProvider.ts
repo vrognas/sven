@@ -66,8 +66,8 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 /** Max cache entries before forced cleanup */
 const MAX_CACHE_SIZE = 100;
 
-/** Debounce delay for visual refresh (ms) */
-const REFRESH_DEBOUNCE_MS = 100;
+/** Debounce delay for visual refresh (ms) - longer to avoid race with context menu */
+const REFRESH_DEBOUNCE_MS = 500;
 
 export default class SparseCheckoutProvider
   implements TreeDataProvider<BaseNode>, Disposable
@@ -404,6 +404,11 @@ export default class SparseCheckoutProvider
    * Checkout a ghost item (restore from server)
    */
   private async checkoutItem(node: SparseItemNode): Promise<void> {
+    // Guard: node can be undefined if tree refreshed while context menu open
+    if (!node?.fullPath) {
+      window.showErrorMessage("Item no longer available. Please try again.");
+      return;
+    }
     const fullPath = node.fullPath;
     const repo = this.sourceControlManager.getRepository(Uri.file(fullPath));
     if (!repo) {
@@ -452,6 +457,11 @@ export default class SparseCheckoutProvider
    * Exclude a local item (remove from working copy)
    */
   private async excludeItem(node: SparseItemNode): Promise<void> {
+    // Guard: node can be undefined if tree refreshed while context menu open
+    if (!node?.fullPath) {
+      window.showErrorMessage("Item no longer available. Please try again.");
+      return;
+    }
     const fullPath = node.fullPath;
     const repo = this.sourceControlManager.getRepository(Uri.file(fullPath));
     if (!repo) {
