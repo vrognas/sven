@@ -326,6 +326,9 @@ export default class SparseCheckoutProvider
     // Add lock status from repository status (fast, uses existing data)
     this.populateLockStatus(repo, trackedLocalItems);
 
+    // Fetch local revisions for outdated detection
+    await this.populateLocalRevisions(repo, trackedLocalItems);
+
     // Always compute ghosts - even with infinity depth, individual items may be excluded
     const ghosts = this.computeGhosts(
       trackedLocalItems,
@@ -452,6 +455,36 @@ export default class SparseCheckoutProvider
         // Note: lockComment not available from status, would need svn info
       }
     }
+  }
+
+  /**
+   * Populate local revision for tracked items (non-ghost).
+   * Used to detect outdated files (localRevision < serverRevision).
+   */
+  private async populateLocalRevisions(
+    repo: Repository,
+    items: ISparseItem[]
+  ): Promise<void> {
+    const localItems = items.filter(i => !i.isGhost);
+    if (localItems.length === 0) return;
+
+    // Batch fetch info for all local items in parallel
+    const infos = await Promise.all(
+      localItems.map(async item => {
+        try {
+          const fullPath = path.join(repo.root, item.path);
+          const info = await repo.getInfo(fullPath);
+          return info.commit?.revision;
+        } catch {
+          return undefined;
+        }
+      })
+    );
+
+    // Apply local revisions
+    localItems.forEach((item, i) => {
+      item.localRevision = infos[i];
+    });
   }
 
   /**

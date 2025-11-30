@@ -12,9 +12,12 @@ import {
 import { LockStatus } from "../common/types";
 
 /**
- * Provides file decorations for sparse checkout tree items.
+ * Provides file decorations for selective download tree items.
  * - Ghost items (not checked out) are visually de-emphasized
+ * - Outdated items (local < server revision) show update indicator
  * - Locked items show lock badge (K/O/B/T) like explorer view
+ *
+ * Uses svn-sparse:// scheme to prevent VS Code SCM decorations from appearing.
  */
 export class SparseFileDecorationProvider
   implements FileDecorationProvider, Disposable
@@ -30,14 +33,20 @@ export class SparseFileDecorationProvider
   }
 
   provideFileDecoration(uri: Uri): FileDecoration | undefined {
-    // Parse query params: sparse=ghost, lock=K/O/B/T, lockOwner=name
+    // Only handle svn-sparse scheme (prevents SCM decoration conflicts)
+    if (uri.scheme !== "svn-sparse") {
+      return undefined;
+    }
+
+    // Parse query params: sparse=ghost, outdated=true, lock=K/O/B/T
     const params = new URLSearchParams(uri.query);
     const isGhost = params.get("sparse") === "ghost";
+    const isOutdated = params.get("outdated") === "true";
     const lockStatus = params.get("lock") as LockStatus | null;
     const lockOwner = params.get("lockOwner");
 
     // No decoration needed
-    if (!isGhost && !lockStatus) {
+    if (!isGhost && !isOutdated && !lockStatus) {
       return undefined;
     }
 
@@ -47,6 +56,19 @@ export class SparseFileDecorationProvider
     if (isGhost) {
       decoration.color = new ThemeColor("list.deemphasizedForeground");
       decoration.tooltip = "Not downloaded (on server only)";
+    }
+
+    // Outdated items: update available indicator
+    // Priority: lock badge > outdated badge (both can't be shown)
+    if (isOutdated && !lockStatus) {
+      decoration.badge = "↓";
+      decoration.color = new ThemeColor(
+        "gitDecoration.modifiedResourceForeground"
+      );
+      const outdatedTooltip = "Update available (server has newer revision)";
+      decoration.tooltip = decoration.tooltip
+        ? `${decoration.tooltip} - ${outdatedTooltip}`
+        : outdatedTooltip;
     }
 
     // Lock badge (K/O/B/T) - same as explorer view

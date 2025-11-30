@@ -1,3 +1,12 @@
+## [2.26.16] (2025-11-30)
+
+### Feature: Outdated File Detection
+
+- **New**: "↓" badge shows when local revision < server revision (update available)
+- **New**: Tooltip shows "Local: r5 → Server: r8 (update available)"
+- **Fix**: Use custom `svn-sparse://` scheme to prevent VS Code SCM decorations
+- **Refactor**: Added `localRevision` field to ISparseItem for revision comparison
+
 ## [2.26.15] (2025-11-30)
 
 ### Perf: Filter Single-Pass Optimization

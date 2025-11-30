@@ -143,8 +143,19 @@ export default class SparseItemNode extends BaseNode {
   private buildTooltip(): string {
     const lines: string[] = [this.item.path];
 
-    if (this.item.revision) {
-      lines.push(`Revision: ${this.item.revision}`);
+    // Show revision comparison for local items
+    if (!this.item.isGhost && this.item.localRevision && this.item.revision) {
+      const local = parseInt(this.item.localRevision, 10);
+      const server = parseInt(this.item.revision, 10);
+      if (local < server) {
+        lines.push(
+          `Local: r${this.item.localRevision} → Server: r${this.item.revision} (update available)`
+        );
+      } else {
+        lines.push(`Revision: r${this.item.revision} (up to date)`);
+      }
+    } else if (this.item.revision) {
+      lines.push(`Revision: r${this.item.revision}`);
     }
     if (this.item.author) {
       lines.push(`Author: ${this.item.author}`);
@@ -164,7 +175,7 @@ export default class SparseItemNode extends BaseNode {
       }
     }
     if (this.item.isGhost) {
-      lines.push("(Not checked out - on server only)");
+      lines.push("(Not downloaded - on server only)");
     }
 
     return lines.join("\n");
@@ -179,6 +190,16 @@ export default class SparseItemNode extends BaseNode {
       params.set("sparse", "ghost");
     }
 
+    // Outdated detection: localRevision < serverRevision
+    if (
+      !this.item.isGhost &&
+      this.item.localRevision &&
+      this.item.revision &&
+      parseInt(this.item.localRevision, 10) < parseInt(this.item.revision, 10)
+    ) {
+      params.set("outdated", "true");
+    }
+
     // Lock status for badge decoration (K/O/B/T)
     if (this.item.lockStatus) {
       params.set("lock", this.item.lockStatus);
@@ -188,7 +209,10 @@ export default class SparseItemNode extends BaseNode {
     }
 
     const query = params.toString();
-    return query ? baseUri.with({ query }) : baseUri;
+    // Use svn-sparse scheme to prevent VS Code SCM decorations
+    return query
+      ? baseUri.with({ scheme: "svn-sparse", query })
+      : baseUri.with({ scheme: "svn-sparse" });
   }
 
   public async getChildren(): Promise<BaseNode[]> {
