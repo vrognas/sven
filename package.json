@@ -1314,6 +1314,21 @@
           "minimum": 10,
           "maximum": 600
         },
+        "svn.output.authLogging": {
+          "type": "string",
+          "enum": [
+            "once",
+            "always",
+            "never"
+          ],
+          "enumDescriptions": [
+            "Log auth mode once at startup (recommended)",
+            "Log auth mode with every SVN command (verbose)",
+            "Never log auth mode"
+          ],
+          "description": "How often to log authentication mode in SVN output panel.",
+          "default": "once"
+        },
         "svn.autorefresh": {
           "type": "boolean",
           "description": "Whether auto refreshing is enabled",

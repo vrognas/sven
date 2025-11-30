@@ -6,6 +6,10 @@
   - Previously: `svn list <localPath>` was slow for large repos (recursive)
   - Now: Uses `svn list <repoUrl/folder>` which is fast and non-recursive
   - Fixes 47+ second freeze when expanding root folder in large repos
+- **New**: `svn.output.authLogging` setting to control auth mode logging
+  - `once` (default): Log auth mode once at startup
+  - `always`: Log with every SVN command (verbose/debug)
+  - `never`: Never log auth mode
 
 ## [2.26.5] (2025-11-30)
 
