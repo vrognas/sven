@@ -7,14 +7,15 @@ import {
   Disposable,
   Event,
   EventEmitter,
-  QuickPickItem,
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  ThemeIcon,
   Uri,
   window
 } from "vscode";
 import { ISparseItem, SparseDepthKey } from "../../common/types";
+import { checkoutDepthOptions } from "../../commands/setDepth";
 import { readdir, stat } from "../../fs";
 import { SourceControlManager } from "../../source_control_manager";
 import { Repository } from "../../repository";
@@ -33,7 +34,9 @@ class RepositoryRootNode extends BaseNode {
 
   public getTreeItem(): TreeItem {
     const repoName = path.basename(this.repo.root);
-    return new TreeItem(repoName, TreeItemCollapsibleState.Collapsed);
+    const treeItem = new TreeItem(repoName, TreeItemCollapsibleState.Collapsed);
+    treeItem.iconPath = new ThemeIcon("repo");
+    return treeItem;
   }
 
   public async getChildren(): Promise<BaseNode[]> {
@@ -47,11 +50,26 @@ class RepositoryRootNode extends BaseNode {
   }
 }
 
+/** Cache entry with TTL */
+interface CacheEntry<T> {
+  data: T;
+  expires: number;
+}
+
+/** Cache TTL in milliseconds (30 seconds) */
+const CACHE_TTL_MS = 30000;
+
 export default class SparseCheckoutProvider
   implements TreeDataProvider<BaseNode>, Disposable
 {
   private _onDidChangeTreeData = new EventEmitter<BaseNode | undefined>();
   private _disposables: Disposable[] = [];
+
+  /** Cache for server list results to avoid repeated network calls */
+  private serverListCache = new Map<
+    string,
+    CacheEntry<{ name: string; kind: "file" | "dir" }[]>
+  >();
 
   public readonly onDidChangeTreeData: Event<BaseNode | undefined> =
     this._onDidChangeTreeData.event;
@@ -70,6 +88,8 @@ export default class SparseCheckoutProvider
   }
 
   public refresh(): void {
+    // Clear cache on manual refresh
+    this.serverListCache.clear();
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -101,6 +121,7 @@ export default class SparseCheckoutProvider
   ): Promise<ISparseItem[]> {
     const localItems = await this.getLocalItems(repo, folderPath);
     const depth = await this.getDepth(repo, folderPath);
+    const relativeFolder = path.relative(repo.root, folderPath);
 
     // If depth is infinity, no ghosts possible
     if (depth === "infinity") {
@@ -110,7 +131,11 @@ export default class SparseCheckoutProvider
     // Fetch server items to find ghosts
     try {
       const serverItems = await this.getServerItems(repo, folderPath);
-      const ghosts = this.computeGhosts(localItems, serverItems);
+      const ghosts = this.computeGhosts(
+        localItems,
+        serverItems,
+        relativeFolder
+      );
       return this.mergeItems(localItems, ghosts);
     } catch (err) {
       // Server list failed (offline, etc.) - just show local
@@ -124,6 +149,7 @@ export default class SparseCheckoutProvider
     folderPath: string
   ): Promise<ISparseItem[]> {
     const items: ISparseItem[] = [];
+    const dirPaths: { index: number; fullPath: string }[] = [];
 
     try {
       const entries = await readdir(folderPath);
@@ -136,22 +162,32 @@ export default class SparseCheckoutProvider
         try {
           const stats = await stat(fullPath);
           const kind = stats.isDirectory() ? "dir" : "file";
-          let depth: SparseDepthKey | undefined;
-
-          if (kind === "dir") {
-            depth = await this.getDepth(repo, fullPath);
-          }
 
           items.push({
             name,
             path: relativePath,
             kind,
-            depth,
+            depth: undefined,
             isGhost: false
           });
+
+          // Track directories for batch depth fetch
+          if (kind === "dir") {
+            dirPaths.push({ index: items.length - 1, fullPath });
+          }
         } catch {
           // stat failed, skip
         }
+      }
+
+      // Batch fetch depths for all directories in parallel
+      if (dirPaths.length > 0) {
+        const depths = await Promise.all(
+          dirPaths.map(d => this.getDepth(repo, d.fullPath))
+        );
+        dirPaths.forEach((d, i) => {
+          items[d.index].depth = depths[i];
+        });
       }
     } catch {
       // readdir failed
@@ -176,23 +212,42 @@ export default class SparseCheckoutProvider
     repo: Repository,
     folderPath: string
   ): Promise<{ name: string; kind: "file" | "dir" }[]> {
+    const cacheKey = `${repo.root}:${folderPath}`;
+    const now = Date.now();
+
+    // Check cache
+    const cached = this.serverListCache.get(cacheKey);
+    if (cached && cached.expires > now) {
+      return cached.data;
+    }
+
+    // Fetch from server
     const listItems = await repo.list(folderPath);
-    return listItems.map(item => ({
+    const result = listItems.map(item => ({
       name: item.name,
-      kind: item.kind === "dir" ? "dir" : "file"
+      kind: (item.kind === "dir" ? "dir" : "file") as "file" | "dir"
     }));
+
+    // Cache result
+    this.serverListCache.set(cacheKey, {
+      data: result,
+      expires: now + CACHE_TTL_MS
+    });
+
+    return result;
   }
 
   private computeGhosts(
     localItems: ISparseItem[],
-    serverItems: { name: string; kind: "file" | "dir" }[]
+    serverItems: { name: string; kind: "file" | "dir" }[],
+    relativeFolder: string
   ): ISparseItem[] {
     const localNames = new Set(localItems.map(i => i.name));
     return serverItems
       .filter(s => !localNames.has(s.name))
       .map(s => ({
         name: s.name,
-        path: s.name,
+        path: relativeFolder ? path.join(relativeFolder, s.name) : s.name,
         kind: s.kind,
         isGhost: true
       }));
@@ -227,33 +282,7 @@ export default class SparseCheckoutProvider
     let depth: SparseDepthKey = "infinity";
 
     if (node.kind === "dir") {
-      interface DepthQuickPickItem extends QuickPickItem {
-        depth: SparseDepthKey;
-      }
-      const options: DepthQuickPickItem[] = [
-        {
-          label: "$(folder-opened) Full",
-          description: "Download everything",
-          depth: "infinity"
-        },
-        {
-          label: "$(list-tree) Shallow",
-          description: "Files + empty subfolders",
-          depth: "immediates"
-        },
-        {
-          label: "$(file) Files Only",
-          description: "Skip subfolders",
-          depth: "files"
-        },
-        {
-          label: "$(folder) Folder Only",
-          description: "Empty placeholder",
-          depth: "empty"
-        }
-      ];
-
-      const selected = await window.showQuickPick(options, {
+      const selected = await window.showQuickPick(checkoutDepthOptions, {
         placeHolder: "How much should be downloaded?"
       });
 

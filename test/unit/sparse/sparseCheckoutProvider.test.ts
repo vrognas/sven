@@ -1,3 +1,4 @@
+import * as path from "path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Types for testing
@@ -15,17 +16,18 @@ interface MockRepository {
   list: ReturnType<typeof vi.fn>;
 }
 
-// Simulated provider logic for testing
+// Simulated provider logic for testing (matches implementation)
 function computeGhosts(
   localItems: { name: string; kind: "file" | "dir" }[],
-  serverItems: { name: string; kind: "file" | "dir" }[]
+  serverItems: { name: string; kind: "file" | "dir" }[],
+  relativeFolder: string = ""
 ): ISparseItem[] {
   const localNames = new Set(localItems.map(i => i.name));
   return serverItems
     .filter(s => !localNames.has(s.name))
     .map(s => ({
       name: s.name,
-      path: s.name,
+      path: relativeFolder ? path.join(relativeFolder, s.name) : s.name,
       kind: s.kind,
       isGhost: true
     }));
@@ -42,7 +44,13 @@ function mergeItems(
     depth: i.depth,
     isGhost: false
   }));
-  return [...local, ...ghosts].sort((a, b) => a.name.localeCompare(b.name));
+  return [...local, ...ghosts].sort((a, b) => {
+    // Dirs first, then alphabetical (matches implementation)
+    if (a.kind !== b.kind) {
+      return a.kind === "dir" ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
 }
 
 describe("Sparse Checkout Provider", () => {
@@ -106,11 +114,12 @@ describe("Sparse Checkout Provider", () => {
 
       const merged = mergeItems(localItems, ghosts);
 
+      // Dirs first, then alphabetical
       expect(merged.map(m => m.name)).toEqual([
         "assets",
         "docs",
-        "README.md",
-        "src"
+        "src",
+        "README.md"
       ]);
       expect(merged.find(m => m.name === "src")?.isGhost).toBe(false);
       expect(merged.find(m => m.name === "docs")?.isGhost).toBe(true);
@@ -127,6 +136,64 @@ describe("Sparse Checkout Provider", () => {
       const info = await mockRepository.getInfo("/home/user/project/lib");
 
       expect(info.wcInfo?.depth).toBe("immediates");
+    });
+  });
+
+  describe("nested directory paths", () => {
+    it("constructs correct paths for ghosts at root level", () => {
+      const serverItems = [
+        { name: "docs", kind: "dir" as const },
+        { name: "config.json", kind: "file" as const }
+      ];
+
+      // Root level: relativeFolder is empty
+      const ghosts = computeGhosts([], serverItems, "");
+
+      expect(ghosts[0].path).toBe("docs");
+      expect(ghosts[1].path).toBe("config.json");
+    });
+
+    it("constructs correct paths for ghosts in nested folder", () => {
+      const serverItems = [
+        { name: "utils", kind: "dir" as const },
+        { name: "index.ts", kind: "file" as const }
+      ];
+
+      // Inside src folder
+      const ghosts = computeGhosts([], serverItems, "src");
+
+      expect(ghosts[0].path).toBe(path.join("src", "utils"));
+      expect(ghosts[1].path).toBe(path.join("src", "index.ts"));
+    });
+
+    it("constructs correct paths for deeply nested ghosts", () => {
+      const serverItems = [{ name: "helper.ts", kind: "file" as const }];
+
+      // Inside src/lib/utils folder
+      const ghosts = computeGhosts(
+        [],
+        serverItems,
+        path.join("src", "lib", "utils")
+      );
+
+      expect(ghosts[0].path).toBe(
+        path.join("src", "lib", "utils", "helper.ts")
+      );
+    });
+
+    it("handles mixed local and ghost items with correct paths", () => {
+      const localItems = [{ name: "existing.ts", kind: "file" as const }];
+      const serverItems = [
+        { name: "existing.ts", kind: "file" as const },
+        { name: "new-file.ts", kind: "file" as const }
+      ];
+
+      const ghosts = computeGhosts(localItems, serverItems, "src");
+
+      // Only new-file.ts should be a ghost
+      expect(ghosts).toHaveLength(1);
+      expect(ghosts[0].name).toBe("new-file.ts");
+      expect(ghosts[0].path).toBe(path.join("src", "new-file.ts"));
     });
   });
 });

@@ -1,6 +1,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import * as path from "path";
 import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from "vscode";
 import { ISparseItem, SparseDepthKey } from "../../common/types";
 import BaseNode from "./baseNode";
@@ -53,12 +54,12 @@ export default class SparseItemNode extends BaseNode {
     if (this.item.kind !== "dir") {
       return [];
     }
-    const fullPath = this.repoRoot + "/" + this.item.path;
+    const fullPath = path.join(this.repoRoot, this.item.path);
     const items = await this.loadChildren(fullPath);
     return items.map(
       i =>
         new SparseItemNode(
-          { ...i, path: this.item.path + "/" + i.name },
+          i, // Path is already correct from getItems()
           this.repoRoot,
           this.loadChildren
         )
@@ -70,7 +71,7 @@ export default class SparseItemNode extends BaseNode {
   }
 
   public get fullPath(): string {
-    return this.repoRoot + "/" + this.item.path;
+    return path.join(this.repoRoot, this.item.path);
   }
 
   public get isGhost(): boolean {
