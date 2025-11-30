@@ -41,6 +41,55 @@ function formatDuration(seconds: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+/** Format bytes into human-readable size */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+/**
+ * Get total size of files in a folder (bytes).
+ * Used for tracking download progress by size.
+ */
+function getFolderSize(
+  folderPath: string,
+  visited = new Set<string>(),
+  depth = 0
+): number {
+  if (depth > MAX_RECURSION_DEPTH) return 0;
+
+  let size = 0;
+  try {
+    const folderStats = fs.statSync(folderPath);
+    const inode = `${folderStats.dev}:${folderStats.ino}`;
+    if (visited.has(inode)) return 0;
+    visited.add(inode);
+
+    const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === ".svn") continue;
+      if (entry.isSymbolicLink()) continue;
+
+      const fullPath = path.join(folderPath, entry.name);
+      if (entry.isDirectory()) {
+        size += getFolderSize(fullPath, visited, depth + 1);
+      } else if (entry.isFile()) {
+        try {
+          size += fs.statSync(fullPath).size;
+        } catch {
+          // File may have been deleted
+        }
+      }
+    }
+  } catch {
+    // Folder may not exist yet
+  }
+  return size;
+}
+
 /**
  * Count files recursively in a directory.
  * Used for tracking folder download progress.
@@ -230,11 +279,13 @@ export class SetDepth extends Command {
 
           let pollInterval: ReturnType<typeof setInterval> | undefined;
           let expectedFileCount = 0;
+          let expectedTotalSize = 0;
           let initialFileCount = 0;
+          let initialTotalSize = 0;
 
           try {
             if (isDownload) {
-              // For downloads, pre-scan server to get expected file count
+              // For downloads, pre-scan server to get expected file count and size
               progress.report({ message: `Scanning ${folderName}...` });
 
               try {
@@ -245,17 +296,27 @@ export class SetDepth extends Command {
                   relativePath,
                   PRE_SCAN_TIMEOUT_SECONDS * 1000
                 );
-                expectedFileCount = items.filter(i => i.kind === "file").length;
+                const files = items.filter(i => i.kind === "file");
+                expectedFileCount = files.length;
+                expectedTotalSize = files.reduce(
+                  (sum, f) => sum + (parseInt(f.size || "0", 10) || 0),
+                  0
+                );
 
                 if (token.isCancellationRequested) {
                   return { exitCode: -1, cancelled: true, stderr: "" };
                 }
 
+                const sizeLabel =
+                  expectedTotalSize > 0
+                    ? ` (${formatBytes(expectedTotalSize)})`
+                    : "";
                 progress.report({
-                  message: `Found ${expectedFileCount} files in ${folderName}`
+                  message: `Found ${expectedFileCount} files${sizeLabel} in ${folderName}`
                 });
               } catch {
                 expectedFileCount = 0;
+                expectedTotalSize = 0;
               }
 
               // Start progress polling for downloads
@@ -268,16 +329,18 @@ export class SetDepth extends Command {
                 pollInterval = setInterval(() => {
                   if (token.isCancellationRequested) return;
                   const currentCount = countFilesInFolder(uri.fsPath);
-                  const pct = Math.round(
-                    (currentCount / expectedFileCount) * 100
-                  );
+                  const currentSize = getFolderSize(uri.fsPath);
+                  const pct =
+                    expectedTotalSize > 0
+                      ? Math.round((currentSize / expectedTotalSize) * 100)
+                      : Math.round((currentCount / expectedFileCount) * 100);
 
-                  // Calculate ETA based on current speed
+                  // Calculate ETA based on bytes/sec (more accurate than files)
                   let etaLabel = "";
-                  if (currentCount > 0) {
+                  if (currentSize > 0 && expectedTotalSize > 0) {
                     const elapsed = (Date.now() - startTime) / 1000;
-                    const speed = currentCount / elapsed; // files/sec
-                    const remaining = expectedFileCount - currentCount;
+                    const speed = currentSize / elapsed; // bytes/sec
+                    const remaining = expectedTotalSize - currentSize;
                     if (speed > 0 && remaining > 0) {
                       const eta = remaining / speed;
                       etaLabel = ` ~${formatDuration(eta)}`;
@@ -294,26 +357,35 @@ export class SetDepth extends Command {
             } else {
               // For removals (exclude, empty, files, immediates), count existing files
               initialFileCount = countFilesInFolder(uri.fsPath);
+              initialTotalSize = getFolderSize(uri.fsPath);
 
               if (initialFileCount > 0) {
                 const startTime = Date.now();
                 const actionLabel =
                   selected.depth === "exclude" ? "Excluding" : "Removing files";
+                const sizeLabel =
+                  initialTotalSize > 0
+                    ? ` (${formatBytes(initialTotalSize)})`
+                    : "";
                 progress.report({
-                  message: `${actionLabel} (${initialFileCount} files)...`
+                  message: `${actionLabel} ${initialFileCount} files${sizeLabel}...`
                 });
 
                 pollInterval = setInterval(() => {
-                  const remaining = countFilesInFolder(uri.fsPath);
-                  const removed = initialFileCount - remaining;
+                  const remainingCount = countFilesInFolder(uri.fsPath);
+                  const remainingSize = getFolderSize(uri.fsPath);
+                  const removed = initialFileCount - remainingCount;
                   if (removed > 0) {
-                    // Calculate ETA
+                    // Calculate ETA based on bytes removed
                     let etaLabel = "";
-                    const elapsed = (Date.now() - startTime) / 1000;
-                    const speed = removed / elapsed; // files/sec
-                    if (speed > 0 && remaining > 0) {
-                      const eta = remaining / speed;
-                      etaLabel = ` ~${formatDuration(eta)}`;
+                    const removedSize = initialTotalSize - remainingSize;
+                    if (removedSize > 0 && initialTotalSize > 0) {
+                      const elapsed = (Date.now() - startTime) / 1000;
+                      const speed = removedSize / elapsed; // bytes/sec
+                      if (speed > 0 && remainingSize > 0) {
+                        const eta = remainingSize / speed;
+                        etaLabel = ` ~${formatDuration(eta)}`;
+                      }
                     }
 
                     progress.report({

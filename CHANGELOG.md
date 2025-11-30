@@ -2,10 +2,11 @@
 
 ### Feature: Set Depth Command Progress
 
-- **New**: Pre-scan folder with `svn list` to count expected files
+- **New**: Pre-scan folder with `svn list` to count files and total size
 - **New**: Real-time progress: "folder: 42/150 files (28%) ~2m 30s"
-- **New**: ETA calculation based on current speed
-- **New**: Exclusion progress: "Excluding: 10/50 removed ~45s"
+- **New**: ETA calculated from bytes/sec (not file count) for accuracy
+- **New**: Shows total size: "Found 150 files (45.2 MB) in folder"
+- **New**: Exclusion progress: "Excluding 50 files (12.3 MB)..."
 - **UX**: Shows "Scanning folder..." during pre-scan phase
 
 ## [2.26.24] (2025-11-30)
