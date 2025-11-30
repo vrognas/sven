@@ -33,9 +33,16 @@
 - **Fix**: Can now checkout files within excluded folders
   - Previously: Checking out a file in an excluded parent folder failed with E155007
   - Now: Uses `--parents` flag to automatically restore parent folders
-- **New**: Ghost items show theme icons with cloud badge decoration
-  - Previously: Ghost items showed generic cloud icon
-  - Now: Shows proper file/folder icons with ☁ badge and grayed-out color
+- **UX**: Ghost items use de-emphasized styling (per VS Code guidelines)
+  - Shows proper file/folder icons with subtle de-emphasized color
+  - No badge or description clutter - visual distinction is clear
+- **UX**: Welcome view explains sparse checkout feature when empty
+- **UX**: "Don't Ask Again" option for exclude confirmation
+  - New setting: `svn.sparse.confirmExclude` (default: true)
+- **UX**: Status bar progress for single-item operations
+  - Batch operations still use notification progress
+- **UX**: "Show Output" button on error notifications
+- **UX**: Partial indicator uses informational color (not warning)
 - **Fix**: Excluded files now show as ghosts in sparse checkout tree
   - Previously: Files excluded via "exclude" action disappeared from treeview completely
   - Now: Individual excluded items appear as ghosts (can be re-checked out)
