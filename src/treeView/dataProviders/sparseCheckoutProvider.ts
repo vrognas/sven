@@ -75,6 +75,12 @@ export default class SparseCheckoutProvider
     CacheEntry<{ name: string; kind: "file" | "dir" }[]>
   >();
 
+  /** Cache for folder depth to avoid repeated svn info calls */
+  private depthCache = new Map<
+    string,
+    CacheEntry<SparseDepthKey | undefined>
+  >();
+
   public readonly onDidChangeTreeData: Event<BaseNode | undefined> =
     this._onDidChangeTreeData.event;
 
@@ -92,8 +98,9 @@ export default class SparseCheckoutProvider
   }
 
   public refresh(): void {
-    // Clear cache on manual refresh
+    // Clear caches on manual refresh
     this.serverListCache.clear();
+    this.depthCache.clear();
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -236,11 +243,42 @@ export default class SparseCheckoutProvider
     repo: Repository,
     folderPath: string
   ): Promise<SparseDepthKey | undefined> {
+    const cacheKey = folderPath;
+    const now = Date.now();
+
+    // Check cache
+    const cached = this.depthCache.get(cacheKey);
+    if (cached && cached.expires > now) {
+      return cached.data;
+    }
+
+    // Evict expired entries if cache is large
+    if (this.depthCache.size >= MAX_CACHE_SIZE) {
+      this.evictExpiredDepthCacheEntries(now);
+    }
+
     try {
       const info = await repo.getInfo(folderPath);
-      return info.wcInfo?.depth as SparseDepthKey | undefined;
+      const depth = info.wcInfo?.depth as SparseDepthKey | undefined;
+
+      // Cache result
+      this.depthCache.set(cacheKey, {
+        data: depth,
+        expires: now + CACHE_TTL_MS
+      });
+
+      return depth;
     } catch {
       return undefined;
+    }
+  }
+
+  /** Remove expired depth cache entries */
+  private evictExpiredDepthCacheEntries(now: number): void {
+    for (const [key, entry] of this.depthCache) {
+      if (entry.expires <= now) {
+        this.depthCache.delete(key);
+      }
     }
   }
 
