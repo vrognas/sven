@@ -1466,7 +1466,8 @@ export class Repository {
    */
   public async setDepth(
     folderPath: string,
-    depth: keyof typeof SvnDepth
+    depth: keyof typeof SvnDepth,
+    options?: { parents?: boolean }
   ): Promise<IExecutionResult> {
     // Validate depth is a valid SvnDepth key
     const validDepths = Object.keys(SvnDepth);
@@ -1481,7 +1482,14 @@ export class Repository {
       throw new Error(`Invalid folder path: ${folderPath}`);
     }
 
-    const args = ["update", "--set-depth", depth, folderPath];
+    const args = ["update", "--set-depth", depth];
+
+    // Add --parents to restore items in excluded parent folders
+    if (options?.parents) {
+      args.push("--parents");
+    }
+
+    args.push(folderPath);
 
     return this.exec(args);
   }

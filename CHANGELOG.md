@@ -2,6 +2,9 @@
 
 ### FIX: Sparse Checkout List Performance
 
+- **Fix**: Can now checkout files within excluded folders
+  - Previously: Checking out a file in an excluded parent folder failed with E155007
+  - Now: Uses `--parents` flag to automatically restore parent folders
 - **Fix**: Excluded files now show as ghosts in sparse checkout tree
   - Previously: Files excluded via "exclude" action disappeared from treeview completely
   - Now: Individual excluded items appear as ghosts (can be re-checked out)

@@ -366,7 +366,8 @@ export default class SparseCheckoutProvider
           title: `Checking out "${itemName}"...`,
           cancellable: false
         },
-        async () => repo.setDepth(fullPath, depth)
+        // Use --parents to restore items even if parent folders are excluded
+        async () => repo.setDepth(fullPath, depth, { parents: true })
       );
 
       if (result.exitCode === 0) {

@@ -1228,10 +1228,15 @@ export class Repository implements IRemoteRepository {
    * Set depth of a folder for sparse checkouts.
    * @param folderPath Path to folder
    * @param depth One of: exclude, empty, files, immediates, infinity
+   * @param options.parents Restore parent folders if excluded
    */
-  public async setDepth(folderPath: string, depth: keyof typeof SvnDepth) {
+  public async setDepth(
+    folderPath: string,
+    depth: keyof typeof SvnDepth,
+    options?: { parents?: boolean }
+  ) {
     return this.run(Operation.Update, () =>
-      this.repository.setDepth(folderPath, depth)
+      this.repository.setDepth(folderPath, depth, options)
     );
   }
 
