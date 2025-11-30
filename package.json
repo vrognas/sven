@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.26.10",
+  "version": "2.26.11",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.74.0",
@@ -175,7 +175,7 @@
         },
         {
           "id": "sparseCheckout",
-          "name": "Sparse Checkout",
+          "name": "Selective Download",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         }
       ]
@@ -183,7 +183,7 @@
     "viewsWelcome": [
       {
         "view": "sparseCheckout",
-        "contents": "Manage which folders and files are checked out from the repository.\n\nExpand folders to see server contents. De-emphasized items exist on server but aren't checked out locally.\n\n[Refresh](command:svn.sparse.refresh)",
+        "contents": "Choose which folders and files to download from the repository.\n\nExpand folders to browse server contents. De-emphasized items are on the server but not downloaded locally.\n\n[Refresh](command:svn.sparse.refresh)",
         "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
       }
     ],
@@ -474,13 +474,13 @@
       },
       {
         "command": "svn.sparse.checkout",
-        "title": "Checkout...",
+        "title": "Download...",
         "category": "SVN",
         "icon": "$(cloud-download)"
       },
       {
         "command": "svn.sparse.exclude",
-        "title": "Exclude",
+        "title": "Remove from Disk",
         "category": "SVN",
         "icon": "$(eye-closed)"
       },
@@ -1456,12 +1456,12 @@
         },
         "svn.sparse.confirmExclude": {
           "type": "boolean",
-          "description": "Show confirmation dialog before excluding items from working copy",
+          "description": "Show confirmation dialog before removing items from disk",
           "default": true
         },
         "svn.sparse.largeFileWarningMb": {
           "type": "number",
-          "description": "Warn before checking out files larger than this size (in MB). Set to 0 to disable.",
+          "description": "Warn before downloading files larger than this size (in MB). Set to 0 to disable.",
           "default": 10,
           "minimum": 0,
           "maximum": 1000

@@ -46,7 +46,7 @@ export class SparseFileDecorationProvider
     // Ghost items: de-emphasized color
     if (isGhost) {
       decoration.color = new ThemeColor("list.deemphasizedForeground");
-      decoration.tooltip = "Not checked out (on server only)";
+      decoration.tooltip = "Not downloaded (on server only)";
     }
 
     // Lock badge (K/O/B/T) - same as explorer view

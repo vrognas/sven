@@ -1,3 +1,13 @@
+## [2.26.11] (2025-11-30)
+
+### UX: Rename "Sparse Checkout" to "Selective Download"
+
+- **UX**: Renamed tree view from "Sparse Checkout" to "Selective Download"
+- **UX**: Command "Checkout..." → "Download..."
+- **UX**: Command "Exclude" → "Remove from Disk"
+- **UX**: Updated welcome message and tooltips to use "download" terminology
+- **Rationale**: "Sparse checkout" is SVN jargon; "Selective Download" is intuitive
+
 ## [2.26.10] (2025-11-30)
 
 ### UX: Real-Time Download Speed Monitoring
