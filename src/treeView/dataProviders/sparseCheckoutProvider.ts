@@ -361,6 +361,9 @@ export default class SparseCheckoutProvider
       // Batch fetch lock info
       const lockInfoMap = await repo.getBatchLockInfo(urls);
 
+      // Get current username to determine K vs O status
+      const currentUser = repo.username;
+
       // Apply lock info to ghost items
       for (let i = 0; i < ghostFiles.length; i++) {
         const url = urls[i];
@@ -368,8 +371,11 @@ export default class SparseCheckoutProvider
         if (lockInfo) {
           ghostFiles[i].lockOwner = lockInfo.owner;
           ghostFiles[i].lockComment = lockInfo.comment;
-          // Ghost files don't have local lock status, use 'O' for "other" lock
-          ghostFiles[i].lockStatus = LockStatus.O;
+          // K if locked by current user, O if locked by others
+          ghostFiles[i].lockStatus =
+            currentUser && lockInfo.owner === currentUser
+              ? LockStatus.K
+              : LockStatus.O;
         }
       }
     } catch (err) {
