@@ -1289,6 +1289,30 @@ export class Repository {
     return parseSvnList(result.stdout);
   }
 
+  /**
+   * List folder contents recursively (for folder size/count estimation).
+   * @param folder Relative folder path
+   * @param timeout Optional timeout in ms for large folders
+   * @returns All files/dirs in folder tree
+   */
+  public async listRecursive(
+    folder: string,
+    timeout?: number
+  ): Promise<ISvnListItem[]> {
+    let url = await this.getRepoUrl();
+
+    // Convert Windows backslashes to forward slashes for URL
+    const urlPath = folder.replace(/\\/g, "/");
+    url += "/" + urlPath;
+
+    const result = await this.exec(
+      ["list", url, "--xml", "--depth", "infinity"],
+      timeout ? { timeout } : {}
+    );
+
+    return parseSvnList(result.stdout);
+  }
+
   public async ls(file: string): Promise<ISvnListItem[]> {
     const result = await this.exec(["list", file, "--xml"]);
 

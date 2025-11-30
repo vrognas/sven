@@ -194,6 +194,68 @@ function createFileSizeMonitor(filePath: string): {
   };
 }
 
+/**
+ * Count files recursively in a directory (for tracking folder download progress).
+ * Returns count of files that exist on disk.
+ */
+function countFilesInFolder(folderPath: string): number {
+  let count = 0;
+  try {
+    const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === ".svn") continue;
+      const fullPath = path.join(folderPath, entry.name);
+      if (entry.isDirectory()) {
+        count += countFilesInFolder(fullPath);
+      } else if (entry.isFile()) {
+        count++;
+      }
+    }
+  } catch {
+    // Folder may not exist yet
+  }
+  return count;
+}
+
+/**
+ * Monitor folder download progress by counting files appearing.
+ * Used for folder downloads where we can't track individual file progress.
+ */
+function createFolderMonitor(
+  folderPath: string,
+  expectedFileCount: number
+): {
+  stop: () => void;
+  getProgress: () => number;
+  getFileCount: () => number;
+  isStopped: () => boolean;
+} {
+  let currentFileCount = 0;
+  let stopped = false;
+
+  const poll = () => {
+    if (stopped) return;
+    currentFileCount = countFilesInFolder(folderPath);
+  };
+
+  // Poll immediately
+  poll();
+  const interval = setInterval(poll, FILE_POLL_INTERVAL_MS);
+
+  return {
+    stop: () => {
+      stopped = true;
+      clearInterval(interval);
+    },
+    getProgress: () =>
+      expectedFileCount > 0
+        ? Math.min(currentFileCount / expectedFileCount, 1)
+        : 0,
+    getFileCount: () => currentFileCount,
+    isStopped: () => stopped
+  };
+}
+
 export default class SparseCheckoutProvider
   implements TreeDataProvider<BaseNode>, Disposable
 {
@@ -820,16 +882,21 @@ export default class SparseCheckoutProvider
           let cancelled = false;
           let bytesDownloaded = 0;
 
-          // Active monitor/interval for cleanup on cancellation
-          let activeMonitor:
+          // Active monitors for cleanup on cancellation
+          let activeFileMonitor:
             | ReturnType<typeof createFileSizeMonitor>
+            | undefined;
+          let activeFolderMonitor:
+            | ReturnType<typeof createFolderMonitor>
             | undefined;
           let activeInterval: ReturnType<typeof setInterval> | undefined;
 
-          /** Cleanup current monitor and interval */
+          /** Cleanup current monitors and interval */
           const cleanup = () => {
-            activeMonitor?.stop();
-            activeMonitor = undefined;
+            activeFileMonitor?.stop();
+            activeFileMonitor = undefined;
+            activeFolderMonitor?.stop();
+            activeFolderMonitor = undefined;
             if (activeInterval) {
               clearInterval(activeInterval);
               activeInterval = undefined;
@@ -874,20 +941,41 @@ export default class SparseCheckoutProvider
             // Get file size using fullPath key (fixes basename collision)
             const expectedSize = fileSizeMap.get(node.fullPath) ?? 0;
 
-            // Start file monitor for real-time speed (files only, >1MB)
-            activeMonitor =
-              node.kind === "file" && expectedSize > 1024 * 1024
-                ? createFileSizeMonitor(node.fullPath)
-                : undefined;
+            // For folders with infinity depth: pre-scan for file count
+            let expectedFileCount = 0;
+            if (node.kind === "dir" && depth === "infinity") {
+              try {
+                // Pre-scan folder to get expected file count (with timeout)
+                const folderContents = await repo.listRecursive(
+                  node.fullPath,
+                  30000 // 30s timeout for pre-scan
+                );
+                expectedFileCount = folderContents.filter(
+                  f => f.kind === "file"
+                ).length;
+              } catch {
+                // Pre-scan failed - continue without progress tracking
+              }
+            }
+
+            // Start appropriate monitor based on item type
+            if (node.kind === "file" && expectedSize > 1024 * 1024) {
+              // File monitor for large files (>1MB)
+              activeFileMonitor = createFileSizeMonitor(node.fullPath);
+            } else if (node.kind === "dir" && expectedFileCount > 0) {
+              // Folder monitor for directories with known file count
+              activeFolderMonitor = createFolderMonitor(
+                node.fullPath,
+                expectedFileCount
+              );
+            }
 
             // Progress update interval during download
-            if (activeMonitor && expectedSize > 0) {
-              const monitor = activeMonitor; // Capture for closure
+            if (activeFileMonitor && expectedSize > 0) {
+              const monitor = activeFileMonitor; // Capture for closure
               activeInterval = setInterval(() => {
-                // Race condition fix: don't update after stop
                 if (monitor.isStopped()) return;
                 const realSpeed = monitor.getSpeed();
-                // Clamp downloaded to expectedSize (Bug fix: avoid negative remaining)
                 const downloaded = Math.min(monitor.getSize(), expectedSize);
                 if (realSpeed > 0) {
                   const remaining = expectedSize - downloaded;
@@ -898,6 +986,17 @@ export default class SparseCheckoutProvider
                     message: `${path.basename(node.fullPath)} ${speedLabel}${etaLabel}`
                   });
                 }
+              }, FILE_POLL_INTERVAL_MS);
+            } else if (activeFolderMonitor && expectedFileCount > 0) {
+              const monitor = activeFolderMonitor; // Capture for closure
+              const folderName = path.basename(node.fullPath);
+              activeInterval = setInterval(() => {
+                if (monitor.isStopped()) return;
+                const fileCount = monitor.getFileCount();
+                const pct = Math.round(monitor.getProgress() * 100);
+                progress.report({
+                  message: `${folderName}: ${fileCount}/${expectedFileCount} files (${pct}%)`
+                });
               }, FILE_POLL_INTERVAL_MS);
             }
 

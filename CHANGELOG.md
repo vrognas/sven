@@ -1,3 +1,12 @@
+## [2.26.18] (2025-11-30)
+
+### Feature: Folder Download Progress
+
+- **New**: Pre-scan folders with `svn list --depth infinity` to get file count
+- **New**: Real-time progress: "folder: 42/150 files (28%)"
+- **New**: `listRecursive` method for recursive folder scanning
+- **UX**: Folders show file count progress, files show speed/ETA
+
 ## [2.26.17] (2025-11-30)
 
 ### Fix: Download Timeout for Large Folders

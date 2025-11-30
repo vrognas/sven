@@ -879,6 +879,21 @@ export class Repository implements IRemoteRepository {
     });
   }
 
+  /**
+   * List folder contents recursively (for folder size/count estimation).
+   * @param folderPath Local folder path
+   * @param timeout Optional timeout in ms for large folders
+   */
+  public async listRecursive(
+    folderPath: string,
+    timeout?: number
+  ): Promise<ISvnListItem[]> {
+    return this.run<ISvnListItem[]>(Operation.List, () => {
+      const relativePath = path.relative(this.root, folderPath);
+      return this.repository.listRecursive(relativePath, timeout);
+    });
+  }
+
   public getPathNormalizer(): PathNormalizer {
     return new PathNormalizer(this.repository.info);
   }
