@@ -7,13 +7,16 @@ import {
   Disposable,
   Event,
   EventEmitter,
-  QuickPickItem,
+  ProgressLocation,
   TreeDataProvider,
   TreeItem,
+  TreeItemCollapsibleState,
+  ThemeIcon,
   Uri,
   window
 } from "vscode";
 import { ISparseItem, SparseDepthKey } from "../../common/types";
+import { checkoutDepthOptions } from "../../commands/setDepth";
 import { readdir, stat } from "../../fs";
 import { SourceControlManager } from "../../source_control_manager";
 import { Repository } from "../../repository";
@@ -32,7 +35,9 @@ class RepositoryRootNode extends BaseNode {
 
   public getTreeItem(): TreeItem {
     const repoName = path.basename(this.repo.root);
-    return new TreeItem(repoName);
+    const treeItem = new TreeItem(repoName, TreeItemCollapsibleState.Collapsed);
+    treeItem.iconPath = new ThemeIcon("repo");
+    return treeItem;
   }
 
   public async getChildren(): Promise<BaseNode[]> {
@@ -46,11 +51,29 @@ class RepositoryRootNode extends BaseNode {
   }
 }
 
+/** Cache entry with TTL */
+interface CacheEntry<T> {
+  data: T;
+  expires: number;
+}
+
+/** Cache TTL in milliseconds (5 minutes) */
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** Max cache entries before forced cleanup */
+const MAX_CACHE_SIZE = 100;
+
 export default class SparseCheckoutProvider
   implements TreeDataProvider<BaseNode>, Disposable
 {
   private _onDidChangeTreeData = new EventEmitter<BaseNode | undefined>();
   private _disposables: Disposable[] = [];
+
+  /** Cache for server list results to avoid repeated network calls */
+  private serverListCache = new Map<
+    string,
+    CacheEntry<{ name: string; kind: "file" | "dir" }[]>
+  >();
 
   public readonly onDidChangeTreeData: Event<BaseNode | undefined> =
     this._onDidChangeTreeData.event;
@@ -69,6 +92,8 @@ export default class SparseCheckoutProvider
   }
 
   public refresh(): void {
+    // Clear cache on manual refresh
+    this.serverListCache.clear();
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -98,24 +123,26 @@ export default class SparseCheckoutProvider
     repo: Repository,
     folderPath: string
   ): Promise<ISparseItem[]> {
-    const localItems = await this.getLocalItems(repo, folderPath);
-    const depth = await this.getDepth(repo, folderPath);
+    const relativeFolder = path.relative(repo.root, folderPath);
 
-    // If depth is infinity, no ghosts possible
-    if (depth === "infinity") {
+    // Fetch local items, depth, and server items in parallel for speed
+    const [localItems, depth, serverResult] = await Promise.all([
+      this.getLocalItems(repo, folderPath),
+      this.getDepth(repo, folderPath),
+      this.getServerItems(repo, folderPath).catch(err => {
+        // Server list failed (offline, etc.) - log and continue
+        logError("Failed to fetch server items for sparse view", err);
+        return null;
+      })
+    ]);
+
+    // If depth is infinity or server fetch failed, no ghosts
+    if (depth === "infinity" || !serverResult) {
       return localItems;
     }
 
-    // Fetch server items to find ghosts
-    try {
-      const serverItems = await this.getServerItems(repo, folderPath);
-      const ghosts = this.computeGhosts(localItems, serverItems);
-      return this.mergeItems(localItems, ghosts);
-    } catch (err) {
-      // Server list failed (offline, etc.) - just show local
-      logError("Failed to fetch server items for sparse view", err);
-      return localItems;
-    }
+    const ghosts = this.computeGhosts(localItems, serverResult, relativeFolder);
+    return this.mergeItems(localItems, ghosts);
   }
 
   private async getLocalItems(
@@ -123,6 +150,7 @@ export default class SparseCheckoutProvider
     folderPath: string
   ): Promise<ISparseItem[]> {
     const items: ISparseItem[] = [];
+    const dirPaths: { index: number; fullPath: string }[] = [];
 
     try {
       const entries = await readdir(folderPath);
@@ -135,22 +163,32 @@ export default class SparseCheckoutProvider
         try {
           const stats = await stat(fullPath);
           const kind = stats.isDirectory() ? "dir" : "file";
-          let depth: SparseDepthKey | undefined;
-
-          if (kind === "dir") {
-            depth = await this.getDepth(repo, fullPath);
-          }
 
           items.push({
             name,
             path: relativePath,
             kind,
-            depth,
+            depth: undefined,
             isGhost: false
           });
+
+          // Track directories for batch depth fetch
+          if (kind === "dir") {
+            dirPaths.push({ index: items.length - 1, fullPath });
+          }
         } catch {
           // stat failed, skip
         }
+      }
+
+      // Batch fetch depths for all directories in parallel
+      if (dirPaths.length > 0) {
+        const depths = await Promise.all(
+          dirPaths.map(d => this.getDepth(repo, d.fullPath))
+        );
+        dirPaths.forEach((d, i) => {
+          items[d.index].depth = depths[i];
+        });
       }
     } catch {
       // readdir failed
@@ -175,23 +213,56 @@ export default class SparseCheckoutProvider
     repo: Repository,
     folderPath: string
   ): Promise<{ name: string; kind: "file" | "dir" }[]> {
+    const cacheKey = `${repo.root}:${folderPath}`;
+    const now = Date.now();
+
+    // Check cache
+    const cached = this.serverListCache.get(cacheKey);
+    if (cached && cached.expires > now) {
+      return cached.data;
+    }
+
+    // Evict expired entries if cache is large
+    if (this.serverListCache.size >= MAX_CACHE_SIZE) {
+      this.evictExpiredCacheEntries(now);
+    }
+
+    // Fetch from server
     const listItems = await repo.list(folderPath);
-    return listItems.map(item => ({
+    const result = listItems.map(item => ({
       name: item.name,
-      kind: item.kind === "dir" ? "dir" : "file"
+      kind: (item.kind === "dir" ? "dir" : "file") as "file" | "dir"
     }));
+
+    // Cache result
+    this.serverListCache.set(cacheKey, {
+      data: result,
+      expires: now + CACHE_TTL_MS
+    });
+
+    return result;
+  }
+
+  /** Remove expired cache entries */
+  private evictExpiredCacheEntries(now: number): void {
+    for (const [key, entry] of this.serverListCache) {
+      if (entry.expires <= now) {
+        this.serverListCache.delete(key);
+      }
+    }
   }
 
   private computeGhosts(
     localItems: ISparseItem[],
-    serverItems: { name: string; kind: "file" | "dir" }[]
+    serverItems: { name: string; kind: "file" | "dir" }[],
+    relativeFolder: string
   ): ISparseItem[] {
     const localNames = new Set(localItems.map(i => i.name));
     return serverItems
       .filter(s => !localNames.has(s.name))
       .map(s => ({
         name: s.name,
-        path: s.name,
+        path: relativeFolder ? path.join(relativeFolder, s.name) : s.name,
         kind: s.kind,
         isGhost: true
       }));
@@ -226,33 +297,7 @@ export default class SparseCheckoutProvider
     let depth: SparseDepthKey = "infinity";
 
     if (node.kind === "dir") {
-      interface DepthQuickPickItem extends QuickPickItem {
-        depth: SparseDepthKey;
-      }
-      const options: DepthQuickPickItem[] = [
-        {
-          label: "$(folder-opened) Full",
-          description: "Download everything",
-          depth: "infinity"
-        },
-        {
-          label: "$(list-tree) Shallow",
-          description: "Files + empty subfolders",
-          depth: "immediates"
-        },
-        {
-          label: "$(file) Files Only",
-          description: "Skip subfolders",
-          depth: "files"
-        },
-        {
-          label: "$(folder) Folder Only",
-          description: "Empty placeholder",
-          depth: "empty"
-        }
-      ];
-
-      const selected = await window.showQuickPick(options, {
+      const selected = await window.showQuickPick(checkoutDepthOptions, {
         placeHolder: "How much should be downloaded?"
       });
 
@@ -260,14 +305,19 @@ export default class SparseCheckoutProvider
       depth = selected.depth;
     }
 
+    const itemName = path.basename(fullPath);
+
     try {
-      // For ghost items, we need to update the parent folder to include this item
-      // SVN doesn't have a direct "add this excluded path" command
-      // We use: svn update --set-depth <depth> <path>
-      const result = await repo.setDepth(fullPath, depth);
+      const result = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: `Checking out "${itemName}"...`,
+          cancellable: false
+        },
+        async () => repo.setDepth(fullPath, depth)
+      );
+
       if (result.exitCode === 0) {
-        const itemName = path.basename(fullPath);
-        window.showInformationMessage(`"${itemName}" checked out`);
         this.refresh();
       } else {
         window.showErrorMessage(`Checkout failed: ${result.stderr}`);
@@ -300,9 +350,16 @@ export default class SparseCheckoutProvider
     if (confirm !== "Exclude") return;
 
     try {
-      const result = await repo.setDepth(fullPath, "exclude");
+      const result = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: `Excluding "${itemName}"...`,
+          cancellable: false
+        },
+        async () => repo.setDepth(fullPath, "exclude")
+      );
+
       if (result.exitCode === 0) {
-        window.showInformationMessage(`"${itemName}" excluded`);
         this.refresh();
       } else {
         window.showErrorMessage(`Exclude failed: ${result.stderr}`);

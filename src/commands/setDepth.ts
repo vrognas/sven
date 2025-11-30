@@ -6,11 +6,41 @@ import { SvnDepth } from "../common/types";
 import { Command } from "./command";
 import { SourceControlManager } from "../source_control_manager";
 
-interface DepthQuickPickItem extends QuickPickItem {
+export interface DepthQuickPickItem extends QuickPickItem {
   depth: keyof typeof SvnDepth;
 }
 
-const depthOptions: DepthQuickPickItem[] = [
+/** Checkout depth options (for restoring ghost items - no exclude option) */
+export const checkoutDepthOptions: DepthQuickPickItem[] = [
+  {
+    label: "$(folder-opened) Full",
+    description: "Download everything",
+    detail: "Downloads the folder and all its contents recursively.",
+    depth: "infinity"
+  },
+  {
+    label: "$(list-tree) Shallow",
+    description: "Files + empty subfolders",
+    detail:
+      "Downloads files and shows subfolders as empty. Good for exploring structure.",
+    depth: "immediates"
+  },
+  {
+    label: "$(file) Files Only",
+    description: "Skip subfolders",
+    detail: "Downloads files in this folder, but skips all subfolders.",
+    depth: "files"
+  },
+  {
+    label: "$(folder) Folder Only",
+    description: "Empty placeholder",
+    detail: "Keeps the folder as a placeholder but downloads no files.",
+    depth: "empty"
+  }
+];
+
+/** Full depth options including exclude (for setDepth command on local items) */
+export const depthPickerOptions: DepthQuickPickItem[] = [
   {
     label: "$(eye-closed) Exclude",
     description: "Don't download this folder",
@@ -18,31 +48,7 @@ const depthOptions: DepthQuickPickItem[] = [
       "Removes the folder and all contents locally. Use for large folders you don't need.",
     depth: "exclude"
   },
-  {
-    label: "$(folder) Folder Only (No Contents)",
-    description: "Keep empty folder",
-    detail: "Keeps the folder as a placeholder but removes all files inside.",
-    depth: "empty"
-  },
-  {
-    label: "$(file) Files Only (No Subfolders)",
-    description: "Skip nested folders",
-    detail: "Downloads files in this folder, but skips all subfolders.",
-    depth: "files"
-  },
-  {
-    label: "$(list-tree) Shallow (One Level)",
-    description: "First level only",
-    detail:
-      "Downloads files and shows subfolders as empty. Good for exploring structure.",
-    depth: "immediates"
-  },
-  {
-    label: "$(folder-opened) Full (All Contents)",
-    description: "Download everything",
-    detail: "Downloads the folder and all its contents recursively.",
-    depth: "infinity"
-  }
+  ...checkoutDepthOptions
 ];
 
 export class SetDepth extends Command {
@@ -72,7 +78,7 @@ export class SetDepth extends Command {
     const folderName = uri.fsPath.split(/[\\/]/).pop() || "folder";
 
     // Show QuickPick for depth selection
-    const selected = await window.showQuickPick(depthOptions, {
+    const selected = await window.showQuickPick(depthPickerOptions, {
       placeHolder: "What should be downloaded for this folder?",
       title: `SVN: Sparse Checkout - ${folderName}`
     });
@@ -123,6 +129,8 @@ export class SetDepth extends Command {
         window.showInformationMessage(
           successMessages[selected.depth] || `Checkout depth changed`
         );
+        // Refresh sparse checkout tree to reflect changes
+        commands.executeCommand("svn.sparse.refresh");
       } else {
         window.showErrorMessage(
           `Failed to change checkout: ${result.stderr || "Unknown error"}`
