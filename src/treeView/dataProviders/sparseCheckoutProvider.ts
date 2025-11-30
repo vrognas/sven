@@ -120,6 +120,12 @@ const FILE_POLL_INTERVAL_MS = 500;
 /** Speed decay factor when no growth detected (0.5 = halve each poll) */
 const SPEED_DECAY_FACTOR = 0.5;
 
+/** Max recursion depth for folder counting (prevents stack overflow) */
+const MAX_RECURSION_DEPTH = 100;
+
+/** Default pre-scan timeout in seconds (configurable via svn.sparse.preScanTimeoutSeconds) */
+const DEFAULT_PRESCAN_TIMEOUT_SECONDS = 30;
+
 /**
  * Monitor file size growth during download.
  * Returns cleanup function and getters for speed/size.
@@ -197,22 +203,53 @@ function createFileSizeMonitor(filePath: string): {
 /**
  * Count files recursively in a directory (for tracking folder download progress).
  * Returns count of files that exist on disk.
+ *
+ * Safety features:
+ * - Symlink loop detection via visited inode tracking
+ * - Max recursion depth limit
+ * - Skips symbolic links entirely
  */
-function countFilesInFolder(folderPath: string): number {
+function countFilesInFolder(
+  folderPath: string,
+  visited = new Set<string>(),
+  depth = 0
+): number {
+  // Depth limit prevents stack overflow on deeply nested structures
+  if (depth > MAX_RECURSION_DEPTH) {
+    return 0;
+  }
+
   let count = 0;
   try {
+    // Get folder's inode to detect loops (works on POSIX, safe on Windows)
+    const folderStats = fs.statSync(folderPath);
+    const inode = `${folderStats.dev}:${folderStats.ino}`;
+    if (visited.has(inode)) {
+      // Loop detected - folder already visited via symlink
+      return 0;
+    }
+    visited.add(inode);
+
     const entries = fs.readdirSync(folderPath, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.name === ".svn") continue;
+
+      // Skip symlinks entirely - they can create loops and point outside WC
+      if (entry.isSymbolicLink()) continue;
+
       const fullPath = path.join(folderPath, entry.name);
       if (entry.isDirectory()) {
-        count += countFilesInFolder(fullPath);
+        count += countFilesInFolder(fullPath, visited, depth + 1);
       } else if (entry.isFile()) {
         count++;
       }
     }
-  } catch {
-    // Folder may not exist yet
+  } catch (err) {
+    // Folder may not exist yet or permission denied
+    // Log non-ENOENT errors for debugging
+    if (err instanceof Error && !err.message.includes("ENOENT")) {
+      logError("countFilesInFolder error", err);
+    }
   }
   return count;
 }
@@ -944,17 +981,41 @@ export default class SparseCheckoutProvider
             // For folders with infinity depth: pre-scan for file count
             let expectedFileCount = 0;
             if (node.kind === "dir" && depth === "infinity") {
+              // Check cancellation BEFORE pre-scan (can be slow for large folders)
+              if (token.isCancellationRequested) {
+                cleanup();
+                cancelled = true;
+                break;
+              }
+
+              // Get configurable pre-scan timeout
+              const preScanTimeoutSeconds = workspace
+                .getConfiguration("svn.sparse")
+                .get<number>(
+                  "preScanTimeoutSeconds",
+                  DEFAULT_PRESCAN_TIMEOUT_SECONDS
+                );
+              const preScanTimeoutMs = preScanTimeoutSeconds * 1000;
+
               try {
-                // Pre-scan folder to get expected file count (with timeout)
+                // Pre-scan folder to get expected file count (with configurable timeout)
                 const folderContents = await repo.listRecursive(
                   node.fullPath,
-                  30000 // 30s timeout for pre-scan
+                  preScanTimeoutMs
                 );
                 expectedFileCount = folderContents.filter(
                   f => f.kind === "file"
                 ).length;
-              } catch {
-                // Pre-scan failed - continue without progress tracking
+              } catch (err) {
+                // Pre-scan failed - log error, continue without progress tracking
+                logError("Pre-scan failed for folder progress", err);
+              }
+
+              // Check cancellation AFTER pre-scan (user may have cancelled during scan)
+              if (token.isCancellationRequested) {
+                cleanup();
+                cancelled = true;
+                break;
               }
             }
 
@@ -963,7 +1024,7 @@ export default class SparseCheckoutProvider
               // File monitor for large files (>1MB)
               activeFileMonitor = createFileSizeMonitor(node.fullPath);
             } else if (node.kind === "dir" && expectedFileCount > 0) {
-              // Folder monitor for directories with known file count
+              // Folder monitor only if we have files to track (skip empty folders)
               activeFolderMonitor = createFolderMonitor(
                 node.fullPath,
                 expectedFileCount
@@ -971,6 +1032,11 @@ export default class SparseCheckoutProvider
             }
 
             // Progress update interval during download
+            // Clear any existing interval before creating new one (prevents leak)
+            if (activeInterval) {
+              clearInterval(activeInterval);
+              activeInterval = undefined;
+            }
             if (activeFileMonitor && expectedSize > 0) {
               const monitor = activeFileMonitor; // Capture for closure
               activeInterval = setInterval(() => {

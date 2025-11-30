@@ -1,3 +1,15 @@
+## [2.26.19] (2025-11-30)
+
+### Fix: Folder Progress Safety & Cancellation
+
+- **Fix**: Symlink loop protection in file counting (detects via inode)
+- **Fix**: Cancellation before/after pre-scan (respects user cancel)
+- **Fix**: Recursion depth limit (100 levels max, prevents stack overflow)
+- **Fix**: Improved error logging in file counting (non-ENOENT errors logged)
+- **Fix**: Skip folder monitor for empty folders
+- **Fix**: Clear interval before overwrite (prevents memory leak)
+- **New**: `svn.sparse.preScanTimeoutSeconds` setting (default: 30s, max: 300s)
+
 ## [2.26.18] (2025-11-30)
 
 ### Feature: Folder Download Progress
