@@ -206,11 +206,11 @@ describe("Sparse Checkout Provider", () => {
     } {
       const isDir = item.kind === "dir";
 
-      // Ghost directories are not expandable (must checkout first)
-      let collapsibleState: "none" | "collapsed" = "none";
-      if (isDir && !item.isGhost) {
-        collapsibleState = "collapsed";
-      }
+      // Directories are expandable (both local and ghost)
+      // Ghost dirs show server contents when expanded
+      const collapsibleState: "none" | "collapsed" = isDir
+        ? "collapsed"
+        : "none";
 
       let contextValue: string;
       if (item.isGhost) {
@@ -241,7 +241,7 @@ describe("Sparse Checkout Provider", () => {
       expect(state.contextValue).toBe("sparseLocalDir");
     });
 
-    it("makes ghost directories NOT expandable", () => {
+    it("makes ghost directories expandable to browse server", () => {
       const item: ISparseItem = {
         name: "docs",
         path: "docs",
@@ -251,7 +251,7 @@ describe("Sparse Checkout Provider", () => {
 
       const state = createTreeItemState(item);
 
-      expect(state.collapsibleState).toBe("none");
+      expect(state.collapsibleState).toBe("collapsed");
       expect(state.contextValue).toBe("sparseGhostDir");
     });
 

@@ -28,14 +28,12 @@ export default class SparseItemNode extends BaseNode {
   public getTreeItem(): TreeItem {
     const isDir = this.item.kind === "dir";
 
-    // Ghost directories are not expandable (must checkout first)
-    // Local directories are expandable
-    let collapsibleState = TreeItemCollapsibleState.None;
-    if (isDir && !this.item.isGhost) {
-      collapsibleState = TreeItemCollapsibleState.Collapsed;
-    }
-
-    const treeItem = new TreeItem(this.item.name, collapsibleState);
+    // Directories are expandable (both local and ghost)
+    // Ghost dirs show server contents, local dirs show local + ghost
+    const treeItem = new TreeItem(
+      this.item.name,
+      isDir ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
+    );
 
     // Add tooltip with full path
     treeItem.tooltip = this.item.path;
