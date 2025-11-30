@@ -56,8 +56,17 @@ export class SetDepth extends Command {
     super("svn.setDepth");
   }
 
-  public async execute(uri?: Uri): Promise<void> {
-    // Get URI from argument or active explorer selection
+  public async execute(arg?: Uri | { fullPath: string }): Promise<void> {
+    // Get URI from argument (Uri from explorer, or SparseItemNode from tree)
+    let uri: Uri | undefined;
+
+    if (arg instanceof Uri) {
+      uri = arg;
+    } else if (arg && typeof arg === "object" && "fullPath" in arg) {
+      // SparseItemNode from sparse checkout tree view
+      uri = Uri.file(arg.fullPath);
+    }
+
     if (!uri) {
       return;
     }

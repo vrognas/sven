@@ -2,6 +2,9 @@
 
 ### FIX: Sparse Checkout List Performance
 
+- **Fix**: "Change depth" now works from sparse checkout tree
+  - Previously: Command expected Uri, failed with "No SVN repository found"
+  - Now: Accepts both Uri (explorer) and SparseItemNode (tree view)
 - **New**: Partial checkout indicator for folders with excluded children
   - Folders with depth "infinity" that contain excluded items now show warning icon
   - Description shows "Full (partial)" to indicate incomplete checkout
