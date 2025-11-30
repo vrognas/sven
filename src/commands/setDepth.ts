@@ -28,6 +28,12 @@ const POLL_INTERVAL_MS = 500;
 /** Max recursion depth for file counting */
 const MAX_RECURSION_DEPTH = 100;
 
+/** Smoothing factor for ETA (0-1, higher = more responsive, lower = smoother) */
+const ETA_SMOOTHING_FACTOR = 0.3;
+
+/** Minimum elapsed seconds before showing ETA (avoids wild initial estimates) */
+const MIN_ELAPSED_FOR_ETA = 2;
+
 /** Format seconds into human-readable duration */
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -50,22 +56,39 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+/** Format speed in human-readable form (bytes/sec) */
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
+  if (bytesPerSec < 1024 * 1024)
+    return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  if (bytesPerSec < 1024 * 1024 * 1024)
+    return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+  return `${(bytesPerSec / (1024 * 1024 * 1024)).toFixed(1)} GB/s`;
+}
+
+/** Folder statistics returned by single traversal */
+interface FolderStats {
+  count: number;
+  size: number;
+}
+
 /**
- * Get total size of files in a folder (bytes).
- * Used for tracking download progress by size.
+ * Get file count and total size in a single traversal.
+ * More efficient than separate count + size functions.
  */
-function getFolderSize(
+function getFolderStats(
   folderPath: string,
   visited = new Set<string>(),
   depth = 0
-): number {
-  if (depth > MAX_RECURSION_DEPTH) return 0;
+): FolderStats {
+  if (depth > MAX_RECURSION_DEPTH) return { count: 0, size: 0 };
 
+  let count = 0;
   let size = 0;
   try {
-    const folderStats = fs.statSync(folderPath);
-    const inode = `${folderStats.dev}:${folderStats.ino}`;
-    if (visited.has(inode)) return 0;
+    const folderStat = fs.statSync(folderPath);
+    const inode = `${folderStat.dev}:${folderStat.ino}`;
+    if (visited.has(inode)) return { count: 0, size: 0 };
     visited.add(inode);
 
     const entries = fs.readdirSync(folderPath, { withFileTypes: true });
@@ -75,10 +98,13 @@ function getFolderSize(
 
       const fullPath = path.join(folderPath, entry.name);
       if (entry.isDirectory()) {
-        size += getFolderSize(fullPath, visited, depth + 1);
+        const sub = getFolderStats(fullPath, visited, depth + 1);
+        count += sub.count;
+        size += sub.size;
       } else if (entry.isFile()) {
         try {
           size += fs.statSync(fullPath).size;
+          count++;
         } catch {
           // File may have been deleted
         }
@@ -87,43 +113,7 @@ function getFolderSize(
   } catch {
     // Folder may not exist yet
   }
-  return size;
-}
-
-/**
- * Count files recursively in a directory.
- * Used for tracking folder download progress.
- */
-function countFilesInFolder(
-  folderPath: string,
-  visited = new Set<string>(),
-  depth = 0
-): number {
-  if (depth > MAX_RECURSION_DEPTH) return 0;
-
-  let count = 0;
-  try {
-    const folderStats = fs.statSync(folderPath);
-    const inode = `${folderStats.dev}:${folderStats.ino}`;
-    if (visited.has(inode)) return 0;
-    visited.add(inode);
-
-    const entries = fs.readdirSync(folderPath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name === ".svn") continue;
-      if (entry.isSymbolicLink()) continue;
-
-      const fullPath = path.join(folderPath, entry.name);
-      if (entry.isDirectory()) {
-        count += countFilesInFolder(fullPath, visited, depth + 1);
-      } else if (entry.isFile()) {
-        count++;
-      }
-    }
-  } catch {
-    // Folder may not exist yet
-  }
-  return count;
+  return { count, size };
 }
 
 export interface DepthQuickPickItem extends QuickPickItem {
@@ -322,33 +312,58 @@ export class SetDepth extends Command {
               // Start progress polling for downloads
               if (expectedFileCount > 0) {
                 const startTime = Date.now();
+                let smoothedSpeed = 0; // Exponential moving average
+                let lastSize = 0;
+                let lastTime = startTime;
+
                 progress.report({
                   message: `Downloading ${folderName} (0/${expectedFileCount} files)...`
                 });
 
                 pollInterval = setInterval(() => {
                   if (token.isCancellationRequested) return;
-                  const currentCount = countFilesInFolder(uri.fsPath);
-                  const currentSize = getFolderSize(uri.fsPath);
+                  const stats = getFolderStats(uri.fsPath);
                   const pct =
                     expectedTotalSize > 0
-                      ? Math.round((currentSize / expectedTotalSize) * 100)
-                      : Math.round((currentCount / expectedFileCount) * 100);
+                      ? Math.round((stats.size / expectedTotalSize) * 100)
+                      : Math.round((stats.count / expectedFileCount) * 100);
 
-                  // Calculate ETA based on bytes/sec (more accurate than files)
-                  let etaLabel = "";
-                  if (currentSize > 0 && expectedTotalSize > 0) {
-                    const elapsed = (Date.now() - startTime) / 1000;
-                    const speed = currentSize / elapsed; // bytes/sec
-                    const remaining = expectedTotalSize - currentSize;
-                    if (speed > 0 && remaining > 0) {
-                      const eta = remaining / speed;
-                      etaLabel = ` ~${formatDuration(eta)}`;
+                  // Calculate smoothed speed with exponential moving average
+                  const now = Date.now();
+                  const elapsed = (now - startTime) / 1000;
+                  const deltaTime = (now - lastTime) / 1000;
+                  const deltaSize = stats.size - lastSize;
+
+                  if (deltaTime > 0 && deltaSize > 0) {
+                    const instantSpeed = deltaSize / deltaTime;
+                    smoothedSpeed =
+                      smoothedSpeed === 0
+                        ? instantSpeed
+                        : ETA_SMOOTHING_FACTOR * instantSpeed +
+                          (1 - ETA_SMOOTHING_FACTOR) * smoothedSpeed;
+                  }
+                  lastSize = stats.size;
+                  lastTime = now;
+
+                  // Build progress message with speed and ETA
+                  let speedEtaLabel = "";
+                  if (smoothedSpeed > 0) {
+                    speedEtaLabel = ` ${formatSpeed(smoothedSpeed)}`;
+                    // Only show ETA after minimum elapsed time
+                    if (
+                      elapsed >= MIN_ELAPSED_FOR_ETA &&
+                      expectedTotalSize > 0
+                    ) {
+                      const remaining = expectedTotalSize - stats.size;
+                      if (remaining > 0) {
+                        const eta = remaining / smoothedSpeed;
+                        speedEtaLabel += ` ~${formatDuration(eta)}`;
+                      }
                     }
                   }
 
                   progress.report({
-                    message: `${folderName}: ${currentCount}/${expectedFileCount} files (${pct}%)${etaLabel}`
+                    message: `${folderName}: ${formatBytes(stats.size)}/${formatBytes(expectedTotalSize)} (${pct}%)${speedEtaLabel}`
                   });
                 }, POLL_INTERVAL_MS);
               } else {
@@ -356,11 +371,16 @@ export class SetDepth extends Command {
               }
             } else {
               // For removals (exclude, empty, files, immediates), count existing files
-              initialFileCount = countFilesInFolder(uri.fsPath);
-              initialTotalSize = getFolderSize(uri.fsPath);
+              const initialStats = getFolderStats(uri.fsPath);
+              initialFileCount = initialStats.count;
+              initialTotalSize = initialStats.size;
 
               if (initialFileCount > 0) {
                 const startTime = Date.now();
+                let smoothedSpeed = 0;
+                let lastRemovedSize = 0;
+                let lastTime = startTime;
+
                 const actionLabel =
                   selected.depth === "exclude" ? "Excluding" : "Removing files";
                 const sizeLabel =
@@ -372,24 +392,44 @@ export class SetDepth extends Command {
                 });
 
                 pollInterval = setInterval(() => {
-                  const remainingCount = countFilesInFolder(uri.fsPath);
-                  const remainingSize = getFolderSize(uri.fsPath);
-                  const removed = initialFileCount - remainingCount;
-                  if (removed > 0) {
-                    // Calculate ETA based on bytes removed
-                    let etaLabel = "";
-                    const removedSize = initialTotalSize - remainingSize;
-                    if (removedSize > 0 && initialTotalSize > 0) {
-                      const elapsed = (Date.now() - startTime) / 1000;
-                      const speed = removedSize / elapsed; // bytes/sec
-                      if (speed > 0 && remainingSize > 0) {
-                        const eta = remainingSize / speed;
-                        etaLabel = ` ~${formatDuration(eta)}`;
+                  const stats = getFolderStats(uri.fsPath);
+                  const removedSize = initialTotalSize - stats.size;
+                  const pct =
+                    initialTotalSize > 0
+                      ? Math.round((removedSize / initialTotalSize) * 100)
+                      : 0;
+
+                  // Calculate smoothed speed with exponential moving average
+                  const now = Date.now();
+                  const elapsed = (now - startTime) / 1000;
+                  const deltaTime = (now - lastTime) / 1000;
+                  const deltaRemoved = removedSize - lastRemovedSize;
+
+                  if (deltaTime > 0 && deltaRemoved > 0) {
+                    const instantSpeed = deltaRemoved / deltaTime;
+                    smoothedSpeed =
+                      smoothedSpeed === 0
+                        ? instantSpeed
+                        : ETA_SMOOTHING_FACTOR * instantSpeed +
+                          (1 - ETA_SMOOTHING_FACTOR) * smoothedSpeed;
+                  }
+                  lastRemovedSize = removedSize;
+                  lastTime = now;
+
+                  if (removedSize > 0) {
+                    // Build progress message with speed and ETA
+                    let speedEtaLabel = "";
+                    if (smoothedSpeed > 0) {
+                      speedEtaLabel = ` ${formatSpeed(smoothedSpeed)}`;
+                      // Only show ETA after minimum elapsed time
+                      if (elapsed >= MIN_ELAPSED_FOR_ETA && stats.size > 0) {
+                        const eta = stats.size / smoothedSpeed;
+                        speedEtaLabel += ` ~${formatDuration(eta)}`;
                       }
                     }
 
                     progress.report({
-                      message: `${actionLabel}: ${removed}/${initialFileCount} removed${etaLabel}`
+                      message: `${actionLabel}: ${formatBytes(removedSize)}/${formatBytes(initialTotalSize)} (${pct}%)${speedEtaLabel}`
                     });
                   }
                 }, POLL_INTERVAL_MS);
