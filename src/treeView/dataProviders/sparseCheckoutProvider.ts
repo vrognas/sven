@@ -125,11 +125,6 @@ export default class SparseCheckoutProvider
     folderPath: string
   ): Promise<ISparseItem[]> {
     const relativeFolder = path.relative(repo.root, folderPath);
-    console.log("[SparseCheckout] getItems called:", {
-      folderPath,
-      relativeFolder,
-      repoRoot: repo.root
-    });
 
     // First, get local items WITHOUT depth (fast, no svn calls)
     // and server items in parallel
@@ -143,16 +138,9 @@ export default class SparseCheckoutProvider
       })
     ]);
 
-    console.log("[SparseCheckout] parallel fetches done:", {
-      localItemsRaw: localItemsRaw.length,
-      depth,
-      serverResult: serverResult?.length ?? "null"
-    });
-
     // If server fetch failed, fall back to showing local items (no filtering)
     // Don't try to get depth for potentially untracked items
     if (!serverResult) {
-      console.log("[SparseCheckout] No server result, returning local items");
       return this.mergeItems(localItemsRaw, []);
     }
 
@@ -272,10 +260,6 @@ export default class SparseCheckoutProvider
     // Check cache
     const cached = this.serverListCache.get(cacheKey);
     if (cached && cached.expires > now) {
-      console.log("[SparseCheckout] getServerItems cache hit:", {
-        cacheKey,
-        items: cached.data.length
-      });
       return cached.data;
     }
 
@@ -285,12 +269,7 @@ export default class SparseCheckoutProvider
     }
 
     // Fetch from server
-    console.log("[SparseCheckout] getServerItems fetching:", { folderPath });
     const listItems = await repo.list(folderPath);
-    console.log("[SparseCheckout] getServerItems raw result:", {
-      itemCount: listItems.length,
-      items: listItems.slice(0, 5).map(i => ({ name: i.name, kind: i.kind }))
-    });
 
     const result = listItems.map(item => ({
       name: item.name,

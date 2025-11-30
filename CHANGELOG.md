@@ -6,6 +6,10 @@
   - Previously: `svn list <localPath>` was slow for large repos (recursive)
   - Now: Uses `svn list <repoUrl/folder>` which is fast and non-recursive
   - Fixes 47+ second freeze when expanding root folder in large repos
+- **Fix**: XML parser handles `<lists><list>` wrapper structure from `svn list`
+  - Previously: Parser expected `<list><entry>` but SVN outputs `<lists><list path="..."><entry>`
+  - Fixes "empty folder" issue when expanding sparse checkout tree
+- **Fix**: Windows paths converted to forward slashes for URL-based listing
 - **New**: `svn.output.authLogging` setting to control auth mode logging
   - `once` (default): Log auth mode once at startup
   - `always`: Log with every SVN command (verbose/debug)
