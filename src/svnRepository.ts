@@ -1279,7 +1279,9 @@ export class Repository {
     let url = await this.getRepoUrl();
 
     if (folder) {
-      url += "/" + folder;
+      // Convert Windows backslashes to forward slashes for URL
+      const urlPath = folder.replace(/\\/g, "/");
+      url += "/" + urlPath;
     }
 
     const result = await this.exec(["list", url, "--xml"]);
