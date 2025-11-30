@@ -49,7 +49,7 @@ class RepositoryRootNode extends BaseNode {
           item,
           this.repo.root,
           p => this.provider.getItems(this.repo, p),
-          () => this.provider.triggerRefresh()
+          node => this.provider.triggerRefresh(node)
         )
     );
   }
@@ -129,9 +129,15 @@ export default class SparseCheckoutProvider
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  /** Trigger tree refresh without clearing caches (for visual updates, debounced) */
-  public triggerRefresh(): void {
-    // Debounce to avoid multiple rapid refreshes when expanding folders
+  /** Trigger tree refresh without clearing caches (for visual updates) */
+  public triggerRefresh(node?: BaseNode): void {
+    // Targeted refresh: immediate, no debounce needed
+    if (node) {
+      this._onDidChangeTreeData.fire(node);
+      return;
+    }
+
+    // Full refresh: debounce to avoid multiple rapid refreshes
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
     }

@@ -13,7 +13,8 @@ import { ISparseItem, SparseDepthKey } from "../../common/types";
 import BaseNode from "./baseNode";
 
 type ChildrenLoader = (path: string) => Promise<ISparseItem[]>;
-type RefreshCallback = () => void;
+/** Callback to refresh tree; pass node for targeted refresh, undefined for full */
+type RefreshCallback = (node?: BaseNode) => void;
 
 const depthLabels: Record<SparseDepthKey, string> = {
   exclude: "Excluded",
@@ -86,11 +87,15 @@ export default class SparseItemNode extends BaseNode {
     const items = await this.loadChildren(fullPath);
 
     // Track if folder has excluded children (for partial indicator)
-    // Note: We set the flag but DON'T trigger refresh here to avoid infinite loop
-    // The parent's icon will update on next manual refresh
+    // Only fire targeted refresh if flag actually changed (prevents loop)
     const hasGhosts = items.some(i => i.isGhost);
+    const flagChanged = hasGhosts && !this.item.hasExcludedChildren;
     if (hasGhosts) {
       this.item.hasExcludedChildren = true;
+    }
+    if (flagChanged) {
+      // Targeted refresh for just this node - updates icon without full rebuild
+      this.onRefresh?.(this);
     }
 
     return items.map(
