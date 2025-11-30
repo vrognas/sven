@@ -85,11 +85,9 @@ export default class SparseItemNode extends BaseNode {
     );
 
     // Set resourceUri to get file icons from VS Code's file icon theme
-    // For ghosts, add query param so FileDecorationProvider can gray them out
+    // Query params for FileDecorationProvider: sparse, lock, lockOwner
     const baseUri = Uri.file(fullPath);
-    treeItem.resourceUri = this.item.isGhost
-      ? baseUri.with({ query: "sparse=ghost" })
-      : baseUri;
+    treeItem.resourceUri = this.buildResourceUri(baseUri);
 
     // Build rich tooltip with metadata
     treeItem.tooltip = this.buildTooltip();
@@ -132,10 +130,7 @@ export default class SparseItemNode extends BaseNode {
     if (!isDir && this.item.size) {
       descParts.push(formatSize(this.item.size));
     }
-    // Lock indicator
-    if (this.item.lockStatus) {
-      descParts.push(`🔒${this.item.lockStatus}`);
-    }
+    // Lock indicator now shown via badge decoration (like explorer view)
 
     if (descParts.length > 0) {
       treeItem.description = descParts.join(" | ");
@@ -173,6 +168,27 @@ export default class SparseItemNode extends BaseNode {
     }
 
     return lines.join("\n");
+  }
+
+  /** Build URI with query params for FileDecorationProvider */
+  private buildResourceUri(baseUri: Uri): Uri {
+    const params = new URLSearchParams();
+
+    // Ghost marker for de-emphasized styling
+    if (this.item.isGhost) {
+      params.set("sparse", "ghost");
+    }
+
+    // Lock status for badge decoration (K/O/B/T)
+    if (this.item.lockStatus) {
+      params.set("lock", this.item.lockStatus);
+      if (this.item.lockOwner) {
+        params.set("lockOwner", this.item.lockOwner);
+      }
+    }
+
+    const query = params.toString();
+    return query ? baseUri.with({ query }) : baseUri;
   }
 
   public async getChildren(): Promise<BaseNode[]> {
