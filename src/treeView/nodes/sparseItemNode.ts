@@ -46,14 +46,17 @@ export default class SparseItemNode extends BaseNode {
     );
 
     // Set resourceUri to get file icons from VS Code's file icon theme
-    treeItem.resourceUri = Uri.file(fullPath);
+    // For ghosts, add query param so FileDecorationProvider can gray them out
+    const baseUri = Uri.file(fullPath);
+    treeItem.resourceUri = this.item.isGhost
+      ? baseUri.with({ query: "sparse=ghost" })
+      : baseUri;
 
     // Add tooltip with full path
     treeItem.tooltip = this.item.path;
 
     if (this.item.isGhost) {
-      // Ghost item: override icon with cloud, add description
-      treeItem.iconPath = new ThemeIcon(isDir ? "cloud" : "cloud-download");
+      // Ghost item: let theme icon show, decoration provider will gray out
       treeItem.description = "(not checked out)";
       treeItem.contextValue = isDir ? "sparseGhostDir" : "sparseGhostFile";
     } else {

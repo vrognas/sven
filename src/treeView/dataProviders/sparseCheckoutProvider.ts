@@ -23,6 +23,7 @@ import { SourceControlManager } from "../../source_control_manager";
 import { Repository } from "../../repository";
 import BaseNode from "../nodes/baseNode";
 import SparseItemNode from "../nodes/sparseItemNode";
+import { SparseFileDecorationProvider } from "../sparseFileDecorationProvider";
 import { dispose } from "../../util";
 import { logError } from "../../util/errorLogger";
 
@@ -106,6 +107,7 @@ export default class SparseCheckoutProvider
 
     this._disposables.push(
       this.treeView,
+      new SparseFileDecorationProvider(),
       commands.registerCommand("svn.sparse.refresh", () => this.refresh()),
       commands.registerCommand(
         "svn.sparse.checkout",
