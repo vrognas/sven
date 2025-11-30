@@ -1,3 +1,13 @@
+## [2.26.12] (2025-11-30)
+
+### Fix: Real-Time Speed Monitoring Bugs
+
+- **Fix**: Immediate poll on monitor start (was delayed 500ms)
+- **Fix**: Speed decays to 0 during network stalls (was showing stale speed)
+- **Fix**: Skip first measurement to avoid spike when file appears
+- **Fix**: Clamp downloaded bytes to expected size (prevents negative ETA)
+- **Docs**: Added note about SVN temp file limitation
+
 ## [2.26.11] (2025-11-30)
 
 ### UX: Rename "Sparse Checkout" to "Selective Download"

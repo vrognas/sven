@@ -114,9 +114,16 @@ function formatBytes(bytes: number): string {
 /** Polling interval for file size monitoring (ms) */
 const FILE_POLL_INTERVAL_MS = 500;
 
+/** Speed decay factor when no growth detected (0.5 = halve each poll) */
+const SPEED_DECAY_FACTOR = 0.5;
+
 /**
  * Monitor file size growth during download.
  * Returns cleanup function and getters for speed/size.
+ *
+ * NOTE: SVN may download to .svn/tmp/ first then rename, so real-time
+ * monitoring may not show progress for all files. Works best when SVN
+ * writes directly to the target path.
  */
 function createFileSizeMonitor(filePath: string): {
   stop: () => void;
@@ -127,6 +134,7 @@ function createFileSizeMonitor(filePath: string): {
   let lastTime = Date.now();
   let currentSpeed = 0;
   let currentSize = 0;
+  let isFirstPoll = true;
 
   const poll = () => {
     try {
@@ -135,8 +143,24 @@ function createFileSizeMonitor(filePath: string): {
       const sizeDelta = stats.size - lastSize;
       const timeDelta = (now - lastTime) / 1000;
 
-      if (timeDelta > 0 && sizeDelta > 0) {
-        currentSpeed = sizeDelta / timeDelta;
+      if (isFirstPoll) {
+        // Skip first measurement to avoid spike when file appears with data
+        isFirstPoll = false;
+        lastSize = stats.size;
+        lastTime = now;
+        currentSize = stats.size;
+        return;
+      }
+
+      if (timeDelta > 0) {
+        if (sizeDelta > 0) {
+          // File is growing - calculate speed
+          currentSpeed = sizeDelta / timeDelta;
+        } else {
+          // No growth - decay speed toward 0 (indicates stall)
+          currentSpeed *= SPEED_DECAY_FACTOR;
+          if (currentSpeed < 1024) currentSpeed = 0; // Below 1KB/s = 0
+        }
       }
 
       currentSize = stats.size;
@@ -147,6 +171,8 @@ function createFileSizeMonitor(filePath: string): {
     }
   };
 
+  // Poll immediately (Bug fix: setInterval doesn't run immediately)
+  poll();
   const interval = setInterval(poll, FILE_POLL_INTERVAL_MS);
 
   return {
@@ -769,7 +795,8 @@ export default class SparseCheckoutProvider
             if (monitor && expectedSize > 0) {
               progressInterval = setInterval(() => {
                 const realSpeed = monitor.getSpeed();
-                const downloaded = monitor.getSize();
+                // Clamp downloaded to expectedSize (Bug fix: avoid negative remaining)
+                const downloaded = Math.min(monitor.getSize(), expectedSize);
                 if (realSpeed > 0) {
                   const remaining = expectedSize - downloaded;
                   const eta = remaining > 0 ? remaining / realSpeed : 0;
