@@ -1,3 +1,13 @@
+## [2.26.4] (2025-11-30)
+
+### FEAT: Scoped Status Fetching
+
+- **New**: `getScopedStatus(path, depth)` API for targeted status queries
+  - Fetches status for specific folder instead of entire repository
+  - Avoids XML parsing limits for large repos (100k+ files)
+  - Supports depth: empty, files, immediates, infinity
+  - Use for incremental status updates or folder-specific queries
+
 ## [2.26.3] (2025-11-30)
 
 ### FEAT: Configurable XML Limits

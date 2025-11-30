@@ -256,6 +256,38 @@ export class Repository {
     return status;
   }
 
+  /**
+   * Get status for a specific path with depth control.
+   * Use this instead of getStatus() when you only need status for a subset of the repo.
+   * Avoids parsing massive XML for large repositories.
+   *
+   * @param targetPath Path to get status for (relative or absolute)
+   * @param depth SVN depth: empty, files, immediates, infinity
+   * @returns File statuses for the specified path and depth
+   */
+  public async getScopedStatus(
+    targetPath: string,
+    depth: keyof typeof SvnDepth
+  ): Promise<IFileStatus[]> {
+    const relativePath = this.removeAbsolutePath(targetPath);
+
+    const args = ["stat", "--xml", "--depth", depth, relativePath];
+
+    const result = await this.exec(args);
+
+    let status: IFileStatus[];
+    try {
+      status = await parseStatusXml(result.stdout);
+    } catch (err) {
+      logError(`Failed to parse scoped status XML for ${relativePath}`, err);
+      throw new Error(
+        `Scoped status failed: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
+    }
+
+    return status;
+  }
+
   public get info(): ISvnInfo {
     return unwrap(this._info);
   }
