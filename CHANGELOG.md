@@ -1,3 +1,12 @@
+## [2.26.6] (2025-11-30)
+
+### FIX: Sparse Checkout List Performance
+
+- **Fix**: Sparse checkout tree view now uses URL-based listing (non-recursive)
+  - Previously: `svn list <localPath>` was slow for large repos (recursive)
+  - Now: Uses `svn list <repoUrl/folder>` which is fast and non-recursive
+  - Fixes 47+ second freeze when expanding root folder in large repos
+
 ## [2.26.5] (2025-11-30)
 
 ### FIX: Sparse Checkout with Untracked Folders

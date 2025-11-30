@@ -872,7 +872,10 @@ export class Repository implements IRemoteRepository {
 
   public async list(filePath: string): Promise<ISvnListItem[]> {
     return this.run<ISvnListItem[]>(Operation.List, () => {
-      return this.repository.ls(filePath);
+      // Convert local path to relative for URL-based listing (faster, non-recursive)
+      const relativePath =
+        filePath === this.root ? undefined : path.relative(this.root, filePath);
+      return this.repository.list(relativePath);
     });
   }
 
