@@ -85,12 +85,12 @@ export default class SparseItemNode extends BaseNode {
     const fullPath = path.join(this.repoRoot, this.item.path);
     const items = await this.loadChildren(fullPath);
 
-    // Check if any children are ghosts (excluded)
+    // Track if folder has excluded children (for partial indicator)
+    // Note: We set the flag but DON'T trigger refresh here to avoid infinite loop
+    // The parent's icon will update on next manual refresh
     const hasGhosts = items.some(i => i.isGhost);
-    if (hasGhosts && !this.item.hasExcludedChildren) {
+    if (hasGhosts) {
       this.item.hasExcludedChildren = true;
-      // Trigger refresh to update this node's icon/description
-      this.onRefresh?.();
     }
 
     return items.map(
