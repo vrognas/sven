@@ -4,8 +4,8 @@
 
 - **Fix**: Infinite loop when expanding folders in sparse checkout tree
   - Previously: Expanding folders caused spinner to spin indefinitely
-  - Root cause: Refresh callback in getChildren() caused tree rebuild loop
-  - Now: Partial indicator updates on manual refresh only (no auto-refresh)
+  - Root cause: Full tree refresh from getChildren() caused rebuild loop
+  - Now: Uses targeted refresh for specific node only (no full rebuild)
 - **Fix**: Guard against undefined node when tree refreshes during context menu
 - **Fix**: Memory leak in SVN tree view from undisposed subscriptions
   - RepositoryNode subscribed to status changes but never disposed
