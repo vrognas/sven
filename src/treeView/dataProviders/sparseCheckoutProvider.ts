@@ -129,14 +129,19 @@ function createFileSizeMonitor(filePath: string): {
   stop: () => void;
   getSpeed: () => number;
   getSize: () => number;
+  isStopped: () => boolean;
 } {
   let lastSize = 0;
   let lastTime = Date.now();
   let currentSpeed = 0;
   let currentSize = 0;
   let isFirstPoll = true;
+  let stopped = false;
 
   const poll = () => {
+    // Race condition fix: don't poll after stop
+    if (stopped) return;
+
     try {
       const stats = fs.statSync(filePath);
       const now = Date.now();
@@ -176,9 +181,13 @@ function createFileSizeMonitor(filePath: string): {
   const interval = setInterval(poll, FILE_POLL_INTERVAL_MS);
 
   return {
-    stop: () => clearInterval(interval),
+    stop: () => {
+      stopped = true;
+      clearInterval(interval);
+    },
     getSpeed: () => currentSpeed,
-    getSize: () => currentSize
+    getSize: () => currentSize,
+    isStopped: () => stopped
   };
 }
 
@@ -658,13 +667,24 @@ export default class SparseCheckoutProvider
       .get<number>("largeFileWarningMb", DEFAULT_LARGE_FILE_WARNING_MB);
     const thresholdBytes = thresholdMb * 1024 * 1024;
 
-    // Calculate total size of selected files
-    const fileSizes = this.getFileSizes(validNodes);
-    const totalSize = fileSizes.reduce((sum, f) => sum + f.size, 0);
+    // Build file size map for O(1) lookups (fixes basename collision + O(n²))
+    const fileSizeMap = this.getFileSizeMap(validNodes);
+
+    // Calculate total size from map values
+    let totalSize = 0;
+    for (const size of fileSizeMap.values()) {
+      totalSize += size;
+    }
 
     // Check for large files and warn user (if threshold > 0)
     if (thresholdMb > 0) {
-      const largeFiles = fileSizes.filter(f => f.size > thresholdBytes);
+      // Filter large files from map
+      const largeFiles: { name: string; size: number }[] = [];
+      for (const [fullPath, size] of fileSizeMap) {
+        if (size > thresholdBytes) {
+          largeFiles.push({ name: path.basename(fullPath), size });
+        }
+      }
       if (largeFiles.length > 0) {
         const largeTotal = largeFiles.reduce((sum, f) => sum + f.size, 0);
         // Show up to 5 large files for better visibility
@@ -744,9 +764,26 @@ export default class SparseCheckoutProvider
           let cancelled = false;
           let bytesDownloaded = 0;
 
+          // Active monitor/interval for cleanup on cancellation
+          let activeMonitor:
+            | ReturnType<typeof createFileSizeMonitor>
+            | undefined;
+          let activeInterval: ReturnType<typeof setInterval> | undefined;
+
+          /** Cleanup current monitor and interval */
+          const cleanup = () => {
+            activeMonitor?.stop();
+            activeMonitor = undefined;
+            if (activeInterval) {
+              clearInterval(activeInterval);
+              activeInterval = undefined;
+            }
+          };
+
           for (let i = 0; i < nodeRepos.length; i++) {
             // Check cancellation before each item
             if (token.isCancellationRequested) {
+              cleanup(); // Memory leak fix: cleanup on cancel
               cancelled = true;
               break;
             }
@@ -778,22 +815,21 @@ export default class SparseCheckoutProvider
               increment: 100 / nodeRepos.length
             });
 
-            // Get file size for tracking
-            const fileSize = fileSizes.find(
-              f => f.name === path.basename(node.fullPath)
-            );
-            const expectedSize = fileSize?.size ?? 0;
+            // Get file size using fullPath key (fixes basename collision)
+            const expectedSize = fileSizeMap.get(node.fullPath) ?? 0;
 
             // Start file monitor for real-time speed (files only, >1MB)
-            const monitor =
+            activeMonitor =
               node.kind === "file" && expectedSize > 1024 * 1024
                 ? createFileSizeMonitor(node.fullPath)
                 : undefined;
 
             // Progress update interval during download
-            let progressInterval: ReturnType<typeof setInterval> | undefined;
-            if (monitor && expectedSize > 0) {
-              progressInterval = setInterval(() => {
+            if (activeMonitor && expectedSize > 0) {
+              const monitor = activeMonitor; // Capture for closure
+              activeInterval = setInterval(() => {
+                // Race condition fix: don't update after stop
+                if (monitor.isStopped()) return;
                 const realSpeed = monitor.getSpeed();
                 // Clamp downloaded to expectedSize (Bug fix: avoid negative remaining)
                 const downloaded = Math.min(monitor.getSize(), expectedSize);
@@ -814,21 +850,16 @@ export default class SparseCheckoutProvider
                 parents: true
               });
 
-              // Cleanup monitor and interval
-              monitor?.stop();
-              if (progressInterval) clearInterval(progressInterval);
+              cleanup();
 
               if (res.exitCode === 0) {
                 success++;
-                if (fileSize) {
-                  bytesDownloaded += fileSize.size;
-                }
+                bytesDownloaded += expectedSize;
               } else {
                 failed++;
               }
             } catch {
-              monitor?.stop();
-              if (progressInterval) clearInterval(progressInterval);
+              cleanup();
               failed++;
             }
           }
@@ -888,17 +919,19 @@ export default class SparseCheckoutProvider
 
   /**
    * Get file sizes for ghost files (server-only items with known size)
+   * Returns Map<fullPath, size> for O(1) lookup (fixes O(n²) in download loop)
    */
-  private getFileSizes(
-    nodes: SparseItemNode[]
-  ): { name: string; size: number }[] {
-    return nodes
-      .filter(n => n.kind === "file" && n.isGhost)
-      .map(n => ({
-        name: path.basename(n.fullPath),
-        size: parseSizeToBytes(n.size)
-      }))
-      .filter(f => f.size > 0);
+  private getFileSizeMap(nodes: SparseItemNode[]): Map<string, number> {
+    const sizeMap = new Map<string, number>();
+    for (const n of nodes) {
+      if (n.kind === "file" && n.isGhost) {
+        const size = parseSizeToBytes(n.size);
+        if (size > 0) {
+          sizeMap.set(n.fullPath, size);
+        }
+      }
+    }
+    return sizeMap;
   }
 
   /**

@@ -1,3 +1,12 @@
+## [2.26.13] (2025-11-30)
+
+### Fix: Progress & Cancellation Bugs
+
+- **Fix**: Memory leak - monitor/interval now cleaned up on cancellation
+- **Fix**: Race condition - added stopped flag, interval checks before update
+- **Fix**: Basename collision - use fullPath as key (dir1/file.txt vs dir2/file.txt)
+- **Perf**: O(n²) → O(1) file size lookup via Map instead of array.find()
+
 ## [2.26.12] (2025-11-30)
 
 ### Fix: Real-Time Speed Monitoring Bugs
