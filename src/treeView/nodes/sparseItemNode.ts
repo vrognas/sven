@@ -2,7 +2,7 @@
 // Licensed under MIT License
 
 import * as path from "path";
-import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from "vscode";
+import { TreeItem, TreeItemCollapsibleState, ThemeIcon, Uri } from "vscode";
 import { ISparseItem, SparseDepthKey } from "../../common/types";
 import BaseNode from "./baseNode";
 
@@ -27,6 +27,7 @@ export default class SparseItemNode extends BaseNode {
 
   public getTreeItem(): TreeItem {
     const isDir = this.item.kind === "dir";
+    const fullPath = path.join(this.repoRoot, this.item.path);
 
     // Directories are expandable (both local and ghost)
     // Ghost dirs show server contents, local dirs show local + ghost
@@ -35,17 +36,20 @@ export default class SparseItemNode extends BaseNode {
       isDir ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
     );
 
+    // Set resourceUri to get file icons from VS Code's file icon theme
+    treeItem.resourceUri = Uri.file(fullPath);
+
     // Add tooltip with full path
     treeItem.tooltip = this.item.path;
 
     if (this.item.isGhost) {
-      // Ghost item: cloud icon, italic description
+      // Ghost item: override icon with cloud, add description
       treeItem.iconPath = new ThemeIcon(isDir ? "cloud" : "cloud-download");
       treeItem.description = "(not checked out)";
       treeItem.contextValue = isDir ? "sparseGhostDir" : "sparseGhostFile";
     } else {
-      // Local item
-      treeItem.iconPath = new ThemeIcon(isDir ? "folder" : "file");
+      // Local item: let VS Code file icon theme show based on resourceUri
+      // Don't set iconPath - VS Code will use the file/folder icon theme
       if (isDir && this.item.depth) {
         treeItem.description = depthLabels[this.item.depth] || this.item.depth;
       }

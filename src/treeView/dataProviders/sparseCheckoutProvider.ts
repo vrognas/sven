@@ -117,7 +117,8 @@ export default class SparseCheckoutProvider
   }
 
   /**
-   * Get items for a folder: local items + ghost items from server
+   * Get items for a folder: only server items, marked as local or ghost.
+   * Untracked local items (like .vscode, .idea) are excluded.
    */
   public async getItems(
     repo: Repository,
@@ -136,13 +137,40 @@ export default class SparseCheckoutProvider
       })
     ]);
 
-    // If depth is infinity or server fetch failed, no ghosts
-    if (depth === "infinity" || !serverResult) {
-      return localItems;
+    // If server fetch failed, can't determine what's tracked - show nothing
+    if (!serverResult) {
+      return [];
     }
 
-    const ghosts = this.computeGhosts(localItems, serverResult, relativeFolder);
-    return this.mergeItems(localItems, ghosts);
+    // Filter local items to only those on server (exclude untracked like .vscode)
+    const trackedLocalItems = this.filterToTrackedItems(
+      localItems,
+      serverResult
+    );
+
+    // If depth is infinity, no ghosts needed
+    if (depth === "infinity") {
+      return this.mergeItems(trackedLocalItems, []);
+    }
+
+    const ghosts = this.computeGhosts(
+      trackedLocalItems,
+      serverResult,
+      relativeFolder
+    );
+    return this.mergeItems(trackedLocalItems, ghosts);
+  }
+
+  /**
+   * Filter local filesystem items to only include tracked items (on server).
+   * This excludes untracked items like .vscode, .idea, node_modules, etc.
+   */
+  private filterToTrackedItems(
+    localItems: ISparseItem[],
+    serverItems: { name: string; kind: "file" | "dir" }[]
+  ): ISparseItem[] {
+    const serverNames = new Set(serverItems.map(s => s.name));
+    return localItems.filter(item => serverNames.has(item.name));
   }
 
   private async getLocalItems(
@@ -268,15 +296,31 @@ export default class SparseCheckoutProvider
       }));
   }
 
+  /** Get file extension (lowercase, without dot) */
+  private getExtension(name: string): string {
+    const lastDot = name.lastIndexOf(".");
+    if (lastDot === -1 || lastDot === 0) return "";
+    return name.slice(lastDot + 1).toLowerCase();
+  }
+
   private mergeItems(
     local: ISparseItem[],
     ghosts: ISparseItem[]
   ): ISparseItem[] {
     return [...local, ...ghosts].sort((a, b) => {
-      // Dirs first, then alphabetical
+      // Dirs first
       if (a.kind !== b.kind) {
         return a.kind === "dir" ? -1 : 1;
       }
+      // For files: sort by extension, then alphabetical
+      if (a.kind === "file") {
+        const extA = this.getExtension(a.name);
+        const extB = this.getExtension(b.name);
+        if (extA !== extB) {
+          return extA.localeCompare(extB);
+        }
+      }
+      // Within same kind/extension: alphabetical
       return a.name.localeCompare(b.name);
     });
   }

@@ -33,6 +33,13 @@ function computeGhosts(
     }));
 }
 
+/** Get file extension (lowercase, without dot) */
+function getExtension(name: string): string {
+  const lastDot = name.lastIndexOf(".");
+  if (lastDot === -1 || lastDot === 0) return "";
+  return name.slice(lastDot + 1).toLowerCase();
+}
+
 function mergeItems(
   localItems: { name: string; kind: "file" | "dir"; depth?: string }[],
   ghosts: ISparseItem[]
@@ -45,12 +52,33 @@ function mergeItems(
     isGhost: false
   }));
   return [...local, ...ghosts].sort((a, b) => {
-    // Dirs first, then alphabetical (matches implementation)
+    // Dirs first
     if (a.kind !== b.kind) {
       return a.kind === "dir" ? -1 : 1;
     }
+    // For files: sort by extension, then alphabetical
+    if (a.kind === "file") {
+      const extA = getExtension(a.name);
+      const extB = getExtension(b.name);
+      if (extA !== extB) {
+        return extA.localeCompare(extB);
+      }
+    }
+    // Within same kind/extension: alphabetical
     return a.name.localeCompare(b.name);
   });
+}
+
+/**
+ * Filter local filesystem items to only include tracked items (on server).
+ * This excludes untracked items like .vscode, .idea, etc.
+ */
+function filterToTrackedItems(
+  localItems: { name: string; kind: "file" | "dir" }[],
+  serverItems: { name: string; kind: "file" | "dir" }[]
+): { name: string; kind: "file" | "dir" }[] {
+  const serverNames = new Set(serverItems.map(s => s.name));
+  return localItems.filter(item => serverNames.has(item.name));
 }
 
 describe("Sparse Checkout Provider", () => {
@@ -101,6 +129,53 @@ describe("Sparse Checkout Provider", () => {
     });
   });
 
+  describe("filtering untracked items", () => {
+    it("excludes .vscode folder not on server", () => {
+      const localItems = [
+        { name: ".vscode", kind: "dir" as const },
+        { name: "src", kind: "dir" as const },
+        { name: "README.md", kind: "file" as const }
+      ];
+      const serverItems = [
+        { name: "src", kind: "dir" as const },
+        { name: "README.md", kind: "file" as const }
+      ];
+
+      const filtered = filterToTrackedItems(localItems, serverItems);
+
+      expect(filtered.map(f => f.name)).toEqual(["src", "README.md"]);
+      expect(filtered.find(f => f.name === ".vscode")).toBeUndefined();
+    });
+
+    it("excludes multiple untracked items", () => {
+      const localItems = [
+        { name: ".vscode", kind: "dir" as const },
+        { name: ".idea", kind: "dir" as const },
+        { name: "node_modules", kind: "dir" as const },
+        { name: "src", kind: "dir" as const },
+        { name: "local-only.txt", kind: "file" as const }
+      ];
+      const serverItems = [{ name: "src", kind: "dir" as const }];
+
+      const filtered = filterToTrackedItems(localItems, serverItems);
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].name).toBe("src");
+    });
+
+    it("returns empty when no local items are tracked", () => {
+      const localItems = [
+        { name: ".vscode", kind: "dir" as const },
+        { name: "local.txt", kind: "file" as const }
+      ];
+      const serverItems = [{ name: "src", kind: "dir" as const }];
+
+      const filtered = filterToTrackedItems(localItems, serverItems);
+
+      expect(filtered).toHaveLength(0);
+    });
+  });
+
   describe("item merging", () => {
     it("merges local and ghost items sorted by name", () => {
       const localItems = [
@@ -114,7 +189,7 @@ describe("Sparse Checkout Provider", () => {
 
       const merged = mergeItems(localItems, ghosts);
 
-      // Dirs first, then alphabetical
+      // Dirs first, then files
       expect(merged.map(m => m.name)).toEqual([
         "assets",
         "docs",
@@ -123,6 +198,66 @@ describe("Sparse Checkout Provider", () => {
       ]);
       expect(merged.find(m => m.name === "src")?.isGhost).toBe(false);
       expect(merged.find(m => m.name === "docs")?.isGhost).toBe(true);
+    });
+
+    it("sorts files by extension then name", () => {
+      const localItems = [
+        { name: "zebra.ts", kind: "file" as const },
+        { name: "alpha.js", kind: "file" as const },
+        { name: "beta.ts", kind: "file" as const },
+        { name: "gamma.js", kind: "file" as const }
+      ];
+      const ghosts: ISparseItem[] = [];
+
+      const merged = mergeItems(localItems, ghosts);
+
+      // js files first (alphabetically), then ts files (alphabetically)
+      expect(merged.map(m => m.name)).toEqual([
+        "alpha.js",
+        "gamma.js",
+        "beta.ts",
+        "zebra.ts"
+      ]);
+    });
+
+    it("sorts directories first, then files by extension", () => {
+      const localItems = [
+        { name: "src", kind: "dir" as const },
+        { name: "config.json", kind: "file" as const },
+        { name: "docs", kind: "dir" as const },
+        { name: "index.ts", kind: "file" as const },
+        { name: "README.md", kind: "file" as const }
+      ];
+      const ghosts: ISparseItem[] = [];
+
+      const merged = mergeItems(localItems, ghosts);
+
+      // Dirs first (alpha), then files by extension (json, md, ts)
+      expect(merged.map(m => m.name)).toEqual([
+        "docs",
+        "src",
+        "config.json",
+        "README.md",
+        "index.ts"
+      ]);
+    });
+
+    it("handles files without extensions", () => {
+      const localItems = [
+        { name: "Makefile", kind: "file" as const },
+        { name: "README", kind: "file" as const },
+        { name: "script.sh", kind: "file" as const }
+      ];
+      const ghosts: ISparseItem[] = [];
+
+      const merged = mergeItems(localItems, ghosts);
+
+      // No extension files first (empty string sorts first), then .sh
+      expect(merged.map(m => m.name)).toEqual([
+        "Makefile",
+        "README",
+        "script.sh"
+      ]);
     });
   });
 

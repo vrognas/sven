@@ -1,3 +1,12 @@
+## [2.26.1] (2025-11-30)
+
+### FIX: Sparse Checkout Tree View
+
+- **Fix**: Exclude untracked items (.vscode, .idea, etc.) from sparse checkout view
+  - Only items on server are shown; local-only files no longer appear
+- **Fix**: Sort files by extension then alphabetically (folders first)
+- **New**: File icons now match VS Code's file icon theme (like Explorer)
+
 ## [2.26.0] (2025-11-29)
 
 ### BREAKING: Simplified Credential Mode Setting
