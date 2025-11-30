@@ -1,3 +1,13 @@
+## [2.26.26] (2025-11-30)
+
+### Fix: Improved Progress Meter
+
+- **Perf**: Single traversal `getFolderStats()` (was 2 separate calls)
+- **UX**: Smoothed ETA with exponential moving average (less jumpy)
+- **UX**: Shows current speed (e.g., "2.5 MB/s")
+- **UX**: Size-based progress: "45.2 MB/128.5 MB (35%)"
+- **UX**: ETA only shown after 2s elapsed (avoids wild initial estimates)
+
 ## [2.26.25] (2025-11-30)
 
 ### Feature: Set Depth Command Progress
