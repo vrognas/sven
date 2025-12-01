@@ -201,6 +201,23 @@ export async function fetchMore(cached: ICachedLog) {
 }
 
 const gravatarCache: Map<string, Uri> = new Map();
+const gravatarAccessOrder: Map<string, number> = new Map();
+const MAX_GRAVATAR_CACHE_SIZE = 100;
+
+function evictOldestGravatar(): void {
+  let oldestKey: string | null = null;
+  let oldestTime = Infinity;
+  for (const [key, time] of gravatarAccessOrder.entries()) {
+    if (time < oldestTime) {
+      oldestTime = time;
+      oldestKey = key;
+    }
+  }
+  if (oldestKey !== null) {
+    gravatarCache.delete(oldestKey);
+    gravatarAccessOrder.delete(oldestKey);
+  }
+}
 
 function md5(s: string): string {
   const data = createHash("md5");
@@ -221,6 +238,7 @@ export function getCommitIcon(
 
   let gravatar = gravatarCache.get(author);
   if (gravatar !== undefined) {
+    gravatarAccessOrder.set(author, Date.now());
     return gravatar;
   }
 
@@ -232,7 +250,13 @@ export function getCommitIcon(
 
   gravatar = Uri.parse(gravitarUrl);
 
+  // Evict LRU if at max size
+  if (gravatarCache.size >= MAX_GRAVATAR_CACHE_SIZE) {
+    evictOldestGravatar();
+  }
+
   gravatarCache.set(author, gravatar);
+  gravatarAccessOrder.set(author, Date.now());
 
   return gravatar;
 }

@@ -1,3 +1,10 @@
+## [2.26.28] (2025-12-01)
+
+### Fix: Gravatar Cache Memory Leak
+
+- **Fix**: Added LRU eviction to gravatar cache (was unbounded)
+- **Fix**: Max 100 entries, oldest evicted when full
+
 ## [2.26.27] (2025-12-01)
 
 ### Perf: Log Cache
