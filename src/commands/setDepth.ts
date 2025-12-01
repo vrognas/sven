@@ -289,7 +289,7 @@ export class SetDepth extends Command {
                 const files = items.filter(i => i.kind === "file");
                 expectedFileCount = files.length;
                 expectedTotalSize = files.reduce(
-                  (sum, f) => sum + (parseInt(f.size || "0", 10) || 0),
+                  (sum, f) => sum + parseInt(f.size, 10),
                   0
                 );
 
@@ -297,12 +297,8 @@ export class SetDepth extends Command {
                   return { exitCode: -1, cancelled: true, stderr: "" };
                 }
 
-                const sizeLabel =
-                  expectedTotalSize > 0
-                    ? ` (${formatBytes(expectedTotalSize)})`
-                    : "";
                 progress.report({
-                  message: `Found ${expectedFileCount} files${sizeLabel} in ${folderName}`
+                  message: `Found ${expectedFileCount} files (${formatBytes(expectedTotalSize)}) in ${folderName}`
                 });
               } catch {
                 expectedFileCount = 0;
@@ -323,10 +319,9 @@ export class SetDepth extends Command {
                 pollInterval = setInterval(() => {
                   if (token.isCancellationRequested) return;
                   const stats = getFolderStats(uri.fsPath);
-                  const pct =
-                    expectedTotalSize > 0
-                      ? Math.round((stats.size / expectedTotalSize) * 100)
-                      : Math.round((stats.count / expectedFileCount) * 100);
+                  const pct = Math.round(
+                    (stats.size / expectedTotalSize) * 100
+                  );
 
                   // Calculate smoothed speed with exponential moving average
                   const now = Date.now();
@@ -350,10 +345,7 @@ export class SetDepth extends Command {
                   if (smoothedSpeed > 0) {
                     speedEtaLabel = ` ${formatSpeed(smoothedSpeed)}`;
                     // Only show ETA after minimum elapsed time
-                    if (
-                      elapsed >= MIN_ELAPSED_FOR_ETA &&
-                      expectedTotalSize > 0
-                    ) {
+                    if (elapsed >= MIN_ELAPSED_FOR_ETA) {
                       const remaining = expectedTotalSize - stats.size;
                       if (remaining > 0) {
                         const eta = remaining / smoothedSpeed;
@@ -362,14 +354,8 @@ export class SetDepth extends Command {
                     }
                   }
 
-                  // Show size-based or file-count-based progress
-                  const progressLabel =
-                    expectedTotalSize > 0
-                      ? `${formatBytes(stats.size)}/${formatBytes(expectedTotalSize)}`
-                      : `${stats.count}/${expectedFileCount} files`;
-
                   progress.report({
-                    message: `${folderName}: ${progressLabel} (${pct}%)${speedEtaLabel}`
+                    message: `${folderName}: ${formatBytes(stats.size)}/${formatBytes(expectedTotalSize)} (${pct}%)${speedEtaLabel}`
                   });
                 }, POLL_INTERVAL_MS);
               } else {
@@ -389,24 +375,16 @@ export class SetDepth extends Command {
 
                 const actionLabel =
                   selected.depth === "exclude" ? "Excluding" : "Removing files";
-                const sizeLabel =
-                  initialTotalSize > 0
-                    ? ` (${formatBytes(initialTotalSize)})`
-                    : "";
                 progress.report({
-                  message: `${actionLabel} ${initialFileCount} files${sizeLabel}...`
+                  message: `${actionLabel} ${initialFileCount} files (${formatBytes(initialTotalSize)})...`
                 });
 
                 pollInterval = setInterval(() => {
                   const stats = getFolderStats(uri.fsPath);
                   const removedSize = initialTotalSize - stats.size;
-                  const removedCount = initialFileCount - stats.count;
-                  const pct =
-                    initialTotalSize > 0
-                      ? Math.round((removedSize / initialTotalSize) * 100)
-                      : initialFileCount > 0
-                        ? Math.round((removedCount / initialFileCount) * 100)
-                        : 0;
+                  const pct = Math.round(
+                    (removedSize / initialTotalSize) * 100
+                  );
 
                   // Calculate smoothed speed with exponential moving average
                   const now = Date.now();
@@ -425,7 +403,7 @@ export class SetDepth extends Command {
                   lastRemovedSize = removedSize;
                   lastTime = now;
 
-                  if (removedSize > 0 || removedCount > 0) {
+                  if (removedSize > 0) {
                     // Build progress message with speed and ETA
                     let speedEtaLabel = "";
                     if (smoothedSpeed > 0) {
@@ -437,14 +415,8 @@ export class SetDepth extends Command {
                       }
                     }
 
-                    // Show size-based or file-count-based progress
-                    const progressLabel =
-                      initialTotalSize > 0
-                        ? `${formatBytes(removedSize)}/${formatBytes(initialTotalSize)}`
-                        : `${removedCount}/${initialFileCount} files`;
-
                     progress.report({
-                      message: `${actionLabel}: ${progressLabel} (${pct}%)${speedEtaLabel}`
+                      message: `${actionLabel}: ${formatBytes(removedSize)}/${formatBytes(initialTotalSize)} (${pct}%)${speedEtaLabel}`
                     });
                   }
                 }, POLL_INTERVAL_MS);
