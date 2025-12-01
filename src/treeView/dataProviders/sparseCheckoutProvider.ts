@@ -209,70 +209,101 @@ function createFileSizeMonitor(filePath: string): {
  * - Max recursion depth limit
  * - Skips symbolic links entirely
  */
-function countFilesInFolder(
+/** Folder statistics for progress tracking */
+interface FolderStats {
+  count: number;
+  size: number;
+}
+
+/**
+ * Get file count and total size in a single traversal.
+ * Used for size-based progress tracking.
+ */
+function getFolderStats(
   folderPath: string,
   visited = new Set<string>(),
   depth = 0
-): number {
-  // Depth limit prevents stack overflow on deeply nested structures
+): FolderStats {
   if (depth > MAX_RECURSION_DEPTH) {
-    return 0;
+    return { count: 0, size: 0 };
   }
 
   let count = 0;
+  let size = 0;
   try {
-    // Get folder's inode to detect loops (works on POSIX, safe on Windows)
-    const folderStats = fs.statSync(folderPath);
-    const inode = `${folderStats.dev}:${folderStats.ino}`;
+    const folderStat = fs.statSync(folderPath);
+    const inode = `${folderStat.dev}:${folderStat.ino}`;
     if (visited.has(inode)) {
-      // Loop detected - folder already visited via symlink
-      return 0;
+      return { count: 0, size: 0 };
     }
     visited.add(inode);
 
     const entries = fs.readdirSync(folderPath, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.name === ".svn") continue;
-
-      // Skip symlinks entirely - they can create loops and point outside WC
       if (entry.isSymbolicLink()) continue;
 
       const fullPath = path.join(folderPath, entry.name);
       if (entry.isDirectory()) {
-        count += countFilesInFolder(fullPath, visited, depth + 1);
+        const sub = getFolderStats(fullPath, visited, depth + 1);
+        count += sub.count;
+        size += sub.size;
       } else if (entry.isFile()) {
-        count++;
+        try {
+          size += fs.statSync(fullPath).size;
+          count++;
+        } catch {
+          // File may have been deleted
+        }
       }
     }
   } catch (err) {
-    // Folder may not exist yet or permission denied
-    // Log non-ENOENT errors for debugging
     if (err instanceof Error && !err.message.includes("ENOENT")) {
-      logError("countFilesInFolder error", err);
+      logError("getFolderStats error", err);
     }
   }
-  return count;
+  return { count, size };
 }
 
 /**
- * Monitor folder download progress by counting files appearing.
- * Used for folder downloads where we can't track individual file progress.
+ * Monitor folder download progress by tracking file size.
+ * Size-based tracking is more accurate than file count for progress/ETA.
  */
 function createFolderMonitor(
   folderPath: string,
+  expectedTotalSize: number,
   expectedFileCount: number
 ): {
   stop: () => void;
   getProgress: () => number;
+  getSize: () => number;
   getFileCount: () => number;
+  getSpeed: () => number;
   isStopped: () => boolean;
 } {
-  let currentFileCount = 0;
+  let currentStats = { count: 0, size: 0 };
   let stopped = false;
+  let lastSize = 0;
+  let lastTime = Date.now();
+  let smoothedSpeed = 0;
 
   const poll = () => {
     if (stopped) return;
-    currentFileCount = countFilesInFolder(folderPath);
+    currentStats = getFolderStats(folderPath);
+
+    // Calculate smoothed speed
+    const now = Date.now();
+    const deltaTime = (now - lastTime) / 1000;
+    const deltaSize = currentStats.size - lastSize;
+    if (deltaTime > 0 && deltaSize > 0) {
+      const instantSpeed = deltaSize / deltaTime;
+      smoothedSpeed =
+        smoothedSpeed === 0
+          ? instantSpeed
+          : 0.3 * instantSpeed + 0.7 * smoothedSpeed;
+    }
+    lastSize = currentStats.size;
+    lastTime = now;
   };
 
   // Poll immediately
@@ -285,10 +316,14 @@ function createFolderMonitor(
       clearInterval(interval);
     },
     getProgress: () =>
-      expectedFileCount > 0
-        ? Math.min(currentFileCount / expectedFileCount, 1)
-        : 0,
-    getFileCount: () => currentFileCount,
+      expectedTotalSize > 0
+        ? Math.min(currentStats.size / expectedTotalSize, 1)
+        : expectedFileCount > 0
+          ? Math.min(currentStats.count / expectedFileCount, 1)
+          : 0,
+    getSize: () => currentStats.size,
+    getFileCount: () => currentStats.count,
+    getSpeed: () => smoothedSpeed,
     isStopped: () => stopped
   };
 }
@@ -993,8 +1028,9 @@ export default class SparseCheckoutProvider
             // Get file size using fullPath key (fixes basename collision)
             const expectedSize = fileSizeMap.get(node.fullPath) ?? 0;
 
-            // For folders with infinity depth: pre-scan for file count
+            // For folders with infinity depth: pre-scan for file count and size
             let expectedFileCount = 0;
+            let expectedFolderSize = 0;
             if (node.kind === "dir" && depth === "infinity") {
               // Check cancellation BEFORE pre-scan (can be slow for large folders)
               if (token.isCancellationRequested) {
@@ -1019,18 +1055,21 @@ export default class SparseCheckoutProvider
               });
 
               try {
-                // Pre-scan folder to get expected file count (with configurable timeout)
+                // Pre-scan folder to get expected file count and total size
                 const folderContents = await repo.listRecursive(
                   node.fullPath,
                   preScanTimeoutMs
                 );
-                expectedFileCount = folderContents.filter(
-                  f => f.kind === "file"
-                ).length;
+                const files = folderContents.filter(f => f.kind === "file");
+                expectedFileCount = files.length;
+                expectedFolderSize = files.reduce(
+                  (sum, f) => sum + parseInt(f.size, 10),
+                  0
+                );
 
-                // Show file count found
+                // Show file count and size found
                 progress.report({
-                  message: `Found ${expectedFileCount} files in ${folderName}`
+                  message: `Found ${expectedFileCount} files (${formatBytes(expectedFolderSize)}) in ${folderName}`
                 });
               } catch (err) {
                 // Pre-scan failed - log error, continue without progress tracking
@@ -1049,10 +1088,11 @@ export default class SparseCheckoutProvider
             if (node.kind === "file" && expectedSize > 1024 * 1024) {
               // File monitor for large files (>1MB)
               activeFileMonitor = createFileSizeMonitor(node.fullPath);
-            } else if (node.kind === "dir" && expectedFileCount > 0) {
-              // Folder monitor only if we have files to track (skip empty folders)
+            } else if (node.kind === "dir" && expectedFolderSize > 0) {
+              // Folder monitor only if we have size to track (skip empty folders)
               activeFolderMonitor = createFolderMonitor(
                 node.fullPath,
+                expectedFolderSize,
                 expectedFileCount
               );
             }
@@ -1079,15 +1119,26 @@ export default class SparseCheckoutProvider
                   });
                 }
               }, FILE_POLL_INTERVAL_MS);
-            } else if (activeFolderMonitor && expectedFileCount > 0) {
+            } else if (activeFolderMonitor && expectedFolderSize > 0) {
               const monitor = activeFolderMonitor; // Capture for closure
               const folderName = path.basename(node.fullPath);
               activeInterval = setInterval(() => {
                 if (monitor.isStopped()) return;
-                const fileCount = monitor.getFileCount();
+                const currentSize = monitor.getSize();
                 const pct = Math.round(monitor.getProgress() * 100);
+                const speed = monitor.getSpeed();
+                // Speed and ETA label
+                let speedEtaLabel = "";
+                if (speed > 0) {
+                  speedEtaLabel = ` ${formatBytes(speed)}/s`;
+                  const remaining = expectedFolderSize - currentSize;
+                  if (remaining > 0) {
+                    const eta = remaining / speed;
+                    if (eta > 2) speedEtaLabel += ` ~${formatDuration(eta)}`;
+                  }
+                }
                 progress.report({
-                  message: `${folderName}: ${fileCount}/${expectedFileCount} files (${pct}%)`
+                  message: `${folderName}: ${formatBytes(currentSize)}/${formatBytes(expectedFolderSize)} (${pct}%)${speedEtaLabel}`
                 });
               }, FILE_POLL_INTERVAL_MS);
             }
@@ -1095,9 +1146,9 @@ export default class SparseCheckoutProvider
             try {
               // Show that actual download is starting (after pre-scan)
               const itemName = path.basename(node.fullPath);
-              if (node.kind === "dir" && expectedFileCount > 0) {
+              if (node.kind === "dir" && expectedFolderSize > 0) {
                 progress.report({
-                  message: `Downloading ${itemName} (${expectedFileCount} files)...`
+                  message: `Downloading ${itemName} (${formatBytes(expectedFolderSize)})...`
                 });
               } else {
                 progress.report({
@@ -1114,7 +1165,9 @@ export default class SparseCheckoutProvider
 
               if (res.exitCode === 0) {
                 success++;
-                bytesDownloaded += expectedSize;
+                // Track bytes from file size or folder size (for ETA)
+                bytesDownloaded +=
+                  node.kind === "dir" ? expectedFolderSize : expectedSize;
               } else {
                 failed++;
               }
