@@ -1,3 +1,12 @@
+## [2.26.27] (2025-12-01)
+
+### Perf: Log Cache
+
+- **Perf**: In-memory LRU cache for `log()` and `logBatch()` queries
+- **Perf**: 60s TTL, 50-entry max (SVN logs are immutable)
+- **Perf**: Repeated log viewer scrolling now instant (cache hit)
+- **Perf**: Follows existing blame/info cache patterns
+
 ## [2.26.26] (2025-11-30)
 
 ### Fix: Improved Progress Meter

@@ -304,5 +304,15 @@ See IMPLEMENTATION_PLAN.md for details.
 
 ---
 
-**Version**: 3.22
-**Updated**: 2025-11-30 (v2.26.4)
+### Log Cache (v2.26.27)
+
+- **Cache**: In-memory LRU for `log()` and `logBatch()` queries
+- **TTL**: 60 seconds (SVN logs are immutable)
+- **Size**: 50 entries max
+- **Pattern**: Follows existing blame/info cache design
+- **Benefit**: Repeated log queries (scrolling) instant on cache hit
+
+---
+
+**Version**: 3.23
+**Updated**: 2025-12-01 (v2.26.27)
