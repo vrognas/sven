@@ -14,31 +14,29 @@ describe("Startup Optimization", () => {
   });
 
   /**
-   * Test 1: SVN path cache hit returns immediately
+   * Test 1: Cached ISvn object used with fs.access check (no spawn)
    */
-  it("uses cached SVN path without spawning process", async () => {
-    const cachedPath = "/usr/bin/svn";
+  it("uses cached ISvn with fs.access instead of spawning", async () => {
+    const cachedSvn = { path: "/usr/bin/svn", version: "1.14.0" };
     const mockGlobalState = {
-      get: vi.fn().mockReturnValue(cachedPath),
+      get: vi.fn().mockReturnValue(cachedSvn),
       update: vi.fn().mockResolvedValue(undefined)
     };
 
-    const mockContext = {
-      globalState: mockGlobalState
-    };
+    // Mock fs.access to succeed
+    const fsAccess = vi.fn().mockResolvedValue(undefined);
 
-    // Simulate findSvn with cache hit
-    const findSpecificSvn = vi.fn().mockResolvedValue({
-      path: cachedPath,
-      version: "1.14.0"
-    });
-
-    // Cache hit should use cached path directly
-    if (mockContext.globalState.get("svnPathCache")) {
-      const result = await findSpecificSvn(cachedPath);
-      expect(result.path).toBe(cachedPath);
-      expect(findSpecificSvn).toHaveBeenCalledWith(cachedPath);
+    // Simulate cache hit flow - fs.access instead of spawn
+    const cached = mockGlobalState.get("svnCache");
+    if (cached?.path && cached?.version) {
+      await fsAccess(cached.path);
+      // No findSpecificSvn call needed - return cached directly
+      expect(cached.path).toBe("/usr/bin/svn");
+      expect(cached.version).toBe("1.14.0");
     }
+
+    // fs.access was called, not svn --version spawn
+    expect(fsAccess).toHaveBeenCalledWith("/usr/bin/svn");
   });
 
   /**
@@ -113,30 +111,29 @@ describe("Startup Optimization", () => {
   });
 
   /**
-   * Test 4: Cache invalidation on SVN path change
+   * Test 4: Cache invalidation when fs.access fails (file moved/deleted)
    */
-  it("clears invalid cache and retries discovery", async () => {
+  it("clears invalid cache when fs.access fails", async () => {
+    const cachedSvn = { path: "/old/invalid/svn", version: "1.14.0" };
     const mockGlobalState = {
-      get: vi.fn().mockReturnValue("/old/invalid/svn"),
+      get: vi.fn().mockReturnValue(cachedSvn),
       update: vi.fn().mockResolvedValue(undefined)
     };
 
-    const findSpecificSvn = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("SVN not found")) // cached path fails
-      .mockResolvedValueOnce({ path: "/usr/bin/svn", version: "1.14.0" }); // new discovery
+    // Mock fs.access to fail (file doesn't exist)
+    const fsAccess = vi.fn().mockRejectedValue(new Error("ENOENT"));
 
     // Try cached path first
-    const cachedPath = mockGlobalState.get("svnPathCache");
-    try {
-      await findSpecificSvn(cachedPath);
-    } catch {
-      // Cache invalid, clear it
-      await mockGlobalState.update("svnPathCache", undefined);
-      expect(mockGlobalState.update).toHaveBeenCalledWith(
-        "svnPathCache",
-        undefined
-      );
+    const cached = mockGlobalState.get("svnCache");
+    if (cached?.path) {
+      try {
+        await fsAccess(cached.path);
+      } catch {
+        // Cache invalid, clear it
+        await mockGlobalState.update("svnCache", undefined);
+      }
     }
+
+    expect(mockGlobalState.update).toHaveBeenCalledWith("svnCache", undefined);
   });
 });

@@ -3,6 +3,7 @@
 // Licensed under MIT License
 
 import * as cp from "child_process";
+import * as fs from "fs/promises";
 import * as path from "path";
 import * as semver from "semver";
 import { Readable } from "stream";
@@ -14,8 +15,8 @@ export interface ISvn {
   version: string;
 }
 
-// Cache key for storing SVN path in globalState
-const SVN_PATH_CACHE_KEY = "svnPathCache";
+// Cache key for storing full ISvn object in globalState
+const SVN_CACHE_KEY = "svnCache";
 
 export class SvnFinder {
   /**
@@ -38,18 +39,20 @@ export class SvnFinder {
       }
     }
 
-    // 2. Try cached path (startup optimization - saves ~1-2s on subsequent launches)
+    // 2. Try cached ISvn (startup optimization - fs.access instead of spawning process)
     if (context) {
-      const cachedPath = context.globalState.get<string>(SVN_PATH_CACHE_KEY);
-      if (cachedPath) {
+      const cached = context.globalState.get<ISvn>(SVN_CACHE_KEY);
+      if (cached?.path && cached?.version) {
         try {
-          const svn = await this.findSpecificSvn(cachedPath);
-          const validated = await this.checkSvnVersion(svn);
-          console.log(`SVN Extension: Using cached SVN path: ${cachedPath}`);
-          return validated;
+          // Quick file existence check - no process spawn needed
+          await fs.access(cached.path, fs.constants.X_OK);
+          console.log(
+            `SVN Extension: Using cached SVN: ${cached.path} v${cached.version}`
+          );
+          return cached;
         } catch {
-          // Cache invalid, clear it and continue discovery
-          await context.globalState.update(SVN_PATH_CACHE_KEY, undefined);
+          // Cache invalid (file moved/deleted), clear and continue discovery
+          await context.globalState.update(SVN_CACHE_KEY, undefined);
         }
       }
     }
@@ -72,9 +75,9 @@ export class SvnFinder {
       throw new Error("Svn installation not found.");
     }
 
-    // 4. Cache successful path for next startup
+    // 4. Cache full ISvn object for next startup (avoids version check spawn)
     if (context) {
-      await context.globalState.update(SVN_PATH_CACHE_KEY, svn.path);
+      await context.globalState.update(SVN_CACHE_KEY, svn);
     }
 
     return svn;
