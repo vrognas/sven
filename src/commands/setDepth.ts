@@ -74,10 +74,12 @@ interface FolderStats {
 
 /**
  * Get file count and total size in a single traversal.
- * More efficient than separate count + size functions.
+ * @param folderPath Path to scan
+ * @param recursive If true, scan subdirectories recursively (default: true)
  */
 function getFolderStats(
   folderPath: string,
+  recursive = true,
   visited = new Set<string>(),
   depth = 0
 ): FolderStats {
@@ -97,8 +99,8 @@ function getFolderStats(
       if (entry.isSymbolicLink()) continue;
 
       const fullPath = path.join(folderPath, entry.name);
-      if (entry.isDirectory()) {
-        const sub = getFolderStats(fullPath, visited, depth + 1);
+      if (entry.isDirectory() && recursive) {
+        const sub = getFolderStats(fullPath, recursive, visited, depth + 1);
         count += sub.count;
         size += sub.size;
       } else if (entry.isFile()) {
@@ -245,8 +247,18 @@ export class SetDepth extends Command {
     repository.sparseDownloadInProgress = true;
 
     try {
-      // Show progress with cancellation support for infinity depth (downloads)
-      const isDownload = selected.depth === "infinity";
+      // Detect ghost folder (not locally present) - these are downloads regardless of depth
+      const isGhostFolder = !fs.existsSync(uri.fsPath);
+
+      // Download mode: ghost folder with any download depth, or infinity on local folder
+      // Depths that download content: infinity, immediates, files
+      // Depths that don't download: empty (placeholder only), exclude (removal)
+      const downloadDepths = ["infinity", "immediates", "files"] as const;
+      const isDownload = isGhostFolder
+        ? downloadDepths.includes(
+            selected.depth as (typeof downloadDepths)[number]
+          )
+        : selected.depth === "infinity";
 
       const result = await window.withProgress(
         {
@@ -276,16 +288,25 @@ export class SetDepth extends Command {
           try {
             if (isDownload) {
               // For downloads, pre-scan server to get expected file count and size
+              // Use depth-aware listing: recursive for infinity, non-recursive for immediates/files
               progress.report({ message: `Scanning ${folderName}...` });
 
               try {
                 const relativePath = repository.repository.removeAbsolutePath(
                   uri.fsPath
                 );
-                const items = await repository.listRecursive(
-                  relativePath,
-                  PRE_SCAN_TIMEOUT_SECONDS * 1000
-                );
+
+                // Depth-aware pre-scan:
+                // - infinity: list all files recursively
+                // - immediates/files: list only direct children (non-recursive)
+                const items =
+                  selected.depth === "infinity"
+                    ? await repository.listRecursive(
+                        relativePath,
+                        PRE_SCAN_TIMEOUT_SECONDS * 1000
+                      )
+                    : await repository.list(uri.fsPath);
+
                 const files = items.filter(i => i.kind === "file");
                 expectedFileCount = files.length;
                 expectedTotalSize = files.reduce(
@@ -312,13 +333,16 @@ export class SetDepth extends Command {
                 let lastSize = 0;
                 let lastTime = startTime;
 
+                // Depth-aware polling: recursive for infinity, non-recursive for immediates/files
+                const pollRecursive = selected.depth === "infinity";
+
                 progress.report({
                   message: `Downloading ${folderName} (0/${expectedFileCount} files)...`
                 });
 
                 pollInterval = setInterval(() => {
                   if (token.isCancellationRequested) return;
-                  const stats = getFolderStats(uri.fsPath);
+                  const stats = getFolderStats(uri.fsPath, pollRecursive);
                   const pct = Math.round(
                     (stats.size / expectedTotalSize) * 100
                   );
