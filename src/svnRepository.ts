@@ -3,11 +3,13 @@
 // Licensed under MIT License
 
 import * as path from "path";
+import * as semver from "semver";
 import * as tmp from "tmp";
 import { Uri, workspace } from "vscode";
 import {
   ConstructorPolicy,
   ICpOptions,
+  ICleanupOptions,
   IExecutionResult,
   IFileStatus,
   ILockOptions,
@@ -1344,14 +1346,129 @@ export class Repository {
 
   public async cleanup() {
     const result = await this.exec(["cleanup"]);
-
+    this.svn.logOutput(result.stdout);
     return result.stdout;
   }
 
-  public async removeUnversioned() {
+  /**
+   * Remove unversioned files from working copy.
+   * WARNING: Permanent deletion, no recovery via SVN.
+   * @requires SVN 1.9+
+   * @throws Error if SVN version < 1.9
+   */
+  public async removeUnversioned(): Promise<string> {
+    if (!semver.gte(this.svn.version, "1.9.0")) {
+      throw new Error(
+        `--remove-unversioned requires SVN 1.9+, you have ${this.svn.version}`
+      );
+    }
     const result = await this.exec(["cleanup", "--remove-unversioned"]);
-
     this.svn.logOutput(result.stdout);
+    this.resetInfoCache();
+    return result.stdout;
+  }
+
+  /**
+   * Remove files matching svn:ignore patterns.
+   * WARNING: Permanent deletion, no recovery via SVN.
+   * @requires SVN 1.9+
+   * @throws Error if SVN version < 1.9
+   */
+  public async removeIgnored(): Promise<string> {
+    if (!semver.gte(this.svn.version, "1.9.0")) {
+      throw new Error(
+        `--remove-ignored requires SVN 1.9+, you have ${this.svn.version}`
+      );
+    }
+    const result = await this.exec(["cleanup", "--remove-ignored"]);
+    this.svn.logOutput(result.stdout);
+    this.resetInfoCache();
+    return result.stdout;
+  }
+
+  /**
+   * Reclaim disk space by removing unreferenced pristine copies.
+   * Safe operation - only removes truly unreferenced files.
+   * @requires SVN 1.10+
+   * @throws Error if SVN version < 1.10
+   */
+  public async vacuumPristines(): Promise<string> {
+    if (!semver.gte(this.svn.version, "1.10.0")) {
+      throw new Error(
+        `--vacuum-pristines requires SVN 1.10+, you have ${this.svn.version}`
+      );
+    }
+    const result = await this.exec(["cleanup", "--vacuum-pristines"]);
+    this.svn.logOutput(result.stdout);
+    return result.stdout;
+  }
+
+  /**
+   * Run cleanup with externals support.
+   * Processes all svn:externals directories recursively.
+   * @requires SVN 1.9+
+   * @throws Error if SVN version < 1.9
+   */
+  public async cleanupWithExternals(): Promise<string> {
+    if (!semver.gte(this.svn.version, "1.9.0")) {
+      throw new Error(
+        `--include-externals requires SVN 1.9+, you have ${this.svn.version}`
+      );
+    }
+    const result = await this.exec(["cleanup", "--include-externals"]);
+    this.svn.logOutput(result.stdout);
+    return result.stdout;
+  }
+
+  /**
+   * Advanced cleanup with multiple options.
+   * Combines multiple cleanup operations in single SVN call.
+   *
+   * Note: Timestamps are always fixed automatically (hardcoded in SVN CLI).
+   *
+   * @param options Cleanup options to enable
+   * @requires SVN 1.9+ for most options, 1.10+ for vacuumPristines
+   * @throws Error if version requirements not met
+   */
+  public async cleanupAdvanced(options: ICleanupOptions): Promise<string> {
+    // Version checks
+    const needs19 =
+      options.removeUnversioned ||
+      options.removeIgnored ||
+      options.includeExternals;
+    if (needs19 && !semver.gte(this.svn.version, "1.9.0")) {
+      throw new Error(
+        `Cleanup options require SVN 1.9+, you have ${this.svn.version}`
+      );
+    }
+    if (options.vacuumPristines && !semver.gte(this.svn.version, "1.10.0")) {
+      throw new Error(
+        `--vacuum-pristines requires SVN 1.10+, you have ${this.svn.version}`
+      );
+    }
+
+    const args = ["cleanup"];
+
+    if (options.vacuumPristines) {
+      args.push("--vacuum-pristines");
+    }
+    if (options.removeUnversioned) {
+      args.push("--remove-unversioned");
+    }
+    if (options.removeIgnored) {
+      args.push("--remove-ignored");
+    }
+    if (options.includeExternals) {
+      args.push("--include-externals");
+    }
+
+    const result = await this.exec(args);
+    this.svn.logOutput(result.stdout);
+
+    // Invalidate cache if files were deleted
+    if (options.removeUnversioned || options.removeIgnored) {
+      this.resetInfoCache();
+    }
 
     return result.stdout;
   }
