@@ -1070,25 +1070,42 @@ export class Repository {
    * Parse SVN update output to extract revision, conflicts, and message
    */
   private parseUpdateOutput(stdout: string): IUpdateResult {
+    if (!stdout || typeof stdout !== "string") {
+      return { revision: null, conflicts: [], message: "" };
+    }
+
+    // Precompiled regex patterns
+    const revRegex = /(?:Updated to|At) revision (\d+)/i;
+    const conflictRegex = /^\s*C\s+(.+)$/;
+
     const lines = stdout.trim().split(/\r?\n/);
     const conflicts: string[] = [];
     let revision: number | null = null;
+    let message = "";
 
-    for (const line of lines) {
-      // Conflict: "C    path/to/file.txt" or "C\tpath"
-      if (line.startsWith("C ") || line.startsWith("C\t")) {
-        const filePath = line.substring(2).trim();
-        if (filePath) conflicts.push(filePath);
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Capture last non-empty line as message
+      if (!message && trimmed) {
+        message = trimmed;
       }
-      // Final line: "Updated to revision 123." or "At revision 123."
-      const revMatch = line.match(/(?:Updated to|At) revision (\d+)/i);
-      if (revMatch) {
-        revision = parseInt(revMatch[1], 10);
+
+      // Detect all conflict types (text, tree, property)
+      const conflictMatch = conflictRegex.exec(line);
+      if (conflictMatch && conflictMatch[1]) {
+        conflicts.unshift(conflictMatch[1].trim());
+      }
+
+      // Extract revision (only once)
+      if (revision === null) {
+        const revMatch = revRegex.exec(line);
+        if (revMatch) {
+          revision = parseInt(revMatch[1], 10);
+        }
       }
     }
-
-    // Last non-empty line as message
-    const message = lines.filter(l => l.trim()).pop() || "";
 
     return { revision, conflicts, message };
   }
