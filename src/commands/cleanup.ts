@@ -25,9 +25,9 @@ interface CleanupQuickPickItem extends QuickPickItem {
 const cleanupOptions: CleanupQuickPickItem[] = [
   {
     label: "$(trash) Remove Unversioned Files",
-    description: "Delete untracked files",
+    description: "Delete untracked files in this repo only",
     detail:
-      "Deletes files not in SVN (e.g. temp files, local configs). Cannot be undone!",
+      "Deletes files not in SVN. Enable 'Clean Nested Repositories' to include externals. Cannot be undone!",
     id: "removeUnversioned",
     shortName: "unversioned files",
     destructive: true,
@@ -35,9 +35,9 @@ const cleanupOptions: CleanupQuickPickItem[] = [
   },
   {
     label: "$(exclude) Remove Ignored Files",
-    description: "Delete files matching svn:ignore patterns",
+    description: "Delete ignored files in this repo only",
     detail:
-      "Removes files ignored via svn:ignore, svn:global-ignores, and config. Cannot be undone!",
+      "Removes files matching svn:ignore, svn:global-ignores, and config. Cannot be undone!",
     id: "removeIgnored",
     shortName: "ignored files",
     destructive: true,
