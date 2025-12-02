@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import * as semver from "semver";
 
 /**
  * Repository Cleanup Advanced Tests
@@ -153,6 +154,17 @@ describe("Repository Cleanup Advanced", () => {
         (v.major === minVersion.major && v.minor >= minVersion.minor);
 
       expect(meetsReq(svn19)).toBe(true);
+    });
+
+    it("semver.gte correctly validates vacuum-pristines version", () => {
+      // SVN 1.9.x should fail
+      expect(semver.gte("1.9.7", "1.10.0")).toBe(false);
+      expect(semver.gte("1.9.0", "1.10.0")).toBe(false);
+
+      // SVN 1.10.x and above should pass
+      expect(semver.gte("1.10.0", "1.10.0")).toBe(true);
+      expect(semver.gte("1.10.3", "1.10.0")).toBe(true);
+      expect(semver.gte("1.14.0", "1.10.0")).toBe(true);
     });
   });
 

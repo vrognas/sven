@@ -3,6 +3,7 @@
 // Licensed under MIT License
 
 import * as path from "path";
+import * as semver from "semver";
 import * as tmp from "tmp";
 import { Uri, workspace } from "vscode";
 import {
@@ -1345,15 +1346,14 @@ export class Repository {
 
   public async cleanup() {
     const result = await this.exec(["cleanup"]);
-
+    this.svn.logOutput(result.stdout);
     return result.stdout;
   }
 
   public async removeUnversioned() {
     const result = await this.exec(["cleanup", "--remove-unversioned"]);
-
     this.svn.logOutput(result.stdout);
-
+    this.resetInfoCache();
     return result.stdout;
   }
 
@@ -1365,6 +1365,7 @@ export class Repository {
   public async removeIgnored(): Promise<string> {
     const result = await this.exec(["cleanup", "--remove-ignored"]);
     this.svn.logOutput(result.stdout);
+    this.resetInfoCache();
     return result.stdout;
   }
 
@@ -1372,9 +1373,16 @@ export class Repository {
    * Reclaim disk space by removing unreferenced pristine copies.
    * Safe operation - only removes truly unreferenced files.
    * @requires SVN 1.10+
+   * @throws Error if SVN version < 1.10
    */
   public async vacuumPristines(): Promise<string> {
+    if (!semver.gte(this.svn.version, "1.10.0")) {
+      throw new Error(
+        `--vacuum-pristines requires SVN 1.10+, you have ${this.svn.version}`
+      );
+    }
     const result = await this.exec(["cleanup", "--vacuum-pristines"]);
+    this.svn.logOutput(result.stdout);
     return result.stdout;
   }
 
@@ -1385,6 +1393,7 @@ export class Repository {
    */
   public async cleanupWithExternals(): Promise<string> {
     const result = await this.exec(["cleanup", "--include-externals"]);
+    this.svn.logOutput(result.stdout);
     return result.stdout;
   }
 
@@ -1396,8 +1405,16 @@ export class Repository {
    *
    * @param options Cleanup options to enable
    * @requires SVN 1.9+ for most options, 1.10+ for vacuumPristines
+   * @throws Error if vacuumPristines requested but SVN version < 1.10
    */
   public async cleanupAdvanced(options: ICleanupOptions): Promise<string> {
+    // Version check for --vacuum-pristines (requires SVN 1.10+)
+    if (options.vacuumPristines && !semver.gte(this.svn.version, "1.10.0")) {
+      throw new Error(
+        `--vacuum-pristines requires SVN 1.10+, you have ${this.svn.version}`
+      );
+    }
+
     const args = ["cleanup"];
 
     if (options.vacuumPristines) {
@@ -1415,6 +1432,12 @@ export class Repository {
 
     const result = await this.exec(args);
     this.svn.logOutput(result.stdout);
+
+    // Invalidate cache if files were deleted
+    if (options.removeUnversioned || options.removeIgnored) {
+      this.resetInfoCache();
+    }
+
     return result.stdout;
   }
 
