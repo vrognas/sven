@@ -17,6 +17,7 @@ import {
   ISvnLockInfo,
   ISvnLogEntry,
   IUnlockOptions,
+  IUpdateResult,
   Status,
   SvnDepth,
   ISvnPathChange,
@@ -1065,7 +1066,36 @@ export class Repository {
     return results.reverse().find(r => r.stdout)?.stdout || "";
   }
 
-  public async update(ignoreExternals: boolean = true): Promise<string> {
+  /**
+   * Parse SVN update output to extract revision, conflicts, and message
+   */
+  private parseUpdateOutput(stdout: string): IUpdateResult {
+    const lines = stdout.trim().split(/\r?\n/);
+    const conflicts: string[] = [];
+    let revision: number | null = null;
+
+    for (const line of lines) {
+      // Conflict: "C    path/to/file.txt" or "C\tpath"
+      if (line.startsWith("C ") || line.startsWith("C\t")) {
+        const filePath = line.substring(2).trim();
+        if (filePath) conflicts.push(filePath);
+      }
+      // Final line: "Updated to revision 123." or "At revision 123."
+      const revMatch = line.match(/(?:Updated to|At) revision (\d+)/i);
+      if (revMatch) {
+        revision = parseInt(revMatch[1], 10);
+      }
+    }
+
+    // Last non-empty line as message
+    const message = lines.filter(l => l.trim()).pop() || "";
+
+    return { revision, conflicts, message };
+  }
+
+  public async update(
+    ignoreExternals: boolean = false
+  ): Promise<IUpdateResult> {
     const args = ["update"];
 
     if (ignoreExternals) {
@@ -1076,12 +1106,7 @@ export class Repository {
 
     this.resetInfoCache();
 
-    const message = result.stdout.trim().split(/\r?\n/).pop();
-
-    if (message) {
-      return message;
-    }
-    return result.stdout;
+    return this.parseUpdateOutput(result.stdout);
   }
 
   public async pullIncomingChange(path: string): Promise<string> {

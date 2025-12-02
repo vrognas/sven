@@ -1,3 +1,13 @@
+## [2.32.1] (2025-12-02)
+
+### Fix: Update Command Improvements
+
+- **Fixed**: Status now refreshes after update (shows conflicts/updated files)
+- **Fixed**: Conflict detection - warns user when update creates conflicts
+- **Fixed**: `ignoreExternals` default aligned (was `true` in svnRepository, config default `false`)
+- **IUpdateResult**: New structured return type with revision, conflicts[], message
+- **Tests**: +19 vitest tests
+
 ## [2.32.0] (2025-12-02)
 
 ### Feature: User-Friendly Error Messages with Action Buttons

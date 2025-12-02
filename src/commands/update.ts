@@ -25,8 +25,15 @@ export class Update extends Command {
 
       const result = await repository.updateRevision(ignoreExternals);
 
-      if (showUpdateMessage) {
-        window.showInformationMessage(result);
+      // Show conflict warning if any
+      if (result.conflicts.length > 0) {
+        const conflictMsg =
+          result.conflicts.length === 1
+            ? `Update created 1 conflict: ${result.conflicts[0]}`
+            : `Update created ${result.conflicts.length} conflicts`;
+        window.showWarningMessage(conflictMsg);
+      } else if (showUpdateMessage) {
+        window.showInformationMessage(result.message);
       }
     }, "Unable to update");
   }

@@ -286,6 +286,18 @@ export interface IExecutionResult {
   stderr: string;
 }
 
+/**
+ * Result from SVN update operation
+ */
+export interface IUpdateResult {
+  /** Final revision after update */
+  revision: number | null;
+  /** Conflicted file paths (lines starting with 'C ') */
+  conflicts: string[];
+  /** User-friendly message (last line of output) */
+  message: string;
+}
+
 export interface ICacheRow {
   uri: Uri;
   timestamp: number;

@@ -63,6 +63,7 @@ import {
   ISvnLockInfo,
   ISvnResourceGroup,
   IUnlockOptions,
+  IUpdateResult,
   Operation,
   RepositoryState,
   Status,
@@ -735,11 +736,13 @@ export class Repository implements IRemoteRepository {
 
   public async updateRevision(
     ignoreExternals: boolean = false
-  ): Promise<string> {
-    return this.run<string>(Operation.Update, async () => {
-      const response = await this.repository.update(ignoreExternals);
+  ): Promise<IUpdateResult> {
+    return this.run<IUpdateResult>(Operation.Update, async () => {
+      const result = await this.repository.update(ignoreExternals);
+      // Refresh local status to show conflicts and updated files
+      await this.status();
       this.updateRemoteChangedFiles();
-      return response;
+      return result;
     });
   }
 
