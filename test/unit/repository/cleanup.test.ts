@@ -11,33 +11,6 @@ import * as semver from "semver";
  * - cleanupAdvanced() with options
  */
 describe("Repository Cleanup Advanced", () => {
-  describe("Command Construction", () => {
-    it("cleanup() builds basic cleanup command", () => {
-      const expectedArgs = ["cleanup"];
-      expect(expectedArgs).toEqual(["cleanup"]);
-    });
-
-    it("removeUnversioned() builds correct command", () => {
-      const expectedArgs = ["cleanup", "--remove-unversioned"];
-      expect(expectedArgs).toEqual(["cleanup", "--remove-unversioned"]);
-    });
-
-    it("removeIgnored() builds correct command", () => {
-      const expectedArgs = ["cleanup", "--remove-ignored"];
-      expect(expectedArgs).toEqual(["cleanup", "--remove-ignored"]);
-    });
-
-    it("vacuumPristines() builds correct command", () => {
-      const expectedArgs = ["cleanup", "--vacuum-pristines"];
-      expect(expectedArgs).toEqual(["cleanup", "--vacuum-pristines"]);
-    });
-
-    it("cleanupWithExternals() builds correct command", () => {
-      const expectedArgs = ["cleanup", "--include-externals"];
-      expect(expectedArgs).toEqual(["cleanup", "--include-externals"]);
-    });
-  });
-
   describe("cleanupAdvanced() Option Building", () => {
     /**
      * Helper to simulate cleanupAdvanced argument building
