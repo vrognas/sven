@@ -1,3 +1,17 @@
+## [2.29.0] (2025-12-02)
+
+### Feature: Advanced Cleanup Options
+
+- **New**: `SVN: Cleanup (Advanced)...` command with multi-select dialog
+- **New**: Remove unversioned files (`--remove-unversioned`)
+- **New**: Remove ignored files (`--remove-ignored`)
+- **New**: Vacuum pristine copies (`--vacuum-pristines`, SVN 1.10+)
+- **New**: Include externals option (`--include-externals`)
+- **New**: `SVN: Remove ignored files` command
+- **New**: `SVN: Vacuum pristine copies` command
+- **Note**: Basic cleanup already fixes timestamps automatically (hardcoded in SVN CLI)
+- **Doc**: [cleanup-cmd.c source](https://github.com/freebsd/freebsd-src/blob/master/contrib/subversion/subversion/svn/cleanup-cmd.c)
+
 ## [2.28.0] (2025-12-01)
 
 ### Perf: Startup Optimization
