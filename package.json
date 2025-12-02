@@ -273,6 +273,11 @@
         "category": "SVN"
       },
       {
+        "command": "svn.cleanupAdvanced",
+        "title": "Cleanup (Advanced)...",
+        "category": "SVN"
+      },
+      {
         "command": "svn.close",
         "title": "Close repository",
         "category": "SVN"
@@ -672,6 +677,10 @@
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },
         {
+          "command": "svn.cleanupAdvanced",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && isSvn19orGreater"
+        },
+        {
           "command": "svn.clearCredentials",
           "when": "config.svn.enabled"
         },
@@ -1050,6 +1059,10 @@
         {
           "command": "svn.cleanup",
           "when": "config.svn.enabled && scmProvider == svn"
+        },
+        {
+          "command": "svn.cleanupAdvanced",
+          "when": "config.svn.enabled && scmProvider == svn && isSvn19orGreater"
         },
         {
           "command": "svn.removeUnversioned",

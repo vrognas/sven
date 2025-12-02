@@ -9,6 +9,7 @@ import { AddToIgnoreSCM } from "./commands/addToIgnoreSCM";
 import { ChangeList } from "./commands/changeList";
 import { Checkout } from "./commands/checkout";
 import { Cleanup } from "./commands/cleanup";
+import { CleanupAdvanced } from "./commands/cleanupAdvanced";
 import { Close } from "./commands/close";
 import { Commit } from "./commands/commit";
 import { CommitWithMessage } from "./commands/commitWithMessage";
@@ -112,6 +113,7 @@ export function registerCommands(
   disposables.push(new RevertChange());
   disposables.push(new Close());
   disposables.push(new Cleanup());
+  disposables.push(new CleanupAdvanced());
   disposables.push(new RemoveUnversioned());
   disposables.push(new RemoveIgnored());
   disposables.push(new VacuumPristines());
