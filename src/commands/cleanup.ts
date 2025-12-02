@@ -35,9 +35,9 @@ const cleanupOptions: CleanupQuickPickItem[] = [
   },
   {
     label: "$(exclude) Remove Ignored Files",
-    description: "Delete build artifacts & ignored files",
+    description: "Delete files matching svn:ignore patterns",
     detail:
-      "Deletes files matching ignore patterns (e.g. node_modules, *.log). Cannot be undone!",
+      "Removes files ignored via svn:ignore, svn:global-ignores, and config. Cannot be undone!",
     id: "removeIgnored",
     shortName: "ignored files",
     destructive: true,
