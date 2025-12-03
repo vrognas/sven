@@ -36,6 +36,7 @@ import { parseBatchLockInfo, parseLockInfo } from "./parser/lockParser";
 import { parseSvnLog } from "./parser/logParser";
 import { parseStatusXml } from "./parser/statusParser";
 import { parseSvnBlame } from "./parser/blameParser";
+import { parseUpdateOutput } from "./parser/updateParser";
 import { Svn, BufferResult } from "./svn";
 import {
   fixPathSeparator,
@@ -1066,50 +1067,6 @@ export class Repository {
     return results.reverse().find(r => r.stdout)?.stdout || "";
   }
 
-  /**
-   * Parse SVN update output to extract revision, conflicts, and message
-   */
-  private parseUpdateOutput(stdout: string): IUpdateResult {
-    if (!stdout || typeof stdout !== "string") {
-      return { revision: null, conflicts: [], message: "" };
-    }
-
-    // Precompiled regex patterns
-    const revRegex = /(?:Updated to|At) revision (\d+)/i;
-    const conflictRegex = /^\s*C\s+(.+)$/;
-
-    const lines = stdout.trim().split(/\r?\n/);
-    const conflicts: string[] = [];
-    let revision: number | null = null;
-    let message = "";
-
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i]!;
-      const trimmed = line.trim();
-
-      // Capture last non-empty line as message
-      if (!message && trimmed) {
-        message = trimmed;
-      }
-
-      // Detect all conflict types (text, tree, property)
-      const conflictMatch = conflictRegex.exec(line);
-      if (conflictMatch && conflictMatch[1]) {
-        conflicts.unshift(conflictMatch[1]!.trim());
-      }
-
-      // Extract revision (only once)
-      if (revision === null) {
-        const revMatch = revRegex.exec(line);
-        if (revMatch && revMatch[1]) {
-          revision = parseInt(revMatch[1]!, 10);
-        }
-      }
-    }
-
-    return { revision, conflicts, message };
-  }
-
   public async update(
     ignoreExternals: boolean = false
   ): Promise<IUpdateResult> {
@@ -1123,7 +1080,7 @@ export class Repository {
 
     this.resetInfoCache();
 
-    return this.parseUpdateOutput(result.stdout);
+    return parseUpdateOutput(result.stdout);
   }
 
   public async pullIncomingChange(path: string): Promise<string> {
