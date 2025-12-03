@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.32.29",
+  "version": "2.33.0",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -292,6 +292,11 @@
         "title": "Commit Changes",
         "category": "SVN",
         "icon": "$(check)"
+      },
+      {
+        "command": "svn.commitFromInputBox",
+        "title": "Commit (from input box)",
+        "category": "SVN"
       },
       {
         "command": "svn.deleteUnversioned",
@@ -1496,6 +1501,21 @@
         "svn.commit.checkEmptyMessage": {
           "type": "boolean",
           "description": "Check empty message before commit",
+          "default": true
+        },
+        "svn.commit.conventionalCommits": {
+          "type": "boolean",
+          "description": "Use conventional commit format (feat/fix/docs/etc)",
+          "default": true
+        },
+        "svn.commit.updateBeforeCommit": {
+          "type": "boolean",
+          "description": "Run svn update before commit to sync with remote",
+          "default": true
+        },
+        "svn.commit.useQuickPick": {
+          "type": "boolean",
+          "description": "Use native QuickPick for commit (false = webview)",
           "default": true
         },
         "svn.conflicts.autoResolve": {

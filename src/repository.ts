@@ -301,9 +301,15 @@ export class Repository implements IRemoteRepository {
 
     // @ts-expect-error - contextValue exists at runtime but not in types
     this.sourceControl.contextValue = "repository";
-    this.sourceControl.inputBox.placeholder = "Commit message";
+    this.sourceControl.inputBox.placeholder =
+      "Commit message (Ctrl+Enter to commit)";
     this.sourceControl.inputBox.visible = true;
     this.sourceControl.inputBox.enabled = true;
+    this.sourceControl.acceptInputCommand = {
+      command: "svn.commitFromInputBox",
+      title: "Commit",
+      arguments: [this]
+    };
     this.sourceControl.quickDiffProvider = this;
     this.sourceControl.count = 0;
     this.disposables.push(this.sourceControl);

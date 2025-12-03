@@ -795,3 +795,55 @@ void this.updateRemoteChangedFiles(); // Debounced, fires in background
 **Rule**: Never call `run()` / `retryRun()` from within a `run()` callback. Let the parent handle post-callback work.
 
 ---
+
+### 21. VS Code UX: Multi-Step QuickPick Patterns
+
+**Lesson**: Use native VS Code QuickPick/InputBox for wizard-like flows, not webviews.
+
+**Issue** (v2.33.0):
+
+- Original commit UX required webview for commit message input
+- Webview is heavy, context-switching, non-native feel
+- Users expected Ctrl+Enter to commit like VS Code Git extension
+
+**Fix**:
+
+```typescript
+// Multi-step QuickPick with step indicators
+await window.showQuickPick(items, {
+  title: "Commit (1/3): Select type", // Step indicator in title
+  placeHolder: "Choose commit type"
+});
+
+// acceptInputCommand for Ctrl+Enter
+sourceControl.acceptInputCommand = {
+  command: "svn.commitFromInputBox",
+  title: "Commit",
+  arguments: [this]
+};
+```
+
+**Pattern**:
+
+1. Use QuickPick for selection steps (commit type, files)
+2. Use InputBox for text entry (scope, description)
+3. Title shows step progress ("1/3", "2/3", "3/3")
+4. Final step shows confirmation with file preview
+5. Wire `acceptInputCommand` for Ctrl+Enter from SCM input box
+
+**Benefits**:
+
+- Native VS Code look and feel
+- Keyboard-driven (no mouse required)
+- Faster than webview (no DOM rendering)
+- Familiar to Git extension users
+
+**Services**:
+
+- `ConventionalCommitService`: Parse/format conventional commit messages
+- `CommitFlowService`: Orchestrate multi-step QuickPick flow
+- `PreCommitUpdateService`: Run SVN update before commit with progress
+
+**Rule**: Prefer native VS Code UI (QuickPick, InputBox, Progress) over webviews for simple workflows.
+
+---

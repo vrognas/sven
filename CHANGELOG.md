@@ -1,3 +1,19 @@
+## [2.33.0] (2025-12-03)
+
+### Feat: Modernized Commit UX
+
+- **New**: Native VS Code QuickPick multi-step commit flow (replaces webview)
+- **New**: Conventional Commits integration (feat/fix/docs/style/refactor/perf/test/build/ci/chore)
+- **New**: Pre-commit update - runs `svn update` before every commit
+- **New**: Conflict detection with user prompts (abort or continue)
+- **New**: Ctrl+Enter (acceptInputCommand) triggers commit from SCM panel
+- **New**: Previous message reuse in type picker
+- **Settings**: `svn.commit.conventionalCommits` (default: true)
+- **Settings**: `svn.commit.updateBeforeCommit` (default: true)
+- **Settings**: `svn.commit.useQuickPick` (default: true)
+- **Services**: ConventionalCommitService, CommitFlowService, PreCommitUpdateService
+- **Affected**: repository.ts, commands.ts, package.json, new service files
+
 ## [2.32.29] (2025-12-03)
 
 ### Perf: Faster Update Revision
