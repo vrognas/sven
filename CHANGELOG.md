@@ -1,3 +1,13 @@
+## [2.32.19] (2025-12-03)
+
+### Fix: Peg Revision Double-@ Bug
+
+- **Fixed**: Repository Log diff fails with "path not found" error
+- **Root cause**: `repoLogProvider` manually embedded peg revision (`path@rev`), then `log` method called `fixPegRevision` which added another `@`
+- **Result**: SVN received `path@rev@` (empty peg) instead of `path@rev`
+- **Solution**: Add `pegRevision` parameter to `log`/`logBatch` methods; pass revision separately
+- **Affected**: svnRepository.ts, remoteRepository.ts, repoLogProvider.ts
+
 ## [2.32.18] (2025-12-03)
 
 ### Fix: Diff View "Unknown Error"
