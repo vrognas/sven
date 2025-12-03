@@ -334,8 +334,7 @@ export class Repository implements IRemoteRepository {
     // Initialize ResourceGroupManager
     this.groupManager = new ResourceGroupManager(
       this.sourceControl,
-      this.disposables,
-      this.root
+      this.disposables
     );
 
     // Initialize RemoteChangeService

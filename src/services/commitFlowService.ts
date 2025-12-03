@@ -273,8 +273,8 @@ export class CommitFlowService {
 
     const description = await window.showInputBox({
       title: `Commit (3/3): ${prefix}_`,
-      prompt: "Brief description of changes",
-      placeHolder: "What did you change?",
+      prompt: "Use imperative mood: add, fix, update, remove...",
+      placeHolder: "If applied, this commit will...",
       value: initialValue,
       validateInput: value => {
         if (!value || value.trim() === "") {

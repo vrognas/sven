@@ -27,7 +27,7 @@ export class StagingService implements Disposable {
   /** Maps file path → original changelist name (before staging) */
   private _originalChangelists = new Map<string, string>();
 
-  constructor(private readonly repoRoot: string) {}
+  constructor() {}
 
   /**
    * Sync staged paths from SVN status result.

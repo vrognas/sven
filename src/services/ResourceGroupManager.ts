@@ -130,15 +130,13 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * @param sourceControl VS Code SourceControl instance
    * @param parentDisposables Parent's disposable array to register cleanup
-   * @param repoRoot Repository root path for staging service
    */
   constructor(
     private readonly sourceControl: SourceControl,
-    parentDisposables: Disposable[],
-    repoRoot: string
+    parentDisposables: Disposable[]
   ) {
     // Create staging service (uses SVN changelist for persistence)
-    this._staging = new StagingService(repoRoot);
+    this._staging = new StagingService();
 
     // Create static groups (order matters for UI display)
     // Staged appears first

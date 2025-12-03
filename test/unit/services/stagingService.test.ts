@@ -16,7 +16,7 @@ describe("StagingService", () => {
   let service: StagingService;
 
   beforeEach(() => {
-    service = new StagingService("/repo");
+    service = new StagingService();
   });
 
   describe("STAGING_CHANGELIST constant", () => {
