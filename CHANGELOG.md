@@ -1,3 +1,11 @@
+## [2.32.10] (2025-12-03)
+
+### Security: Block % in Windows Username
+
+- **Fixed**: Username validation now blocks `%` character
+- **Purpose**: Prevents environment variable expansion attacks (%APPDATA%, etc.)
+- **Also**: Removed unsafe `%USERNAME%` fallback from ACL code
+
 ## [2.32.9] (2025-12-03)
 
 ### Security: Debug Mode Auto-Timeout
