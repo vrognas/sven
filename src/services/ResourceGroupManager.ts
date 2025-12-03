@@ -142,7 +142,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
     // Create static groups (order matters for UI display)
     // Staged appears first
-    this._staged = this.createGroup("staged", "Selected for Commit");
+    this._staged = this.createGroup("staged", "Staged for Commit");
     this._staged.hideWhenEmpty = true;
 
     this._changes = this.createGroup("changes", "Changes");
@@ -201,7 +201,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
     // Update or create changelist groups (excluding __staged__)
     result.changelists.forEach((resources, changelist) => {
-      // Skip staging changelist - handled separately as "Selected for Commit"
+      // Skip staging changelist - handled separately as "Staged for Commit"
       if (changelist === STAGING_CHANGELIST) {
         return;
       }

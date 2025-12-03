@@ -1261,11 +1261,6 @@
           "group": "1_modification@8"
         },
         {
-          "command": "svn.commit",
-          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != conflicts && scmResourceGroup != remotechanges",
-          "group": "1_modification"
-        },
-        {
           "command": "svn.revert",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != conflicts && scmResourceGroup != remotechanges",
           "group": "2_modification"
