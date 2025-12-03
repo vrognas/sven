@@ -5,9 +5,10 @@
 - **New**: Instant UI feedback for stage/unstage operations (skips full svn status refresh)
 - **Feat**: Warn when staging files already in changelists (prevents data loss)
 - **Feat**: Restore original changelist on unstage (non-destructive staging)
-- **Feat**: "Select before commit" - Ctrl+Enter requires staged files (offers "Stage All" option)
+- **Feat**: "Stage before commit" - All commit commands require files in changelist
 - **Feat**: Renamed "Staged Changes" to "Staged for Commit"
 - **Removed**: "Commit Selected" from file context menu (use Ctrl+Enter instead)
+- **Fix**: Lock commands moved to separate context menu section
 - **Feat**: History log shows file stats (e.g., "r366 · user · 2h ago · 1A 3M 2D")
 - **Fix**: Unstage All / Stage All buttons now work correctly (iterate all repos)
 - **Fix**: Auto-unstage reverted files (no changes to commit)
