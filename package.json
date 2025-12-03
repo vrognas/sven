@@ -1243,22 +1243,22 @@
         {
           "command": "svn.lock",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
-          "group": "1_modification@5"
+          "group": "3_lock@1"
         },
         {
           "command": "svn.unlock",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
-          "group": "1_modification@6"
+          "group": "3_lock@2"
         },
         {
           "command": "svn.stealLock",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
-          "group": "1_modification@7"
+          "group": "3_lock@3"
         },
         {
           "command": "svn.toggleNeedsLock",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
-          "group": "1_modification@8"
+          "group": "3_lock@4"
         },
         {
           "command": "svn.revert",
