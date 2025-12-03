@@ -1,3 +1,11 @@
+## [2.32.5] (2025-12-03)
+
+### Fix: Race Conditions and Resource Cleanup
+
+- **Fixed**: Credential race condition - mutex prevents concurrent auth from causing lockout
+- **Fixed**: Config handler serializes credential clearing to saveAuthLock chain
+- **Fixed**: BlameProvider disposal on setup failure - try-catch ensures cleanup
+
 ## [2.32.4] (2025-12-03)
 
 ### Fix: Memory Leak and Crash Prevention
