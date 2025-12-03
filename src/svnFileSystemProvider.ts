@@ -182,10 +182,11 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       }
 
       if (!repository) {
-        // More helpful error message
-        const repoCount = this.sourceControlManager.repositories.length;
+        // Debug: show path being looked up and repo roots for comparison
+        const repos = this.sourceControlManager.repositories;
+        const roots = repos.map(r => r.workspaceRoot).join("; ");
         throw FileSystemError.Unavailable(
-          `No SVN repository found for path. Active repos: ${repoCount}`
+          `No repo for: ${fsPath || "(empty)"} | Roots: ${roots || "(none)"}`
         );
       }
 
