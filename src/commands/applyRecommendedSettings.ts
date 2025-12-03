@@ -3,6 +3,7 @@
 
 import { commands, window, workspace } from "vscode";
 import { Command } from "./command";
+import { logError } from "../util/errorLogger";
 
 /**
  * Recommended settings profiles for different use cases.
@@ -86,7 +87,7 @@ export class ApplyRecommendedSettings extends Command {
         appliedCount++;
       } catch (err) {
         // Log but continue
-        console.warn(`Failed to set ${key}:`, err);
+        logError(`Failed to set ${key}`, err);
       }
     }
 
