@@ -182,11 +182,11 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       }
 
       if (!repository) {
-        // Debug: show path being looked up and repo roots for comparison
+        // Debug: show URI and parsed data for diagnosis
         const repos = this.sourceControlManager.repositories;
         const roots = repos.map(r => r.workspaceRoot).join("; ");
         throw FileSystemError.Unavailable(
-          `No repo for: ${fsPath || "(empty)"} | Roots: ${roots || "(none)"}`
+          `fsPath: ${fsPath || "(empty)"} | query: ${uri.query?.slice(0, 100) || "(none)"} | roots: ${roots || "(none)"}`
         );
       }
 
