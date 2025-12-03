@@ -21,6 +21,18 @@ function processEntry(
     return list;
   }
 
+  // Validate entry structure before accessing properties
+  if (
+    !entry ||
+    typeof entry !== "object" ||
+    !entry.path ||
+    !entry.wcStatus ||
+    typeof entry.wcStatus !== "object" ||
+    !entry.wcStatus.item
+  ) {
+    return [];
+  }
+
   // Extract lock owner from repos-status if available
   let lockOwner: string | undefined;
   const serverChecked = !!entry.reposStatus;

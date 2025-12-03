@@ -255,18 +255,17 @@ export class Repository {
     await Promise.all(
       status
         .filter(s => s.status === Status.EXTERNAL)
-        .map(s =>
-          this.getInfo(s.path)
-            .then(info => {
-              s.repositoryUuid = info.repository?.uuid;
-            })
-            .catch(error => {
-              logError(
-                `Failed to fetch external repository info for ${s.path}`,
-                error
-              );
-            })
-        )
+        .map(async s => {
+          try {
+            const info = await this.getInfo(s.path);
+            s.repositoryUuid = info.repository?.uuid;
+          } catch (error) {
+            logError(
+              `Failed to fetch external repository info for ${s.path}`,
+              error
+            );
+          }
+        })
     );
 
     return status;
@@ -623,6 +622,7 @@ export class Repository {
     try {
       paths = await parseDiffXml(result.stdout);
     } catch (err) {
+      logError("Failed to parse diff XML for branch changes", err);
       return [];
     }
 
@@ -817,7 +817,14 @@ export class Repository {
     } finally {
       // Remove temporary file if exists - cleanup on success or error
       if (tmpFile) {
-        tmpFile.removeCallback();
+        try {
+          tmpFile.removeCallback();
+        } catch (cleanupError) {
+          logError(
+            "Failed to remove temporary commit message file",
+            cleanupError
+          );
+        }
       }
     }
 
@@ -1542,7 +1549,10 @@ export class Repository {
 
       currentIgnore = currentIgnoreResult.stdout.trim();
     } catch (error) {
-      logError("Merge operation failed", error);
+      logError(
+        `Failed to get svn:ignore property for ${directory || "."}`,
+        error
+      );
     }
 
     const ignores = currentIgnore.split(/[\r\n]+/);
@@ -1809,5 +1819,7 @@ export class Repository {
     this._infoCache.clear();
     this._blameCache.forEach(entry => clearTimeout(entry.timeout));
     this._blameCache.clear();
+    this._logCache.forEach(entry => clearTimeout(entry.timeout));
+    this._logCache.clear();
   }
 }

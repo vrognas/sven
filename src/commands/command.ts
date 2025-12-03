@@ -249,7 +249,8 @@ export abstract class Command implements Disposable {
       return repository.getResourceFromFile(uri);
     }
 
-    return;
+    // Unsupported URI scheme (e.g., untitled, output)
+    return undefined;
   }
 
   protected async _openResource(
@@ -471,7 +472,7 @@ export abstract class Command implements Disposable {
         try {
           await unlink(tempFile);
         } catch (err) {
-          // TODO(cjohnston)//log error
+          logError(`Failed to unlink temp file ${tempFile}`, err);
         }
       }
 
