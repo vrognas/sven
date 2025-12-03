@@ -18,6 +18,7 @@ export function fromSvnUri(uri: Uri): ISvnUriParams {
     const parsed = JSON.parse(uri.query);
 
     // Security: Validate structure and reject prototype pollution vectors
+    // Note: Empty/missing params is normal when VS Code probes svn:// URIs
     if (
       !parsed ||
       typeof parsed !== "object" ||
@@ -26,7 +27,7 @@ export function fromSvnUri(uri: Uri): ISvnUriParams {
       "constructor" in parsed ||
       "prototype" in parsed
     ) {
-      logError("Invalid SVN URI params structure");
+      // Return safe defaults silently - this is expected during URI probing
       return { action: SvnUriAction.SHOW, fsPath: "", extra: {} };
     }
 

@@ -26,7 +26,7 @@ import { exists } from "../fs";
 import { SourceControlManager } from "../source_control_manager";
 import { IRemoteRepository } from "../remoteRepository";
 import { Repository } from "../repository";
-import { dispose, unwrap } from "../util";
+import { dispose } from "../util";
 import {
   checkIfFile,
   copyCommitToClipboard,
@@ -109,7 +109,7 @@ export class RepoLogProvider
     }
   }
 
-  private getCached(maybeItem?: ILogTreeItem): ICachedLog {
+  private getCached(maybeItem?: ILogTreeItem): ICachedLog | undefined {
     // With flat structure, commits are at root level
     // Walk up to find root, then return first cache entry
     if (!maybeItem) {
@@ -118,28 +118,27 @@ export class RepoLogProvider
       if (first) {
         first.lastAccessed = Date.now();
       }
-      return unwrap(first);
+      return first;
     }
 
-    const item = unwrap(maybeItem);
-    if (item.data instanceof SvnPath) {
-      const cached = this.logCache.get(item.data.toString());
+    if (maybeItem.data instanceof SvnPath) {
+      const cached = this.logCache.get(maybeItem.data.toString());
       if (cached) {
         cached.lastAccessed = Date.now();
       }
-      return unwrap(cached);
+      return cached;
     }
 
     // For commits at root level, return first cache entry
-    if (!item.parent) {
+    if (!maybeItem.parent) {
       const first = this.logCache.values().next().value;
       if (first) {
         first.lastAccessed = Date.now();
       }
-      return unwrap(first);
+      return first;
     }
 
-    return this.getCached(item.parent);
+    return this.getCached(maybeItem.parent);
   }
 
   constructor(private sourceControlManager: SourceControlManager) {
@@ -246,8 +245,12 @@ export class RepoLogProvider
       try {
         let uri: Uri;
         if (repoLike.startsWith("^")) {
+          const folders = workspace.workspaceFolders;
+          if (!folders || folders.length === 0) {
+            throw new Error("No workspace folder open");
+          }
           const wsrepo = this.sourceControlManager.getRepository(
-            unwrap(workspace.workspaceFolders)[0]!.uri
+            folders[0]!.uri
           );
           if (!wsrepo) {
             throw new Error("No repository in workspace root");
@@ -331,6 +334,9 @@ export class RepoLogProvider
   public async openFileRemoteCmd(element: ILogTreeItem) {
     const commit = element.data as ISvnLogEntryPath;
     const item = this.getCached(element);
+    if (!item) {
+      return;
+    }
     const ri = item.repo.getPathNormalizer().parse(commit._);
     if ((await checkIfFile(ri, false)) === false) {
       return;
@@ -342,16 +348,24 @@ export class RepoLogProvider
   public openFileLocal(element: ILogTreeItem) {
     const commit = element.data as ISvnLogEntryPath;
     const item = this.getCached(element);
+    if (!item) {
+      return;
+    }
     const ri = item.repo.getPathNormalizer().parse(commit._);
     if (!checkIfFile(ri, true)) {
       return;
     }
-    commands.executeCommand("vscode.open", unwrap(ri.localFullPath));
+    if (ri.localFullPath) {
+      commands.executeCommand("vscode.open", ri.localFullPath);
+    }
   }
 
   public async openDiffCmd(element: ILogTreeItem) {
     const commit = element.data as ISvnLogEntryPath;
     const item = this.getCached(element);
+    if (!item) {
+      return;
+    }
     const parent = (element.parent as ILogTreeItem).data as ISvnLogEntry;
     const remotePath = item.repo
       .getPathNormalizer()
@@ -392,6 +406,9 @@ export class RepoLogProvider
     try {
       const commit = element.data as ISvnLogEntryPath;
       const item = this.getCached(element);
+      if (!item) {
+        return;
+      }
       const pathInfo = item.repo.getPathNormalizer().parse(commit._);
 
       // Use local path if available
@@ -414,6 +431,9 @@ export class RepoLogProvider
     try {
       const commit = element.data as ISvnLogEntryPath;
       const item = this.getCached(element);
+      if (!item) {
+        return;
+      }
       const parent = (element.parent as ILogTreeItem).data as ISvnLogEntry;
       const remotePath = item.repo
         .getPathNormalizer()
@@ -474,7 +494,9 @@ export class RepoLogProvider
     if (fetchMoreClick) {
       // Fetch more commits for current repo
       const cached = this.getCached(element);
-      await fetchMore(cached);
+      if (cached) {
+        await fetchMore(cached);
+      }
     } else if (element === undefined) {
       // Determine if we should clear or preserve cache
       const shouldClearCache = explicitRefresh === true;
@@ -546,6 +568,12 @@ export class RepoLogProvider
       const basename = path.basename(pathElem._);
       const dirname = path.dirname(pathElem._);
       const cached = this.getCached(element);
+      if (!cached) {
+        // Cache expired or element orphaned - return placeholder
+        ti = new TreeItem(basename, TreeItemCollapsibleState.None);
+        ti.description = dirname;
+        return ti;
+      }
       const nm = cached.repo.getPathNormalizer();
       const parsedPath = nm.parse(pathElem._);
 
@@ -583,8 +611,13 @@ export class RepoLogProvider
   ): Promise<ILogTreeItem[]> {
     if (element === undefined) {
       // Show commits directly at root level (skip repo folder)
-      const limit = getLimit();
       const cached = this.getCached();
+      // Return empty array if no repositories in cache yet
+      if (!cached) {
+        return [];
+      }
+
+      const limit = getLimit();
       const logentries = cached.entries;
 
       if (logentries.length === 0) {

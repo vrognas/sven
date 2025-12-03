@@ -18,7 +18,7 @@ import {
 } from "vscode";
 import { ISvnLogEntry } from "../common/types";
 import { SourceControlManager } from "../source_control_manager";
-import { dispose, unwrap } from "../util";
+import { dispose } from "../util";
 import {
   copyCommitToClipboard,
   fetchMore,
@@ -80,27 +80,47 @@ export class ItemLogProvider
   }
 
   public async openFileRemoteCmd(element: ILogTreeItem) {
+    if (!this.currentItem) {
+      return;
+    }
     const commit = element.data as ISvnLogEntry;
-    const item = unwrap(this.currentItem);
-    return openFileRemote(item.repo, item.svnTarget, commit.revision);
+    return openFileRemote(
+      this.currentItem.repo,
+      this.currentItem.svnTarget,
+      commit.revision
+    );
   }
 
   public async openDiffBaseCmd(element: ILogTreeItem) {
+    if (!this.currentItem) {
+      return;
+    }
     const commit = element.data as ISvnLogEntry;
-    const item = unwrap(this.currentItem);
-    return openDiff(item.repo, item.svnTarget, commit.revision, "BASE");
+    return openDiff(
+      this.currentItem.repo,
+      this.currentItem.svnTarget,
+      commit.revision,
+      "BASE"
+    );
   }
 
   public async openDiffCmd(element: ILogTreeItem) {
+    if (!this.currentItem) {
+      return;
+    }
     const commit = element.data as ISvnLogEntry;
-    const item = unwrap(this.currentItem);
-    const pos = item.entries.findIndex(e => e === commit);
-    if (pos === item.entries.length - 1) {
+    const pos = this.currentItem.entries.findIndex(e => e === commit);
+    if (pos === this.currentItem.entries.length - 1) {
       window.showWarningMessage("Cannot diff last commit");
       return;
     }
-    const prevRev = item.entries[pos + 1]!.revision;
-    return openDiff(item.repo, item.svnTarget, prevRev, commit.revision);
+    const prevRev = this.currentItem.entries[pos + 1]!.revision;
+    return openDiff(
+      this.currentItem.repo,
+      this.currentItem.svnTarget,
+      prevRev,
+      commit.revision
+    );
   }
 
   public async editorChanged(te?: TextEditor) {
@@ -113,8 +133,8 @@ export class ItemLogProvider
     loadMore?: boolean
   ) {
     // TODO maybe make autorefresh optionable?
-    if (loadMore) {
-      await fetchMore(unwrap(this.currentItem));
+    if (loadMore && this.currentItem) {
+      await fetchMore(this.currentItem);
       this._onDidChangeTreeData.fire(element);
       return;
     }
