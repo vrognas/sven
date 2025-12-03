@@ -1,3 +1,12 @@
+## [2.32.16] (2025-12-03)
+
+### Fix: Tree View Error Handling
+
+- **Fixed**: "undefined unwrap" error in RepoLogProvider/ItemLogProvider
+- **Fixed**: "Invalid SVN URI params structure" error spam in console
+- **Root cause**: Tree views crashed when cache was empty; URI parsing logged errors for normal probing
+- **Solution**: Graceful undefined handling, silent return for expected empty params
+
 ## [2.32.15] (2025-12-03)
 
 ### Cleanup: Remove Debug Logs from BlameProvider
