@@ -104,8 +104,8 @@ export class CommitStaged extends Command {
       const result = await repository.commitFiles(message!, selectedFiles);
       window.showInformationMessage(result);
       repository.inputBox.value = "";
-      // Clear staged files after successful commit
-      repository.staging.unstageAll(selectedFiles);
+      // Clear staged files after successful commit (removes from __staged__ changelist)
+      await repository.removeChangelist(selectedFiles);
     }, "Unable to commit");
   }
 }

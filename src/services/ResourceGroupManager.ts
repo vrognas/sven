@@ -2,11 +2,11 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { Disposable, Memento, SourceControl, Uri } from "vscode";
+import { Disposable, SourceControl, Uri } from "vscode";
 import { ISvnResourceGroup } from "../common/types";
 import { Resource } from "../resource";
 import { StatusResult } from "./StatusService";
-import { StagingService } from "./stagingService";
+import { StagingService, STAGING_CHANGELIST } from "./stagingService";
 import { normalizePath, toDisposable } from "../util";
 
 /**
@@ -130,17 +130,15 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * @param sourceControl VS Code SourceControl instance
    * @param parentDisposables Parent's disposable array to register cleanup
-   * @param repoRoot Repository root path for staging persistence
-   * @param workspaceState Workspace state for staging persistence
+   * @param repoRoot Repository root path for staging service
    */
   constructor(
     private readonly sourceControl: SourceControl,
     parentDisposables: Disposable[],
-    repoRoot: string,
-    workspaceState?: Memento
+    repoRoot: string
   ) {
-    // Create staging service
-    this._staging = new StagingService(repoRoot, workspaceState);
+    // Create staging service (uses SVN changelist for persistence)
+    this._staging = new StagingService(repoRoot);
 
     // Create static groups (order matters for UI display)
     // Staged appears first
@@ -183,36 +181,31 @@ export class ResourceGroupManager implements IResourceGroupManager {
   updateGroups(data: ResourceGroupUpdateData): number {
     const { result, config } = data;
 
-    // Split changes into staged and unstaged
-    const stagedResources: Resource[] = [];
-    const unstagedResources: Resource[] = [];
+    // Extract staged files from __staged__ changelist
+    const stagedResources = result.changelists.get(STAGING_CHANGELIST) ?? [];
 
-    for (const resource of result.changes) {
-      if (this._staging.isStaged(resource.resourceUri)) {
-        stagedResources.push(resource);
-      } else {
-        unstagedResources.push(resource);
-      }
-    }
+    // Sync staging service cache with SVN changelist data
+    this._staging.syncFromChangelist(
+      stagedResources.map(r => r.resourceUri.fsPath)
+    );
 
     // Update staged and changes groups
     this._staged.resourceStates = stagedResources;
-    this._changes.resourceStates = unstagedResources;
+    this._changes.resourceStates = result.changes;
     this._conflicts.resourceStates = result.conflicts;
-
-    // Cleanup stale staged paths (files that are no longer changed)
-    const validPaths = new Set(
-      result.changes.map(r => normalizePath(r.resourceUri.fsPath))
-    );
-    this._staging.cleanupStalePaths(validPaths);
 
     // Clear existing changelist groups
     this._changelists.forEach(group => {
       group.resourceStates = [];
     });
 
-    // Update or create changelist groups
+    // Update or create changelist groups (excluding __staged__)
     result.changelists.forEach((resources, changelist) => {
+      // Skip staging changelist - handled separately as "Staged Changes"
+      if (changelist === STAGING_CHANGELIST) {
+        return;
+      }
+
       let group = this._changelists.get(changelist);
       if (!group) {
         // Prefix 'changelist-' to prevent ID collision with 'changes'
@@ -228,8 +221,10 @@ export class ResourceGroupManager implements IResourceGroupManager {
       group.resourceStates = resources;
     });
 
-    // Dispose removed changelists
-    const currentChangelists = new Set(result.changelists.keys());
+    // Dispose removed changelists (excluding __staged__ which is never in _changelists)
+    const currentChangelists = new Set(
+      [...result.changelists.keys()].filter(k => k !== STAGING_CHANGELIST)
+    );
     this._changelists.forEach((group, changelist) => {
       if (!currentChangelists.has(changelist)) {
         group.dispose();

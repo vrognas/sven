@@ -16,7 +16,11 @@ export class Unstage extends Command {
     const uris = selection.map(resource => resource.resourceUri);
 
     await this.runByRepository(uris, async (repository, resources) => {
-      repository.staging.unstageAll(resources);
+      const paths = resources.map(r => r.fsPath);
+      await this.handleRepositoryOperation(
+        async () => repository.removeChangelist(paths),
+        "Unable to unstage files"
+      );
     });
   }
 }
@@ -29,16 +33,27 @@ export class UnstageAll extends Command {
   public async execute(...resourceStates: SourceControlResourceState[]) {
     const selection = await this.getResourceStates(resourceStates);
 
-    // If called with resources, unstage those; otherwise unstage all
+    // If called with resources, unstage those; otherwise unstage all staged
     if (selection.length > 0) {
       const uris = selection.map(resource => resource.resourceUri);
       await this.runByRepository(uris, async (repository, resources) => {
-        repository.staging.unstageAll(resources);
+        const paths = resources.map(r => r.fsPath);
+        await this.handleRepositoryOperation(
+          async () => repository.removeChangelist(paths),
+          "Unable to unstage files"
+        );
       });
     } else {
       // Unstage all in all repositories
       await this.runByRepository([], async repository => {
-        repository.staging.unstageAll();
+        const staged = repository.staged.resourceStates;
+        const paths = staged.map(r => r.resourceUri.fsPath);
+        if (paths.length > 0) {
+          await this.handleRepositoryOperation(
+            async () => repository.removeChangelist(paths),
+            "Unable to unstage files"
+          );
+        }
       });
     }
   }
