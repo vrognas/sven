@@ -98,10 +98,16 @@ export class StageAll extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStates(resourceStates);
+    // Check if called with explicit selection vs button on group header
+    const hasExplicitSelection =
+      resourceStates.length > 0 &&
+      resourceStates[0]?.resourceUri instanceof (await import("vscode")).Uri;
 
-    // If called with resources, stage those; otherwise stage all changes
-    if (selection.length > 0) {
+    if (hasExplicitSelection) {
+      // Stage selected resources
+      const selection = await this.getResourceStates(resourceStates);
+      if (selection.length === 0) return;
+
       // Warn if files are in other changelists
       const affected = getAffectedChangelists(selection);
       if (!(await warnAboutChangelists(affected))) return;

@@ -69,10 +69,16 @@ export class UnstageAll extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStates(resourceStates);
+    // Check if called with explicit selection vs button on group header
+    const hasExplicitSelection =
+      resourceStates.length > 0 &&
+      resourceStates[0]?.resourceUri instanceof (await import("vscode")).Uri;
 
-    // If called with resources, unstage those
-    if (selection.length > 0) {
+    if (hasExplicitSelection) {
+      // Unstage selected resources
+      const selection = await this.getResourceStates(resourceStates);
+      if (selection.length === 0) return;
+
       const uris = selection.map(resource => resource.resourceUri);
       await this.runByRepository(uris, async (repository, resources) => {
         const paths = resources.map(r => r.fsPath);
@@ -82,7 +88,7 @@ export class UnstageAll extends Command {
         );
       });
     } else {
-      // Unstage all staged files - iterate via staged group URIs
+      // Unstage all staged files across all repositories
       await this.runForAllStaged(async (repository, paths) => {
         await this.handleRepositoryOperation(
           async () => unstageWithRestoreOptimistic(repository, paths),
