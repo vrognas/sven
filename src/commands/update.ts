@@ -2,7 +2,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { window } from "vscode";
+import { commands, ProgressLocation, window } from "vscode";
 import { configuration } from "../helpers/configuration";
 import { Repository } from "../repository";
 import { Command } from "./command";
@@ -23,10 +23,40 @@ export class Update extends Command {
         true
       );
 
-      const result = await repository.updateRevision(ignoreExternals);
+      const result = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: "Updating from repository..."
+        },
+        () => repository.updateRevision(ignoreExternals)
+      );
 
-      if (showUpdateMessage) {
-        window.showInformationMessage(result);
+      // Show conflict warning with action button
+      if (result.conflicts.length > 0) {
+        const fileList = result.conflicts.slice(0, 3).join(", ");
+        const more =
+          result.conflicts.length > 3
+            ? ` (+${result.conflicts.length - 3} more)`
+            : "";
+        const conflictMsg =
+          result.conflicts.length === 1
+            ? `Conflict: ${result.conflicts[0]}`
+            : `${result.conflicts.length} conflicts: ${fileList}${more}`;
+
+        const choice = await window.showWarningMessage(
+          conflictMsg,
+          "Resolve Conflicts",
+          "View SCM"
+        );
+        if (choice === "Resolve Conflicts") {
+          await commands.executeCommand("svn.resolveAll");
+        } else if (choice === "View SCM") {
+          await commands.executeCommand("workbench.view.scm");
+        }
+      } else if (showUpdateMessage && result.revision !== null) {
+        window.showInformationMessage(result.message);
+      } else if (showUpdateMessage) {
+        window.showInformationMessage("Update completed");
       }
     }, "Unable to update");
   }

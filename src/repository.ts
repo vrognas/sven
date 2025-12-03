@@ -63,6 +63,7 @@ import {
   ISvnLockInfo,
   ISvnResourceGroup,
   IUnlockOptions,
+  IUpdateResult,
   Operation,
   RepositoryState,
   Status,
@@ -735,11 +736,15 @@ export class Repository implements IRemoteRepository {
 
   public async updateRevision(
     ignoreExternals: boolean = false
-  ): Promise<string> {
-    return this.run<string>(Operation.Update, async () => {
-      const response = await this.repository.update(ignoreExternals);
-      this.updateRemoteChangedFiles();
-      return response;
+  ): Promise<IUpdateResult> {
+    return this.run<IUpdateResult>(Operation.Update, async () => {
+      const result = await this.repository.update(ignoreExternals);
+      // Brief delay to ensure SVN releases working copy lock
+      await timeout(100);
+      // Refresh local status to show conflicts and updated files
+      await this.status();
+      await this.updateRemoteChangedFiles();
+      return result;
     });
   }
 
@@ -1054,7 +1059,7 @@ export class Repository implements IRemoteRepository {
           c => c.account === username
         );
         if (existingIndex >= 0) {
-          credentials[existingIndex].password = password;
+          credentials[existingIndex]!.password = password;
         } else {
           credentials.push({ account: username, password });
         }
@@ -1203,8 +1208,8 @@ export class Repository implements IRemoteRepository {
     // Fix Bug 2: Pre-set credentials from first stored account if none set
     // Prevents first attempt failing with empty credentials in remote sessions
     if (!this.username && !this.password && accounts.length > 0) {
-      this.username = accounts[0].account;
-      this.password = accounts[0].password;
+      this.username = accounts[0]!.account;
+      this.password = accounts[0]!.password;
     }
 
     while (true) {
@@ -1232,8 +1237,8 @@ export class Repository implements IRemoteRepository {
           // attempt 1 failed with accounts[0], try accounts[1], etc.
           const index = attempt;
           if (typeof accounts[index] !== "undefined") {
-            this.username = accounts[index].account;
-            this.password = accounts[index].password;
+            this.username = accounts[index]!.account;
+            this.password = accounts[index]!.password;
           }
         } else if (
           svnError.svnErrorCode === svnErrorCodes.AuthorizationFailed &&

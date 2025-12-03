@@ -17,6 +17,7 @@ import {
   ISvnLockInfo,
   ISvnLogEntry,
   IUnlockOptions,
+  IUpdateResult,
   Status,
   SvnDepth,
   ISvnPathChange,
@@ -573,7 +574,7 @@ export class Repository {
       return [];
     }
 
-    const copyCommitPath = entries[0].paths[0];
+    const copyCommitPath = entries[0]!.paths[0]!;
 
     if (
       copyCommitPath.copyfromRev === undefined ||
@@ -599,7 +600,7 @@ export class Repository {
     let latestMergedRevision: string = "";
 
     if (revisions.length) {
-      latestMergedRevision = revisions[revisions.length - 1];
+      latestMergedRevision = revisions[revisions.length - 1]!;
     }
 
     if (latestMergedRevision.trim().length === 0) {
@@ -1065,7 +1066,53 @@ export class Repository {
     return results.reverse().find(r => r.stdout)?.stdout || "";
   }
 
-  public async update(ignoreExternals: boolean = true): Promise<string> {
+  /**
+   * Parse SVN update output to extract revision, conflicts, and message
+   */
+  private parseUpdateOutput(stdout: string): IUpdateResult {
+    if (!stdout || typeof stdout !== "string") {
+      return { revision: null, conflicts: [], message: "" };
+    }
+
+    // Precompiled regex patterns
+    const revRegex = /(?:Updated to|At) revision (\d+)/i;
+    const conflictRegex = /^\s*C\s+(.+)$/;
+
+    const lines = stdout.trim().split(/\r?\n/);
+    const conflicts: string[] = [];
+    let revision: number | null = null;
+    let message = "";
+
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i]!;
+      const trimmed = line.trim();
+
+      // Capture last non-empty line as message
+      if (!message && trimmed) {
+        message = trimmed;
+      }
+
+      // Detect all conflict types (text, tree, property)
+      const conflictMatch = conflictRegex.exec(line);
+      if (conflictMatch && conflictMatch[1]) {
+        conflicts.unshift(conflictMatch[1]!.trim());
+      }
+
+      // Extract revision (only once)
+      if (revision === null) {
+        const revMatch = revRegex.exec(line);
+        if (revMatch && revMatch[1]) {
+          revision = parseInt(revMatch[1]!, 10);
+        }
+      }
+    }
+
+    return { revision, conflicts, message };
+  }
+
+  public async update(
+    ignoreExternals: boolean = false
+  ): Promise<IUpdateResult> {
     const args = ["update"];
 
     if (ignoreExternals) {
@@ -1076,12 +1123,7 @@ export class Repository {
 
     this.resetInfoCache();
 
-    const message = result.stdout.trim().split(/\r?\n/).pop();
-
-    if (message) {
-      return message;
-    }
-    return result.stdout;
+    return this.parseUpdateOutput(result.stdout);
   }
 
   public async pullIncomingChange(path: string): Promise<string> {
@@ -1284,7 +1326,7 @@ export class Repository {
 
     // Edge case: single revision (use existing log method - also cached)
     if (revisions.length === 1) {
-      return this.log(revisions[0], revisions[0], 1, target);
+      return this.log(revisions[0]!, revisions[0]!, 1, target);
     }
 
     // Parse revisions as numbers

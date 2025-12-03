@@ -1,3 +1,25 @@
+## [2.32.2] (2025-12-02)
+
+### Fix: Update Command Robustness
+
+- **Fixed**: Race condition - 100ms delay before status() to avoid lock contention
+- **Fixed**: Tree/property conflicts now detected (not just text conflicts)
+- **Fixed**: Null revision handling in UI (shows "Update completed")
+- **Added**: Progress indicator during update
+- **Added**: "Resolve Conflicts" / "View SCM" action buttons
+- **Fixed**: Await updateRemoteChangedFiles() to prevent race
+- **Refactored**: Tests use IUpdateResult (not string), reduced from 19 to 4 focused tests
+
+## [2.32.1] (2025-12-02)
+
+### Fix: Update Command Improvements
+
+- **Fixed**: Status now refreshes after update (shows conflicts/updated files)
+- **Fixed**: Conflict detection - warns user when update creates conflicts
+- **Fixed**: `ignoreExternals` default aligned (was `true` in svnRepository, config default `false`)
+- **IUpdateResult**: New structured return type with revision, conflicts[], message
+- **Tests**: +19 vitest tests
+
 ## [2.32.0] (2025-12-02)
 
 ### Feature: User-Friendly Error Messages with Action Buttons

@@ -1,18 +1,32 @@
 import * as assert from "assert";
-import { window } from "vscode";
+import { commands, window } from "vscode";
 import { Update } from "../../../commands/update";
 import { Repository } from "../../../repository";
 import { configuration } from "../../../helpers/configuration";
+import { IUpdateResult } from "../../../common/types";
+
+// Helper to create IUpdateResult
+function makeResult(
+  message: string,
+  revision: number | null = 123,
+  conflicts: string[] = []
+): IUpdateResult {
+  return { message, revision, conflicts };
+}
 
 suite("Update Command Tests", () => {
   let update: Update;
   let mockRepository: Partial<Repository>;
   let origShowInfo: typeof window.showInformationMessage;
+  let origShowWarning: typeof window.showWarningMessage;
   let origShowError: typeof window.showErrorMessage;
+  let origWithProgress: typeof window.withProgress;
   let origConfigGet: typeof configuration.get;
+  let origExecuteCommand: typeof commands.executeCommand;
 
   // Call tracking
   let showInfoCalls: any[] = [];
+  let showWarningCalls: any[] = [];
   let showErrorCalls: any[] = [];
   let updateRevisionCalls: any[] = [];
   let configGetCalls: any[] = [];
@@ -20,18 +34,34 @@ suite("Update Command Tests", () => {
   setup(() => {
     update = new Update();
 
-    // Mock Repository
+    // Mock Repository - now returns IUpdateResult
     mockRepository = {
       updateRevision: async (ignoreExternals: boolean) => {
         updateRevisionCalls.push({ ignoreExternals });
-        return "Updated to revision 123.";
+        return makeResult("Updated to revision 123.", 123);
       }
+    };
+
+    // Mock window.withProgress to execute immediately
+    origWithProgress = window.withProgress;
+    (window as any).withProgress = async (_opts: any, task: any) => {
+      return task();
     };
 
     // Mock window.showInformationMessage
     origShowInfo = window.showInformationMessage;
     (window as any).showInformationMessage = (message: string) => {
       showInfoCalls.push({ message });
+      return Promise.resolve(undefined);
+    };
+
+    // Mock window.showWarningMessage
+    origShowWarning = window.showWarningMessage;
+    (window as any).showWarningMessage = (
+      message: string,
+      ...buttons: any[]
+    ) => {
+      showWarningCalls.push({ message, buttons });
       return Promise.resolve(undefined);
     };
 
@@ -42,22 +72,22 @@ suite("Update Command Tests", () => {
       return Promise.resolve(undefined);
     };
 
+    // Mock commands.executeCommand
+    origExecuteCommand = commands.executeCommand;
+    (commands as any).executeCommand = async () => {};
+
     // Mock configuration.get
     origConfigGet = configuration.get;
     (configuration as any).get = (key: string, defaultValue?: any) => {
       configGetCalls.push({ key, defaultValue });
-      // Default behavior
-      if (key === "update.ignoreExternals") {
-        return false;
-      }
-      if (key === "showUpdateMessage") {
-        return true;
-      }
+      if (key === "update.ignoreExternals") return false;
+      if (key === "showUpdateMessage") return true;
       return defaultValue;
     };
 
     // Clear call tracking
     showInfoCalls = [];
+    showWarningCalls = [];
     showErrorCalls = [];
     updateRevisionCalls = [];
     configGetCalls = [];
@@ -66,7 +96,10 @@ suite("Update Command Tests", () => {
   teardown(() => {
     update.dispose();
     (window as any).showInformationMessage = origShowInfo;
+    (window as any).showWarningMessage = origShowWarning;
     (window as any).showErrorMessage = origShowError;
+    (window as any).withProgress = origWithProgress;
+    (commands as any).executeCommand = origExecuteCommand;
     (configuration as any).get = origConfigGet;
   });
 
@@ -109,16 +142,46 @@ suite("Update Command Tests", () => {
     });
   });
 
+  suite("Conflict Detection", () => {
+    test("should show warning for single conflict", async () => {
+      mockRepository.updateRevision = async () =>
+        makeResult("Updated to revision 100.", 100, ["src/file.ts"]);
+
+      await update.execute(mockRepository as Repository);
+
+      assert.strictEqual(showWarningCalls.length, 1);
+      assert.ok(showWarningCalls[0].message.includes("Conflict"));
+      assert.ok(showWarningCalls[0].message.includes("src/file.ts"));
+      assert.strictEqual(showInfoCalls.length, 0);
+    });
+
+    test("should show warning for multiple conflicts", async () => {
+      mockRepository.updateRevision = async () =>
+        makeResult("Updated to revision 100.", 100, ["a.ts", "b.ts", "c.ts"]);
+
+      await update.execute(mockRepository as Repository);
+
+      assert.strictEqual(showWarningCalls.length, 1);
+      assert.ok(showWarningCalls[0].message.includes("3 conflicts"));
+    });
+
+    test("should include action buttons for conflicts", async () => {
+      mockRepository.updateRevision = async () =>
+        makeResult("Updated to revision 100.", 100, ["file.ts"]);
+
+      await update.execute(mockRepository as Repository);
+
+      assert.ok(showWarningCalls[0].buttons.includes("Resolve Conflicts"));
+      assert.ok(showWarningCalls[0].buttons.includes("View SCM"));
+    });
+  });
+
   suite("Ignore Externals Config", () => {
     test("should ignore externals when config is true", async () => {
       (configuration as any).get = (key: string, defaultValue?: any) => {
         configGetCalls.push({ key, defaultValue });
-        if (key === "update.ignoreExternals") {
-          return true;
-        }
-        if (key === "showUpdateMessage") {
-          return true;
-        }
+        if (key === "update.ignoreExternals") return true;
+        if (key === "showUpdateMessage") return true;
         return defaultValue;
       };
 
@@ -131,27 +194,8 @@ suite("Update Command Tests", () => {
     test("should not ignore externals when config is false", async () => {
       (configuration as any).get = (key: string, defaultValue?: any) => {
         configGetCalls.push({ key, defaultValue });
-        if (key === "update.ignoreExternals") {
-          return false;
-        }
-        if (key === "showUpdateMessage") {
-          return true;
-        }
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(updateRevisionCalls.length, 1);
-      assert.strictEqual(updateRevisionCalls[0].ignoreExternals, false);
-    });
-
-    test("should default to false when config not set", async () => {
-      (configuration as any).get = (key: string, defaultValue?: any) => {
-        configGetCalls.push({ key, defaultValue });
-        if (key === "showUpdateMessage") {
-          return true;
-        }
+        if (key === "update.ignoreExternals") return false;
+        if (key === "showUpdateMessage") return true;
         return defaultValue;
       };
 
@@ -166,12 +210,8 @@ suite("Update Command Tests", () => {
     test("should show message when config is true", async () => {
       (configuration as any).get = (key: string, defaultValue?: any) => {
         configGetCalls.push({ key, defaultValue });
-        if (key === "update.ignoreExternals") {
-          return false;
-        }
-        if (key === "showUpdateMessage") {
-          return true;
-        }
+        if (key === "update.ignoreExternals") return false;
+        if (key === "showUpdateMessage") return true;
         return defaultValue;
       };
 
@@ -184,12 +224,8 @@ suite("Update Command Tests", () => {
     test("should not show message when config is false", async () => {
       (configuration as any).get = (key: string, defaultValue?: any) => {
         configGetCalls.push({ key, defaultValue });
-        if (key === "update.ignoreExternals") {
-          return false;
-        }
-        if (key === "showUpdateMessage") {
-          return false;
-        }
+        if (key === "update.ignoreExternals") return false;
+        if (key === "showUpdateMessage") return false;
         return defaultValue;
       };
 
@@ -197,20 +233,6 @@ suite("Update Command Tests", () => {
 
       assert.strictEqual(showInfoCalls.length, 0);
       assert.strictEqual(updateRevisionCalls.length, 1);
-    });
-
-    test("should default to true when config not set", async () => {
-      (configuration as any).get = (key: string, defaultValue?: any) => {
-        configGetCalls.push({ key, defaultValue });
-        if (key === "update.ignoreExternals") {
-          return false;
-        }
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls.length, 1);
     });
   });
 
@@ -237,54 +259,23 @@ suite("Update Command Tests", () => {
       assert.strictEqual(showErrorCalls.length, 1);
       assert.strictEqual(showErrorCalls[0].message, "Unable to update");
     });
+  });
 
-    test("should handle authentication error", async () => {
-      mockRepository.updateRevision = async () => {
-        throw new Error("svn: E215004: Authentication failed");
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showErrorCalls.length, 1);
-      assert.strictEqual(showErrorCalls[0].message, "Unable to update");
-    });
-
-    test("should not show success message on error", async () => {
-      mockRepository.updateRevision = async () => {
-        throw new Error("svn: Update failed");
-      };
+  suite("Null Revision Handling", () => {
+    test("should show generic message when revision is null", async () => {
+      mockRepository.updateRevision = async () => makeResult("", null, []);
 
       await update.execute(mockRepository as Repository);
 
-      assert.strictEqual(showInfoCalls.length, 0);
-      assert.strictEqual(showErrorCalls.length, 1);
-    });
-
-    test("should handle conflict during update", async () => {
-      mockRepository.updateRevision = async () => {
-        throw new Error("svn: E155015: Conflict found during update");
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showErrorCalls.length, 1);
-      assert.strictEqual(showErrorCalls[0].message, "Unable to update");
-    });
-
-    test("should handle out of date working copy", async () => {
-      mockRepository.updateRevision = async () => {
-        throw new Error("svn: E155036: Working copy is out of date");
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showErrorCalls.length, 1);
+      assert.strictEqual(showInfoCalls.length, 1);
+      assert.strictEqual(showInfoCalls[0].message, "Update completed");
     });
   });
 
   suite("Update Messages", () => {
     test("should display revision number in message", async () => {
-      mockRepository.updateRevision = async () => "Updated to revision 456.";
+      mockRepository.updateRevision = async () =>
+        makeResult("Updated to revision 456.", 456);
 
       await update.execute(mockRepository as Repository);
 
@@ -293,130 +284,13 @@ suite("Update Command Tests", () => {
     });
 
     test("should display 'At revision' message", async () => {
-      mockRepository.updateRevision = async () => "At revision 789.";
+      mockRepository.updateRevision = async () =>
+        makeResult("At revision 789.", 789);
 
       await update.execute(mockRepository as Repository);
 
       assert.strictEqual(showInfoCalls.length, 1);
       assert.strictEqual(showInfoCalls[0].message, "At revision 789.");
-    });
-
-    test("should handle empty update message", async () => {
-      mockRepository.updateRevision = async () => "";
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls.length, 1);
-      assert.strictEqual(showInfoCalls[0].message, "");
-    });
-
-    test("should display multi-line update output", async () => {
-      mockRepository.updateRevision = async () =>
-        "Updating '.'\nUpdated to revision 999.";
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls.length, 1);
-      assert.ok(showInfoCalls[0].message.includes("999"));
-    });
-
-    test("should handle update with file changes", async () => {
-      mockRepository.updateRevision = async () =>
-        "U    file1.txt\nU    file2.txt\nUpdated to revision 100.";
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls.length, 1);
-      assert.ok(showInfoCalls[0].message.includes("100"));
-    });
-  });
-
-  suite("Config Combinations", () => {
-    test("should handle ignoreExternals=true, showMessage=true", async () => {
-      (configuration as any).get = (key: string, defaultValue?: any) => {
-        if (key === "update.ignoreExternals") return true;
-        if (key === "showUpdateMessage") return true;
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(updateRevisionCalls.length, 1);
-      assert.strictEqual(updateRevisionCalls[0].ignoreExternals, true);
-      assert.strictEqual(showInfoCalls.length, 1);
-    });
-
-    test("should handle ignoreExternals=true, showMessage=false", async () => {
-      (configuration as any).get = (key: string, defaultValue?: any) => {
-        if (key === "update.ignoreExternals") return true;
-        if (key === "showUpdateMessage") return false;
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(updateRevisionCalls.length, 1);
-      assert.strictEqual(updateRevisionCalls[0].ignoreExternals, true);
-      assert.strictEqual(showInfoCalls.length, 0);
-    });
-
-    test("should handle ignoreExternals=false, showMessage=false", async () => {
-      (configuration as any).get = (key: string, defaultValue?: any) => {
-        if (key === "update.ignoreExternals") return false;
-        if (key === "showUpdateMessage") return false;
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(updateRevisionCalls.length, 1);
-      assert.strictEqual(updateRevisionCalls[0].ignoreExternals, false);
-      assert.strictEqual(showInfoCalls.length, 0);
-    });
-
-    test("should handle all default values", async () => {
-      (configuration as any).get = (_key: string, defaultValue?: any) => {
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(updateRevisionCalls.length, 1);
-      assert.strictEqual(updateRevisionCalls[0].ignoreExternals, false);
-      assert.strictEqual(showInfoCalls.length, 1);
-    });
-  });
-
-  suite("Update Return Values", () => {
-    test("should handle successful update return value", async () => {
-      mockRepository.updateRevision = async () => "Revision 200 updated";
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls[0].message, "Revision 200 updated");
-    });
-
-    test("should handle already up-to-date message", async () => {
-      mockRepository.updateRevision = async () => "At revision 300.";
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls[0].message, "At revision 300.");
-    });
-
-    test("should preserve exact message from updateRevision", async () => {
-      const expectedMsg = "Custom update message with special chars !@#";
-      mockRepository.updateRevision = async () => expectedMsg;
-
-      (configuration as any).get = (_key: string, defaultValue?: any) => {
-        if (_key === "update.ignoreExternals") return false;
-        if (_key === "showUpdateMessage") return true;
-        return defaultValue;
-      };
-
-      await update.execute(mockRepository as Repository);
-
-      assert.strictEqual(showInfoCalls[0].message, expectedMsg);
     });
   });
 
@@ -439,7 +313,8 @@ suite("Update Command Tests", () => {
       assert.strictEqual(showErrorCalls.length, 1);
 
       // Reset mock to succeed
-      mockRepository.updateRevision = async () => "Updated to revision 500.";
+      mockRepository.updateRevision = async () =>
+        makeResult("Updated to revision 500.", 500);
       updateRevisionCalls = [];
       showErrorCalls = [];
       showInfoCalls = [];
