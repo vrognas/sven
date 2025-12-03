@@ -580,17 +580,20 @@ export class Repository implements IRemoteRepository {
   private readonly MODEL_CACHE_MS = 2000; // 2s cache
 
   @globalSequentialize("updateModelState")
-  public async updateModelState(checkRemoteChanges: boolean = false) {
+  public async updateModelState(
+    checkRemoteChanges: boolean = false,
+    forceRefresh: boolean = false
+  ) {
     // Skip status updates during sparse checkout downloads
     // Prevents working copy lock conflicts on Windows
     if (this._sparseDownloadInProgress) {
       return;
     }
 
-    // Short-term cache: skip if called within 2s
+    // Short-term cache: skip if called within 2s (unless forced)
     // Note: @throttle removed (Phase 15) - cache already handles throttling
     const now = Date.now();
-    if (now - this.lastModelUpdate < this.MODEL_CACHE_MS) {
+    if (!forceRefresh && now - this.lastModelUpdate < this.MODEL_CACHE_MS) {
       return;
     }
     this.lastModelUpdate = now;
@@ -1199,9 +1202,14 @@ export class Repository implements IRemoteRepository {
         const result = await this.retryRun(runOperation);
 
         const checkRemote = operation === Operation.StatusRemote;
+        // Force refresh for changelist operations to bypass 2s cache
+        // These operations modify which group files appear in
+        const forceRefresh =
+          operation === Operation.AddChangelist ||
+          operation === Operation.RemoveChangelist;
 
         if (!isReadOnly(operation)) {
-          await this.updateModelState(checkRemote);
+          await this.updateModelState(checkRemote, forceRefresh);
         }
 
         return result;
