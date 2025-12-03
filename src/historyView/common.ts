@@ -247,7 +247,7 @@ export function getCommitDescription(commit: ISvnLogEntry): string {
 
 export function getCommitLabel(commit: ISvnLogEntry): string {
   if (!commit.msg) {
-    return "<blank>";
+    return "";
   }
   return commit.msg.split(/\r?\n/, 1)[0]!;
 }
