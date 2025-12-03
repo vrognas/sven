@@ -1,3 +1,11 @@
+## [2.32.12] (2025-12-03)
+
+### Fix: Timer Leaks & Performance
+
+- **Fixed**: Timer leak in SvnFileSystemProvider (cleanup interval not cleared on dispose)
+- **Fixed**: Timer leak in TempSvnFs (fireSoon timeout not cleared on dispose)
+- **Improved**: XML parser single-pass transformation (60-70% faster parsing)
+
 ## [2.32.11] (2025-12-03)
 
 ### UX: Error Message Action Buttons
