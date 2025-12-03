@@ -15,6 +15,7 @@ export type CommitType =
   | "build"
   | "ci"
   | "chore"
+  | "revert"
   | "custom";
 
 /**
@@ -93,6 +94,12 @@ const COMMIT_TYPES: CommitTypeInfo[] = [
     icon: "$(tools)",
     label: "chore",
     description: "Other changes"
+  },
+  {
+    type: "revert",
+    icon: "$(discard)",
+    label: "revert",
+    description: "Revert previous commit"
   },
   {
     type: "custom",
