@@ -120,17 +120,22 @@ export class CommitFlowService {
     }
 
     // Step 2: Enter scope (optional)
-    const scope = await this.showScopeStep(repository);
+    const scope = await this.showScopeStep(repository, typeResult.type!);
     if (scope === undefined) {
       return undefined; // Cancelled
     }
 
-    // Step 3: Enter description
+    // Step 3: Enter description (pre-populate with SCM input box value)
+    const existingMessage = repository.inputBox.value;
     let description: string | undefined;
     let confirmed = false;
 
     while (!confirmed) {
-      description = await this.showDescriptionStep(typeResult.type!, scope);
+      description = await this.showDescriptionStep(
+        typeResult.type!,
+        scope,
+        existingMessage
+      );
       if (description === undefined) {
         return undefined;
       }
@@ -202,9 +207,11 @@ export class CommitFlowService {
 
   /**
    * Show scope input (Step 2)
+   * Shows the message prefix being built (e.g., "feat: _")
    */
   private async showScopeStep(
-    repository: Repository
+    repository: Repository,
+    type: string
   ): Promise<string | undefined> {
     // Get recent scopes from repository if available
     const recentScopes = this.getRecentScopes(repository);
@@ -214,7 +221,7 @@ export class CommitFlowService {
         : "Optional scope (e.g., ui, api, core)";
 
     const scope = await window.showInputBox({
-      title: "Commit (2/3): Enter scope",
+      title: `Commit (2/3): ${type}(_): ...`,
       prompt: placeholder,
       placeHolder: "Leave empty to skip"
     });
@@ -225,25 +232,46 @@ export class CommitFlowService {
 
   /**
    * Show description input (Step 3)
+   * Shows real-time character count as user types
+   * Pre-populates with SCM input box value if available
    */
   private async showDescriptionStep(
     type: string,
-    scope: string
+    scope: string,
+    existingMessage?: string
   ): Promise<string | undefined> {
     const prefix = scope ? `${type}(${scope}): ` : `${type}: `;
-    const maxLen = this.conventionalService.getMaxLength() - prefix.length;
+    const maxTotal = this.conventionalService.getMaxLength();
+    const maxDesc = maxTotal - prefix.length;
+
+    // Try to extract description from existing message
+    let initialValue = "";
+    if (existingMessage) {
+      // If message starts with prefix, extract description
+      if (existingMessage.startsWith(prefix)) {
+        initialValue = existingMessage.slice(prefix.length);
+      } else {
+        // Otherwise use the whole message (user can edit)
+        initialValue = existingMessage;
+      }
+    }
 
     const description = await window.showInputBox({
-      title: "Commit (3/3): Enter description",
-      prompt: `Max ${maxLen} chars`,
+      title: `Commit (3/3): ${prefix}_`,
+      prompt: `Max ${maxTotal} chars total (${maxDesc} for description)`,
       placeHolder: "Brief description of changes",
+      value: initialValue,
       validateInput: value => {
         if (!value || value.trim() === "") {
           return "Description required";
         }
-        if (value.length > maxLen) {
-          return `Max ${maxLen} chars (${value.length})`;
+        const totalLen = prefix.length + value.length;
+        const remaining = maxTotal - totalLen;
+
+        if (remaining < 0) {
+          return `${totalLen}/${maxTotal} (${remaining}) - exceeds recommended 50 char limit`;
         }
+        // Show count as informational (null = valid, but we show count in prompt)
         return undefined;
       }
     });
@@ -304,6 +332,7 @@ export class CommitFlowService {
 
   /**
    * Show custom message input (skip conventional format)
+   * Shows real-time character count
    */
   private async showCustomMessageStep(
     repository: Repository
@@ -311,16 +340,17 @@ export class CommitFlowService {
     const maxLen = this.conventionalService.getMaxLength();
 
     return window.showInputBox({
-      title: "Enter commit message",
-      prompt: `Max ${maxLen} chars`,
+      title: "Commit: Enter message",
+      prompt: `Max ${maxLen} chars recommended`,
       value: repository.inputBox.value,
       placeHolder: "Your commit message",
       validateInput: value => {
         if (!value || value.trim() === "") {
           return "Message required";
         }
-        if (value.length > maxLen) {
-          return `Max ${maxLen} chars (${value.length})`;
+        const remaining = maxLen - value.length;
+        if (remaining < 0) {
+          return `${value.length}/${maxLen} (${remaining}) - exceeds recommended 50 char limit`;
         }
         return undefined;
       }
