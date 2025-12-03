@@ -7,6 +7,7 @@
 - **Feat**: Restore original changelist on unstage (non-destructive staging)
 - **Feat**: "Select before commit" - Ctrl+Enter requires staged files (offers "Stage All" option)
 - **Feat**: Renamed "Staged Changes" to "Selected for Commit" for clarity
+- **Feat**: History log shows file stats (e.g., "r366 · user · 2h ago · 1A 3M 2D")
 - **Fix**: Unstage All / Stage All buttons now work correctly (iterate all repos)
 - **Fix**: Auto-unstage reverted files (no changes to commit)
 - **Fix**: Hide changelist command on staged files (prevents breaking staging state)

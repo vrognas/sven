@@ -240,11 +240,46 @@ export function getCommitIcon(
   return getAuthorColorDot(author);
 }
 
+/**
+ * Build file change stats string (e.g., "1A 3M 2D")
+ */
+function getFileStats(paths: ISvnLogEntryPath[] | undefined): string {
+  if (!paths || paths.length === 0) return "";
+
+  const counts: Record<string, number> = {};
+  for (const p of paths) {
+    const action = p.action || "?";
+    counts[action] = (counts[action] || 0) + 1;
+  }
+
+  // Order: A (Added), M (Modified), D (Deleted), R (Replaced), other
+  const order = ["A", "M", "D", "R"];
+  const parts: string[] = [];
+
+  for (const action of order) {
+    if (counts[action]) {
+      parts.push(`${counts[action]}${action}`);
+      delete counts[action];
+    }
+  }
+  // Add any remaining actions
+  for (const [action, count] of Object.entries(counts)) {
+    parts.push(`${count}${action}`);
+  }
+
+  return parts.join(" ");
+}
+
 export function getCommitDescription(commit: ISvnLogEntry): string {
   const relativeDate = formatRelativeTime(commit.date);
   const hasMsg = commit.msg && commit.msg.trim();
   const prefix = hasMsg ? "· " : "";
-  return `${prefix}r${commit.revision} · ${commit.author} · ${relativeDate}`;
+
+  // Add file stats if available
+  const stats = getFileStats(commit.paths);
+  const statsPart = stats ? ` · ${stats}` : "";
+
+  return `${prefix}r${commit.revision} · ${commit.author} · ${relativeDate}${statsPart}`;
 }
 
 export function getCommitLabel(commit: ISvnLogEntry): string {
