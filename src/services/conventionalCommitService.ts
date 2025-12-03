@@ -44,26 +44,31 @@ const COMMIT_TYPES: CommitTypeInfo[] = [
     type: "feat",
     icon: "$(sparkle)",
     label: "feat",
-    description: "Add new feature"
+    description: "New feature (MINOR version bump)"
   },
-  { type: "fix", icon: "$(bug)", label: "fix", description: "Fix a bug" },
+  {
+    type: "fix",
+    icon: "$(bug)",
+    label: "fix",
+    description: "Bug fix (PATCH version bump)"
+  },
   {
     type: "docs",
     icon: "$(book)",
     label: "docs",
-    description: "Documentation only"
+    description: "Documentation only changes"
   },
   {
     type: "style",
     icon: "$(paintcan)",
     label: "style",
-    description: "Code style/formatting"
+    description: "Formatting, whitespace, semicolons"
   },
   {
     type: "refactor",
     icon: "$(wrench)",
     label: "refactor",
-    description: "Refactor code"
+    description: "Code change without fix or feature"
   },
   {
     type: "perf",
@@ -75,37 +80,37 @@ const COMMIT_TYPES: CommitTypeInfo[] = [
     type: "test",
     icon: "$(beaker)",
     label: "test",
-    description: "Add/update tests"
+    description: "Adding or updating tests"
   },
   {
     type: "build",
     icon: "$(package)",
     label: "build",
-    description: "Build system changes"
+    description: "Build system or dependencies"
   },
   {
     type: "ci",
     icon: "$(server-process)",
     label: "ci",
-    description: "CI configuration"
+    description: "CI/CD configuration"
   },
   {
     type: "chore",
     icon: "$(tools)",
     label: "chore",
-    description: "Other changes"
+    description: "Maintenance, no src/test change"
   },
   {
     type: "revert",
     icon: "$(discard)",
     label: "revert",
-    description: "Revert previous commit"
+    description: "Revert a previous commit"
   },
   {
     type: "custom",
     icon: "$(pencil)",
     label: "custom",
-    description: "Custom message"
+    description: "Write custom message"
   }
 ];
 
