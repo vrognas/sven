@@ -1,3 +1,10 @@
+## [2.32.11] (2025-12-03)
+
+### UX: Error Message Action Buttons
+
+- **Added**: "Open Settings" action on diff tool errors
+- **Purpose**: Direct path to fix config issues (no searching)
+
 ## [2.32.10] (2025-12-03)
 
 ### Security: Block % in Windows Username
