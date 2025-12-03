@@ -19,6 +19,7 @@ import { PreCommitUpdateService } from "./preCommitUpdateService";
  */
 export interface CommitFlowResult {
   message?: string;
+  selectedFiles?: string[];
   cancelled: boolean;
 }
 
@@ -38,6 +39,10 @@ interface TypePickItem extends QuickPickItem {
 
 interface ConfirmPickItem extends QuickPickItem {
   action?: "commit" | "edit";
+}
+
+interface FilePickItem extends QuickPickItem {
+  filePath: string;
 }
 
 /**
@@ -64,6 +69,12 @@ export class CommitFlowService {
   ): Promise<CommitFlowResult> {
     const { updateBeforeCommit = false, conventionalCommits = true } = options;
 
+    // Step 0: File selection with checkboxes
+    const selectedFiles = await this.showFileSelectionStep(filePaths);
+    if (!selectedFiles || selectedFiles.length === 0) {
+      return { cancelled: true };
+    }
+
     // Run pre-commit update if enabled
     if (updateBeforeCommit) {
       const updateResult = await this.updateService.runUpdate(repository);
@@ -89,7 +100,7 @@ export class CommitFlowService {
     let message: string | undefined;
 
     if (conventionalCommits) {
-      message = await this.runConventionalFlow(repository, filePaths);
+      message = await this.runConventionalFlow(repository, selectedFiles);
     } else {
       message = await this.runSimpleFlow(repository);
     }
@@ -98,7 +109,7 @@ export class CommitFlowService {
       return { cancelled: true };
     }
 
-    return { message, cancelled: false };
+    return { message, selectedFiles, cancelled: false };
   }
 
   /**
@@ -341,6 +352,46 @@ export class CommitFlowService {
     }
 
     return selected.action;
+  }
+
+  /**
+   * Show file selection step with checkboxes (Step 0)
+   * All files selected by default, user can deselect
+   */
+  private async showFileSelectionStep(
+    filePaths: string[]
+  ): Promise<string[] | undefined> {
+    if (filePaths.length === 0) {
+      return [];
+    }
+
+    // Skip picker if only one file
+    if (filePaths.length === 1) {
+      return filePaths;
+    }
+
+    const items: FilePickItem[] = filePaths.map(filePath => ({
+      label: `$(file) ${this.getFileName(filePath)}`,
+      description: this.getRelativePath(filePath),
+      filePath,
+      picked: true // All selected by default
+    }));
+
+    const selected = await window.showQuickPick(items, {
+      title: `Select files to commit (${filePaths.length} changed)`,
+      placeHolder: "Check/uncheck files to include in commit",
+      canPickMany: true
+    });
+
+    if (!selected) {
+      return undefined; // Cancelled
+    }
+
+    if (selected.length === 0) {
+      return undefined; // No files selected
+    }
+
+    return selected.map(item => item.filePath);
   }
 
   /**

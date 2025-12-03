@@ -212,8 +212,81 @@ describe("CommitFlowService", () => {
     });
   });
 
+  describe("file selection step", () => {
+    it("shows file picker with all files selected by default", async () => {
+      // File selection (canPickMany) - simulate selecting all files
+      mockWindow.showQuickPick.mockResolvedValueOnce([
+        { label: "file1.txt", filePath: "/a/file1.txt", picked: true },
+        { label: "file2.txt", filePath: "/a/file2.txt", picked: true }
+      ]);
+      // Type selection
+      mockWindow.showQuickPick
+        .mockResolvedValueOnce({ type: "feat", label: "feat" })
+        .mockResolvedValueOnce({ action: "commit" });
+      mockWindow.showInputBox
+        .mockResolvedValueOnce("")
+        .mockResolvedValueOnce("add files");
+
+      const result = await service.runCommitFlow(mockRepository, [
+        "/a/file1.txt",
+        "/a/file2.txt"
+      ]);
+
+      expect(result.cancelled).toBe(false);
+      expect(result.selectedFiles).toHaveLength(2);
+    });
+
+    it("allows user to deselect files", async () => {
+      // User only selects one file
+      mockWindow.showQuickPick.mockResolvedValueOnce([
+        { label: "file1.txt", filePath: "/a/file1.txt", picked: true }
+      ]);
+      mockWindow.showQuickPick
+        .mockResolvedValueOnce({ type: "fix", label: "fix" })
+        .mockResolvedValueOnce({ action: "commit" });
+      mockWindow.showInputBox
+        .mockResolvedValueOnce("")
+        .mockResolvedValueOnce("fix bug");
+
+      const result = await service.runCommitFlow(mockRepository, [
+        "/a/file1.txt",
+        "/a/file2.txt"
+      ]);
+
+      expect(result.selectedFiles).toHaveLength(1);
+      expect(result.selectedFiles![0]).toBe("/a/file1.txt");
+    });
+
+    it("cancels when no files selected", async () => {
+      mockWindow.showQuickPick.mockResolvedValueOnce([]);
+
+      const result = await service.runCommitFlow(mockRepository, [
+        "/a/file1.txt"
+      ]);
+
+      expect(result.cancelled).toBe(true);
+    });
+
+    it("cancels when file picker dismissed", async () => {
+      mockWindow.showQuickPick.mockResolvedValueOnce(undefined);
+
+      const result = await service.runCommitFlow(mockRepository, [
+        "/a/file1.txt"
+      ]);
+
+      expect(result.cancelled).toBe(true);
+    });
+  });
+
   describe("confirmation step", () => {
     it("shows file count in confirm step", async () => {
+      // File selection (3 files - need picker)
+      mockWindow.showQuickPick.mockResolvedValueOnce([
+        { filePath: "/a.txt" },
+        { filePath: "/b.txt" },
+        { filePath: "/c.txt" }
+      ]);
+      // Type and confirm
       mockWindow.showQuickPick
         .mockResolvedValueOnce({ type: "feat", label: "feat" })
         .mockResolvedValueOnce({ action: "commit" });
@@ -227,7 +300,8 @@ describe("CommitFlowService", () => {
         "/c.txt"
       ]);
 
-      const confirmCall = mockWindow.showQuickPick.mock.calls[1];
+      // Index 2: file picker (0) -> type (1) -> confirm (2)
+      const confirmCall = mockWindow.showQuickPick.mock.calls[2];
       expect(
         confirmCall[0].some(
           (item: { label?: string; description?: string }) =>
