@@ -268,8 +268,7 @@ export abstract class Command implements Disposable {
     }
 
     if (!right) {
-      // TODO
-      console.error("oh no");
+      window.showErrorMessage("Unable to open resource: file not found");
       return;
     }
 

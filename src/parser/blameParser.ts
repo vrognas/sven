@@ -61,6 +61,9 @@ export async function parseSvnBlame(content: string): Promise<ISvnBlameLine[]> {
       // Transform XML entries to ISvnBlameLine[]
       const blameLines: ISvnBlameLine[] = entries.map((entry: unknown) => {
         const e = entry as Record<string, unknown>;
+        if (!e.lineNumber) {
+          throw new Error("Invalid blame entry: missing lineNumber");
+        }
         const line: ISvnBlameLine = {
           lineNumber: parseInt(e.lineNumber as string, 10)
         };

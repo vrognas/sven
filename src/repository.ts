@@ -1236,9 +1236,10 @@ export class Repository implements IRemoteRepository {
           // Fix Bug 1: Cycle through stored accounts properly
           // attempt 1 failed with accounts[0], try accounts[1], etc.
           const index = attempt;
-          if (typeof accounts[index] !== "undefined") {
-            this.username = accounts[index]!.account;
-            this.password = accounts[index]!.password;
+          const account = accounts[index];
+          if (account) {
+            this.username = account.account;
+            this.password = account.password;
           }
         } else if (
           svnError.svnErrorCode === svnErrorCodes.AuthorizationFailed &&

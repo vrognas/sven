@@ -116,6 +116,9 @@ export function parseBatchLockInfo(
     }
   } catch (err) {
     logError("parseBatchLockInfo error", err);
+    throw err instanceof Error
+      ? err
+      : new Error("Failed to parse batch lock XML: Unknown error");
   }
 
   return result;
