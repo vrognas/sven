@@ -1,3 +1,11 @@
+## [2.32.14] (2025-12-03)
+
+### Perf: Config Cache Invalidation Fix
+
+- **Fixed**: Config cache only invalidates on svn.\* setting changes
+- **Before**: Invalidated on ANY VS Code config change (wasteful)
+- **Affected**: repository.ts config change handler
+
 ## [2.32.13] (2025-12-03)
 
 ### Security: Console Log Sanitization & JSON Validation
