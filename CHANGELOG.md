@@ -1,3 +1,11 @@
+## [2.32.13] (2025-12-03)
+
+### Security: Console Log Sanitization & JSON Validation
+
+- **Fixed**: Console.warn/log calls now use sanitized logWarning/logError
+- **Fixed**: JSON.parse in uri.ts validates structure, rejects prototype pollution
+- **Affected**: extension.ts, command.ts, branchChangesProvider.ts, RemoteChangeService.ts, svnAuthCache.ts
+
 ## [2.32.12] (2025-12-03)
 
 ### Fix: Timer Leaks & Performance
