@@ -13,8 +13,8 @@ import { Command } from "./command";
 
 /**
  * Commit from SCM input box (Ctrl+Enter).
- * If staged files exist, commits only staged (Git-like behavior).
- * Otherwise commits all changes.
+ * Requires files to be staged/selected before commit.
+ * If no files staged, offers to stage all and proceed.
  */
 export class CommitFromInputBox extends Command {
   private commitFlowService: CommitFlowService;
@@ -25,7 +25,7 @@ export class CommitFromInputBox extends Command {
   }
 
   public async execute(repository: Repository) {
-    // Check for staged files first - if present, commit only staged
+    // Get staged and changed files
     const staged = repository.staged.resourceStates.filter(
       s => s instanceof Resource
     ) as Resource[];
@@ -34,14 +34,33 @@ export class CommitFromInputBox extends Command {
       s => s instanceof Resource
     ) as Resource[];
 
-    // Determine what to commit: staged takes priority
-    const resourcesToCommit = staged.length > 0 ? staged : changes;
-    const isCommittingStaged = staged.length > 0;
+    // Require files to be staged before commit
+    if (staged.length === 0) {
+      if (changes.length === 0) {
+        window.showInformationMessage("No changes to commit");
+        return;
+      }
 
-    if (resourcesToCommit.length === 0) {
-      window.showInformationMessage("No changes to commit");
-      return;
+      // Offer to stage all and commit
+      const choice = await window.showInformationMessage(
+        `${changes.length} file(s) not staged. Stage all and commit?`,
+        "Stage All",
+        "Cancel"
+      );
+
+      if (choice !== "Stage All") {
+        return;
+      }
+
+      // Stage all changes
+      const changePaths = changes.map(r => r.resourceUri.fsPath);
+      await repository.stageOptimistic(changePaths);
     }
+
+    // Get staged files (possibly just auto-staged)
+    const resourcesToCommit = repository.staged.resourceStates.filter(
+      s => s instanceof Resource
+    ) as Resource[];
 
     const filePaths = resourcesToCommit.map(state => state.resourceUri.fsPath);
 
@@ -111,10 +130,8 @@ export class CommitFromInputBox extends Command {
       const result = await repository.commitFiles(message!, filePaths);
       window.showInformationMessage(result);
       repository.inputBox.value = "";
-      // Clear original changelist tracking if we committed staged files
-      if (isCommittingStaged) {
-        repository.staging.clearOriginalChangelists(filePaths);
-      }
+      // Clear original changelist tracking for committed files
+      repository.staging.clearOriginalChangelists(filePaths);
     }, "Unable to commit");
   }
 }
