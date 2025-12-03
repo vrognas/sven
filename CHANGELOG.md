@@ -1,3 +1,13 @@
+## [2.32.20] (2025-12-03)
+
+### Fix: Improved SVN Error Extraction
+
+- **Fixed**: "Unknown Error" when diff fails due to SvnError not being parsed correctly
+- **Root cause**: `SvnError.message` is generic "Failed to execute svn"; actual error code is in `svnErrorCode` and `stderr`
+- **Solution**: Extract `svnErrorCode` from SvnError object; use `stderrFormated` for detailed message
+- **Result**: Proper FileNotFound for E160013/E200009/W160013; clear error message for others
+- **Affected**: svnFileSystemProvider.ts
+
 ## [2.32.19] (2025-12-03)
 
 ### Fix: Peg Revision Double-@ Bug

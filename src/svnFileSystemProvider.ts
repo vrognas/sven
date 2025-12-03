@@ -187,22 +187,47 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       }
     } catch (error) {
       // Fix: Convert SVN errors to FileSystemError for proper VS Code handling
-      // Previously, errors were logged but returned empty content, causing "Unknown Error"
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      // SvnError has svnErrorCode and stderr with detailed info; message is generic
 
-      // Check for common "not found" error patterns
+      // Extract SVN error code from SvnError or error message/stderr
+      let svnErrorCode: string | undefined;
+      let errorDetails = "";
+
+      if (error && typeof error === "object" && "svnErrorCode" in error) {
+        // SvnError object - get the specific error code and stderr
+        const svnError = error as {
+          svnErrorCode?: string;
+          stderr?: string;
+          stderrFormated?: string;
+          message?: string;
+        };
+        svnErrorCode = svnError.svnErrorCode;
+        errorDetails =
+          svnError.stderrFormated || svnError.stderr || svnError.message || "";
+      } else {
+        // Regular Error - check message for error codes
+        errorDetails = error instanceof Error ? error.message : String(error);
+        const errorCodeMatch = errorDetails.match(/E\d+|W\d+/);
+        if (errorCodeMatch) {
+          svnErrorCode = errorCodeMatch[0];
+        }
+      }
+
+      // Check for "not found" error patterns
       if (
-        errorMessage.includes("E160013") || // Path not found
-        errorMessage.includes("E200009") || // Could not cat
-        errorMessage.includes("W160013") // URL not found
+        svnErrorCode === "E160013" || // Path not found
+        svnErrorCode === "E200009" || // Could not cat
+        svnErrorCode === "W160013" || // URL not found
+        errorDetails.includes("E160013") ||
+        errorDetails.includes("E200009") ||
+        errorDetails.includes("W160013")
       ) {
         throw FileSystemError.FileNotFound(uri);
       }
 
-      // Log and re-throw as unavailable for other errors
+      // Log and re-throw as unavailable with detailed message
       logError("Failed to read SVN file", error);
-      throw FileSystemError.Unavailable(errorMessage);
+      throw FileSystemError.Unavailable(errorDetails || "SVN operation failed");
     }
 
     return new Uint8Array(0);
