@@ -106,6 +106,8 @@ export class CommitStaged extends Command {
       repository.inputBox.value = "";
       // Note: SVN automatically removes files from changelists after commit
       // No need to call removeChangelist - it's handled by SVN
+      // Clear original changelist tracking for committed files
+      repository.staging.clearOriginalChangelists(selectedFiles);
     }, "Unable to commit");
   }
 }

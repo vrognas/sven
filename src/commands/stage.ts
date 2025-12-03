@@ -21,6 +21,22 @@ function getAffectedChangelists(resources: Resource[]): string[] {
 }
 
 /**
+ * Build a map of file path → original changelist for resources.
+ * Used to restore changelists on unstage.
+ */
+function buildOriginalChangelistMap(
+  resources: Resource[]
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const resource of resources) {
+    if (resource.changelist && resource.changelist !== STAGING_CHANGELIST) {
+      map.set(resource.resourceUri.fsPath, resource.changelist);
+    }
+  }
+  return map;
+}
+
+/**
  * Warn user if staging will remove files from existing changelists.
  * Returns true if user wants to proceed, false to cancel.
  */
@@ -50,10 +66,22 @@ export class Stage extends Command {
     const affected = getAffectedChangelists(selection);
     if (!(await warnAboutChangelists(affected))) return;
 
+    // Build map of original changelists before staging
+    const originalChangelists = buildOriginalChangelistMap(selection);
+
     const uris = selection.map(resource => resource.resourceUri);
 
     await this.runByRepository(uris, async (repository, resources) => {
       const paths = resources.map(r => r.fsPath);
+
+      // Save original changelists for restore on unstage
+      for (const path of paths) {
+        const original = originalChangelists.get(path);
+        if (original) {
+          repository.staging.saveOriginalChangelist(path, original);
+        }
+      }
+
       await this.handleRepositoryOperation(
         async () => repository.addChangelist(paths, STAGING_CHANGELIST),
         "Unable to stage files"
@@ -76,9 +104,21 @@ export class StageAll extends Command {
       const affected = getAffectedChangelists(selection);
       if (!(await warnAboutChangelists(affected))) return;
 
+      // Build map of original changelists before staging
+      const originalChangelists = buildOriginalChangelistMap(selection);
+
       const uris = selection.map(resource => resource.resourceUri);
       await this.runByRepository(uris, async (repository, resources) => {
         const paths = resources.map(r => r.fsPath);
+
+        // Save original changelists for restore on unstage
+        for (const path of paths) {
+          const original = originalChangelists.get(path);
+          if (original) {
+            repository.staging.saveOriginalChangelist(path, original);
+          }
+        }
+
         await this.handleRepositoryOperation(
           async () => repository.addChangelist(paths, STAGING_CHANGELIST),
           "Unable to stage files"
@@ -86,7 +126,7 @@ export class StageAll extends Command {
       });
     } else {
       // Stage all changes in all repositories - these are in "Changes" group
-      // so they shouldn't be in any changelist (no warning needed)
+      // so they shouldn't be in any changelist (no original changelist to save)
       await this.runByRepository([], async repository => {
         const changes = repository.changes.resourceStates;
         const paths = changes.map(r => r.resourceUri.fsPath);
