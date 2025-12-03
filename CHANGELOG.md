@@ -1,3 +1,14 @@
+## [2.32.28] (2025-12-03)
+
+### Fix: Update Revision Hangs Forever
+
+- **Fixed**: "Update Revision" shows "Updating from repository..." but never completes
+- **Root cause**: Deadlock from nested `credentialLock` acquisition
+  - `updateRevision()` → `run()` → `retryRun()` [acquires lock]
+  - Inside lambda: `await this.status()` → `run()` → `retryRun()` [blocks on same lock]
+- **Solution**: Remove redundant `status()` call; `run()` already calls `updateModelState()` after lambda
+- **Affected**: repository.ts updateRevision() method
+
 ## [2.32.27] (2025-12-03)
 
 ### Refactor: Use Object.hasOwn() Consistently

@@ -656,7 +656,7 @@ dispose(): void {
 
 ---
 
-**Document Version**: 2.11
+**Document Version**: 2.12
 **Last Updated**: 2025-12-03
 
 ### 23. VS Code TreeView Providers: Listen for Repository Open/Close Events
@@ -751,5 +751,48 @@ async log(rfrom, rto, limit, target?, pegRevision?: string) {
 ```
 
 **Rule**: Pass peg revision as a separate parameter; let the SVN-calling method construct the final path.
+
+---
+
+### 25. Avoid Nested Lock Acquisition in Async Code
+
+**Lesson**: Never call methods that acquire the same lock from within a lambda that already holds that lock.
+
+**Issue** (v2.32.28):
+
+- `updateRevision()` called `await this.status()` inside its lambda
+- `run()` wraps lambdas in `retryRun()` which acquires `credentialLock`
+- `status()` → `run()` → `retryRun()` tried to acquire same lock
+- **Deadlock**: Outer lock held, inner blocked waiting, outer waiting for inner to complete
+
+**Pattern**:
+
+```typescript
+// BAD: Nested lock acquisition
+async updateRevision() {
+  return this.run(Operation.Update, async () => {
+    await this.repository.update();
+    await this.status();  // ❌ Deadlock - status() also calls run() → retryRun()
+    return result;
+  });
+}
+
+// GOOD: Let run() handle post-operation work
+async updateRevision() {
+  return this.run(Operation.Update, async () => {
+    await this.repository.update();
+    // run() calls updateModelState() AFTER lambda returns (outside lock)
+    return result;
+  });
+}
+```
+
+**Why redundant**:
+
+- `run()` already calls `updateModelState()` after `retryRun()` completes
+- Non-readonly operations (like Update) always refresh status
+- Explicit `status()` call was redundant AND caused deadlock
+
+**Rule**: Understand lock boundaries. Never nest calls that acquire the same lock.
 
 ---

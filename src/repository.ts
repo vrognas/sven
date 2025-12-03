@@ -753,8 +753,8 @@ export class Repository implements IRemoteRepository {
       const result = await this.repository.update(ignoreExternals);
       // Brief delay to ensure SVN releases working copy lock
       await timeout(100);
-      // Refresh local status to show conflicts and updated files
-      await this.status();
+      // Note: status() removed - was causing deadlock due to nested credentialLock
+      // acquisition. run() already calls updateModelState() after this lambda returns.
       await this.updateRemoteChangedFiles();
       return result;
     });

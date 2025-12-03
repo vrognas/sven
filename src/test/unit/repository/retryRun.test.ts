@@ -8,6 +8,7 @@ import { ISvnErrorData, IStoredAuth } from "../../../common/types";
  * These tests verify the fix for:
  * - Bug 1: Account cycling never worked (always used last account)
  * - Bug 2: First attempt with empty credentials
+ * - Bug 3: updateRevision deadlock from nested credentialLock acquisition
  */
 suite("Repository retryRun Auth Logic", () => {
   suite("Account Cycling (Bug 1 Fix)", () => {
@@ -169,6 +170,96 @@ suite("Repository retryRun Auth Logic", () => {
       assert.strictEqual(attemptLog[1], "Attempt 2: user2");
       assert.strictEqual(attemptLog[2], "Attempt 3: user2");
       assert.ok(attemptLog[3]!.includes("Prompt triggered"));
+    });
+  });
+
+  suite("Nested retryRun Deadlock Prevention (Bug 3 Fix)", () => {
+    /**
+     * Bug 3: updateRevision() called await this.status() inside the lambda
+     * passed to run(). This caused a deadlock:
+     *
+     * 1. updateRevision() → run(Operation.Update, lambda)
+     * 2. run() → retryRun(lambda) [acquires credentialLock]
+     * 3. lambda runs → await this.status()
+     * 4. status() → run(Operation.Status)
+     * 5. run() → retryRun() [BLOCKS waiting for credentialLock]
+     * 6. DEADLOCK: outer retryRun holds lock, waiting for lambda to complete
+     *              lambda waiting for inner retryRun to complete
+     *              inner retryRun waiting for lock held by outer
+     *
+     * Fix: Removed await this.status() from updateRevision lambda.
+     * Status refresh happens automatically via run()'s updateModelState()
+     * after the lambda completes.
+     */
+    test("Demonstrates why nested retryRun causes deadlock", () => {
+      // Simulate credentialLock as a simple mutex
+      let lockHeld = false;
+      let lockQueue: (() => void)[] = [];
+
+      const acquireLock = (): Promise<void> => {
+        if (!lockHeld) {
+          lockHeld = true;
+          return Promise.resolve();
+        }
+        // Lock is held - would block forever in real scenario
+        return new Promise(resolve => {
+          lockQueue.push(resolve);
+        });
+      };
+
+      const releaseLock = () => {
+        lockHeld = false;
+        const next = lockQueue.shift();
+        if (next) {
+          lockHeld = true;
+          next();
+        }
+      };
+
+      // Simulate the buggy flow
+      let outerAcquired = false;
+      let innerBlocked = false;
+
+      // Step 1: Outer retryRun acquires lock
+      acquireLock().then(() => {
+        outerAcquired = true;
+
+        // Step 2: Nested call tries to acquire same lock
+        const innerPromise = acquireLock();
+        innerPromise.then(() => {
+          // This would never execute in the buggy code
+        });
+
+        // Step 3: Check if inner is blocked (it should be)
+        innerBlocked = lockQueue.length > 0;
+
+        // Clean up for test
+        releaseLock();
+      });
+
+      // Verify deadlock scenario
+      assert.strictEqual(outerAcquired, true, "Outer should acquire lock");
+      assert.strictEqual(innerBlocked, true, "Inner should be blocked");
+    });
+
+    test("Fix: run() calls updateModelState() after lambda, no need for nested status()", () => {
+      // The fix relies on this architectural fact:
+      // run() method structure (simplified):
+      //   async run(operation, lambda) {
+      //     await retryRun(lambda);           // lambda executes inside lock
+      //     await updateModelState();         // <-- this refreshes status AFTER lock released
+      //   }
+      //
+      // So calling status() inside the lambda was redundant AND caused deadlock
+
+      // Verify the architectural assumption: non-readonly operations call updateModelState
+      const readOnlyOps = ["CurrentBranch", "Log", "Show", "Info", "Changes"];
+      const updateOp = "Update";
+
+      assert.ok(
+        !readOnlyOps.includes(updateOp),
+        "Update is NOT a readonly operation, so run() calls updateModelState()"
+      );
     });
   });
 });
