@@ -1,7 +1,12 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { QuickPickItem, QuickPickItemKind, window } from "vscode";
+import {
+  InputBoxValidationSeverity,
+  QuickPickItem,
+  QuickPickItemKind,
+  window
+} from "vscode";
 import { Repository } from "../repository";
 import {
   ConventionalCommitService,
@@ -242,7 +247,6 @@ export class CommitFlowService {
   ): Promise<string | undefined> {
     const prefix = scope ? `${type}(${scope}): ` : `${type}: `;
     const maxTotal = this.conventionalService.getMaxLength();
-    const maxDesc = maxTotal - prefix.length;
 
     // Try to extract description from existing message
     let initialValue = "";
@@ -258,21 +262,30 @@ export class CommitFlowService {
 
     const description = await window.showInputBox({
       title: `Commit (3/3): ${prefix}_`,
-      prompt: `Max ${maxTotal} chars total (${maxDesc} for description)`,
-      placeHolder: "Brief description of changes",
+      prompt: "Brief description of changes",
+      placeHolder: "What did you change?",
       value: initialValue,
       validateInput: value => {
         if (!value || value.trim() === "") {
-          return "Description required";
+          return {
+            message: "Description required",
+            severity: InputBoxValidationSeverity.Error
+          };
         }
         const totalLen = prefix.length + value.length;
         const remaining = maxTotal - totalLen;
 
         if (remaining < 0) {
-          return `${totalLen}/${maxTotal} (${remaining}) - exceeds recommended 50 char limit`;
+          return {
+            message: `${totalLen}/${maxTotal} (${remaining}) - exceeds 50 char recommendation`,
+            severity: InputBoxValidationSeverity.Warning
+          };
         }
-        // Show count as informational (null = valid, but we show count in prompt)
-        return undefined;
+        // Show real-time character count as info
+        return {
+          message: `${totalLen}/${maxTotal}`,
+          severity: InputBoxValidationSeverity.Info
+        };
       }
     });
 
@@ -341,18 +354,28 @@ export class CommitFlowService {
 
     return window.showInputBox({
       title: "Commit: Enter message",
-      prompt: `Max ${maxLen} chars recommended`,
+      prompt: "Enter your commit message",
       value: repository.inputBox.value,
       placeHolder: "Your commit message",
       validateInput: value => {
         if (!value || value.trim() === "") {
-          return "Message required";
+          return {
+            message: "Message required",
+            severity: InputBoxValidationSeverity.Error
+          };
         }
         const remaining = maxLen - value.length;
         if (remaining < 0) {
-          return `${value.length}/${maxLen} (${remaining}) - exceeds recommended 50 char limit`;
+          return {
+            message: `${value.length}/${maxLen} (${remaining}) - exceeds 50 char recommendation`,
+            severity: InputBoxValidationSeverity.Warning
+          };
         }
-        return undefined;
+        // Show real-time character count as info
+        return {
+          message: `${value.length}/${maxLen}`,
+          severity: InputBoxValidationSeverity.Info
+        };
       }
     });
   }
