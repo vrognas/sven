@@ -13,7 +13,8 @@ import { Command } from "./command";
 
 /**
  * Commit from SCM input box (Ctrl+Enter).
- * Uses new QuickPick flow or legacy webview based on config.
+ * If staged files exist, commits only staged (Git-like behavior).
+ * Otherwise commits all changes.
  */
 export class CommitFromInputBox extends Command {
   private commitFlowService: CommitFlowService;
@@ -24,20 +25,28 @@ export class CommitFromInputBox extends Command {
   }
 
   public async execute(repository: Repository) {
-    // Get all resources from changes group
+    // Check for staged files first - if present, commit only staged
+    const staged = repository.staged.resourceStates.filter(
+      s => s instanceof Resource
+    ) as Resource[];
+
     const changes = repository.changes.resourceStates.filter(
       s => s instanceof Resource
     ) as Resource[];
 
-    if (changes.length === 0) {
+    // Determine what to commit: staged takes priority
+    const resourcesToCommit = staged.length > 0 ? staged : changes;
+    const isCommittingStaged = staged.length > 0;
+
+    if (resourcesToCommit.length === 0) {
       window.showInformationMessage("No changes to commit");
       return;
     }
 
-    const filePaths = changes.map(state => state.resourceUri.fsPath);
+    const filePaths = resourcesToCommit.map(state => state.resourceUri.fsPath);
 
     // Handle renamed files and parent directories
-    changes.forEach(state => {
+    resourcesToCommit.forEach(state => {
       if (state.type === Status.ADDED && state.renameResourceUri) {
         filePaths.push(state.renameResourceUri.fsPath);
       }
@@ -102,6 +111,10 @@ export class CommitFromInputBox extends Command {
       const result = await repository.commitFiles(message!, filePaths);
       window.showInformationMessage(result);
       repository.inputBox.value = "";
+      // Clear original changelist tracking if we committed staged files
+      if (isCommittingStaged) {
+        repository.staging.clearOriginalChangelists(filePaths);
+      }
     }, "Unable to commit");
   }
 }
