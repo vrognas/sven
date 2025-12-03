@@ -104,8 +104,8 @@ export class CommitStaged extends Command {
       const result = await repository.commitFiles(message!, selectedFiles);
       window.showInformationMessage(result);
       repository.inputBox.value = "";
-      // Clear staged files after successful commit (removes from __staged__ changelist)
-      await repository.removeChangelist(selectedFiles);
+      // Note: SVN automatically removes files from changelists after commit
+      // No need to call removeChangelist - it's handled by SVN
     }, "Unable to commit");
   }
 }
