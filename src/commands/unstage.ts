@@ -71,7 +71,7 @@ export class UnstageAll extends Command {
   public async execute(...resourceStates: SourceControlResourceState[]) {
     const selection = await this.getResourceStates(resourceStates);
 
-    // If called with resources, unstage those; otherwise unstage all staged
+    // If called with resources, unstage those
     if (selection.length > 0) {
       const uris = selection.map(resource => resource.resourceUri);
       await this.runByRepository(uris, async (repository, resources) => {
@@ -82,17 +82,35 @@ export class UnstageAll extends Command {
         );
       });
     } else {
-      // Unstage all in all repositories
-      await this.runByRepository([], async repository => {
-        const staged = repository.staged.resourceStates;
-        const paths = staged.map(r => r.resourceUri.fsPath);
-        if (paths.length > 0) {
-          await this.handleRepositoryOperation(
-            async () => unstageWithRestoreOptimistic(repository, paths),
-            "Unable to unstage files"
-          );
-        }
+      // Unstage all staged files - iterate via staged group URIs
+      await this.runForAllStaged(async (repository, paths) => {
+        await this.handleRepositoryOperation(
+          async () => unstageWithRestoreOptimistic(repository, paths),
+          "Unable to unstage files"
+        );
       });
+    }
+  }
+
+  /**
+   * Run operation for all staged files across all repositories.
+   */
+  private async runForAllStaged(
+    fn: (repository: Repository, paths: string[]) => Promise<void>
+  ): Promise<void> {
+    const { commands } = await import("vscode");
+
+    const sourceControlManager = (await commands.executeCommand(
+      "svn.getSourceControlManager",
+      ""
+    )) as { repositories: Repository[] };
+
+    for (const repository of sourceControlManager.repositories) {
+      const staged = repository.staged.resourceStates;
+      const paths = staged.map(r => r.resourceUri.fsPath);
+      if (paths.length > 0) {
+        await fn(repository, paths);
+      }
     }
   }
 }
