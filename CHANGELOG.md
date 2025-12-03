@@ -1,3 +1,11 @@
+## [2.32.8] (2025-12-03)
+
+### UX: Apply Recommended Settings Command
+
+- **Added**: `SVN: Apply Recommended Settings` command
+- **Profiles**: Data Science (recommended), Minimal, Full Features
+- **Purpose**: Reduces configuration complexity (60+ settings → 3 profiles)
+
 ## [2.32.7] (2025-12-03)
 
 ### Docs: Comprehensive Quality Review
