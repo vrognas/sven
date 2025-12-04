@@ -79,38 +79,37 @@ export class Resource implements SourceControlResourceState {
   }
 
   get decorations(): SourceControlResourceDecorations {
-    // Test: set iconPath for ALL resources to see if that fixes folder display
-    // Badge (A/M/D) comes from FileDecorationProvider
-    const light = {
-      iconPath:
-        this._kind === "dir"
-          ? Uri.file(path.join(iconsRootPath, "light", "folder.svg"))
-          : this.getStatusIconPath("light")
-    };
-    const dark = {
-      iconPath:
-        this._kind === "dir"
-          ? Uri.file(path.join(iconsRootPath, "dark", "folder.svg"))
-          : this.getStatusIconPath("dark")
-    };
+    // Folders: composite icons with folder shape + status badge
+    // Files: don't set iconPath, let VS Code show file extension icons
+    // FileDecorationProvider adds A/M/D badges to files
+    if (this._kind === "dir") {
+      const light = { iconPath: this.getFolderIconPath("light") };
+      const dark = { iconPath: this.getFolderIconPath("dark") };
+      return {
+        strikeThrough: this.strikeThrough,
+        faded: this.faded,
+        tooltip: this.tooltip,
+        light,
+        dark
+      };
+    }
 
+    // Files: no iconPath, VS Code uses file extension icon + FileDecorationProvider badge
     return {
       strikeThrough: this.strikeThrough,
       faded: this.faded,
-      tooltip: this.tooltip,
-      light,
-      dark
+      tooltip: this.tooltip
     };
   }
 
-  private getStatusIconPath(theme: string): Uri {
-    // Map status to icon - using existing status icons
+  private getFolderIconPath(theme: string): Uri {
+    // Map status to folder icon - folder shape with embedded status badge
     let iconName: string;
     if (this.type === Status.ADDED && this.renameResourceUri) {
-      iconName = "status-renamed";
+      iconName = "folder-renamed";
     } else {
       const type = this.type.charAt(0).toUpperCase() + this.type.slice(1);
-      iconName = `status-${type.toLowerCase()}`;
+      iconName = `folder-${type.toLowerCase()}`;
     }
     return Uri.file(path.join(iconsRootPath, theme, `${iconName}.svg`));
   }
