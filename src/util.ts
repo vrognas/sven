@@ -202,28 +202,28 @@ export function camelcase(name: string) {
  * Validate SVN file path for security
  * Prevents path traversal and other path-based attacks
  *
- * @param path Path from SVN XML output
+ * @param filePath Path from SVN XML output
  * @returns Normalized safe path
  * @throws Error if path is unsafe
  */
-export function validateSvnPath(path: string): string {
+export function validateSvnPath(filePath: string): string {
   // Reject empty/null paths
-  if (!path || path.trim().length === 0) {
+  if (!filePath || filePath.trim().length === 0) {
     throw new Error("Path is empty");
   }
 
   // Reject null bytes
-  if (path.includes("\0")) {
+  if (filePath.includes("\0")) {
     throw new Error("Path contains null bytes");
   }
 
   // Reject absolute paths (Windows drive letters or Unix root)
-  if (/^([a-zA-Z]:|\/)/.test(path)) {
+  if (/^([a-zA-Z]:|\/)/.test(filePath)) {
     throw new Error("Absolute paths not allowed");
   }
 
   // Reject path traversal
-  const normalized = path.normalize(path);
+  const normalized = path.normalize(filePath);
   if (normalized.includes("..")) {
     throw new Error("Path traversal not allowed");
   }

@@ -30,8 +30,11 @@ export async function parseSvnLog(content: string): Promise<ISvnLogEntry[]> {
           logentry.paths = [];
         } else if (Array.isArray(logentry.paths.path)) {
           logentry.paths = logentry.paths.path;
-        } else {
+        } else if (logentry.paths.path !== undefined) {
           logentry.paths = [logentry.paths.path];
+        } else {
+          // paths exists but path is undefined (empty <paths> tag)
+          logentry.paths = [];
         }
       }
 

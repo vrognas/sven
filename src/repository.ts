@@ -296,7 +296,11 @@ export class Repository implements IRemoteRepository {
     this._fsWatcher.onDidAny(this.onFSChange, this, this.disposables);
     this._fsWatcher.onDidSvnAny(
       async (e: Uri) => {
-        await this.onDidAnyFileChanged(e);
+        try {
+          await this.onDidAnyFileChanged(e);
+        } catch (err) {
+          logError("File watcher callback failed", err);
+        }
       },
       this,
       this.disposables

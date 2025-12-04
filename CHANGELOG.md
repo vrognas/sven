@@ -1,3 +1,12 @@
+## [2.33.4] (2025-12-04)
+
+### Fix: Critical Bug Fixes (v2.33.4)
+
+- **Fix**: validateSvnPath() crash - parameter shadowed path module causing TypeError (CRITICAL)
+- **Fix**: Log parser crash - empty `<paths>` tag caused undefined array element
+- **Fix**: Unhandled promise rejection in file watcher callback - now properly caught and logged
+- **Affected**: src/util.ts, src/parser/logParser.ts, src/repository.ts
+
 ## [2.33.3] (2025-12-04)
 
 ### UX: Clearer Commands & Terminology
