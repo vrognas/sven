@@ -83,16 +83,17 @@ export class Resource implements SourceControlResourceState {
     // Files: don't set iconPath, VS Code uses file extension icon
     // Badge (A/M/D) comes from FileDecorationProvider
     if (this._kind === "dir") {
+      const lightIcon = Uri.file(
+        path.join(iconsRootPath, "light", "folder.svg")
+      );
+      const darkIcon = Uri.file(path.join(iconsRootPath, "dark", "folder.svg"));
       return {
         strikeThrough: this.strikeThrough,
         faded: this.faded,
         tooltip: this.tooltip,
-        light: {
-          iconPath: Uri.file(path.join(iconsRootPath, "light", "folder.svg"))
-        },
-        dark: {
-          iconPath: Uri.file(path.join(iconsRootPath, "dark", "folder.svg"))
-        }
+        iconPath: lightIcon,
+        light: { iconPath: lightIcon },
+        dark: { iconPath: darkIcon }
       };
     }
 
