@@ -760,12 +760,46 @@ export class Repository implements IRemoteRepository {
    * Stage files with optimistic UI update.
    * Runs SVN changelist command but skips full status refresh.
    * UI is updated immediately by moving resources between groups.
+   *
+   * Note: SVN changelists are file-only - directories can't be added.
+   * When staging a directory, we expand it to include all changed
+   * descendant files.
    */
   public async stageOptimistic(files: string[]): Promise<void> {
+    // Expand directories to include all changed descendant files
+    // (SVN changelists don't support directories)
+    const expanded = this.expandDirectoriesToChangedFiles(files);
+
     // Run SVN command to update working copy state
-    await this.repository.addChangelist(files, STAGING_CHANGELIST);
+    await this.repository.addChangelist(expanded, STAGING_CHANGELIST);
     // Optimistically update UI without status refresh
-    this.groupManager.moveToStaged(files);
+    this.groupManager.moveToStaged(expanded);
+  }
+
+  /**
+   * Expand directory paths to include all changed descendant files.
+   * SVN changelists only work with files, not directories.
+   */
+  private expandDirectoriesToChangedFiles(paths: string[]): string[] {
+    const result = new Set<string>();
+    const changedPaths = this.groupManager.changes.resourceStates.map(
+      r => r.resourceUri.fsPath
+    );
+
+    for (const p of paths) {
+      // Always include the original path
+      result.add(p);
+
+      // Check if any changed files are descendants of this path
+      const prefix = p.endsWith("/") || p.endsWith("\\") ? p : p + "/";
+      for (const changed of changedPaths) {
+        if (changed.startsWith(prefix)) {
+          result.add(changed);
+        }
+      }
+    }
+
+    return Array.from(result);
   }
 
   /**
@@ -778,15 +812,41 @@ export class Repository implements IRemoteRepository {
     files: string[],
     targetChangelist?: string
   ): Promise<void> {
+    // Expand directories to include all staged descendant files
+    const expanded = this.expandDirectoriesToStagedFiles(files);
+
     if (targetChangelist) {
       // Restore to original changelist
-      await this.repository.addChangelist(files, targetChangelist);
+      await this.repository.addChangelist(expanded, targetChangelist);
     } else {
       // Remove from changelist entirely
-      await this.repository.removeChangelist(files);
+      await this.repository.removeChangelist(expanded);
     }
     // Optimistically update UI without status refresh
-    this.groupManager.moveFromStaged(files, targetChangelist);
+    this.groupManager.moveFromStaged(expanded, targetChangelist);
+  }
+
+  /**
+   * Expand directory paths to include all staged descendant files.
+   */
+  private expandDirectoriesToStagedFiles(paths: string[]): string[] {
+    const result = new Set<string>();
+    const stagedPaths = this.groupManager.staged.resourceStates.map(
+      r => r.resourceUri.fsPath
+    );
+
+    for (const p of paths) {
+      result.add(p);
+
+      const prefix = p.endsWith("/") || p.endsWith("\\") ? p : p + "/";
+      for (const staged of stagedPaths) {
+        if (staged.startsWith(prefix)) {
+          result.add(staged);
+        }
+      }
+    }
+
+    return Array.from(result);
   }
 
   public async getCurrentBranch() {
