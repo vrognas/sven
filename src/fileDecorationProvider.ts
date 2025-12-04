@@ -19,7 +19,9 @@ import { Repository } from "./repository";
 export class SvnFileDecorationProvider
   implements FileDecorationProvider, Disposable
 {
-  private _onDidChangeFileDecorations = new EventEmitter<Uri | Uri[]>();
+  private _onDidChangeFileDecorations = new EventEmitter<
+    Uri | Uri[] | undefined
+  >();
   readonly onDidChangeFileDecorations = this._onDidChangeFileDecorations.event;
   private disposables: Disposable[] = [];
 
@@ -120,8 +122,9 @@ export class SvnFileDecorationProvider
    * Refresh decorations for changed files
    */
   refresh(uris?: Uri | Uri[]): void {
-    // Fire event with uris if provided, otherwise fire with empty array to refresh all
-    this._onDidChangeFileDecorations.fire(uris || []);
+    // Fire with undefined to refresh all, or specific URIs to refresh those
+    // Note: empty array [] means refresh nothing, undefined means refresh all
+    this._onDidChangeFileDecorations.fire(uris);
   }
 
   /**
