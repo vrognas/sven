@@ -1045,9 +1045,13 @@ export class Repository implements IRemoteRepository {
   }
 
   public async commitFiles(message: string, files: string[]) {
-    return this.run(Operation.Commit, () =>
+    const result = await this.run(Operation.Commit, () =>
       this.repository.commitFiles(message, files)
     );
+    // Refresh history views to show new commit
+    commands.executeCommand("svn.repolog.refresh");
+    commands.executeCommand("svn.itemlog.refresh");
+    return result;
   }
 
   public async revert(files: string[], depth: keyof typeof SvnDepth) {
