@@ -179,6 +179,13 @@ export class Repository implements IRemoteRepository {
   private promptAuthCooldownTimer?: ReturnType<typeof setTimeout>;
   private storedAuthsCache?: { accounts: IStoredAuth[]; expiry: number };
 
+  // Needs-lock cache: tracks files with svn:needs-lock property
+  private needsLockCache = new Map<
+    string,
+    { value: boolean; expiry: number }
+  >();
+  private static readonly NEEDS_LOCK_CACHE_TTL = 60000; // 60 seconds
+
   private _fsWatcher: RepositoryFilesWatcher;
   public get fsWatcher() {
     return this._fsWatcher;
@@ -413,6 +420,13 @@ export class Repository implements IRemoteRepository {
     this.disposables.push(
       workspace.onDidSaveTextDocument(document => {
         this.onDidSaveTextDocument(document);
+      }),
+      // Prompt to lock files with svn:needs-lock property when opened
+      workspace.onDidOpenTextDocument(document => {
+        if (document.uri.scheme === "file") {
+          // Fire async - don't block document open
+          void this.promptLockIfNeeded(document.uri);
+        }
       })
     );
   }
@@ -1432,10 +1446,27 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Check if file has svn:needs-lock property.
+   * Check if file has svn:needs-lock property (with caching).
+   * Returns true if file has the property set.
    */
   public async hasNeedsLock(filePath: string): Promise<boolean> {
-    return this.repository.hasNeedsLock(filePath);
+    const now = Date.now();
+    const cached = this.needsLockCache.get(filePath);
+
+    if (cached && cached.expiry > now) {
+      return cached.value;
+    }
+
+    try {
+      const result = await this.repository.hasNeedsLock(filePath);
+      this.needsLockCache.set(filePath, {
+        value: result,
+        expiry: now + Repository.NEEDS_LOCK_CACHE_TTL
+      });
+      return result;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -1454,6 +1485,40 @@ export class Repository implements IRemoteRepository {
     return this.run(Operation.Update, () =>
       this.repository.removeNeedsLock(filePath)
     );
+  }
+
+  /**
+   * Check if file needs lock and prompt user to lock it.
+   * Called when opening a file that might need locking.
+   */
+  public async promptLockIfNeeded(uri: Uri): Promise<void> {
+    // Only check files in this repository's working copy
+    if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+      return;
+    }
+
+    // Check if file already has a lock (any lock status means it's locked)
+    const resource = this.getResourceFromFile(uri.fsPath);
+    if (resource?.lockStatus || resource?.locked) {
+      return; // Already locked
+    }
+
+    // Check if file has needs-lock property
+    const needsLock = await this.hasNeedsLock(uri.fsPath);
+    if (!needsLock) {
+      return;
+    }
+
+    // File has needs-lock but isn't locked - prompt user
+    const choice = await window.showInformationMessage(
+      "This file requires a lock before editing. Lock it now?",
+      "Lock File",
+      "Not Now"
+    );
+
+    if (choice === "Lock File") {
+      await commands.executeCommand("svn.lock", uri);
+    }
   }
 
   public dispose(): void {
