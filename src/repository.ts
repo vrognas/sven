@@ -764,11 +764,20 @@ export class Repository implements IRemoteRepository {
    * Note: SVN changelists are file-only - directories can't be added.
    * When staging a directory, we expand it to include all changed
    * descendant files.
+   *
+   * For unversioned files, `svn add` is called first before changelist.
    */
   public async stageOptimistic(files: string[]): Promise<void> {
     // Expand directories to include all changed descendant files
     // (SVN changelists don't support directories)
     const expanded = this.expandDirectoriesToChangedFiles(files);
+
+    // Find unversioned items that need `svn add` first
+    const unversionedPaths = this.findUnversionedPaths(expanded);
+    if (unversionedPaths.length > 0) {
+      // svn add handles parent directories automatically
+      await this.repository.addFiles(unversionedPaths);
+    }
 
     // Filter out directories for SVN command (changelists are file-only)
     // but keep them for UI update
@@ -780,6 +789,20 @@ export class Repository implements IRemoteRepository {
     }
     // Optimistically update UI (includes directories for visual grouping)
     this.groupManager.moveToStaged(expanded);
+  }
+
+  /**
+   * Find paths that are unversioned (need `svn add` before changelist).
+   */
+  private findUnversionedPaths(paths: string[]): string[] {
+    const unversioned: string[] = [];
+    for (const p of paths) {
+      const resource = this.groupManager.getResourceFromFile(p);
+      if (resource && resource.type === Status.UNVERSIONED) {
+        unversioned.push(p);
+      }
+    }
+    return unversioned;
   }
 
   /**

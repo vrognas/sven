@@ -795,7 +795,7 @@
       },
       {
         "command": "svn.revert",
-        "title": "Revert Selected File",
+        "title": "Revert",
         "category": "SVN",
         "icon": "$(discard)"
       },
@@ -1456,11 +1456,6 @@
           "command": "svn.resolve",
           "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup == conflicts",
           "group": "1_modification"
-        },
-        {
-          "command": "svn.changelist",
-          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != conflicts && scmResourceGroup != remotechanges && scmResourceGroup != staged",
-          "group": "inline"
         },
         {
           "command": "svn.changelist",

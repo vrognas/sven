@@ -383,12 +383,20 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * Optimistically move resources to staged group without SVN status refresh.
    * Used for instant UI feedback after staging operations.
+   * When staging a file, also stages any parent folders that are in changes.
    * @param paths File paths to move to staged
    * @returns Resources that were moved (for potential rollback)
    */
   moveToStaged(paths: string[]): Resource[] {
     const movedResources: Resource[] = [];
     const pathSet = new Set(paths.map(p => normalizePath(p)));
+
+    // Find parent directories that need to be staged with files
+    // (can't commit a file without its parent folder existing)
+    const parentsToStage = this.findParentDirectoriesToStage(pathSet);
+    for (const parentPath of parentsToStage) {
+      pathSet.add(parentPath);
+    }
 
     // Find and remove from changes group
     const remainingChanges = this._changes.resourceStates.filter(r => {
@@ -402,6 +410,21 @@ export class ResourceGroupManager implements IResourceGroupManager {
       return true;
     });
     this._changes.resourceStates = remainingChanges;
+
+    // Find and remove from unversioned group (new folders appear here)
+    const remainingUnversioned = this._unversioned.resourceStates.filter(r => {
+      if (
+        r instanceof Resource &&
+        pathSet.has(normalizePath(r.resourceUri.fsPath))
+      ) {
+        if (!movedResources.includes(r)) {
+          movedResources.push(r);
+        }
+        return false;
+      }
+      return true;
+    });
+    this._unversioned.resourceStates = remainingUnversioned;
 
     // Find and remove from changelist groups
     this._changelists.forEach(group => {
@@ -439,6 +462,59 @@ export class ResourceGroupManager implements IResourceGroupManager {
     );
 
     return movedResources;
+  }
+
+  /**
+   * Find parent directories of paths that need to be staged together.
+   * When staging a file in a new folder, the folder must also be staged.
+   */
+  private findParentDirectoriesToStage(pathSet: Set<string>): string[] {
+    const parentsToStage: string[] = [];
+
+    // Build set of all directory paths in changes, unversioned, and changelists
+    const availableDirs = new Map<string, Resource>();
+    const collectDirs = (resources: readonly { resourceUri: Uri }[]) => {
+      for (const r of resources) {
+        if (r instanceof Resource && r.kind === "dir") {
+          availableDirs.set(normalizePath(r.resourceUri.fsPath), r);
+        }
+      }
+    };
+
+    collectDirs(this._changes.resourceStates);
+    collectDirs(this._unversioned.resourceStates);
+    this._changelists.forEach(group => collectDirs(group.resourceStates));
+
+    // For each path being staged, check if its parents are in available dirs
+    for (const filePath of pathSet) {
+      let parentPath = this.getParentPath(filePath);
+      while (parentPath) {
+        const normalizedParent = normalizePath(parentPath);
+        if (
+          availableDirs.has(normalizedParent) &&
+          !pathSet.has(normalizedParent)
+        ) {
+          parentsToStage.push(normalizedParent);
+        }
+        parentPath = this.getParentPath(parentPath);
+      }
+    }
+
+    return parentsToStage;
+  }
+
+  /**
+   * Get parent directory path, or undefined if at root
+   */
+  private getParentPath(filePath: string): string | undefined {
+    const lastSep = Math.max(
+      filePath.lastIndexOf("/"),
+      filePath.lastIndexOf("\\")
+    );
+    if (lastSep <= 0) {
+      return undefined;
+    }
+    return filePath.substring(0, lastSep);
   }
 
   /**
