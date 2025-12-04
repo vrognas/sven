@@ -356,11 +356,12 @@ export class StatusService implements IStatusService {
         status.changelist
       );
 
-      // Skip normal/unchanged items
+      // Skip normal/unchanged items (but keep locked files for decoration)
       if (
         (status.status === Status.NORMAL || status.status === Status.NONE) &&
         (status.props === Status.NORMAL || status.props === Status.NONE) &&
-        !status.changelist
+        !status.changelist &&
+        !lockStatus // Keep locked files even if otherwise unchanged
       ) {
         continue;
       } else if (status.status === Status.IGNORED) {
