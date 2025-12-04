@@ -8,6 +8,7 @@ import {
   SourceControlResourceDecorations,
   SourceControlResourceState,
   ThemeColor,
+  ThemeIcon,
   Uri
 } from "vscode";
 import { LockStatus, PropStatus, Status } from "./common/types";
@@ -57,8 +58,13 @@ export class Resource implements SourceControlResourceState {
     private _lockOwner?: string,
     private _hasLockToken: boolean = false,
     private _lockStatus?: LockStatus,
-    private _changelist?: string
+    private _changelist?: string,
+    private _kind?: "file" | "dir"
   ) {}
+
+  get kind(): "file" | "dir" | undefined {
+    return this._kind;
+  }
 
   get changelist(): string | undefined {
     return this._changelist;
@@ -104,11 +110,22 @@ export class Resource implements SourceControlResourceState {
 
   get decorations(): SourceControlResourceDecorations {
     // TODO@joh, still requires restart/redraw in the SCM viewlet
-    const light = { iconPath: this.getIconPath("light") };
-    const dark = { iconPath: this.getIconPath("dark") };
     const tooltip = this.tooltip;
     const strikeThrough = this.strikeThrough;
     const faded = this.faded;
+
+    // Use ThemeIcon.Folder for directories, custom icons for files
+    if (this._kind === "dir") {
+      return {
+        strikeThrough,
+        faded,
+        tooltip,
+        iconPath: ThemeIcon.Folder
+      };
+    }
+
+    const light = { iconPath: this.getIconPath("light") };
+    const dark = { iconPath: this.getIconPath("dark") };
 
     return {
       strikeThrough,

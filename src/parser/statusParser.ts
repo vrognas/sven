@@ -82,6 +82,7 @@ function processEntry(
   const r: IFileStatus = {
     changelist,
     path: entry.path,
+    kind: entry.kind,
     status: entry.wcStatus.item,
     props: entry.wcStatus.props,
     wcStatus,

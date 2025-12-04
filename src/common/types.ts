@@ -190,6 +190,7 @@ export interface IFileStatus {
   status: string;
   props: string;
   path: string;
+  kind?: "file" | "dir";
   changelist?: string;
   rename?: string;
   wcStatus: IWcStatus;
@@ -208,6 +209,7 @@ export interface IFileStatus {
 
 export interface IEntry {
   path: string;
+  kind?: "file" | "dir";
   wcStatus: {
     item: string;
     revision: string;

@@ -353,7 +353,8 @@ export class StatusService implements IStatusService {
         status.wcStatus.lockOwner,
         status.wcStatus.hasLockToken,
         lockStatus,
-        status.changelist
+        status.changelist,
+        status.kind
       );
 
       // Skip normal/unchanged items (but keep locked files for decoration)
