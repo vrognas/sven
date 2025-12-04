@@ -81,8 +81,7 @@ export class SvnFileDecorationProvider
     const resource = this.repository.getResourceFromFile(uri.fsPath);
 
     if (!resource) {
-      // File not in changes list - check if it has needs-lock property
-      return this.getNeedsLockDecoration(uri);
+      return undefined;
     }
 
     const status = resource.type;
@@ -121,8 +120,7 @@ export class SvnFileDecorationProvider
     }
 
     if (!badge && !color) {
-      // No status decoration - check if needs-lock
-      return this.getNeedsLockDecoration(uri);
+      return undefined;
     }
 
     return {
@@ -130,35 +128,6 @@ export class SvnFileDecorationProvider
       tooltip,
       color,
       propagate: true // Show on parent folders like Git
-    };
-  }
-
-  /**
-   * Get decoration for files with svn:needs-lock property (not locked)
-   */
-  private async getNeedsLockDecoration(
-    uri: Uri
-  ): Promise<FileDecoration | undefined> {
-    // Only check file scheme
-    if (uri.scheme !== "file") {
-      return undefined;
-    }
-
-    // Check if file is in working copy
-    if (!uri.fsPath.startsWith(this.repository.workspaceRoot)) {
-      return undefined;
-    }
-
-    // Check if file has needs-lock property
-    const hasNeedsLock = await this.repository.hasNeedsLock(uri.fsPath);
-    if (!hasNeedsLock) {
-      return undefined;
-    }
-
-    return {
-      badge: "🔓", // Open lock icon
-      tooltip: "Needs lock - file is read-only until locked",
-      propagate: false // Don't propagate to parent folders
     };
   }
 
