@@ -1,3 +1,11 @@
+## [2.33.2] (2025-12-04)
+
+### Fix: Resource Leak Cleanup
+
+- **Fix**: Native fs.watch file watcher now properly disposed on repository close (prevents file handle leak)
+- **Fix**: Process exit handlers (SIGINT/SIGTERM) now cleaned up on extension deactivation (prevents handler accumulation during dev reloads)
+- **Affected**: repositoryFilesWatcher.ts, extension.ts
+
 ## [2.33.1] (2025-12-03)
 
 ### Perf: Optimistic UI for Stage/Unstage
