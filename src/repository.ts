@@ -689,7 +689,8 @@ export class Repository implements IRemoteRepository {
     const changesCount = this.groupManager.changes.resourceStates.length;
     const hasChanges = stagedCount > 0 || changesCount > 0;
 
-    const label = stagedCount > 0 ? `✓ Commit (${stagedCount})` : "✓ Commit";
+    const label =
+      stagedCount > 0 ? `$(check) Commit (${stagedCount})` : "$(check) Commit";
 
     // Secondary commands for dropdown menu (Command[][])
     const secondaryCommands = [
