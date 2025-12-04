@@ -8,6 +8,7 @@ import {
   SourceControlResourceDecorations,
   SourceControlResourceState,
   ThemeColor,
+  ThemeIcon,
   Uri
 } from "vscode";
 import { LockStatus, PropStatus, Status } from "./common/types";
@@ -109,11 +110,24 @@ export class Resource implements SourceControlResourceState {
 
   get decorations(): SourceControlResourceDecorations {
     // TODO@joh, still requires restart/redraw in the SCM viewlet
-    const light = { iconPath: this.getIconPath("light") };
-    const dark = { iconPath: this.getIconPath("dark") };
     const tooltip = this.tooltip;
     const strikeThrough = this.strikeThrough;
     const faded = this.faded;
+
+    // Directories: use folder icon with status color
+    if (this._kind === "dir") {
+      const color = this.getStatusColor();
+      return {
+        strikeThrough,
+        faded,
+        tooltip,
+        iconPath: new ThemeIcon("folder", color)
+      };
+    }
+
+    // Files: use custom status SVG icons
+    const light = { iconPath: this.getIconPath("light") };
+    const dark = { iconPath: this.getIconPath("dark") };
 
     return {
       strikeThrough,
@@ -122,6 +136,26 @@ export class Resource implements SourceControlResourceState {
       light,
       dark
     };
+  }
+
+  private getStatusColor(): ThemeColor | undefined {
+    switch (this._type) {
+      case Status.MODIFIED:
+      case Status.REPLACED:
+        return new ThemeColor("gitDecoration.modifiedResourceForeground");
+      case Status.DELETED:
+      case Status.MISSING:
+        return new ThemeColor("gitDecoration.deletedResourceForeground");
+      case Status.ADDED:
+      case Status.UNVERSIONED:
+        return new ThemeColor("gitDecoration.untrackedResourceForeground");
+      case Status.IGNORED:
+        return new ThemeColor("gitDecoration.ignoredResourceForeground");
+      case Status.CONFLICTED:
+        return new ThemeColor("gitDecoration.conflictingResourceForeground");
+      default:
+        return undefined;
+    }
   }
 
   @memoize
