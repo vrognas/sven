@@ -21,6 +21,17 @@ import {
   workspace
 } from "vscode";
 
+// Input box validation types (not in older vscode types)
+interface InputBoxValidation {
+  message: string;
+  type: InputBoxValidationType;
+}
+enum InputBoxValidationType {
+  Error = 0,
+  Warning = 1,
+  Information = 2
+}
+
 /**
  * Credential storage mode - determines where SVN credentials are stored
  */
@@ -324,6 +335,9 @@ export class Repository implements IRemoteRepository {
       "Message here or Ctrl+Enter for guided commit";
     this.sourceControl.inputBox.visible = true;
     this.sourceControl.inputBox.enabled = true;
+    // @ts-expect-error - validateInput exists at runtime but not in types
+    this.sourceControl.inputBox.validateInput = (text: string) =>
+      this.validateCommitInput(text);
     this.sourceControl.acceptInputCommand = {
       command: "svn.commitFromInputBox",
       title: "Commit",
@@ -337,6 +351,13 @@ export class Repository implements IRemoteRepository {
     this.disposables.push(this.statusBar);
     this.statusBar.onDidChange(
       () => (this.sourceControl.statusBarCommands = this.statusBar.commands),
+      null,
+      this.disposables
+    );
+
+    // Update action button when operations start/end (for spinning icon)
+    this.onDidChangeOperations(
+      () => this.updateActionButton(),
       null,
       this.disposables
     );
@@ -650,6 +671,10 @@ export class Repository implements IRemoteRepository {
     this.sourceControl.count = count;
     this.updateActionButton();
 
+    // Update context keys for conditional UI
+    const hasConflicts = this.groupManager.conflicts.resourceStates.length > 0;
+    commands.executeCommand("setContext", "svn.hasConflicts", hasConflicts);
+
     // Set repository reference on remote changes group
     if (this.groupManager.remoteChanges) {
       this.groupManager.remoteChanges.repository = this;
@@ -663,6 +688,14 @@ export class Repository implements IRemoteRepository {
       this.remoteChangedFiles = result.remoteChanges.length;
       this._onDidChangeRemoteChangedFiles.fire();
     }
+
+    // Update context key for remote changes
+    const hasRemoteChanges = this.remoteChangedFiles > 0;
+    commands.executeCommand(
+      "setContext",
+      "svn.updateAvailable",
+      hasRemoteChanges
+    );
 
     this._onDidChangeStatus.fire();
 
@@ -689,8 +722,24 @@ export class Repository implements IRemoteRepository {
     const changesCount = this.groupManager.changes.resourceStates.length;
     const hasChanges = stagedCount > 0 || changesCount > 0;
 
+    // Check if commit/update is in progress
+    const isCommitting = this.operations.isRunning(Operation.Commit);
+    const isUpdating = this.operations.isRunning(Operation.Update);
+    const isOperationRunning = isCommitting || isUpdating;
+
+    // Use spinning icon during operations
+    let icon = "$(check)";
+    let tooltip = "Commit Changes";
+    if (isCommitting) {
+      icon = "$(sync~spin)";
+      tooltip = "Committing...";
+    } else if (isUpdating) {
+      icon = "$(sync~spin)";
+      tooltip = "Updating...";
+    }
+
     const label =
-      stagedCount > 0 ? `$(check) Commit (${stagedCount})` : "$(check) Commit";
+      stagedCount > 0 ? `${icon} Commit (${stagedCount})` : `${icon} Commit`;
 
     // Secondary commands for dropdown menu (Command[][])
     const secondaryCommands = [
@@ -721,12 +770,43 @@ export class Repository implements IRemoteRepository {
       command: {
         command: "svn.commitFromInputBox",
         title: label,
-        tooltip: "Commit Changes",
+        tooltip,
         arguments: [this]
       },
       secondaryCommands,
-      enabled: hasChanges
+      enabled: hasChanges && !isOperationRunning
     };
+  }
+
+  private validateCommitInput(text: string): InputBoxValidation | undefined {
+    const stagedCount = this.groupManager.staged.resourceStates.length;
+    const conflictCount = this.groupManager.conflicts.resourceStates.length;
+
+    // Error: conflicts must be resolved first
+    if (conflictCount > 0) {
+      return {
+        message: `${conflictCount} conflict(s) must be resolved before committing`,
+        type: InputBoxValidationType.Error
+      };
+    }
+
+    // Warning: no files staged
+    if (stagedCount === 0) {
+      return {
+        message: "No files staged for commit",
+        type: InputBoxValidationType.Warning
+      };
+    }
+
+    // Info: message empty (but not an error - guided commit will prompt)
+    if (!text || text.trim() === "") {
+      return {
+        message: "Enter message or press Ctrl+Enter for guided commit",
+        type: InputBoxValidationType.Information
+      };
+    }
+
+    return undefined;
   }
 
   public getResourceFromFile(uri: string | Uri): Resource | undefined {
