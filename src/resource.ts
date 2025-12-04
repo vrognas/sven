@@ -79,21 +79,22 @@ export class Resource implements SourceControlResourceState {
   }
 
   get decorations(): SourceControlResourceDecorations {
-    // Directories: use custom folder SVG icons (SCM view can't auto-detect folders)
+    // Directories: use custom folder SVG icons (same format as original status icons)
     // Files: don't set iconPath, VS Code uses file extension icon
     // Badge (A/M/D) comes from FileDecorationProvider
     if (this._kind === "dir") {
-      const lightIcon = Uri.file(
-        path.join(iconsRootPath, "light", "folder.svg")
-      );
-      const darkIcon = Uri.file(path.join(iconsRootPath, "dark", "folder.svg"));
+      const light = {
+        iconPath: Uri.file(path.join(iconsRootPath, "light", "folder.svg"))
+      };
+      const dark = {
+        iconPath: Uri.file(path.join(iconsRootPath, "dark", "folder.svg"))
+      };
       return {
         strikeThrough: this.strikeThrough,
         faded: this.faded,
         tooltip: this.tooltip,
-        iconPath: lightIcon,
-        light: { iconPath: lightIcon },
-        dark: { iconPath: darkIcon }
+        light,
+        dark
       };
     }
 
