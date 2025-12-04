@@ -180,6 +180,26 @@
     },
     "viewsWelcome": [
       {
+        "view": "svn",
+        "contents": "Check for updates from the server to see incoming changes.\n\n[Check for Updates](command:svn.update)\n\nTip: Enable `svn.sourceControl.checkForIncomingChanges` for automatic checks.",
+        "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+      },
+      {
+        "view": "repolog",
+        "contents": "View the commit history of your repository.\n\n[Show Log](command:svn.log)\n\nTip: Use the log to browse commits, view changes, and understand project history.",
+        "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+      },
+      {
+        "view": "itemlog",
+        "contents": "Select a file in the explorer to view its revision history.\n\nRight-click any file and choose **SVN: Show Log** to see its history here.",
+        "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+      },
+      {
+        "view": "branchchanges",
+        "contents": "Compare your branch against trunk to see what's changed.\n\nThis view shows commits unique to your branch that haven't been merged to trunk yet.",
+        "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+      },
+      {
         "view": "sparseCheckout",
         "contents": "Choose which folders and files to download from the repository.\n\nExpand folders to browse server contents. De-emphasized items are on the server but not downloaded locally.\n\n[Refresh](command:svn.sparse.refresh)",
         "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
