@@ -1,3 +1,10 @@
+## [2.33.5] (2025-12-04)
+
+### Fix: Resource Index Stale Data
+
+- **Fix**: `clearAll()` now clears `_resourceIndex` and resets `_resourceHash` to prevent stale resource lookups after state reset
+- **Affected**: src/services/ResourceGroupManager.ts
+
 ## [2.33.4] (2025-12-04)
 
 ### Fix: Critical Bug Fixes (v2.33.4)

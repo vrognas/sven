@@ -507,6 +507,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
     });
     this._remoteChanges?.dispose();
     this._remoteChanges = undefined;
+    this._resourceIndex.clear();
+    this._resourceHash = "";
   }
 
   /**
