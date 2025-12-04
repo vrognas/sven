@@ -15,6 +15,7 @@ import { CommitWithMessage } from "./commands/commitWithMessage";
 import { CommitAll } from "./commands/commitAll";
 import { CommitFromInputBox } from "./commands/commitFromInputBox";
 import { CommitStaged } from "./commands/commitStaged";
+import { CommitQuick } from "./commands/commitQuick";
 import { DeleteUnversioned } from "./commands/deleteUnversioned";
 import { FileOpen } from "./commands/fileOpen";
 import { FinishCheckout } from "./commands/finishCheckout";
@@ -90,6 +91,7 @@ export function registerCommands(
   disposables.push(new CommitAll());
   disposables.push(new CommitFromInputBox());
   disposables.push(new CommitStaged());
+  disposables.push(new CommitQuick());
   disposables.push(new Add());
   disposables.push(new ChangeList());
   disposables.push(new Refresh());

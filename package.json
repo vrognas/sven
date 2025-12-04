@@ -532,6 +532,12 @@
         "icon": "$(check)"
       },
       {
+        "command": "svn.commitQuick",
+        "title": "Commit (Quick)",
+        "category": "SVN",
+        "icon": "$(check)"
+      },
+      {
         "command": "svn.deleteUnversioned",
         "title": "Delete selected files",
         "category": "SVN"

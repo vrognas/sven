@@ -696,14 +696,20 @@ export class Repository implements IRemoteRepository {
       [
         {
           command: "svn.commitStaged",
-          title: "Commit Staged",
+          title: "Commit Staged...",
           tooltip: "Commit only staged files",
           arguments: [this]
         },
         {
           command: "svn.commitAll",
-          title: "Commit All",
+          title: "Commit All...",
           tooltip: "Commit all changed files",
+          arguments: [this]
+        },
+        {
+          command: "svn.commitQuick",
+          title: "Commit (Quick)",
+          tooltip: "Commit staged files without message prompt",
           arguments: [this]
         }
       ]
