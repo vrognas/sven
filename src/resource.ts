@@ -79,30 +79,40 @@ export class Resource implements SourceControlResourceState {
   }
 
   get decorations(): SourceControlResourceDecorations {
-    // Directories: use custom folder SVG icons (same format as original status icons)
-    // Files: don't set iconPath, VS Code uses file extension icon
+    // Test: set iconPath for ALL resources to see if that fixes folder display
     // Badge (A/M/D) comes from FileDecorationProvider
-    if (this._kind === "dir") {
-      const light = {
-        iconPath: Uri.file(path.join(iconsRootPath, "light", "folder.svg"))
-      };
-      const dark = {
-        iconPath: Uri.file(path.join(iconsRootPath, "dark", "folder.svg"))
-      };
-      return {
-        strikeThrough: this.strikeThrough,
-        faded: this.faded,
-        tooltip: this.tooltip,
-        light,
-        dark
-      };
-    }
+    const light = {
+      iconPath:
+        this._kind === "dir"
+          ? Uri.file(path.join(iconsRootPath, "light", "folder.svg"))
+          : this.getStatusIconPath("light")
+    };
+    const dark = {
+      iconPath:
+        this._kind === "dir"
+          ? Uri.file(path.join(iconsRootPath, "dark", "folder.svg"))
+          : this.getStatusIconPath("dark")
+    };
 
     return {
       strikeThrough: this.strikeThrough,
       faded: this.faded,
-      tooltip: this.tooltip
+      tooltip: this.tooltip,
+      light,
+      dark
     };
+  }
+
+  private getStatusIconPath(theme: string): Uri {
+    // Map status to icon - using existing status icons
+    let iconName: string;
+    if (this.type === Status.ADDED && this.renameResourceUri) {
+      iconName = "status-renamed";
+    } else {
+      const type = this.type.charAt(0).toUpperCase() + this.type.slice(1);
+      iconName = `status-${type.toLowerCase()}`;
+    }
+    return Uri.file(path.join(iconsRootPath, theme, `${iconName}.svg`));
   }
 
   @memoize
