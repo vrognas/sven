@@ -667,6 +667,15 @@ export class RepoLogProvider
       }
       const result = transform(logentries, LogTreeItemKind.Commit, undefined);
       insertBaseMarker(cached, logentries, result);
+
+      // Check if we've reached r1 (no more revisions possible)
+      const lastEntry = logentries[logentries.length - 1];
+      const atFirstRevision =
+        lastEntry && parseInt(lastEntry.revision, 10) <= 1;
+      if (atFirstRevision) {
+        cached.isComplete = true;
+      }
+
       if (!cached.isComplete) {
         const ti = new TreeItem(`Load another ${limit} revisions`);
         ti.tooltip = "Paging size may be adjusted using log.length setting";
