@@ -798,6 +798,7 @@ export class Repository implements IRemoteRepository {
     }
     // Optimistically update UI (includes directories for visual grouping)
     this.groupManager.moveToStaged(files);
+    this.updateActionButton();
   }
 
   /**
@@ -827,6 +828,7 @@ export class Repository implements IRemoteRepository {
     }
     // Optimistically update UI (includes directories for visual grouping)
     this.groupManager.moveToStaged(expanded);
+    this.updateActionButton();
   }
 
   /**
@@ -914,6 +916,7 @@ export class Repository implements IRemoteRepository {
     }
     // Optimistically update UI without status refresh
     this.groupManager.moveFromStaged(expanded, targetChangelist);
+    this.updateActionButton();
   }
 
   /**
