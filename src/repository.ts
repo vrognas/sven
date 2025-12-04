@@ -648,6 +648,7 @@ export class Repository implements IRemoteRepository {
     });
 
     this.sourceControl.count = count;
+    this.updateActionButton();
 
     // Set repository reference on remote changes group
     if (this.groupManager.remoteChanges) {
@@ -681,6 +682,28 @@ export class Repository implements IRemoteRepository {
     this.currentBranch = await this.getCurrentBranch();
 
     return Promise.resolve();
+  }
+
+  private updateActionButton(): void {
+    const stagedCount = this.groupManager.staged.resourceStates.length;
+    const changesCount = this.groupManager.changes.resourceStates.length;
+
+    // Show commit button when there are staged files or changes
+    if (stagedCount > 0 || changesCount > 0) {
+      const label = stagedCount > 0 ? `Commit (${stagedCount})` : "Commit";
+      // @ts-expect-error - actionButton exists at runtime but not in types
+      this.sourceControl.actionButton = {
+        command: {
+          command: "svn.commitFromInputBox",
+          title: label,
+          arguments: [this]
+        },
+        enabled: true
+      };
+    } else {
+      // @ts-expect-error - actionButton exists at runtime but not in types
+      this.sourceControl.actionButton = undefined;
+    }
   }
 
   public getResourceFromFile(uri: string | Uri): Resource | undefined {
