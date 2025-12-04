@@ -217,8 +217,13 @@ export async function fetchMore(cached: ICachedLog) {
   let rfrom = cached.persisted.commitFrom;
   const entries = cached.entries;
   if (entries.length) {
-    rfrom = entries[entries.length - 1]!.revision;
-    rfrom = (Number.parseInt(rfrom, 10) - 1).toString();
+    const lastRev = Number.parseInt(entries[entries.length - 1]!.revision, 10);
+    // Already at r1, nothing more to fetch
+    if (lastRev <= 1) {
+      cached.isComplete = true;
+      return;
+    }
+    rfrom = (lastRev - 1).toString();
   }
   let moreCommits: ISvnLogEntry[] = [];
   const limit = getLimit();
@@ -230,7 +235,10 @@ export async function fetchMore(cached: ICachedLog) {
   if (!needFetch(entries, moreCommits, limit)) {
     cached.isComplete = true;
   }
-  entries.push(...moreCommits);
+  // Deduplicate: skip commits already in entries
+  const existingRevs = new Set(entries.map(e => e.revision));
+  const newCommits = moreCommits.filter(c => !existingRevs.has(c.revision));
+  entries.push(...newCommits);
 }
 
 /**

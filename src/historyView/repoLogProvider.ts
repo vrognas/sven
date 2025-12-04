@@ -560,6 +560,8 @@ export class RepoLogProvider
         // Clear entries if explicit refresh OR revision changed
         const clearEntries = shouldClearCache || revisionChanged;
         const entries = clearEntries ? [] : savedEntries.get(repoUrl) || [];
+        // Preserve isComplete if we're keeping entries
+        const isComplete = clearEntries ? false : (prev?.isComplete ?? false);
 
         // LRU eviction before adding (if not updating existing)
         if (
@@ -570,7 +572,7 @@ export class RepoLogProvider
         }
         this.logCache.set(repoUrl, {
           entries,
-          isComplete: false,
+          isComplete,
           repo,
           svnTarget: remoteRoot,
           persisted,
