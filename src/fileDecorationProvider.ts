@@ -92,9 +92,10 @@ export class SvnFileDecorationProvider
       return undefined;
     }
 
-    let badge = this.getBadge(status, resource.renameResourceUri);
+    const isFolder = resource.kind === "dir";
+    let badge = this.getBadge(status, resource.renameResourceUri, isFolder);
     const color = this.getColor(status);
-    let tooltip = this.getTooltip(status, resource.renameResourceUri);
+    let tooltip = this.getTooltip(status, resource.renameResourceUri, isFolder);
 
     // Add lock info to tooltip and badge (K/O/B/T per SVN convention)
     if (resource.lockStatus) {
@@ -187,32 +188,48 @@ export class SvnFileDecorationProvider
     }
   }
 
-  private getBadge(status: string, renameUri?: Uri): string | undefined {
-    // Renamed files (added with rename source) get R badge
+  private getBadge(
+    status: string,
+    renameUri?: Uri,
+    isFolder: boolean = false
+  ): string | undefined {
+    // Renamed files/folders (added with rename source) get R/📁R badge
     if (status === Status.ADDED && renameUri) {
-      return "R";
+      return isFolder ? "📁R" : "R";
     }
 
+    let badge: string | undefined;
     switch (status) {
       case Status.ADDED:
-        return "A";
+        badge = "A";
+        break;
       case Status.CONFLICTED:
-        return "C";
+        badge = "C";
+        break;
       case Status.DELETED:
-        return "D";
+        badge = "D";
+        break;
       case Status.MODIFIED:
-        return "M";
+        badge = "M";
+        break;
       case Status.REPLACED:
-        return "R";
+        badge = "R";
+        break;
       case Status.UNVERSIONED:
-        return "U";
+        badge = "U";
+        break;
       case Status.MISSING:
-        return "!";
+        badge = "!";
+        break;
       case Status.IGNORED:
-        return "I";
+        badge = "I";
+        break;
       default:
         return undefined;
     }
+
+    // Prefix with folder emoji for folders (📁A, 📁M, 📁D, etc.)
+    return isFolder ? `📁${badge}` : badge;
   }
 
   private getColor(status: string): ThemeColor | undefined {
@@ -250,28 +267,34 @@ export class SvnFileDecorationProvider
     }
   }
 
-  private getTooltip(status: string, renameUri?: Uri): string | undefined {
+  private getTooltip(
+    status: string,
+    renameUri?: Uri,
+    isFolder: boolean = false
+  ): string | undefined {
+    const prefix = isFolder ? "Folder " : "";
+
     if (status === Status.ADDED && renameUri) {
-      return `Renamed from ${renameUri.fsPath}`;
+      return `${prefix}Renamed from ${renameUri.fsPath}`;
     }
 
     switch (status) {
       case Status.ADDED:
-        return "Added";
+        return `${prefix}Added`;
       case Status.CONFLICTED:
-        return "Conflicted";
+        return `${prefix}Conflicted`;
       case Status.DELETED:
-        return "Deleted";
+        return `${prefix}Deleted`;
       case Status.MODIFIED:
-        return "Modified";
+        return `${prefix}Modified`;
       case Status.REPLACED:
-        return "Replaced";
+        return `${prefix}Replaced`;
       case Status.UNVERSIONED:
-        return "Unversioned";
+        return `${prefix}Unversioned`;
       case Status.MISSING:
-        return "Missing";
+        return `${prefix}Missing`;
       case Status.IGNORED:
-        return "Ignored";
+        return `${prefix}Ignored`;
       default:
         return undefined;
     }

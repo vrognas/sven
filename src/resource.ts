@@ -2,7 +2,6 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from "path";
 import {
   Command,
   SourceControlResourceDecorations,
@@ -10,9 +9,6 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-
-// Path to icons directory (relative from out/)
-const iconsRootPath = path.join(__dirname, "..", "icons");
 import { LockStatus, PropStatus, Status } from "./common/types";
 import { memoize } from "./decorators";
 import { configuration } from "./helpers/configuration";
@@ -79,39 +75,13 @@ export class Resource implements SourceControlResourceState {
   }
 
   get decorations(): SourceControlResourceDecorations {
-    // Folders: composite icons with folder shape + status badge
-    // Files: don't set iconPath, let VS Code show file extension icons
-    // FileDecorationProvider adds A/M/D badges to files
-    if (this._kind === "dir") {
-      const light = { iconPath: this.getFolderIconPath("light") };
-      const dark = { iconPath: this.getFolderIconPath("dark") };
-      return {
-        strikeThrough: this.strikeThrough,
-        faded: this.faded,
-        tooltip: this.tooltip,
-        light,
-        dark
-      };
-    }
-
-    // Files: no iconPath, VS Code uses file extension icon + FileDecorationProvider badge
+    // No iconPath - VS Code uses file extension icons for files
+    // FileDecorationProvider adds badges (A/M/D for files, FA/FM/FD for folders)
     return {
       strikeThrough: this.strikeThrough,
       faded: this.faded,
       tooltip: this.tooltip
     };
-  }
-
-  private getFolderIconPath(theme: string): Uri {
-    // Map status to folder icon - folder shape with embedded status badge
-    let iconName: string;
-    if (this.type === Status.ADDED && this.renameResourceUri) {
-      iconName = "folder-renamed";
-    } else {
-      const type = this.type.charAt(0).toUpperCase() + this.type.slice(1);
-      iconName = `folder-${type.toLowerCase()}`;
-    }
-    return Uri.file(path.join(iconsRootPath, theme, `${iconName}.svg`));
   }
 
   @memoize

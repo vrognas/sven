@@ -1,5 +1,0 @@
-<svg width="16px" height="16px" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <path fill="#C5C5C5" d="M85 20H42L32 10H10C5 10 0 15 0 20v55c0 5 5 10 10 10h75c5 0 10-5 10-10V30c0-5-5-10-10-10z"/>
-  <circle fill="#B9131A" cx="70" cy="60" r="35"/>
-  <text x="70" y="74" font-size="45" text-anchor="middle" style="font-family: sans-serif; font-weight: bold;" fill="white">D</text>
-</svg>
