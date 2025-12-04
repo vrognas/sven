@@ -114,13 +114,14 @@ export class Resource implements SourceControlResourceState {
     const strikeThrough = this.strikeThrough;
     const faded = this.faded;
 
-    // Use ThemeIcon.Folder for directories, custom icons for files
+    // Use colored ThemeIcon.Folder for directories to show both folder shape and status
     if (this._kind === "dir") {
+      const color = this.getColor(this._type);
       return {
         strikeThrough,
         faded,
         tooltip,
-        iconPath: ThemeIcon.Folder
+        iconPath: color ? new ThemeIcon("folder", color) : ThemeIcon.Folder
       };
     }
 
@@ -134,6 +135,29 @@ export class Resource implements SourceControlResourceState {
       light,
       dark
     };
+  }
+
+  /**
+   * Get status color for a given type
+   */
+  private getColor(status: string): ThemeColor | undefined {
+    switch (status) {
+      case Status.MODIFIED:
+      case Status.REPLACED:
+        return new ThemeColor("gitDecoration.modifiedResourceForeground");
+      case Status.DELETED:
+      case Status.MISSING:
+        return new ThemeColor("gitDecoration.deletedResourceForeground");
+      case Status.ADDED:
+      case Status.UNVERSIONED:
+        return new ThemeColor("gitDecoration.untrackedResourceForeground");
+      case Status.IGNORED:
+        return new ThemeColor("gitDecoration.ignoredResourceForeground");
+      case Status.CONFLICTED:
+        return new ThemeColor("gitDecoration.conflictingResourceForeground");
+      default:
+        return undefined;
+    }
   }
 
   @memoize
