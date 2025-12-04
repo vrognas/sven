@@ -108,10 +108,10 @@ export class Repository {
     })() as unknown as Repository;
   }
 
-  public async updateInfo() {
-    // Check cache first
+  public async updateInfo(forceRefresh: boolean = false) {
+    // Check cache first (skip if forced)
     const now = Date.now();
-    if (now - this.lastInfoUpdate < this.INFO_CACHE_MS) {
+    if (!forceRefresh && now - this.lastInfoUpdate < this.INFO_CACHE_MS) {
       return;
     }
     this.lastInfoUpdate = now;

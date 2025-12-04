@@ -602,6 +602,12 @@ export class Repository implements IRemoteRepository {
     }
     this.lastModelUpdate = now;
 
+    // Force refresh repository info after revision-changing operations
+    // (Commit, Update, etc.) so repo history can detect the new revision
+    if (forceRefresh) {
+      await this.repository.updateInfo(true);
+    }
+
     // Get categorized status from StatusService
     const result = await this.retryRun(async () => {
       return this.statusService.updateStatus({ checkRemoteChanges });
