@@ -104,10 +104,8 @@ export class SvnFileDecorationProvider
         resource.lockOwner
       );
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
-      // Show 🔒 badge for locked files
-      if (!badge) {
-        badge = "🔒";
-      }
+      // Combine 🔒 with status badge (🔒M, 🔒A, etc.) or just 🔒
+      badge = badge ? `🔒${badge}` : "🔒";
     } else if (resource.locked) {
       // Fallback for legacy lock detection without lockStatus
       const lockInfo = resource.hasLockToken
@@ -116,9 +114,8 @@ export class SvnFileDecorationProvider
           ? `Locked by ${resource.lockOwner}`
           : "Locked by others";
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
-      if (!badge) {
-        badge = "🔒";
-      }
+      // Combine 🔒 with status badge (🔒M, 🔒A, etc.) or just 🔒
+      badge = badge ? `🔒${badge}` : "🔒";
     }
 
     if (!badge && !color) {

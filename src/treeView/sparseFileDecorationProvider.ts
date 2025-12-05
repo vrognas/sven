@@ -59,8 +59,7 @@ export class SparseFileDecorationProvider
     }
 
     // Outdated items: update available indicator
-    // Priority: lock badge > outdated badge (both can't be shown)
-    if (isOutdated && !lockStatus) {
+    if (isOutdated) {
       decoration.badge = "↓";
       decoration.color = new ThemeColor(
         "gitDecoration.modifiedResourceForeground"
@@ -71,9 +70,9 @@ export class SparseFileDecorationProvider
         : outdatedTooltip;
     }
 
-    // Lock badge (🔒 for all lock states)
+    // Lock badge (🔒 combined with other badges like 🔒↓)
     if (lockStatus) {
-      decoration.badge = "🔒";
+      decoration.badge = decoration.badge ? `🔒${decoration.badge}` : "🔒";
       const lockTooltip = this.getLockTooltip(lockStatus, lockOwner);
       decoration.tooltip = decoration.tooltip
         ? `${decoration.tooltip} - ${lockTooltip}`
