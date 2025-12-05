@@ -170,6 +170,11 @@ export class RepoLogProvider
       ),
       commands.registerCommand(
         "svn.repolog.refresh",
+        () => this._onDidChangeTreeData.fire(undefined),
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.fetch",
         this.explicitRefreshCmd,
         this
       ),
@@ -564,9 +569,9 @@ export class RepoLogProvider
         const ti = new TreeItem(`Load another ${limit} revisions`);
         ti.tooltip = "Paging size may be adjusted using log.length setting";
         ti.command = {
-          command: "svn.repolog.refresh",
+          command: "svn.repolog.fetch",
           arguments: [undefined, true],
-          title: "refresh element"
+          title: "fetch more"
         };
         ti.iconPath = new ThemeIcon("unfold");
         result.push({ kind: LogTreeItemKind.TItem, data: ti });

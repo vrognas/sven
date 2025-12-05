@@ -763,7 +763,13 @@
       {
         "command": "svn.repolog.refresh",
         "category": "SVN",
-        "title": "Refresh log",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "svn.repolog.fetch",
+        "category": "SVN",
+        "title": "Fetch",
         "icon": "$(git-fetch)"
       },
       {
@@ -1073,6 +1079,10 @@
           "when": "false"
         },
         {
+          "command": "svn.repolog.fetch",
+          "when": "false"
+        },
+        {
           "command": "svn.repolog.remove",
           "when": "false"
         },
@@ -1156,14 +1166,19 @@
           "group": "navigation"
         },
         {
-          "command": "svn.repolog.refresh",
+          "command": "svn.repolog.fetch",
           "when": "view == repolog",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "svn.update",
           "when": "view == repolog",
-          "group": "navigation"
+          "group": "navigation@2"
+        },
+        {
+          "command": "svn.repolog.refresh",
+          "when": "view == repolog",
+          "group": "navigation@3"
         },
         {
           "command": "svn.itemlog.refresh",
@@ -1272,7 +1287,7 @@
           "group": "navigation"
         },
         {
-          "command": "svn.repolog.refresh",
+          "command": "svn.repolog.fetch",
           "when": "view == repolog && viewItem =~ /.*repo/"
         },
         {

@@ -1092,8 +1092,8 @@ export class Repository implements IRemoteRepository {
       // Skip updateRemoteChangedFiles - after update we're at HEAD, no remote changes
       return updateResult;
     });
-    // Refresh history views to show new commits from update
-    commands.executeCommand("svn.repolog.refresh");
+    // Fetch history views to show new commits from update
+    commands.executeCommand("svn.repolog.fetch");
     commands.executeCommand("svn.itemlog.refresh");
     return result;
   }
@@ -1133,8 +1133,8 @@ export class Repository implements IRemoteRepository {
     const result = await this.run(Operation.Commit, () =>
       this.repository.commitFiles(message, files)
     );
-    // Refresh history views to show new commit
-    commands.executeCommand("svn.repolog.refresh");
+    // Fetch history views to show new commit
+    commands.executeCommand("svn.repolog.fetch");
     commands.executeCommand("svn.itemlog.refresh");
     return result;
   }
