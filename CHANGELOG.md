@@ -1,3 +1,13 @@
+## [2.33.25] (2025-12-06)
+
+### Fix: Needs-Lock Workflow Enforcement
+
+- **Fix**: Lock makes files writable (for needs-lock files)
+- **Fix**: Unlock/BreakLock makes files read-only (if has needs-lock)
+- **New**: Commit warns if committing needs-lock files without locks
+- **Workflow**: needs-lock → lock → edit → commit
+- **Affected**: lock.ts, unlock.ts, repository.ts
+
 ## [2.33.24] (2025-12-05)
 
 ### Fix: Lock Token Detection

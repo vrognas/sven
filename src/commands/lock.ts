@@ -4,6 +4,7 @@
 import { SourceControlResourceState, Uri, window } from "vscode";
 import { Command } from "./command";
 import { validateLockComment } from "../validation";
+import { makeWritable } from "../fs";
 
 export class Lock extends Command {
   constructor() {
@@ -37,6 +38,14 @@ export class Lock extends Command {
         const paths = resources.map(r => r.fsPath);
         const result = await repository.lock(paths, comment ? { comment } : {});
         if (result.exitCode === 0) {
+          // Make files writable after locking (for needs-lock files)
+          for (const p of paths) {
+            try {
+              await makeWritable(p);
+            } catch {
+              // Ignore permission errors
+            }
+          }
           window.showInformationMessage(`Locked ${paths.length} file(s)`);
         } else {
           window.showErrorMessage(
@@ -58,6 +67,14 @@ export class Lock extends Command {
       async (repository, paths) => {
         const result = await repository.lock(paths, comment ? { comment } : {});
         if (result.exitCode === 0) {
+          // Make files writable after locking (for needs-lock files)
+          for (const p of paths) {
+            try {
+              await makeWritable(p);
+            } catch {
+              // Ignore permission errors
+            }
+          }
           window.showInformationMessage(`Locked ${paths.length} file(s)`);
         } else {
           window.showErrorMessage(
@@ -98,6 +115,14 @@ export class StealLock extends Command {
         const paths = resources.map(r => r.fsPath);
         const result = await repository.lock(paths, { force: true });
         if (result.exitCode === 0) {
+          // Make files writable after locking (for needs-lock files)
+          for (const p of paths) {
+            try {
+              await makeWritable(p);
+            } catch {
+              // Ignore permission errors
+            }
+          }
           window.showInformationMessage(
             `Stole lock on ${paths.length} file(s)`
           );
@@ -121,6 +146,14 @@ export class StealLock extends Command {
       async (repository, paths) => {
         const result = await repository.lock(paths, { force: true });
         if (result.exitCode === 0) {
+          // Make files writable after locking (for needs-lock files)
+          for (const p of paths) {
+            try {
+              await makeWritable(p);
+            } catch {
+              // Ignore permission errors
+            }
+          }
           window.showInformationMessage(
             `Stole lock on ${paths.length} file(s)`
           );

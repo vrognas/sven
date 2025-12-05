@@ -3,6 +3,7 @@
 
 import { SourceControlResourceState, Uri, window } from "vscode";
 import { Command } from "./command";
+import { makeReadOnly } from "../fs";
 
 export class Unlock extends Command {
   constructor() {
@@ -17,6 +18,17 @@ export class Unlock extends Command {
         const paths = resources.map(r => r.fsPath);
         const result = await repository.unlock(paths);
         if (result.exitCode === 0) {
+          // Make files read-only after unlocking (if has needs-lock property)
+          for (const p of paths) {
+            const hasNeedsLock = await repository.hasNeedsLock(p);
+            if (hasNeedsLock) {
+              try {
+                await makeReadOnly(p);
+              } catch {
+                // Ignore permission errors
+              }
+            }
+          }
           window.showInformationMessage(`Unlocked ${paths.length} file(s)`);
         } else {
           window.showErrorMessage(
@@ -38,6 +50,17 @@ export class Unlock extends Command {
       async (repository, paths) => {
         const result = await repository.unlock(paths);
         if (result.exitCode === 0) {
+          // Make files read-only after unlocking (if has needs-lock property)
+          for (const p of paths) {
+            const hasNeedsLock = await repository.hasNeedsLock(p);
+            if (hasNeedsLock) {
+              try {
+                await makeReadOnly(p);
+              } catch {
+                // Ignore permission errors
+              }
+            }
+          }
           window.showInformationMessage(`Unlocked ${paths.length} file(s)`);
         } else {
           window.showErrorMessage(
@@ -75,6 +98,17 @@ export class BreakLock extends Command {
         const paths = resources.map(r => r.fsPath);
         const result = await repository.unlock(paths, { force: true });
         if (result.exitCode === 0) {
+          // Make files read-only after unlocking (if has needs-lock property)
+          for (const p of paths) {
+            const hasNeedsLock = await repository.hasNeedsLock(p);
+            if (hasNeedsLock) {
+              try {
+                await makeReadOnly(p);
+              } catch {
+                // Ignore permission errors
+              }
+            }
+          }
           window.showInformationMessage(
             `Broke lock on ${paths.length} file(s)`
           );
@@ -98,6 +132,17 @@ export class BreakLock extends Command {
       async (repository, paths) => {
         const result = await repository.unlock(paths, { force: true });
         if (result.exitCode === 0) {
+          // Make files read-only after unlocking (if has needs-lock property)
+          for (const p of paths) {
+            const hasNeedsLock = await repository.hasNeedsLock(p);
+            if (hasNeedsLock) {
+              try {
+                await makeReadOnly(p);
+              } catch {
+                // Ignore permission errors
+              }
+            }
+          }
           window.showInformationMessage(
             `Broke lock on ${paths.length} file(s)`
           );

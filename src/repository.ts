@@ -1303,6 +1303,31 @@ export class Repository implements IRemoteRepository {
   }
 
   public async commitFiles(message: string, files: string[]) {
+    // Check for needs-lock files that aren't locked
+    const unlockedNeedsLock: string[] = [];
+    for (const file of files) {
+      const hasNeedsLock = await this.hasNeedsLock(file);
+      if (hasNeedsLock) {
+        // Check if file has lock token
+        const resource = this.getResourceFromFile(file);
+        if (!resource?.hasLockToken) {
+          unlockedNeedsLock.push(file);
+        }
+      }
+    }
+
+    if (unlockedNeedsLock.length > 0) {
+      const answer = await window.showWarningMessage(
+        `${unlockedNeedsLock.length} file(s) have svn:needs-lock but are not locked. Commit anyway?`,
+        { modal: true },
+        "Commit Anyway",
+        "Cancel"
+      );
+      if (answer !== "Commit Anyway") {
+        throw new Error("Commit cancelled: unlock files or lock them first");
+      }
+    }
+
     const result = await this.run(Operation.Commit, () =>
       this.repository.commitFiles(message, files)
     );
