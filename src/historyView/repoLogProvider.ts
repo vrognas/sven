@@ -14,17 +14,14 @@ import {
   TreeItemCollapsibleState,
   TreeView,
   Uri,
-  window,
-  workspace
+  window
 } from "vscode";
 import {
   RepositoryChangeEvent,
   ISvnLogEntry,
   ISvnLogEntryPath
 } from "../common/types";
-import { exists } from "../fs";
 import { SourceControlManager } from "../source_control_manager";
-import { IRemoteRepository } from "../remoteRepository";
 import { Repository } from "../repository";
 import { dispose } from "../util";
 import {
@@ -159,11 +156,6 @@ export class RepoLogProvider
         "svn.repolog.copyrevision",
         async (item: ILogTreeItem) => copyCommitToClipboard("revision", item)
       ),
-      commands.registerCommand(
-        "svn.repolog.addrepolike",
-        this.addRepolikeGui,
-        this
-      ),
       commands.registerCommand("svn.repolog.remove", this.removeRepo, this),
       commands.registerCommand(
         "svn.repolog.openFileRemote",
@@ -230,114 +222,6 @@ export class RepoLogProvider
   public removeRepo(element: ILogTreeItem) {
     this.logCache.delete((element.data as SvnPath).toString());
     this.refresh();
-  }
-
-  private async addRepolike(repoLike: string, rev: string) {
-    // TODO save user's custom repositories
-    const item: ICachedLog = {
-      entries: [],
-      isComplete: false,
-      svnTarget: {} as Uri, // later
-      repo: {} as IRemoteRepository, // later
-      persisted: {
-        commitFrom: rev,
-        userAdded: true
-      },
-      order: this.logCache.size
-    };
-    if (this.logCache.has(repoLike)) {
-      window.showWarningMessage("This path is already added");
-      return;
-    }
-    const repo = this.sourceControlManager.getRepository(repoLike);
-    if (repo === null) {
-      try {
-        let uri: Uri;
-        if (repoLike.startsWith("^")) {
-          const folders = workspace.workspaceFolders;
-          if (!folders || folders.length === 0) {
-            throw new Error("No workspace folder open");
-          }
-          const wsrepo = this.sourceControlManager.getRepository(
-            folders[0]!.uri
-          );
-          if (!wsrepo) {
-            throw new Error("No repository in workspace root");
-          }
-          const info = await wsrepo.getInfo(repoLike);
-          uri = Uri.parse(info.url);
-        } else {
-          uri = Uri.parse(repoLike);
-        }
-        if (rev !== "HEAD" && isNaN(parseInt(rev, 10))) {
-          throw new Error("erroneous revision");
-        }
-        const remRepo =
-          await this.sourceControlManager.getRemoteRepository(uri);
-        item.repo = remRepo;
-        item.svnTarget = uri;
-      } catch (e) {
-        window.showWarningMessage(
-          "Failed to add repo: " + (e instanceof Error ? e.message : "")
-        );
-        return;
-      }
-    } else {
-      try {
-        const svninfo = await repo.getInfo(repoLike, rev);
-        item.repo = repo;
-        item.svnTarget = Uri.parse(svninfo.url);
-        item.persisted.baseRevision = parseInt(svninfo.revision, 10);
-      } catch (e) {
-        window.showErrorMessage("Failed to resolve svn path");
-        return;
-      }
-    }
-
-    const repoName = item.svnTarget.toString(true);
-    if (this.logCache.has(repoName)) {
-      window.showWarningMessage("Repository with this name already exists");
-      return;
-    }
-    // LRU eviction before adding
-    if (this.logCache.size >= RepoLogProvider.MAX_LOG_CACHE_SIZE) {
-      this.evictOldestLogEntry();
-    }
-    item.lastAccessed = Date.now();
-    this.logCache.set(repoName, item);
-    this._onDidChangeTreeData.fire(undefined);
-  }
-
-  public addRepolikeGui() {
-    const box = window.createInputBox();
-    box.prompt = "Enter SVN URL or local path";
-    box.onDidAccept(async () => {
-      let repoLike = box.value;
-      if (
-        !path.isAbsolute(repoLike) &&
-        workspace.workspaceFolders &&
-        !repoLike.startsWith("^") &&
-        !/^[a-z]+?:\/\//.test(repoLike)
-      ) {
-        for (const wsf of workspace.workspaceFolders) {
-          const joined = path.join(wsf.uri.fsPath, repoLike);
-          if (await exists(joined)) {
-            repoLike = joined;
-            break;
-          }
-        }
-      }
-      box.dispose();
-      const box2 = window.createInputBox();
-      box2.prompt = "Enter starting revision (optional)";
-      box2.onDidAccept(async () => {
-        const rev = box2.value;
-        box2.dispose();
-        return this.addRepolike(repoLike, rev || "HEAD");
-      }, undefined);
-      box2.show();
-    });
-    box.show();
   }
 
   public async openFileRemoteCmd(element: ILogTreeItem) {

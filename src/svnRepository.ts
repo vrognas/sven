@@ -1493,6 +1493,11 @@ export class Repository {
     }
 
     const args = ["cleanup"];
+    const hasOptions =
+      options.vacuumPristines ||
+      options.removeUnversioned ||
+      options.removeIgnored ||
+      options.includeExternals;
 
     if (options.vacuumPristines) {
       args.push("--vacuum-pristines");
@@ -1507,15 +1512,36 @@ export class Repository {
       args.push("--include-externals");
     }
 
-    const result = await this.exec(args);
-    this.svn.logOutput(result.stdout);
+    try {
+      const result = await this.exec(args);
+      this.svn.logOutput(result.stdout);
 
-    // Invalidate cache if files were deleted
-    if (options.removeUnversioned || options.removeIgnored) {
-      this.resetInfoCache();
+      // Invalidate cache if files were deleted
+      if (options.removeUnversioned || options.removeIgnored) {
+        this.resetInfoCache();
+      }
+
+      return result.stdout;
+    } catch (err) {
+      // E155037: Working copy locked from interrupted operation
+      // Auto-retry: run plain cleanup first to clear lock, then retry with options
+      const error = err as { svnErrorCode?: string };
+      if (error.svnErrorCode === "E155037" && hasOptions) {
+        // Clear the lock with plain cleanup
+        await this.exec(["cleanup"]);
+
+        // Retry with original options
+        const result = await this.exec(args);
+        this.svn.logOutput(result.stdout);
+
+        if (options.removeUnversioned || options.removeIgnored) {
+          this.resetInfoCache();
+        }
+
+        return result.stdout;
+      }
+      throw err;
     }
-
-    return result.stdout;
   }
 
   public async finishCheckout() {

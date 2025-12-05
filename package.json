@@ -736,12 +736,6 @@
         "category": "SVN"
       },
       {
-        "command": "svn.repolog.addrepolike",
-        "category": "SVN",
-        "title": "Add repo-like path",
-        "icon": "$(add)"
-      },
-      {
         "command": "svn.repolog.copymsg",
         "category": "SVN",
         "title": "Copy message"
@@ -770,7 +764,7 @@
         "command": "svn.repolog.refresh",
         "category": "SVN",
         "title": "Refresh log",
-        "icon": "$(refresh)"
+        "icon": "$(cloud-download)"
       },
       {
         "command": "svn.repolog.remove",
@@ -883,7 +877,7 @@
         "command": "svn.update",
         "title": "Update",
         "category": "SVN",
-        "icon": "$(cloud-download)"
+        "icon": "$(repo-pull)"
       },
       {
         "command": "svn.applyRecommendedSettings",
@@ -1055,10 +1049,6 @@
           "when": "false"
         },
         {
-          "command": "svn.repolog.addrepolike",
-          "when": "false"
-        },
-        {
           "command": "svn.repolog.copymsg",
           "when": "false"
         },
@@ -1171,7 +1161,7 @@
           "group": "navigation"
         },
         {
-          "command": "svn.repolog.addrepolike",
+          "command": "svn.update",
           "when": "view == repolog",
           "group": "navigation"
         },

@@ -1085,13 +1085,17 @@ export class Repository implements IRemoteRepository {
   public async updateRevision(
     ignoreExternals: boolean = false
   ): Promise<IUpdateResult> {
-    return this.run<IUpdateResult>(Operation.Update, async () => {
-      const result = await this.repository.update(ignoreExternals);
+    const result = await this.run<IUpdateResult>(Operation.Update, async () => {
+      const updateResult = await this.repository.update(ignoreExternals);
       // Note: status refresh handled by run() via updateModelState() after callback
       // Do NOT call this.status() here - causes credentialLock deadlock (nested retryRun)
       // Skip updateRemoteChangedFiles - after update we're at HEAD, no remote changes
-      return result;
+      return updateResult;
     });
+    // Refresh history views to show new commits from update
+    commands.executeCommand("svn.repolog.refresh");
+    commands.executeCommand("svn.itemlog.refresh");
+    return result;
   }
 
   /**
