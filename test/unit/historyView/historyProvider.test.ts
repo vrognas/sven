@@ -4,7 +4,6 @@
 import * as assert from "assert";
 import {
   mapLogEntryToHistoryItem,
-  getParentIds,
   createAuthorReference,
   calculateStatistics
 } from "../../../src/historyView/historyProvider";
@@ -97,28 +96,6 @@ suite("HistoryProvider", () => {
       assert.strictEqual(item.references!.length, 1);
       assert.strictEqual(item.references![0]!.name, "eve");
       assert.strictEqual(item.references![0]!.category, "authors");
-    });
-  });
-
-  suite("getParentIds", () => {
-    test("returns previous revision for normal commits", () => {
-      const parentIds = getParentIds("123");
-      assert.deepStrictEqual(parentIds, ["r122"]);
-    });
-
-    test("returns empty array for revision 1", () => {
-      const parentIds = getParentIds("1");
-      assert.deepStrictEqual(parentIds, []);
-    });
-
-    test("handles string revision numbers", () => {
-      const parentIds = getParentIds("500");
-      assert.deepStrictEqual(parentIds, ["r499"]);
-    });
-
-    test("returns empty for invalid revision", () => {
-      const parentIds = getParentIds("abc");
-      assert.deepStrictEqual(parentIds, []);
     });
   });
 

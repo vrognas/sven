@@ -95,19 +95,6 @@ export interface SourceControlHistoryProvider {
 // ============================================================================
 
 /**
- * Get parent revision IDs for a given revision.
- * SVN is linear: each commit has exactly one parent (previous revision).
- * Revision 1 has no parents.
- */
-export function getParentIds(revision: string): string[] {
-  const revNum = parseInt(revision, 10);
-  if (isNaN(revNum) || revNum <= 1) {
-    return [];
-  }
-  return [`r${revNum - 1}`];
-}
-
-/**
  * Create an author reference badge for display in the graph.
  */
 export function createAuthorReference(
@@ -227,11 +214,11 @@ export class SvnHistoryProvider
     const skip = options.skip ?? 0;
 
     try {
-      // Fetch log entries
+      // Fetch one extra entry to determine the parent of the last displayed entry
       const entries = await this.repository.log(
         "HEAD",
         "1",
-        limit + skip, // Fetch extra to handle skip
+        limit + skip + 1,
         this.repository.branchRoot
       );
 
@@ -239,14 +226,20 @@ export class SvnHistoryProvider
         return [];
       }
 
-      // Apply skip
-      const skippedEntries = entries.slice(skip);
+      // Apply skip, keep limit+1 to have parent info for last entry
+      const withExtra = entries.slice(skip, skip + limit + 1);
 
-      // Map to history items
-      return skippedEntries.map(entry => {
-        const parentIds = getParentIds(entry.revision);
-        return mapLogEntryToHistoryItem(entry, parentIds);
-      });
+      // Map to history items (only return `limit` items, use extra for parent)
+      const result: SourceControlHistoryItem[] = [];
+      for (let i = 0; i < Math.min(withExtra.length, limit); i++) {
+        const entry = withExtra[i]!;
+        const nextEntry = withExtra[i + 1];
+        // Parent is the next entry in the log (older revision)
+        // because SVN log only contains revisions that touched this path
+        const parentIds = nextEntry ? [`r${nextEntry.revision}`] : [];
+        result.push(mapLogEntryToHistoryItem(entry, parentIds));
+      }
+      return result;
     } catch (error) {
       // Log error but don't throw - return empty array
       console.error("SvnHistoryProvider.provideHistoryItems failed:", error);
