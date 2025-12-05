@@ -1109,8 +1109,8 @@ export class Repository implements IRemoteRepository {
       return updateResult;
     });
     // Fetch history views to show new commits from update
-    commands.executeCommand("svn.repolog.fetch");
-    commands.executeCommand("svn.itemlog.refresh");
+    await commands.executeCommand("svn.repolog.fetch");
+    await commands.executeCommand("svn.itemlog.refresh");
     return result;
   }
 
@@ -1150,8 +1150,8 @@ export class Repository implements IRemoteRepository {
       this.repository.commitFiles(message, files)
     );
     // Fetch history views to show new commit
-    commands.executeCommand("svn.repolog.fetch");
-    commands.executeCommand("svn.itemlog.refresh");
+    await commands.executeCommand("svn.repolog.fetch");
+    await commands.executeCommand("svn.itemlog.refresh");
     return result;
   }
 
