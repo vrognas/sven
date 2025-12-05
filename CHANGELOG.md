@@ -1,3 +1,11 @@
+## [2.33.10] (2025-12-05)
+
+### Fix: Revert Renamed Files
+
+- **Fix**: Reverting a renamed file now properly restores the original file
+- **Root cause**: Only the new path was reverted, leaving the original path deleted
+- **Affected**: revert.ts
+
 ## [2.33.9] (2025-12-05)
 
 ### Fix: Lock Decorator Not Showing
