@@ -44,7 +44,7 @@ export class SvnFileDecorationProvider
         return {
           badge: "B",
           tooltip: "Your working copy's BASE revision",
-          color: new ThemeColor("charts.green")
+          color: new ThemeColor("charts.purple")
         };
       }
       return undefined;

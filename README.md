@@ -188,7 +188,7 @@ View commit history for your repository in the dedicated History pane.
 
 - **Commit list** - Browse all commits with author, date, and message
 - **File changes** - Expand commits to see which files were modified
-- **BASE indicator** - Green **B** badge marks your working copy's BASE revision
+- **BASE indicator** - Purple **B** badge marks your working copy's BASE revision
 - **Diff view** - Click files to see changes in that commit
 
 ### Toolbar Actions
@@ -206,7 +206,7 @@ View commit history for your repository in the dedicated History pane.
 
 ### BASE Revision
 
-The **B** badge (green) indicates your working copy's BASE revision - the revision you last updated to.
+The **B** badge (purple) indicates your working copy's BASE revision - the revision you last updated to.
 
 - Commits above BASE = newer changes on server (not in your working copy yet)
 - BASE commit = what your working copy is based on
