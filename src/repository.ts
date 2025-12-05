@@ -494,6 +494,12 @@ export class Repository implements IRemoteRepository {
     if (this._sparseDownloadInProgress) {
       return;
     }
+
+    // Check grace period after force refresh to avoid redundant calls
+    if (this.isInGracePeriod()) {
+      return; // Info was already updated during force refresh
+    }
+
     await this.repository.updateInfo();
     this._onDidChangeRepository.fire(e);
   }
@@ -627,10 +633,49 @@ export class Repository implements IRemoteRepository {
       return;
     }
 
+    // Check grace period after force refresh (Update, Commit, etc.)
+    // to avoid redundant status calls from file watcher
+    if (this.isInGracePeriod()) {
+      this.queueRefreshAfterGracePeriod();
+      return;
+    }
+
     // Don't check idle here - eventuallyUpdateWhenIdleAndWait handles
     // idle-waiting via whenIdleAndFocused(). Previously, events were
     // silently dropped if operations were running, causing missed updates.
     this.eventuallyUpdateWhenIdleAndWait();
+  }
+
+  /**
+   * Check if within grace period after a force refresh operation.
+   */
+  private isInGracePeriod(): boolean {
+    return Date.now() - this.lastForceRefresh < this.FORCE_REFRESH_GRACE_MS;
+  }
+
+  /**
+   * Queue a refresh for after the grace period ends.
+   * Ensures user changes during grace period aren't lost.
+   */
+  private queueRefreshAfterGracePeriod(): void {
+    // Already queued
+    if (this.pendingGraceRefresh) {
+      return;
+    }
+
+    const remaining =
+      this.FORCE_REFRESH_GRACE_MS - (Date.now() - this.lastForceRefresh);
+    if (remaining <= 0) {
+      // Grace period already expired, refresh now
+      this.eventuallyUpdateWhenIdleAndWait();
+      return;
+    }
+
+    // Queue refresh for after grace period
+    this.pendingGraceRefresh = setTimeout(() => {
+      this.pendingGraceRefresh = undefined;
+      this.eventuallyUpdateWhenIdleAndWait();
+    }, remaining + 100); // +100ms buffer
   }
 
   @debounce(500)
@@ -668,6 +713,11 @@ export class Repository implements IRemoteRepository {
   // Cache matches debounce time (500ms) - after debounce completes, cache expired
   private readonly MODEL_CACHE_MS = 500;
 
+  // Grace period after force refresh to avoid redundant file watcher status calls
+  private lastForceRefresh: number = 0;
+  private readonly FORCE_REFRESH_GRACE_MS = 5000; // 5 seconds
+  private pendingGraceRefresh: NodeJS.Timeout | undefined;
+
   @globalSequentialize("updateModelState")
   public async updateModelState(
     checkRemoteChanges: boolean = false,
@@ -691,6 +741,8 @@ export class Repository implements IRemoteRepository {
     // (Commit, Update, etc.) so repo history can detect the new revision
     if (forceRefresh) {
       await this.repository.updateInfo(true);
+      // Set grace period to avoid redundant file watcher status calls
+      this.lastForceRefresh = Date.now();
     }
 
     // Get categorized status from StatusService
@@ -1898,6 +1950,11 @@ export class Repository implements IRemoteRepository {
     if (this.promptAuthCooldownTimer) {
       clearTimeout(this.promptAuthCooldownTimer);
       this.promptAuthCooldownTimer = undefined;
+    }
+    // Clear grace period refresh timer
+    if (this.pendingGraceRefresh) {
+      clearTimeout(this.pendingGraceRefresh);
+      this.pendingGraceRefresh = undefined;
     }
     // Stop remote change polling to prevent timer leak
     this.remoteChangeService.dispose();

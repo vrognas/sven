@@ -1,3 +1,12 @@
+## [2.33.7] (2025-12-05)
+
+### Fix: Log Cache & Performance
+
+- **Fix**: Fetch/Refresh buttons now properly clear low-level SVN log cache (60s TTL was preventing fresh fetches)
+- **Perf**: 5-second grace period after Update/Commit prevents redundant file watcher status calls
+- **Style**: B decorator (BASE revision) changed from green to purple
+- **Affected**: repoLogProvider.ts, itemLogProvider.ts, remoteRepository.ts, repository.ts, fileDecorationProvider.ts
+
 ## [2.33.6] (2025-12-05)
 
 ### Remove: Native Graph View
