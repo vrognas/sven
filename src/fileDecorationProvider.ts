@@ -43,7 +43,6 @@ export class SvnFileDecorationProvider
       if (queryParams.get("isBase") === "true") {
         return {
           badge: "B",
-          tooltip: "Your working copy's BASE revision",
           color: new ThemeColor("charts.green")
         };
       }
