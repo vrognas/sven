@@ -630,6 +630,10 @@ export class Repository implements IRemoteRepository {
       return;
     }
 
+    // Collect all tracked files first, then delete in batch
+    // This prevents race conditions when deleting multiple files
+    const trackedFiles: string[] = [];
+
     for (const uri of e.files) {
       // Skip files outside this repository
       if (!uri.fsPath.startsWith(this.workspaceRoot)) {
@@ -639,14 +643,20 @@ export class Repository implements IRemoteRepository {
       try {
         // Check if file was tracked by SVN
         const wasTracked = await this.wasFileTracked(uri.fsPath);
-
         if (wasTracked) {
-          // Run svn delete to mark for removal
-          await this.removeFiles([uri.fsPath], false);
+          trackedFiles.push(uri.fsPath);
         }
       } catch (err) {
-        // Log but don't block - user can manually fix if needed
-        logError(`Failed to auto-delete: ${uri.fsPath}`, err);
+        logError(`Failed to check if tracked: ${uri.fsPath}`, err);
+      }
+    }
+
+    // Delete all tracked files in a single svn delete call
+    if (trackedFiles.length > 0) {
+      try {
+        await this.removeFiles(trackedFiles, false);
+      } catch (err) {
+        logError(`Failed to auto-delete files`, err);
       }
     }
   }

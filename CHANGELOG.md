@@ -1,3 +1,12 @@
+## [2.33.17] (2025-12-05)
+
+### Fix: Multi-file Delete Shows All as Deleted
+
+- **Fix**: Deleting multiple files now marks all as deleted (not missing)
+- **Root cause**: Sequential `svn delete` calls caused race conditions
+- **Solution**: Batch all tracked files into single `svn delete` call
+- **Affected**: repository.ts
+
 ## [2.33.16] (2025-12-05)
 
 ### Feature: Configurable BASE Decorator Color
