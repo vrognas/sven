@@ -393,6 +393,11 @@ export class Repository implements IRemoteRepository {
       workspace.onDidRenameFiles(e => this.onDidRenameFiles(e))
     );
 
+    // Intercept file deletes to use svn delete for tracked files
+    this.disposables.push(
+      workspace.onDidDeleteFiles(e => this.onDidDeleteFiles(e))
+    );
+
     // For each deleted file, add to set (auto-deduplicates)
     this._fsWatcher.onDidWorkspaceDelete(
       uri => this.deletedUris.add(uri),
@@ -607,6 +612,41 @@ export class Repository implements IRemoteRepository {
       } catch (err) {
         // Log but don't block - user can manually fix if needed
         logError(`Failed to convert rename to svn move: ${oldUri.fsPath}`, err);
+      }
+    }
+  }
+
+  /**
+   * Intercept file deletes to use svn delete for tracked files.
+   * This immediately marks files for deletion instead of leaving as "missing".
+   */
+  private async onDidDeleteFiles(e: {
+    files: ReadonlyArray<Uri>;
+  }): Promise<void> {
+    const config = this.getConfig();
+
+    // Only auto-delete if setting is "remove"
+    if (config.actionForDeletedFiles !== "remove") {
+      return;
+    }
+
+    for (const uri of e.files) {
+      // Skip files outside this repository
+      if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+        continue;
+      }
+
+      try {
+        // Check if file was tracked by SVN
+        const wasTracked = await this.wasFileTracked(uri.fsPath);
+
+        if (wasTracked) {
+          // Run svn delete to mark for removal
+          await this.removeFiles([uri.fsPath], false);
+        }
+      } catch (err) {
+        // Log but don't block - user can manually fix if needed
+        logError(`Failed to auto-delete: ${uri.fsPath}`, err);
       }
     }
   }

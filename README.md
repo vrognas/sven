@@ -180,6 +180,20 @@ When you rename tracked files in the Explorer, the extension automatically uses 
 - External tools (command line, file manager) won't trigger auto-conversion
 - For external renames, manually use `svn move` or delete + add (loses history)
 
+## Smart File Deletion
+
+When you delete tracked files in the Explorer, the extension can automatically run `svn delete`.
+
+**Setting:** `svn.delete.actionForDeletedFiles`
+- `prompt` (default) - Ask what to do
+- `remove` - Automatically run `svn delete`
+- `none` - Do nothing (file shows as "missing")
+
+**How it works (when set to "remove"):**
+- Delete a tracked file via Explorer → extension intercepts and runs `svn delete`
+- File is immediately marked for deletion (D status)
+- Untracked files are deleted normally (no SVN involvement)
+
 ## Repository History
 
 View commit history for your repository in the dedicated History pane.

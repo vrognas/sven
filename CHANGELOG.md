@@ -1,3 +1,11 @@
+## [2.33.8] (2025-12-05)
+
+### Feat: Immediate Auto-Delete Intercept
+
+- **Feat**: Deleting tracked files in Explorer now immediately runs `svn delete` (when setting is "remove")
+- **Docs**: Added Smart File Deletion section to README
+- **Affected**: repository.ts, README.md
+
 ## [2.33.7] (2025-12-05)
 
 ### Fix: Log Cache & Performance
