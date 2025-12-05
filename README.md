@@ -180,6 +180,49 @@ When you rename tracked files in the Explorer, the extension automatically uses 
 - External tools (command line, file manager) won't trigger auto-conversion
 - For external renames, manually use `svn move` or delete + add (loses history)
 
+## Repository History
+
+View commit history for your repository in the dedicated History pane.
+
+### Features
+
+- **Commit list** - Browse all commits with author, date, and message
+- **File changes** - Expand commits to see which files were modified
+- **BASE indicator** - Green **B** badge marks your working copy's BASE revision
+- **Diff view** - Click files to see changes in that commit
+
+### Toolbar Actions
+
+| Button | Action | Description |
+|--------|--------|-------------|
+| ↻ Refresh | Refresh from cache | Quick refresh using cached log data |
+| ↓ Fetch | Fetch from server | Get latest commits from server, update cache |
+| ↓↓ Pull | Fetch + Update | Fetch latest AND update working copy to HEAD |
+
+**When to use each:**
+- **Refresh** - Just redraw the UI (instant, no server contact)
+- **Fetch** - See new commits without changing your files
+- **Pull** - Get new commits AND update your working copy
+
+### BASE Revision
+
+The **B** badge (green) indicates your working copy's BASE revision - the revision you last updated to.
+
+- Commits above BASE = newer changes on server (not in your working copy yet)
+- BASE commit = what your working copy is based on
+- Commits below BASE = older history
+
+**Tip:** If you see commits above BASE, use "Pull" or `svn update` to get them.
+
+### File History
+
+Right-click a file → **Show File History** to see commits that modified that specific file.
+
+From file history, you can:
+- **Go to Repository History** - Jump to that revision in the full repo log
+- **Open file at revision** - View file contents at that point in time
+- **Compare revisions** - Diff between any two versions
+
 ## Blame Annotations
 
 View line-by-line revision history directly in the editor.
