@@ -761,6 +761,12 @@
         "title": "Open this revision"
       },
       {
+        "command": "svn.repolog.goToBase",
+        "category": "SVN",
+        "title": "Go to BASE",
+        "icon": "$(target)"
+      },
+      {
         "command": "svn.repolog.refresh",
         "category": "SVN",
         "title": "Refresh",
@@ -1075,6 +1081,10 @@
           "when": "false"
         },
         {
+          "command": "svn.repolog.goToBase",
+          "when": "false"
+        },
+        {
           "command": "svn.repolog.refresh",
           "when": "false"
         },
@@ -1164,6 +1174,11 @@
           "command": "svn.treeview.refreshProvider",
           "when": "view == svn",
           "group": "navigation"
+        },
+        {
+          "command": "svn.repolog.goToBase",
+          "when": "view == repolog",
+          "group": "navigation@0"
         },
         {
           "command": "svn.repolog.fetch",

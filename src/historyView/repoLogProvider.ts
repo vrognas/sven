@@ -173,6 +173,7 @@ export class RepoLogProvider
         () => this._onDidChangeTreeData.fire(undefined),
         this
       ),
+      commands.registerCommand("svn.repolog.goToBase", this.goToBase, this),
       commands.registerCommand(
         "svn.repolog.fetch",
         this.explicitRefreshCmd,
@@ -395,6 +396,38 @@ export class RepoLogProvider
     return this.refresh(element, fetchMoreClick, true);
   }
 
+  // Navigate to the BASE revision in the tree view
+  public async goToBase() {
+    if (!this.treeView) {
+      return;
+    }
+    const cached = this.getCached();
+    if (!cached) {
+      return;
+    }
+    const baseRev = cached.persisted.baseRevision;
+    if (!baseRev) {
+      return;
+    }
+    // Find the BASE commit in the entries
+    for (const entry of cached.entries) {
+      if (parseInt(entry.revision, 10) === baseRev) {
+        // Create the tree item to reveal
+        const item: ILogTreeItem = {
+          kind: LogTreeItemKind.Commit,
+          data: entry,
+          isBase: true
+        };
+        await this.treeView.reveal(item, {
+          select: true,
+          focus: true,
+          expand: false
+        });
+        return;
+      }
+    }
+  }
+
   public async refresh(
     element?: ILogTreeItem,
     fetchMoreClick?: boolean,
@@ -535,6 +568,11 @@ export class RepoLogProvider
     }
 
     return ti;
+  }
+
+  // Required for TreeView.reveal() to work
+  public getParent(element: ILogTreeItem): ILogTreeItem | undefined {
+    return element.parent;
   }
 
   public async getChildren(
