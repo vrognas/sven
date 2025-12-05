@@ -85,7 +85,7 @@ export class RepoLogProvider
   // Performance optimization: visibility tracking and debouncing
   private treeView?: TreeView<ILogTreeItem>;
   private refreshTimeout?: NodeJS.Timeout;
-  private readonly DEBOUNCE_MS = 2000;
+  private readonly DEBOUNCE_MS = 1000;
 
   private evictOldestLogEntry(): void {
     let oldestKey: string | null = null;
