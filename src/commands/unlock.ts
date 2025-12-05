@@ -18,8 +18,8 @@ export class Unlock extends Command {
         const result = await repository.unlock(paths);
         if (result.exitCode === 0) {
           window.showInformationMessage(`Unlocked ${paths.length} file(s)`);
-          // Refresh status to update lock icons
-          await repository.updateModelState(true, true);
+          // Refresh local status to update lock icons (no remote check needed)
+          await repository.updateModelState(false, true);
         } else {
           window.showErrorMessage(
             `Unlock failed: ${result.stderr || "Unknown error"}`
@@ -41,8 +41,8 @@ export class Unlock extends Command {
         const result = await repository.unlock(paths);
         if (result.exitCode === 0) {
           window.showInformationMessage(`Unlocked ${paths.length} file(s)`);
-          // Refresh status to update lock icons
-          await repository.updateModelState(true, true);
+          // Refresh local status to update lock icons (no remote check needed)
+          await repository.updateModelState(false, true);
         } else {
           window.showErrorMessage(
             `Unlock failed: ${result.stderr || "Unknown error"}`
@@ -82,8 +82,8 @@ export class BreakLock extends Command {
           window.showInformationMessage(
             `Broke lock on ${paths.length} file(s)`
           );
-          // Refresh status to update lock icons
-          await repository.updateModelState(true, true);
+          // Refresh local status to update lock icons (no remote check needed)
+          await repository.updateModelState(false, true);
         } else {
           window.showErrorMessage(
             `Break lock failed: ${result.stderr || "Unknown error"}`
@@ -107,8 +107,8 @@ export class BreakLock extends Command {
           window.showInformationMessage(
             `Broke lock on ${paths.length} file(s)`
           );
-          // Refresh status to update lock icons
-          await repository.updateModelState(true, true);
+          // Refresh local status to update lock icons (no remote check needed)
+          await repository.updateModelState(false, true);
         } else {
           window.showErrorMessage(
             `Break lock failed: ${result.stderr || "Unknown error"}`

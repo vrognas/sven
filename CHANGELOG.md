@@ -1,3 +1,11 @@
+## [2.33.9] (2025-12-05)
+
+### Fix: Lock Decorator Not Showing
+
+- **Fix**: Lock decorator (🔒) now shows immediately after locking files
+- **Root cause**: `hasRemoteChanges()` optimization was skipping status call when no new commits existed
+- **Affected**: lock.ts, unlock.ts
+
 ## [2.33.8] (2025-12-05)
 
 ### Feat: Immediate Auto-Delete Intercept
