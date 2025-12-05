@@ -1,21 +1,11 @@
-## [2.33.7] (2025-12-05)
-
-### Feat: Author Connections in Graph View
-
-- **New**: Optional `svn.graph.showAuthorConnections` setting (default: false)
-- **New**: When enabled, creates visual "author lanes" by linking same-author commits
-- **Note**: Experimental - may create complex graph layouts with many authors
-- **Affected**: package.json, src/historyView/historyProvider.ts
-
 ## [2.33.6] (2025-12-05)
 
-### Feat: Native Graph View (Experimental)
+### Remove: Native Graph View
 
-- **New**: `SourceControlHistoryProvider` for VS Code's native Graph view
-- **New**: Author badges displayed as references on each commit
-- **Note**: Uses PROPOSED API (`scmHistoryProvider`) - may change in future VS Code versions
-- **Note**: Coexists with existing TreeView (repolog) - both views work simultaneously
-- **Affected**: package.json, src/historyView/historyProvider.ts, src/repository.ts
+- **Removed**: `SourceControlHistoryProvider` implementation
+- **Reason**: VS Code's proposed `scmHistoryProvider` API has internal bugs causing "Tree input not set" errors
+- **Note**: TreeView (repolog) remains the primary history view
+- **Affected**: Removed src/historyView/historyProvider.ts, cleaned up package.json and repository.ts
 
 ## [2.33.5] (2025-12-04)
 

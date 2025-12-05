@@ -109,10 +109,6 @@ import {
 import { logError } from "./util/errorLogger";
 import { match } from "./util/globMatch";
 import { RepositoryFilesWatcher } from "./watchers/repositoryFilesWatcher";
-import {
-  tryRegisterHistoryProvider,
-  SvnHistoryProvider
-} from "./historyView/historyProvider";
 
 function shouldShowProgress(operation: Operation): boolean {
   switch (operation) {
@@ -156,7 +152,6 @@ export class Repository implements IRemoteRepository {
     refresh(uris?: Uri | Uri[]): void;
     dispose(): void;
   };
-  private historyProvider?: SvnHistoryProvider;
   private _configCache: RepositoryConfig | undefined;
 
   // Property accessors for backward compatibility
@@ -392,22 +387,6 @@ export class Repository implements IRemoteRepository {
       window.registerFileDecorationProvider(this.fileDecorationProvider)
     );
     this.disposables.push(this.fileDecorationProvider);
-
-    // Try to register SourceControlHistoryProvider for native Graph view
-    // Wait for first status update to ensure repository is initialized
-    // This avoids VS Code "Tree input not set" error
-    // This is a PROPOSED API - may not be available in all VS Code versions
-    const historyProviderRegistration = this.onDidChangeStatus(() => {
-      historyProviderRegistration.dispose();
-      this.historyProvider = tryRegisterHistoryProvider(
-        this.sourceControl,
-        this
-      );
-      if (this.historyProvider) {
-        this.disposables.push(this.historyProvider);
-      }
-    });
-    this.disposables.push(historyProviderRegistration);
 
     // For each deleted file, add to set (auto-deduplicates)
     this._fsWatcher.onDidWorkspaceDelete(
@@ -1153,8 +1132,6 @@ export class Repository implements IRemoteRepository {
     // Refresh history views to show new commit
     commands.executeCommand("svn.repolog.refresh");
     commands.executeCommand("svn.itemlog.refresh");
-    // Refresh native Graph view (proposed API)
-    this.historyProvider?.refresh();
     return result;
   }
 

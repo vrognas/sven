@@ -953,55 +953,31 @@ disposables.push(
 
 ---
 
-### 14. Proposed APIs: Runtime Checks + Graceful Degradation
+### 14. Proposed APIs: Proceed with Extreme Caution
 
-**Lesson**: VS Code proposed APIs enable powerful features but require defensive coding.
+**Lesson**: VS Code proposed APIs can have internal bugs that make them unusable, even with correct implementation.
 
-**Pattern** (SourceControlHistoryProvider):
+**Example** (SourceControlHistoryProvider - ABANDONED):
 
-```typescript
-// 1. Define local types matching proposed API (not in @types/vscode)
-interface SourceControlHistoryItem {
-  readonly id: string;
-  readonly parentIds: string[];
-  // ...
-}
+We implemented `scmHistoryProvider` for native Graph view support. Despite correct implementation:
 
-// 2. Runtime check before registration
-function tryRegisterHistoryProvider(
-  sourceControl: unknown,
-  repository: IRepository
-): SvnHistoryProvider | undefined {
-  try {
-    const sc = sourceControl as { historyProvider?: unknown };
-    if (!("historyProvider" in sc)) {
-      return undefined; // API not available
-    }
-    const provider = new SvnHistoryProvider(repository);
-    sc.historyProvider = provider;
-    return provider;
-  } catch {
-    return undefined; // Silently fail
-  }
-}
+- Runtime checks passed
+- Provider registered successfully
+- Methods implemented correctly
 
-// 3. Optional chaining when using
-this.historyProvider?.refresh();
-```
+But VS Code's internal Graph view threw "Tree input not set" errors due to their own tree initialization bugs. No amount of timing adjustments (setImmediate, setTimeout, waiting for status updates) could fix VS Code's internal race condition.
 
-**Requirements**:
+**What We Tried**:
 
-- Add to `enabledApiProposals` in package.json
-- Define local interfaces (proposed types not exported)
-- Use `@ts-expect-error` sparingly for known runtime-only properties
-- Provide fallback (existing TreeView still works)
+1. Immediate registration → Error
+2. setImmediate delay → Error
+3. setTimeout(100ms) → Error
+4. Wait for first status update → Error
 
-**Benefits**:
+**Conclusion**: The bug was in VS Code's `WorkbenchCompressibleAsyncDataTree2._updateChildren` - their tree view wasn't initialized before they tried to update it.
 
-- Native Graph view when available
-- Zero breakage on older VS Code versions
-- Coexists with stable implementations
+**Rule**: Proposed APIs are unstable by definition. Even correct implementations can fail due to VS Code internal bugs. Always have a stable fallback (TreeView worked perfectly while Graph view failed).
 
-**Rule**: Proposed APIs = opt-in enhancement, not required functionality.
+**Recommendation**: Avoid proposed APIs unless absolutely necessary. Wait for them to become stable APIs before adoption.
 
 ---

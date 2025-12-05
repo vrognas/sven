@@ -2,15 +2,12 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.33.7",
+  "version": "2.33.6",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
     "positron": "^2025.11.0"
   },
-  "enabledApiProposals": [
-    "scmHistoryProvider"
-  ],
   "icon": "images/subversion.png",
   "homepage": "https://github.com/vrognas/positron-svn#readme",
   "repository": {
@@ -2152,17 +2149,6 @@
             "log",
             "history",
             "ui"
-          ]
-        },
-        "svn.graph.showAuthorConnections": {
-          "type": "boolean",
-          "markdownDescription": "**Experimental**: Show connections between commits by the same author in the Graph view. Creates visual 'author lanes' by adding secondary parent links.",
-          "default": false,
-          "order": 102,
-          "tags": [
-            "graph",
-            "history",
-            "experimental"
           ]
         },
         "svn.diff.withHead": {
