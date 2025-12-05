@@ -120,6 +120,66 @@ Configure external diff tools like Beyond Compare for large files (e.g., CSVs) w
 2. Right-click file in Source Control → **Diff with External Tool**
 3. For Beyond Compare setup, see: https://www.scootersoftware.com/kb/vcs#svn
 
+## File & Folder Decorations
+
+The extension displays status badges and icons on files in the Explorer and Source Control views.
+
+### Status Badges
+
+| Badge | Meaning |
+|-------|---------|
+| **A** | Added - new file scheduled for commit |
+| **M** | Modified - file has local changes |
+| **D** | Deleted - file scheduled for removal |
+| **R** | Renamed/Replaced - file moved or replaced |
+| **C** | Conflicted - merge conflict needs resolution |
+| **U** | Unversioned - new file not yet added to SVN |
+| **!** | Missing - file deleted outside SVN |
+| **I** | Ignored - file matches ignore pattern |
+
+### Folder Badges
+
+Folders show the same status with a folder prefix:
+- 📁A - Folder added
+- 📁M - Folder with modified contents
+- 📁D - Folder deleted
+
+### Lock Icons
+
+| Icon | Meaning |
+|------|---------|
+| 🔒 | File is locked (by you or others) |
+| 🔓 | File has `svn:needs-lock` property (unlocked, read-only) |
+| 🔒M | Locked and modified |
+| 🔒A | Locked and added |
+
+**Tooltip:** Hover over the lock icon to see who owns the lock.
+
+### Combined Badges
+
+When a file has both a status and lock, badges combine:
+- 🔒M - Locked + Modified
+- 🔒A - Locked + Added
+
+## Smart File Renaming
+
+When you rename tracked files in the Explorer, the extension automatically uses `svn move` to preserve file history.
+
+**How it works:**
+- Rename a tracked file via Explorer → extension intercepts and converts to `svn move`
+- File history is preserved across the rename
+- Untracked files are renamed normally (no SVN involvement)
+
+**What you get:**
+- Use the normal "Rename" command - no separate "SVN Rename" needed
+- `svn log` shows full history including before the rename
+- No "missing + unversioned" status after renaming
+
+**Limitations:**
+- Only intercepts renames within VS Code/Positron
+- External tools (command line, file manager) won't trigger auto-conversion
+- For external renames, manually use `svn move` or delete + add (loses history)
+
 ## Blame Annotations
 
 View line-by-line revision history directly in the editor.
