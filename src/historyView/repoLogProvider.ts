@@ -492,7 +492,7 @@ export class RepoLogProvider
         ) {
           this.evictOldestLogEntry();
         }
-        this.logCache.set(repoUrl, {
+        const newCached: ICachedLog = {
           entries,
           isComplete,
           repo,
@@ -500,7 +500,14 @@ export class RepoLogProvider
           persisted,
           order: this.logCache.size,
           lastAccessed: Date.now()
-        });
+        };
+        this.logCache.set(repoUrl, newCached);
+
+        // If cache was cleared, fetch new commits immediately
+        // Don't rely on getChildren - VS Code may not call it if tree is hidden
+        if (clearEntries) {
+          await fetchMore(newCached);
+        }
       }
     }
     this._onDidChangeTreeData.fire(element);
