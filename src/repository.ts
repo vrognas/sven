@@ -394,10 +394,11 @@ export class Repository implements IRemoteRepository {
     this.disposables.push(this.fileDecorationProvider);
 
     // Try to register SourceControlHistoryProvider for native Graph view
-    // Defer registration to avoid race condition with VS Code's tree initialization
-    // Use setTimeout to ensure VS Code's internal tree is fully initialized
+    // Wait for first status update to ensure repository is initialized
+    // This avoids VS Code "Tree input not set" error
     // This is a PROPOSED API - may not be available in all VS Code versions
-    setTimeout(() => {
+    const historyProviderRegistration = this.onDidChangeStatus(() => {
+      historyProviderRegistration.dispose();
       this.historyProvider = tryRegisterHistoryProvider(
         this.sourceControl,
         this
@@ -405,7 +406,8 @@ export class Repository implements IRemoteRepository {
       if (this.historyProvider) {
         this.disposables.push(this.historyProvider);
       }
-    }, 100);
+    });
+    this.disposables.push(historyProviderRegistration);
 
     // For each deleted file, add to set (auto-deduplicates)
     this._fsWatcher.onDidWorkspaceDelete(
