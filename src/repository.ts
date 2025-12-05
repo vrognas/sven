@@ -1521,6 +1521,11 @@ export class Repository implements IRemoteRepository {
   }
 
   public onDidSaveTextDocument(document: TextDocument) {
+    // Always refresh status on save to update Changes view
+    // Uses 2s cache to avoid excessive SVN calls on rapid saves
+    void this.updateModelState();
+
+    // Handle conflict auto-resolution
     const uriString = document.uri.toString();
     const conflict = this.conflicts.resourceStates.find(
       resource => resource.resourceUri.toString() === uriString
