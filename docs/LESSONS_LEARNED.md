@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: v2.25.0
-**Updated**: 2025-11-29
+**Version**: v2.33.6
+**Updated**: 2025-12-05
 
 ---
 
@@ -950,5 +950,58 @@ disposables.push(
 ```
 
 **Rule**: Native resources don't implement IDisposable. Track them separately and clean up in dispose().
+
+---
+
+### 14. Proposed APIs: Runtime Checks + Graceful Degradation
+
+**Lesson**: VS Code proposed APIs enable powerful features but require defensive coding.
+
+**Pattern** (SourceControlHistoryProvider):
+
+```typescript
+// 1. Define local types matching proposed API (not in @types/vscode)
+interface SourceControlHistoryItem {
+  readonly id: string;
+  readonly parentIds: string[];
+  // ...
+}
+
+// 2. Runtime check before registration
+function tryRegisterHistoryProvider(
+  sourceControl: unknown,
+  repository: IRepository
+): SvnHistoryProvider | undefined {
+  try {
+    const sc = sourceControl as { historyProvider?: unknown };
+    if (!("historyProvider" in sc)) {
+      return undefined; // API not available
+    }
+    const provider = new SvnHistoryProvider(repository);
+    sc.historyProvider = provider;
+    return provider;
+  } catch {
+    return undefined; // Silently fail
+  }
+}
+
+// 3. Optional chaining when using
+this.historyProvider?.refresh();
+```
+
+**Requirements**:
+
+- Add to `enabledApiProposals` in package.json
+- Define local interfaces (proposed types not exported)
+- Use `@ts-expect-error` sparingly for known runtime-only properties
+- Provide fallback (existing TreeView still works)
+
+**Benefits**:
+
+- Native Graph view when available
+- Zero breakage on older VS Code versions
+- Coexists with stable implementations
+
+**Rule**: Proposed APIs = opt-in enhancement, not required functionality.
 
 ---

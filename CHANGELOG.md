@@ -1,3 +1,13 @@
+## [2.33.6] (2025-12-05)
+
+### Feat: Native Graph View (Experimental)
+
+- **New**: `SourceControlHistoryProvider` for VS Code's native Graph view
+- **New**: Author badges displayed as references on each commit
+- **Note**: Uses PROPOSED API (`scmHistoryProvider`) - may change in future VS Code versions
+- **Note**: Coexists with existing TreeView (repolog) - both views work simultaneously
+- **Affected**: package.json, src/historyView/historyProvider.ts, src/repository.ts
+
 ## [2.33.5] (2025-12-04)
 
 ### Fix: Resource Index Stale Data

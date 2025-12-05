@@ -2,13 +2,15 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.33.5",
+  "version": "2.33.6",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
     "positron": "^2025.11.0"
   },
-  "enabledApiProposals": [],
+  "enabledApiProposals": [
+    "scmHistoryProvider"
+  ],
   "icon": "images/subversion.png",
   "homepage": "https://github.com/vrognas/positron-svn#readme",
   "repository": {
