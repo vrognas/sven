@@ -182,17 +182,17 @@ When you rename tracked files in the Explorer, the extension automatically uses 
 
 ## Smart File Deletion
 
-When you delete tracked files in the Explorer, the extension can automatically run `svn delete`.
+When you delete tracked files in the Explorer, the extension automatically runs `svn delete` to preserve proper version control.
 
-**Setting:** `svn.delete.actionForDeletedFiles`
-- `prompt` (default) - Ask what to do
-- `remove` - Automatically run `svn delete`
-- `none` - Do nothing (file shows as "missing")
-
-**How it works (when set to "remove"):**
-- Delete a tracked file via Explorer → extension intercepts and runs `svn delete`
+**Default behavior:**
+- Delete a tracked file via Explorer → extension runs `svn delete`
 - File is immediately marked for deletion (D status)
 - Untracked files are deleted normally (no SVN involvement)
+
+**Setting:** `svn.delete.actionForDeletedFiles`
+- `remove` (default) - Automatically run `svn delete`
+- `prompt` - Ask what to do each time
+- `none` - Do nothing (file shows as "missing" status)
 
 ## Repository History
 
@@ -569,8 +569,8 @@ Here are all of the extension settings with their default values. To change any 
   // The default location to checkout a svn repository.
   "svn.defaultCheckoutDirectory": null,
 
-  // When a file is deleted, what SVN should do? `none` - Do nothing, `prompt` - Ask the action, `remove` - automatically remove from SVN
-  "svn.delete.actionForDeletedFiles": "prompt"  // values: ["none","prompt","remove"],
+  // Action when tracked files are deleted in Explorer: `none` - Do nothing, `prompt` - Ask, `remove` - Auto svn delete
+  "svn.delete.actionForDeletedFiles": "remove"  // values: ["none","prompt","remove"],
 
   // Ignored files/rules for `svn.delete.actionForDeletedFiles`(Ex.: file.txt or **/*.txt)
   "svn.delete.ignoredRulesForDeletedFiles": [],

@@ -473,7 +473,7 @@ export class Repository implements IRemoteRepository {
     this._configCache = {
       actionForDeletedFiles: configuration.get<string>(
         "delete.actionForDeletedFiles",
-        "prompt"
+        "remove"
       ),
       ignoredRulesForDeletedFiles: configuration.get<string[]>(
         "delete.ignoredRulesForDeletedFiles",

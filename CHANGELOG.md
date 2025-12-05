@@ -1,3 +1,11 @@
+## [2.33.12] (2025-12-05)
+
+### Change: Auto-Delete Default
+
+- **Change**: `svn.delete.actionForDeletedFiles` now defaults to `"remove"` instead of `"prompt"`
+- **Behavior**: Deleting tracked files in Explorer now auto-runs `svn delete` by default
+- **Affected**: package.json, repository.ts, README.md
+
 ## [2.33.11] (2025-12-05)
 
 ### Fix: Faster Extension Activation

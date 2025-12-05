@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.33.11",
+  "version": "2.33.12",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -2352,11 +2352,11 @@
           ],
           "enumDescriptions": [
             "Do nothing when files are deleted",
-            "Ask what to do (recommended)",
-            "Automatically run 'svn delete'"
+            "Ask what to do",
+            "Automatically run 'svn delete' (recommended)"
           ],
-          "description": "Action when files are deleted outside SVN",
-          "default": "prompt",
+          "description": "Action when tracked files are deleted in Explorer",
+          "default": "remove",
           "order": 202,
           "tags": [
             "delete",
