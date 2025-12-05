@@ -393,6 +393,7 @@ export class RepoLogProvider
     element?: ILogTreeItem,
     fetchMoreClick?: boolean
   ) {
+    console.log("[SVN repolog] explicitRefreshCmd called");
     return this.refresh(element, fetchMoreClick, true);
   }
 
@@ -433,6 +434,9 @@ export class RepoLogProvider
     fetchMoreClick?: boolean,
     explicitRefresh?: boolean
   ) {
+    console.log(
+      `[SVN repolog] refresh called: element=${element}, fetchMoreClick=${fetchMoreClick}, explicitRefresh=${explicitRefresh}`
+    );
     if (fetchMoreClick) {
       // Fetch more commits for current repo
       const cached = this.getCached(element);
@@ -459,6 +463,9 @@ export class RepoLogProvider
       }
 
       // Rebuild cache with preserved or empty entries
+      console.log(
+        `[SVN repolog] repositories count: ${this.sourceControlManager.repositories.length}`
+      );
       for (const repo of this.sourceControlManager.repositories) {
         const remoteRoot = repo.branchRoot;
         const repoUrl = remoteRoot.toString(true);
@@ -505,8 +512,15 @@ export class RepoLogProvider
 
         // If cache was cleared, fetch new commits immediately
         // Don't rely on getChildren - VS Code may not call it if tree is hidden
+        console.log(
+          `[SVN repolog] clearEntries=${clearEntries}, repoUrl=${repoUrl}`
+        );
         if (clearEntries) {
+          console.log("[SVN repolog] calling fetchMore...");
           await fetchMore(newCached);
+          console.log(
+            `[SVN repolog] fetchMore done, entries=${newCached.entries.length}`
+          );
         }
       }
     }
