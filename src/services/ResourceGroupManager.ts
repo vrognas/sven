@@ -303,26 +303,34 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * Calculate hash of resource state for change detection (Phase 16 perf fix)
    * Used to skip unnecessary index rebuilds when resources haven't changed
+   * Includes file paths to detect renames (same count but different files)
    */
   private calculateResourceHash(result: StatusResult): string {
-    const changelistSize = result.changelists.size;
-    // Build hash from resource counts per group
-    // Format: changes-conflicts-unversioned-changelists-remote
-    const counts = [
-      result.changes.length,
-      result.conflicts.length,
-      result.unversioned.length,
-      changelistSize,
-      result.remoteChanges.length
+    // Build hash from resource paths per group (not just counts)
+    // This detects renames where count stays same but files differ
+    const pathHashes = [
+      this.hashPaths(result.changes),
+      this.hashPaths(result.conflicts),
+      this.hashPaths(result.unversioned),
+      this.hashPaths(result.remoteChanges)
     ];
 
-    // Include changelist names and counts for more precise detection
+    // Include changelist names and their path hashes
     const changelistData: string[] = [];
     result.changelists.forEach((resources, name) => {
-      changelistData.push(`${name}:${resources.length}`);
+      changelistData.push(`${name}:${this.hashPaths(resources)}`);
     });
 
-    return `${counts.join("-")}|${changelistData.join(",")}`;
+    return `${pathHashes.join("|")}|${changelistData.join(",")}`;
+  }
+
+  /**
+   * Simple hash of resource paths for change detection
+   */
+  private hashPaths(resources: Resource[]): string {
+    // Sort paths for consistent hash regardless of order
+    const paths = resources.map(r => r.resourceUri.fsPath).sort();
+    return paths.join(";");
   }
 
   /**
