@@ -1150,7 +1150,9 @@ export class Repository implements IRemoteRepository {
       this.repository.commitFiles(message, files)
     );
     // Fetch history views to show new commit
+    console.log("[SVN repository] commit done, calling repolog.fetch...");
     await commands.executeCommand("svn.repolog.fetch");
+    console.log("[SVN repository] repolog.fetch done");
     await commands.executeCommand("svn.itemlog.refresh");
     return result;
   }
