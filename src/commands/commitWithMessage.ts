@@ -22,24 +22,25 @@ export class CommitWithMessage extends Command {
       return;
     }
 
-    const filePaths = resourceStates.map(state => {
-      return state.resourceUri.fsPath;
-    });
+    // Use Set to avoid duplicates when multiple files share parent dirs
+    const filePathSet = new Set(
+      resourceStates.map(state => state.resourceUri.fsPath)
+    );
 
     const message = await inputCommitMessage(
       repository.inputBox.value,
       false,
-      filePaths
+      Array.from(filePathSet)
     );
     if (message === undefined) {
       return;
     }
 
-    // If files is renamed, the commit need previous file
+    // Add renamed files and added parent directories
     resourceStates.forEach(state => {
       if (state instanceof Resource) {
         if (state.type === Status.ADDED && state.renameResourceUri) {
-          filePaths.push(state.renameResourceUri.fsPath);
+          filePathSet.add(state.renameResourceUri.fsPath);
         }
 
         let dir = path.dirname(state.resourceUri.fsPath);
@@ -47,13 +48,15 @@ export class CommitWithMessage extends Command {
 
         while (parent) {
           if (parent.type === Status.ADDED) {
-            filePaths.push(dir);
+            filePathSet.add(dir);
           }
           dir = path.dirname(dir);
           parent = repository.getResourceFromFile(dir);
         }
       }
     });
+
+    const filePaths = Array.from(filePathSet);
 
     await this.handleRepositoryOperation(async () => {
       const result = await repository.commitFiles(message, filePaths);

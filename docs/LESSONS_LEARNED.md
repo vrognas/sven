@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: v2.25.0
-**Updated**: 2025-11-29
+**Version**: v2.33.6
+**Updated**: 2025-12-05
 
 ---
 
@@ -950,5 +950,34 @@ disposables.push(
 ```
 
 **Rule**: Native resources don't implement IDisposable. Track them separately and clean up in dispose().
+
+---
+
+### 14. Proposed APIs: Proceed with Extreme Caution
+
+**Lesson**: VS Code proposed APIs can have internal bugs that make them unusable, even with correct implementation.
+
+**Example** (SourceControlHistoryProvider - ABANDONED):
+
+We implemented `scmHistoryProvider` for native Graph view support. Despite correct implementation:
+
+- Runtime checks passed
+- Provider registered successfully
+- Methods implemented correctly
+
+But VS Code's internal Graph view threw "Tree input not set" errors due to their own tree initialization bugs. No amount of timing adjustments (setImmediate, setTimeout, waiting for status updates) could fix VS Code's internal race condition.
+
+**What We Tried**:
+
+1. Immediate registration → Error
+2. setImmediate delay → Error
+3. setTimeout(100ms) → Error
+4. Wait for first status update → Error
+
+**Conclusion**: The bug was in VS Code's `WorkbenchCompressibleAsyncDataTree2._updateChildren` - their tree view wasn't initialized before they tried to update it.
+
+**Rule**: Proposed APIs are unstable by definition. Even correct implementations can fail due to VS Code internal bugs. Always have a stable fallback (TreeView worked perfectly while Graph view failed).
+
+**Recommendation**: Avoid proposed APIs unless absolutely necessary. Wait for them to become stable APIs before adoption.
 
 ---

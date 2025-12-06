@@ -3,7 +3,7 @@
 // Licensed under MIT License
 
 import { Disposable, SourceControl, Uri } from "vscode";
-import { ISvnResourceGroup } from "../common/types";
+import { ISvnResourceGroup, LockStatus } from "../common/types";
 import { Resource } from "../resource";
 import { StatusResult } from "./StatusService";
 import { StagingService, STAGING_CHANGELIST } from "./stagingService";
@@ -23,6 +23,8 @@ export type ResourceGroupConfig = {
 export type ResourceGroupUpdateData = {
   readonly result: StatusResult;
   readonly config: ResourceGroupConfig;
+  /** If true, lock status in result is fresh (from --show-updates), don't preserve old status */
+  readonly lockStatusFresh?: boolean;
 };
 
 /**
@@ -98,6 +100,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
   private _resourceIndex = new Map<string, Resource>(); // Phase 8.1 perf fix - O(1) lookup
   private _resourceHash = ""; // Phase 16 perf fix - conditional rebuild
   private _staging: StagingService;
+  private _stagedDirectories = new Set<string>(); // Track staged dirs (changelists can't hold them)
 
   get staged(): ISvnResourceGroup {
     return this._staged;
@@ -177,7 +180,59 @@ export class ResourceGroupManager implements IResourceGroupManager {
    * Returns the total count for source control badge.
    */
   updateGroups(data: ResourceGroupUpdateData): number {
-    const { result, config } = data;
+    const { result, config, lockStatusFresh } = data;
+
+    // Preserve lock status from existing resources (lock info is only visible with --show-updates)
+    // When status is called without --show-updates, we don't want to lose lock info
+    // BUT if lockStatusFresh=true, the current status is authoritative (from --show-updates)
+    const preservedLockStatus = new Map<
+      string,
+      { lockStatus: LockStatus; lockOwner?: string; hasLockToken: boolean }
+    >();
+
+    // Only preserve lock status if current call did NOT use --show-updates
+    if (!lockStatusFresh) {
+      for (const resource of this._resourceIndex.values()) {
+        if (resource.lockStatus) {
+          const key = normalizePath(resource.resourceUri.fsPath);
+          preservedLockStatus.set(key, {
+            lockStatus: resource.lockStatus,
+            lockOwner: resource.lockOwner,
+            hasLockToken: resource.hasLockToken
+          });
+        }
+      }
+    }
+
+    // Helper to merge preserved lock status into new resources
+    const mergePreservedLockStatus = (resources: Resource[]): Resource[] => {
+      if (lockStatusFresh) {
+        return resources; // Don't merge if current status is authoritative
+      }
+      return resources.map(r => {
+        if (!r.lockStatus) {
+          const key = normalizePath(r.resourceUri.fsPath);
+          const preserved = preservedLockStatus.get(key);
+          if (preserved) {
+            // Create new Resource with preserved lock status
+            return new Resource(
+              r.resourceUri,
+              r.type,
+              r.renameResourceUri,
+              r.props,
+              r.remote,
+              true, // locked
+              preserved.lockOwner,
+              preserved.hasLockToken,
+              preserved.lockStatus,
+              r.changelist,
+              r.kind
+            );
+          }
+        }
+        return r;
+      });
+    };
 
     // Extract staged files from __staged__ changelist
     const stagedResources = result.changelists.get(STAGING_CHANGELIST) ?? [];
@@ -187,10 +242,43 @@ export class ResourceGroupManager implements IResourceGroupManager {
       stagedResources.map(r => r.resourceUri.fsPath)
     );
 
-    // Update staged and changes groups
-    this._staged.resourceStates = stagedResources;
-    this._changes.resourceStates = result.changes;
-    this._conflicts.resourceStates = result.conflicts;
+    // Find staged directories in changes/conflicts (changelists can't hold dirs)
+    const stagedDirs: Resource[] = [];
+    const filterStagedDirs = (resources: Resource[]): Resource[] => {
+      return resources.filter(r => {
+        const normalizedPath = normalizePath(r.resourceUri.fsPath);
+        if (this._stagedDirectories.has(normalizedPath)) {
+          stagedDirs.push(r);
+          return false; // Remove from original group
+        }
+        return true;
+      });
+    };
+
+    // Filter first to populate stagedDirs, then assign groups
+    const filteredChanges = filterStagedDirs(result.changes);
+    const filteredConflicts = filterStagedDirs(result.conflicts);
+
+    // Clean up staged directories that no longer have status (committed)
+    const allResourcePaths = new Set([
+      ...result.changes.map(r => normalizePath(r.resourceUri.fsPath)),
+      ...result.conflicts.map(r => normalizePath(r.resourceUri.fsPath))
+    ]);
+    for (const dirPath of this._stagedDirectories) {
+      if (!allResourcePaths.has(dirPath)) {
+        this._stagedDirectories.delete(dirPath);
+      }
+    }
+
+    // Update groups, preserving staged directories
+    // Apply lock status preservation to all resources
+    this._staged.resourceStates = mergePreservedLockStatus([
+      ...stagedResources,
+      ...stagedDirs
+    ]);
+    this._changes.resourceStates = mergePreservedLockStatus(filteredChanges);
+    this._conflicts.resourceStates =
+      mergePreservedLockStatus(filteredConflicts);
 
     // Clear existing changelist groups
     this._changelists.forEach(group => {
@@ -216,7 +304,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
         this._changelists.set(changelist, group);
       }
 
-      group.resourceStates = resources;
+      group.resourceStates = mergePreservedLockStatus(resources);
     });
 
     // Dispose removed changelists (excluding __staged__ which is never in _changelists)
@@ -237,7 +325,9 @@ export class ResourceGroupManager implements IResourceGroupManager {
       this._unversioned.hideWhenEmpty = true;
     }
 
-    this._unversioned.resourceStates = result.unversioned;
+    this._unversioned.resourceStates = mergePreservedLockStatus(
+      result.unversioned
+    );
 
     // Recreate or create remote changes group (must be last)
     if (
@@ -274,26 +364,34 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * Calculate hash of resource state for change detection (Phase 16 perf fix)
    * Used to skip unnecessary index rebuilds when resources haven't changed
+   * Includes file paths to detect renames (same count but different files)
    */
   private calculateResourceHash(result: StatusResult): string {
-    const changelistSize = result.changelists.size;
-    // Build hash from resource counts per group
-    // Format: changes-conflicts-unversioned-changelists-remote
-    const counts = [
-      result.changes.length,
-      result.conflicts.length,
-      result.unversioned.length,
-      changelistSize,
-      result.remoteChanges.length
+    // Build hash from resource paths per group (not just counts)
+    // This detects renames where count stays same but files differ
+    const pathHashes = [
+      this.hashPaths(result.changes),
+      this.hashPaths(result.conflicts),
+      this.hashPaths(result.unversioned),
+      this.hashPaths(result.remoteChanges)
     ];
 
-    // Include changelist names and counts for more precise detection
+    // Include changelist names and their path hashes
     const changelistData: string[] = [];
     result.changelists.forEach((resources, name) => {
-      changelistData.push(`${name}:${resources.length}`);
+      changelistData.push(`${name}:${this.hashPaths(resources)}`);
     });
 
-    return `${counts.join("-")}|${changelistData.join(",")}`;
+    return `${pathHashes.join("|")}|${changelistData.join(",")}`;
+  }
+
+  /**
+   * Simple hash of resource paths for change detection
+   */
+  private hashPaths(resources: Resource[]): string {
+    // Sort paths for consistent hash regardless of order
+    const paths = resources.map(r => r.resourceUri.fsPath).sort();
+    return paths.join(";");
   }
 
   /**
@@ -303,7 +401,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
   private rebuildResourceIndex(): void {
     this._resourceIndex.clear();
 
-    const allResources = [
+    // Add local resources first (these have lock status and real file status)
+    const localResources = [
       ...this._staged.resourceStates,
       ...this._changes.resourceStates,
       ...this._conflicts.resourceStates,
@@ -312,19 +411,27 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
     // Add changelist resources
     this._changelists.forEach(group => {
-      allResources.push(...group.resourceStates);
+      localResources.push(...group.resourceStates);
     });
 
-    // Add remote changes if exists
-    if (this._remoteChanges) {
-      allResources.push(...this._remoteChanges.resourceStates);
-    }
-
-    // Build index
-    for (const resource of allResources) {
+    // Build index from local resources
+    for (const resource of localResources) {
       if (resource instanceof Resource) {
         const normalizedPath = normalizePath(resource.resourceUri.fsPath);
         this._resourceIndex.set(normalizedPath, resource);
+      }
+    }
+
+    // Add remote changes only if no local resource exists for that path
+    // Remote resources have type="none" and no lock status, so local takes precedence
+    if (this._remoteChanges) {
+      for (const resource of this._remoteChanges.resourceStates) {
+        if (resource instanceof Resource) {
+          const normalizedPath = normalizePath(resource.resourceUri.fsPath);
+          if (!this._resourceIndex.has(normalizedPath)) {
+            this._resourceIndex.set(normalizedPath, resource);
+          }
+        }
       }
     }
   }
@@ -354,12 +461,20 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * Optimistically move resources to staged group without SVN status refresh.
    * Used for instant UI feedback after staging operations.
+   * When staging a file, also stages any parent folders that are in changes.
    * @param paths File paths to move to staged
    * @returns Resources that were moved (for potential rollback)
    */
   moveToStaged(paths: string[]): Resource[] {
     const movedResources: Resource[] = [];
     const pathSet = new Set(paths.map(p => normalizePath(p)));
+
+    // Find parent directories that need to be staged with files
+    // (can't commit a file without its parent folder existing)
+    const parentsToStage = this.findParentDirectoriesToStage(pathSet);
+    for (const parentPath of parentsToStage) {
+      pathSet.add(parentPath);
+    }
 
     // Find and remove from changes group
     const remainingChanges = this._changes.resourceStates.filter(r => {
@@ -373,6 +488,21 @@ export class ResourceGroupManager implements IResourceGroupManager {
       return true;
     });
     this._changes.resourceStates = remainingChanges;
+
+    // Find and remove from unversioned group (new folders appear here)
+    const remainingUnversioned = this._unversioned.resourceStates.filter(r => {
+      if (
+        r instanceof Resource &&
+        pathSet.has(normalizePath(r.resourceUri.fsPath))
+      ) {
+        if (!movedResources.includes(r)) {
+          movedResources.push(r);
+        }
+        return false;
+      }
+      return true;
+    });
+    this._unversioned.resourceStates = remainingUnversioned;
 
     // Find and remove from changelist groups
     this._changelists.forEach(group => {
@@ -397,12 +527,72 @@ export class ResourceGroupManager implements IResourceGroupManager {
       ...movedResources
     ];
 
+    // Track staged directories (changelists can't hold them)
+    for (const r of movedResources) {
+      if (r.kind === "dir") {
+        this._stagedDirectories.add(normalizePath(r.resourceUri.fsPath));
+      }
+    }
+
     // Update staging cache
     this._staging.syncFromChangelist(
       this._staged.resourceStates.map(r => r.resourceUri.fsPath)
     );
 
     return movedResources;
+  }
+
+  /**
+   * Find parent directories of paths that need to be staged together.
+   * When staging a file in a new folder, the folder must also be staged.
+   */
+  private findParentDirectoriesToStage(pathSet: Set<string>): string[] {
+    const parentsToStage: string[] = [];
+
+    // Build set of all directory paths in changes, unversioned, and changelists
+    const availableDirs = new Map<string, Resource>();
+    const collectDirs = (resources: readonly { resourceUri: Uri }[]) => {
+      for (const r of resources) {
+        if (r instanceof Resource && r.kind === "dir") {
+          availableDirs.set(normalizePath(r.resourceUri.fsPath), r);
+        }
+      }
+    };
+
+    collectDirs(this._changes.resourceStates);
+    collectDirs(this._unversioned.resourceStates);
+    this._changelists.forEach(group => collectDirs(group.resourceStates));
+
+    // For each path being staged, check if its parents are in available dirs
+    for (const filePath of pathSet) {
+      let parentPath = this.getParentPath(filePath);
+      while (parentPath) {
+        const normalizedParent = normalizePath(parentPath);
+        if (
+          availableDirs.has(normalizedParent) &&
+          !pathSet.has(normalizedParent)
+        ) {
+          parentsToStage.push(normalizedParent);
+        }
+        parentPath = this.getParentPath(parentPath);
+      }
+    }
+
+    return parentsToStage;
+  }
+
+  /**
+   * Get parent directory path, or undefined if at root
+   */
+  private getParentPath(filePath: string): string | undefined {
+    const lastSep = Math.max(
+      filePath.lastIndexOf("/"),
+      filePath.lastIndexOf("\\")
+    );
+    if (lastSep <= 0) {
+      return undefined;
+    }
+    return filePath.substring(0, lastSep);
   }
 
   /**
@@ -423,6 +613,10 @@ export class ResourceGroupManager implements IResourceGroupManager {
         pathSet.has(normalizePath(r.resourceUri.fsPath))
       ) {
         movedResources.push(r);
+        // Untrack staged directories
+        if (r.kind === "dir") {
+          this._stagedDirectories.delete(normalizePath(r.resourceUri.fsPath));
+        }
         return false;
       }
       return true;
@@ -507,6 +701,9 @@ export class ResourceGroupManager implements IResourceGroupManager {
     });
     this._remoteChanges?.dispose();
     this._remoteChanges = undefined;
+    this._resourceIndex.clear();
+    this._resourceHash = "";
+    this._stagedDirectories.clear();
   }
 
   /**

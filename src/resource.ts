@@ -2,7 +2,6 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from "path";
 import {
   Command,
   SourceControlResourceDecorations,
@@ -14,39 +13,7 @@ import { LockStatus, PropStatus, Status } from "./common/types";
 import { memoize } from "./decorators";
 import { configuration } from "./helpers/configuration";
 
-// Path needs to be relative from out/
-const iconsRootPath = path.join(__dirname, "..", "icons");
-
-function getIconUri(iconName: string, theme: string): Uri {
-  return Uri.file(path.join(iconsRootPath, theme, `${iconName}.svg`));
-}
-
 export class Resource implements SourceControlResourceState {
-  private static icons: Record<string, Record<string, Uri>> = {
-    light: {
-      Added: getIconUri("status-added", "light"),
-      Conflicted: getIconUri("status-conflicted", "light"),
-      Deleted: getIconUri("status-deleted", "light"),
-      Ignored: getIconUri("status-ignored", "light"),
-      Missing: getIconUri("status-missing", "light"),
-      Modified: getIconUri("status-modified", "light"),
-      Renamed: getIconUri("status-renamed", "light"),
-      Replaced: getIconUri("status-replaced", "light"),
-      Unversioned: getIconUri("status-unversioned", "light")
-    },
-    dark: {
-      Added: getIconUri("status-added", "dark"),
-      Conflicted: getIconUri("status-conflicted", "dark"),
-      Deleted: getIconUri("status-deleted", "dark"),
-      Ignored: getIconUri("status-ignored", "dark"),
-      Missing: getIconUri("status-missing", "dark"),
-      Modified: getIconUri("status-modified", "dark"),
-      Renamed: getIconUri("status-renamed", "dark"),
-      Replaced: getIconUri("status-replaced", "dark"),
-      Unversioned: getIconUri("status-unversioned", "dark")
-    }
-  };
-
   constructor(
     private _resourceUri: Uri,
     private _type: string,
@@ -57,8 +24,13 @@ export class Resource implements SourceControlResourceState {
     private _lockOwner?: string,
     private _hasLockToken: boolean = false,
     private _lockStatus?: LockStatus,
-    private _changelist?: string
+    private _changelist?: string,
+    private _kind?: "file" | "dir"
   ) {}
+
+  get kind(): "file" | "dir" | undefined {
+    return this._kind;
+  }
 
   get changelist(): string | undefined {
     return this._changelist;
@@ -102,20 +74,17 @@ export class Resource implements SourceControlResourceState {
     return this._lockStatus;
   }
 
-  get decorations(): SourceControlResourceDecorations {
-    // TODO@joh, still requires restart/redraw in the SCM viewlet
-    const light = { iconPath: this.getIconPath("light") };
-    const dark = { iconPath: this.getIconPath("dark") };
-    const tooltip = this.tooltip;
-    const strikeThrough = this.strikeThrough;
-    const faded = this.faded;
+  get contextValue(): string {
+    return this._kind === "dir" ? "folder" : "file";
+  }
 
+  get decorations(): SourceControlResourceDecorations {
+    // No iconPath - VS Code uses file extension icons for files
+    // FileDecorationProvider adds badges (A/M/D for files, FA/FM/FD for folders)
     return {
-      strikeThrough,
-      faded,
-      tooltip,
-      light,
-      dark
+      strikeThrough: this.strikeThrough,
+      faded: this.faded,
+      tooltip: this.tooltip
     };
   }
 
@@ -150,20 +119,6 @@ export class Resource implements SourceControlResourceState {
     };
   }
 
-  private getIconPath(theme: string): Uri | undefined {
-    if (this.type === Status.ADDED && this.renameResourceUri) {
-      return Resource.icons[theme]!.Renamed;
-    }
-
-    const type = this.type.charAt(0).toUpperCase() + this.type.slice(1);
-
-    if (typeof Resource.icons[theme]![type] !== "undefined") {
-      return Resource.icons[theme]![type];
-    }
-
-    return void 0;
-  }
-
   private get tooltip(): string {
     let tip = "";
 
@@ -183,8 +138,8 @@ export class Resource implements SourceControlResourceState {
     // Add lock info to tooltip
     if (this._locked) {
       const lockInfo = this._lockOwner
-        ? `🔒 Locked by ${this._lockOwner}`
-        : "🔒 Locked";
+        ? `Locked by ${this._lockOwner}`
+        : "Locked";
       tip = `${tip} (${lockInfo})`;
     }
 

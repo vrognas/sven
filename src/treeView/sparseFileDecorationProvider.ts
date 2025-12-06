@@ -15,7 +15,7 @@ import { LockStatus } from "../common/types";
  * Provides file decorations for selective download tree items.
  * - Ghost items (not checked out) are visually de-emphasized
  * - Outdated items (local < server revision) show update indicator
- * - Locked items show lock badge (K/O/B/T) like explorer view
+ * - Locked items show K/O/B/T badge (SVN lock status)
  *
  * Uses svn-sparse:// scheme to prevent VS Code SCM decorations from appearing.
  */
@@ -59,8 +59,7 @@ export class SparseFileDecorationProvider
     }
 
     // Outdated items: update available indicator
-    // Priority: lock badge > outdated badge (both can't be shown)
-    if (isOutdated && !lockStatus) {
+    if (isOutdated) {
       decoration.badge = "↓";
       decoration.color = new ThemeColor(
         "gitDecoration.modifiedResourceForeground"
@@ -71,16 +70,44 @@ export class SparseFileDecorationProvider
         : outdatedTooltip;
     }
 
-    // Lock badge (K/O/B/T) - same as explorer view
+    // Lock badge using SVN status letters (K=yours, O=others, B=broken, T=stolen)
     if (lockStatus) {
-      decoration.badge = lockStatus;
+      decoration.badge = decoration.badge
+        ? `${lockStatus}${decoration.badge}`
+        : lockStatus;
       const lockTooltip = this.getLockTooltip(lockStatus, lockOwner);
       decoration.tooltip = decoration.tooltip
         ? `${decoration.tooltip} - ${lockTooltip}`
         : lockTooltip;
+      // Lock color: B/T always red (error), K/O if not ghost/outdated
+      if (
+        lockStatus === LockStatus.B ||
+        lockStatus === LockStatus.T ||
+        (!isGhost && !isOutdated)
+      ) {
+        decoration.color = this.getLockColor(lockStatus);
+      }
     }
 
     return decoration;
+  }
+
+  /**
+   * Get color for lock status
+   * K=blue (safe), O=orange (blocked), B/T=red (error)
+   */
+  private getLockColor(lockStatus: LockStatus): ThemeColor {
+    switch (lockStatus) {
+      case LockStatus.K:
+        return new ThemeColor("charts.blue");
+      case LockStatus.O:
+        return new ThemeColor("charts.orange");
+      case LockStatus.B:
+      case LockStatus.T:
+        return new ThemeColor("errorForeground");
+      default:
+        return new ThemeColor("charts.orange");
+    }
   }
 
   private getLockTooltip(

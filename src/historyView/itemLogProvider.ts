@@ -73,9 +73,28 @@ export class ItemLogProvider
         this.openDiffBaseCmd,
         this
       ),
-      commands.registerCommand("svn.itemlog.refresh", this.refresh, this)
+      commands.registerCommand(
+        "svn.itemlog.refresh",
+        () => this.refresh(undefined, undefined, false, true),
+        this
+      ),
+      commands.registerCommand(
+        "svn.itemlog.gotoRepolog",
+        this.gotoRepologCmd,
+        this
+      )
     );
     this.refresh();
+  }
+
+  // Navigate to the same revision in repository history
+  public async gotoRepologCmd(element: ILogTreeItem) {
+    if (element.kind !== LogTreeItemKind.Commit) {
+      return;
+    }
+    const commit = element.data as ISvnLogEntry;
+    const revision = parseInt(commit.revision, 10);
+    await commands.executeCommand("svn.repolog.goToRevision", revision);
   }
 
   public dispose() {
@@ -133,7 +152,8 @@ export class ItemLogProvider
   public async refresh(
     element?: ILogTreeItem,
     te?: TextEditor,
-    loadMore?: boolean
+    loadMore?: boolean,
+    explicitRefresh?: boolean
   ) {
     // TODO maybe make autorefresh optionable?
     if (loadMore && this.currentItem) {
@@ -151,6 +171,10 @@ export class ItemLogProvider
         const repo = this.sourceControlManager.getRepository(uri);
         if (repo !== null) {
           try {
+            // Clear low-level log cache on explicit refresh to force fresh SVN call
+            if (explicitRefresh) {
+              repo.clearLogCache();
+            }
             const info = await repo.getInfo(uri.fsPath);
             this.currentItem = {
               isComplete: false,
@@ -186,6 +210,12 @@ export class ItemLogProvider
         title: "Open diff",
         arguments: [element]
       };
+      // Use resourceUri to trigger FileDecorationProvider for BASE badge
+      if (element.isBase) {
+        ti.resourceUri = Uri.parse(
+          `svn-commit:r${commit.revision}?isBase=true`
+        );
+      }
     } else if (element.kind === LogTreeItemKind.TItem) {
       ti = element.data as TreeItem;
     } else {

@@ -5,6 +5,7 @@
 import { Disposable, Uri, workspace } from "vscode";
 import { IFileStatus, LockStatus, Status } from "../common/types";
 import { configuration } from "../helpers/configuration";
+import { stat } from "../fs";
 import { Resource } from "../resource";
 import { Repository as BaseRepository } from "../svnRepository";
 import { isDescendant } from "../util";
@@ -31,6 +32,7 @@ export type StatusResult = {
  */
 export type StatusUpdateOptions = {
   readonly checkRemoteChanges: boolean;
+  readonly fetchLockStatus?: boolean;
 };
 
 /**
@@ -95,7 +97,8 @@ export class StatusService implements IStatusService {
     // Fetch statuses from SVN
     const statuses = await this.fetchStatuses(
       config.combineExternal,
-      options.checkRemoteChanges
+      options.checkRemoteChanges,
+      options.fetchLockStatus
     );
 
     // Get file exclusion patterns
@@ -108,7 +111,7 @@ export class StatusService implements IStatusService {
     );
 
     // Categorize resources
-    const categorized = this.categorizeStatuses(
+    const categorized = await this.categorizeStatuses(
       statusesRepository,
       excludeList,
       config
@@ -169,12 +172,14 @@ export class StatusService implements IStatusService {
    */
   private async fetchStatuses(
     includeExternals: boolean,
-    checkRemoteChanges: boolean
+    checkRemoteChanges: boolean,
+    fetchLockStatus?: boolean
   ): Promise<IFileStatus[]> {
     return await this.repository.getStatus({
       includeIgnored: true,
       includeExternals,
       checkRemoteChanges,
+      fetchLockStatus,
       // Only fetch external UUIDs when combineExternal=true (needed to filter by repo)
       // Skips N sequential svn info calls when combineExternal=false (default)
       fetchExternalUuids: includeExternals
@@ -256,11 +261,11 @@ export class StatusService implements IStatusService {
   /**
    * Categorize statuses into resource groups
    */
-  private categorizeStatuses(
+  private async categorizeStatuses(
     statuses: IFileStatus[],
     excludeList: string[],
     config: StatusConfig
-  ): {
+  ): Promise<{
     changes: Resource[];
     conflicts: Resource[];
     unversioned: Resource[];
@@ -269,7 +274,7 @@ export class StatusService implements IStatusService {
     statusIgnored: IFileStatus[];
     isIncomplete: boolean;
     needCleanUp: boolean;
-  } {
+  }> {
     const changes: Resource[] = [];
     const conflicts: Resource[] = [];
     const unversioned: Resource[] = [];
@@ -288,10 +293,11 @@ export class StatusService implements IStatusService {
     }
 
     for (const status of statuses) {
-      // Check for incomplete/locked status on root
+      // Check for incomplete/WC-admin-locked status on root
       if (status.path === ".") {
         isIncomplete = status.status === Status.INCOMPLETE;
-        needCleanUp = status.wcStatus.locked;
+        // WC admin lock (from wc-locked attr) means cleanup needed, not user lock
+        needCleanUp = !!status.wcStatus.wcAdminLocked;
       }
 
       // If exists a switched item, the repository is incomplete
@@ -299,9 +305,11 @@ export class StatusService implements IStatusService {
         isIncomplete = true;
       }
 
-      // Skip locked/switched/incomplete items
+      // Skip WC-admin-locked/switched/incomplete items (but NOT user-locked files)
+      // wcAdminLocked = WC admin lock from interrupted checkout, needs cleanup
+      // locked = user lock (K/O/B/T), should NOT be skipped
       if (
-        status.wcStatus.locked ||
+        status.wcStatus.wcAdminLocked ||
         status.wcStatus.switched ||
         status.status === Status.INCOMPLETE
       ) {
@@ -333,6 +341,7 @@ export class StatusService implements IStatusService {
 
       // Detect T (stolen) lock: we have token but server shows different owner
       let lockStatus = status.wcStatus.lockStatus;
+
       if (
         lockStatus === LockStatus.K &&
         status.wcStatus.hasLockToken &&
@@ -341,6 +350,18 @@ export class StatusService implements IStatusService {
         status.wcStatus.lockOwner !== this.repository.username
       ) {
         lockStatus = LockStatus.T;
+      }
+
+      // Detect kind if not provided by SVN status
+      let kind = status.kind;
+      if (!kind) {
+        try {
+          const stats = await stat(uri.fsPath);
+          kind = stats.isDirectory() ? "dir" : "file";
+        } catch {
+          // If stat fails, assume file
+          kind = "file";
+        }
       }
 
       const resource = new Resource(
@@ -353,15 +374,20 @@ export class StatusService implements IStatusService {
         status.wcStatus.lockOwner,
         status.wcStatus.hasLockToken,
         lockStatus,
-        status.changelist
+        status.changelist,
+        kind
       );
 
-      // Skip normal/unchanged items
-      if (
-        (status.status === Status.NORMAL || status.status === Status.NONE) &&
-        (status.props === Status.NORMAL || status.props === Status.NONE) &&
-        !status.changelist
-      ) {
+      // Skip normal/unchanged items (but keep locked files for decoration)
+      const isNormal =
+        status.status === Status.NORMAL || status.status === Status.NONE;
+      const propsNormal =
+        status.props === Status.NORMAL || status.props === Status.NONE;
+      const noChangelist = !status.changelist;
+      const noLockStatus = !lockStatus;
+      const willSkip = isNormal && propsNormal && noChangelist && noLockStatus;
+
+      if (willSkip) {
         continue;
       } else if (status.status === Status.IGNORED) {
         statusIgnored.push(status);

@@ -33,7 +33,7 @@ function processEntry(
     return [];
   }
 
-  // Extract lock owner from repos-status if available
+  // Extract lock owner from repos-status if available (server lock info)
   let lockOwner: string | undefined;
   const serverChecked = !!entry.reposStatus;
   const serverHasLock = !!entry.reposStatus?.lock;
@@ -45,9 +45,16 @@ function processEntry(
     }
   }
 
-  // wcLocked="true" means we hold the lock token locally (K)
-  const hasLockToken =
-    !!entry.wcStatus.wcLocked && entry.wcStatus.wcLocked === "true";
+  // Check for local lock token:
+  // 1. wcStatus.lock element = we have a lock token for this file
+  // 2. wcStatus.wcLocked = working copy is administratively locked (different thing)
+  // The presence of wcStatus.lock means WE have a lock token (K status)
+  const hasLockToken = !!entry.wcStatus.lock;
+
+  // If we have local lock, extract owner from local lock info
+  if (hasLockToken && entry.wcStatus.lock?.owner) {
+    lockOwner = entry.wcStatus.lock.owner;
+  }
 
   // Compute lock status: K, O, B, T
   let lockStatus: LockStatus | undefined;
@@ -70,8 +77,13 @@ function processEntry(
     lockStatus = LockStatus.O;
   }
 
+  // WC admin lock is from wc-locked="true" attribute (needs cleanup, different from user locks)
+  const wcAdminLocked =
+    !!entry.wcStatus.wcLocked && entry.wcStatus.wcLocked === "true";
+
   const wcStatus: IWcStatus = {
     locked: hasLockToken || serverHasLock,
+    wcAdminLocked,
     switched: !!entry.wcStatus.switched && entry.wcStatus.switched === "true",
     lockOwner,
     hasLockToken,
@@ -82,6 +94,7 @@ function processEntry(
   const r: IFileStatus = {
     changelist,
     path: entry.path,
+    kind: entry.kind,
     status: entry.wcStatus.item,
     props: entry.wcStatus.props,
     wcStatus,

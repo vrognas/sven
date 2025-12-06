@@ -21,6 +21,17 @@ import {
   workspace
 } from "vscode";
 
+// Input box validation types (not in older vscode types)
+interface InputBoxValidation {
+  message: string;
+  type: InputBoxValidationType;
+}
+enum InputBoxValidationType {
+  Error = 0,
+  Warning = 1,
+  Information = 2
+}
+
 /**
  * Credential storage mode - determines where SVN credentials are stored
  */
@@ -65,6 +76,7 @@ import {
   ISvnResourceGroup,
   IUnlockOptions,
   IUpdateResult,
+  LockStatus,
   Operation,
   RepositoryState,
   Status,
@@ -75,7 +87,7 @@ import {
   ISvnListItem
 } from "./common/types";
 import { debounce, globalSequentialize, memoize, throttle } from "./decorators";
-import { exists } from "./fs";
+import { exists, rename as fsRename, stat } from "./fs";
 import { configuration } from "./helpers/configuration";
 import OperationsImpl from "./operationsImpl";
 import { PathNormalizer } from "./pathNormalizer";
@@ -178,6 +190,20 @@ export class Repository implements IRemoteRepository {
   private promptAuthCooldown: boolean = false;
   private promptAuthCooldownTimer?: ReturnType<typeof setTimeout>;
   private storedAuthsCache?: { accounts: IStoredAuth[]; expiry: number };
+
+  // Needs-lock cache: set of relative paths with svn:needs-lock property
+  // Populated in batch by refreshNeedsLockCache() for efficient decoration
+  private needsLockFilesSet = new Set<string>();
+  private needsLockCacheExpiry = 0;
+  private static readonly NEEDS_LOCK_CACHE_TTL = 60000; // 60 seconds
+
+  // Lock status cache: preserves lock info between status calls
+  // Lock status is only visible with --show-updates, so we cache it
+  // Map: relative path -> { lockStatus, lockOwner, hasLockToken }
+  private lockStatusCache = new Map<
+    string,
+    { lockStatus: LockStatus; lockOwner?: string; hasLockToken: boolean }
+  >();
 
   private _fsWatcher: RepositoryFilesWatcher;
   public get fsWatcher() {
@@ -296,7 +322,11 @@ export class Repository implements IRemoteRepository {
     this._fsWatcher.onDidAny(this.onFSChange, this, this.disposables);
     this._fsWatcher.onDidSvnAny(
       async (e: Uri) => {
-        await this.onDidAnyFileChanged(e);
+        try {
+          await this.onDidAnyFileChanged(e);
+        } catch (err) {
+          logError("File watcher callback failed", err);
+        }
       },
       this,
       this.disposables
@@ -314,6 +344,9 @@ export class Repository implements IRemoteRepository {
       "Message here or Ctrl+Enter for guided commit";
     this.sourceControl.inputBox.visible = true;
     this.sourceControl.inputBox.enabled = true;
+    // @ts-expect-error - validateInput exists at runtime but not in types
+    this.sourceControl.inputBox.validateInput = (text: string) =>
+      this.validateCommitInput(text);
     this.sourceControl.acceptInputCommand = {
       command: "svn.commitFromInputBox",
       title: "Commit",
@@ -327,6 +360,13 @@ export class Repository implements IRemoteRepository {
     this.disposables.push(this.statusBar);
     this.statusBar.onDidChange(
       () => (this.sourceControl.statusBarCommands = this.statusBar.commands),
+      null,
+      this.disposables
+    );
+
+    // Update action button when operations start/end (for spinning icon)
+    this.onDidChangeOperations(
+      () => this.updateActionButton(),
       null,
       this.disposables
     );
@@ -356,6 +396,16 @@ export class Repository implements IRemoteRepository {
       window.registerFileDecorationProvider(this.fileDecorationProvider)
     );
     this.disposables.push(this.fileDecorationProvider);
+
+    // Intercept file renames to use svn move for tracked files
+    this.disposables.push(
+      workspace.onDidRenameFiles(e => this.onDidRenameFiles(e))
+    );
+
+    // Intercept file deletes to use svn delete for tracked files
+    this.disposables.push(
+      workspace.onDidDeleteFiles(e => this.onDidDeleteFiles(e))
+    );
 
     // For each deleted file, add to set (auto-deduplicates)
     this._fsWatcher.onDidWorkspaceDelete(
@@ -409,6 +459,13 @@ export class Repository implements IRemoteRepository {
     this.disposables.push(
       workspace.onDidSaveTextDocument(document => {
         this.onDidSaveTextDocument(document);
+      }),
+      // Prompt to lock files with svn:needs-lock property when opened
+      workspace.onDidOpenTextDocument(document => {
+        if (document.uri.scheme === "file") {
+          // Fire async - don't block document open
+          void this.promptLockIfNeeded(document.uri);
+        }
       })
     );
   }
@@ -425,7 +482,7 @@ export class Repository implements IRemoteRepository {
     this._configCache = {
       actionForDeletedFiles: configuration.get<string>(
         "delete.actionForDeletedFiles",
-        "prompt"
+        "remove"
       ),
       ignoredRulesForDeletedFiles: configuration.get<string[]>(
         "delete.ignoredRulesForDeletedFiles",
@@ -451,6 +508,12 @@ export class Repository implements IRemoteRepository {
     if (this._sparseDownloadInProgress) {
       return;
     }
+
+    // Check grace period after force refresh to avoid redundant calls
+    if (this.isInGracePeriod()) {
+      return; // Info was already updated during force refresh
+    }
+
     await this.repository.updateInfo();
     this._onDidChangeRepository.fire(e);
   }
@@ -531,6 +594,97 @@ export class Repository implements IRemoteRepository {
     }
   }
 
+  /**
+   * Intercept file renames to use svn move for tracked files.
+   * This preserves file history when renaming via Explorer.
+   */
+  private async onDidRenameFiles(e: {
+    files: ReadonlyArray<{ oldUri: Uri; newUri: Uri }>;
+  }): Promise<void> {
+    for (const { oldUri, newUri } of e.files) {
+      // Skip files outside this repository
+      if (!oldUri.fsPath.startsWith(this.workspaceRoot)) {
+        continue;
+      }
+
+      try {
+        // Check if old path was tracked by SVN (will show as "missing" now)
+        const wasTracked = await this.wasFileTracked(oldUri.fsPath);
+
+        if (wasTracked) {
+          // Undo the filesystem rename
+          await fsRename(newUri.fsPath, oldUri.fsPath);
+
+          // Use svn rename to preserve history
+          await this.rename(oldUri.fsPath, newUri.fsPath);
+        }
+      } catch (err) {
+        // Log but don't block - user can manually fix if needed
+        logError(`Failed to convert rename to svn move: ${oldUri.fsPath}`, err);
+      }
+    }
+  }
+
+  /**
+   * Intercept file deletes to use svn delete for tracked files.
+   * This immediately marks files for deletion instead of leaving as "missing".
+   */
+  private async onDidDeleteFiles(e: {
+    files: ReadonlyArray<Uri>;
+  }): Promise<void> {
+    const config = this.getConfig();
+
+    // Only auto-delete if setting is "remove"
+    if (config.actionForDeletedFiles !== "remove") {
+      return;
+    }
+
+    // Collect all tracked files first, then delete in batch
+    // This prevents race conditions when deleting multiple files
+    const trackedFiles: string[] = [];
+
+    for (const uri of e.files) {
+      // Skip files outside this repository
+      if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+        continue;
+      }
+
+      try {
+        // Check if file was tracked by SVN
+        const wasTracked = await this.wasFileTracked(uri.fsPath);
+        if (wasTracked) {
+          trackedFiles.push(uri.fsPath);
+        }
+      } catch (err) {
+        logError(`Failed to check if tracked: ${uri.fsPath}`, err);
+      }
+    }
+
+    // Delete all tracked files in a single svn delete call
+    if (trackedFiles.length > 0) {
+      try {
+        await this.removeFiles(trackedFiles, false);
+      } catch (err) {
+        logError(`Failed to auto-delete files`, err);
+      }
+    }
+  }
+
+  /**
+   * Check if a file path was tracked by SVN before it was renamed/deleted.
+   * Uses svn info which works even on missing files.
+   */
+  private async wasFileTracked(filePath: string): Promise<boolean> {
+    try {
+      // svn info succeeds for tracked files, even if missing
+      await this.repository.getInfo(filePath);
+      return true;
+    } catch {
+      // Not tracked or error
+      return false;
+    }
+  }
+
   private onFSChange(_uri: Uri): void {
     const config = this.getConfig();
 
@@ -538,11 +692,49 @@ export class Repository implements IRemoteRepository {
       return;
     }
 
-    if (!this.operations.isIdle()) {
+    // Check grace period after force refresh (Update, Commit, etc.)
+    // to avoid redundant status calls from file watcher
+    if (this.isInGracePeriod()) {
+      this.queueRefreshAfterGracePeriod();
       return;
     }
 
+    // Don't check idle here - eventuallyUpdateWhenIdleAndWait handles
+    // idle-waiting via whenIdleAndFocused(). Previously, events were
+    // silently dropped if operations were running, causing missed updates.
     this.eventuallyUpdateWhenIdleAndWait();
+  }
+
+  /**
+   * Check if within grace period after a force refresh operation.
+   */
+  private isInGracePeriod(): boolean {
+    return Date.now() - this.lastForceRefresh < this.FORCE_REFRESH_GRACE_MS;
+  }
+
+  /**
+   * Queue a refresh for after the grace period ends.
+   * Ensures user changes during grace period aren't lost.
+   */
+  private queueRefreshAfterGracePeriod(): void {
+    // Already queued
+    if (this.pendingGraceRefresh) {
+      return;
+    }
+
+    const remaining =
+      this.FORCE_REFRESH_GRACE_MS - (Date.now() - this.lastForceRefresh);
+    if (remaining <= 0) {
+      // Grace period already expired, refresh now
+      this.eventuallyUpdateWhenIdleAndWait();
+      return;
+    }
+
+    // Queue refresh for after grace period
+    this.pendingGraceRefresh = setTimeout(() => {
+      this.pendingGraceRefresh = undefined;
+      this.eventuallyUpdateWhenIdleAndWait();
+    }, remaining + 100); // +100ms buffer
   }
 
   @debounce(500)
@@ -577,12 +769,19 @@ export class Repository implements IRemoteRepository {
   }
 
   private lastModelUpdate: number = 0;
-  private readonly MODEL_CACHE_MS = 2000; // 2s cache
+  // Cache matches debounce time (500ms) - after debounce completes, cache expired
+  private readonly MODEL_CACHE_MS = 500;
+
+  // Grace period after force refresh to avoid redundant file watcher status calls
+  private lastForceRefresh: number = 0;
+  private readonly FORCE_REFRESH_GRACE_MS = 5000; // 5 seconds
+  private pendingGraceRefresh: NodeJS.Timeout | undefined;
 
   @globalSequentialize("updateModelState")
   public async updateModelState(
     checkRemoteChanges: boolean = false,
-    forceRefresh: boolean = false
+    forceRefresh: boolean = false,
+    fetchLockStatus: boolean = false
   ) {
     // Skip status updates during sparse checkout downloads
     // Prevents working copy lock conflicts on Windows
@@ -598,9 +797,20 @@ export class Repository implements IRemoteRepository {
     }
     this.lastModelUpdate = now;
 
+    // Force refresh repository info after revision-changing operations
+    // (Commit, Update, etc.) so repo history can detect the new revision
+    if (forceRefresh) {
+      await this.repository.updateInfo(true);
+      // Set grace period to avoid redundant file watcher status calls
+      this.lastForceRefresh = Date.now();
+    }
+
     // Get categorized status from StatusService
     const result = await this.retryRun(async () => {
-      return this.statusService.updateStatus({ checkRemoteChanges });
+      return this.statusService.updateStatus({
+        checkRemoteChanges,
+        fetchLockStatus
+      });
     });
 
     // Update metadata
@@ -621,10 +831,17 @@ export class Repository implements IRemoteRepository {
           "sourceControl.countUnversioned",
           false
         )
-      }
+      },
+      // Lock status is authoritative when fetched with --show-updates
+      lockStatusFresh: fetchLockStatus
     });
 
     this.sourceControl.count = count;
+    this.updateActionButton();
+
+    // Update context keys for conditional UI
+    const hasConflicts = this.groupManager.conflicts.resourceStates.length > 0;
+    commands.executeCommand("setContext", "svn.hasConflicts", hasConflicts);
 
     // Set repository reference on remote changes group
     if (this.groupManager.remoteChanges) {
@@ -640,7 +857,18 @@ export class Repository implements IRemoteRepository {
       this._onDidChangeRemoteChangedFiles.fire();
     }
 
+    // Update context key for remote changes
+    const hasRemoteChanges = this.remoteChangedFiles > 0;
+    commands.executeCommand(
+      "setContext",
+      "svn.updateAvailable",
+      hasRemoteChanges
+    );
+
     this._onDidChangeStatus.fire();
+
+    // Refresh needs-lock cache before decorations (single batch SVN call)
+    await this.refreshNeedsLockCache();
 
     // Refresh file decorations in Explorer view
     if (this.fileDecorationProvider) {
@@ -655,6 +883,111 @@ export class Repository implements IRemoteRepository {
     this.currentBranch = await this.getCurrentBranch();
 
     return Promise.resolve();
+  }
+
+  private updateActionButton(): void {
+    const stagedCount = this.groupManager.staged.resourceStates.length;
+    const changesCount = this.groupManager.changes.resourceStates.length;
+    const hasChanges = stagedCount > 0 || changesCount > 0;
+
+    // Check if commit/update is in progress
+    const isCommitting = this.operations.isRunning(Operation.Commit);
+    const isUpdating = this.operations.isRunning(Operation.Update);
+    const isOperationRunning = isCommitting || isUpdating;
+
+    // Use spinning icon during operations
+    let icon = "$(check)";
+    let tooltip = "Commit Changes";
+    if (isCommitting) {
+      icon = "$(sync~spin)";
+      tooltip = "Committing...";
+    } else if (isUpdating) {
+      icon = "$(sync~spin)";
+      tooltip = "Updating...";
+    }
+
+    const label =
+      stagedCount > 0 ? `${icon} Commit (${stagedCount})` : `${icon} Commit`;
+
+    // Secondary commands for dropdown menu (Command[][])
+    const secondaryCommands = [
+      [
+        {
+          command: "svn.commitStaged",
+          title: "Commit Staged...",
+          tooltip: "Commit only staged files",
+          arguments: [this]
+        },
+        {
+          command: "svn.commitAll",
+          title: "Commit All...",
+          tooltip: "Commit all changed files",
+          arguments: [this]
+        },
+        {
+          command: "svn.commitQuick",
+          title: "Commit (Quick)",
+          tooltip: "Commit staged files without message prompt",
+          arguments: [this]
+        }
+      ]
+    ];
+
+    // @ts-expect-error - actionButton exists at runtime but not in types
+    this.sourceControl.actionButton = {
+      command: {
+        command: "svn.commitFromInputBox",
+        title: label,
+        tooltip,
+        arguments: [this]
+      },
+      secondaryCommands,
+      enabled: hasChanges && !isOperationRunning
+    };
+  }
+
+  /**
+   * Force re-validation of the commit input box.
+   * VS Code only calls validateInput when text changes, so we toggle value
+   * to trigger re-validation after staging/unstaging operations.
+   */
+  private triggerInputValidation(): void {
+    const inputBox = this.sourceControl.inputBox;
+    const currentValue = inputBox.value;
+    // Toggle value to force validateInput callback
+    inputBox.value = currentValue + " ";
+    inputBox.value = currentValue;
+  }
+
+  private validateCommitInput(text: string): InputBoxValidation | undefined {
+    const stagedCount = this.groupManager.staged.resourceStates.length;
+    const conflictCount = this.groupManager.conflicts.resourceStates.length;
+
+    // Error: conflicts must be resolved first
+    if (conflictCount > 0) {
+      return {
+        message: `${conflictCount} conflict(s) must be resolved before committing`,
+        type: InputBoxValidationType.Error
+      };
+    }
+
+    // Warning: no files staged
+    if (stagedCount === 0) {
+      return {
+        message: "No files staged for commit",
+        type: InputBoxValidationType.Warning
+      };
+    }
+
+    // Info: message empty (but not an error - guided commit will prompt)
+    if (!text || text.trim() === "") {
+      return {
+        message: "Enter message or press Ctrl+Enter for guided commit",
+        type: InputBoxValidationType.Information
+      };
+    }
+
+    return undefined;
   }
 
   public getResourceFromFile(uri: string | Uri): Resource | undefined {
@@ -731,15 +1064,119 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Stage files with optimistic UI update.
-   * Runs SVN changelist command but skips full status refresh.
-   * UI is updated immediately by moving resources between groups.
+   * Stage files with optimistic UI update (no directory expansion).
+   * Stages just the paths provided - folders are staged alone for visual grouping.
+   * For unversioned files, `svn add` is called first before changelist.
    */
   public async stageOptimistic(files: string[]): Promise<void> {
-    // Run SVN command to update working copy state
-    await this.repository.addChangelist(files, STAGING_CHANGELIST);
-    // Optimistically update UI without status refresh
+    // Find unversioned items that need `svn add` first
+    const unversionedPaths = this.findUnversionedPaths(files);
+    if (unversionedPaths.length > 0) {
+      // svn add handles parent directories automatically
+      await this.repository.addFiles(unversionedPaths);
+    }
+
+    // Filter out directories for SVN command (changelists are file-only)
+    // but keep them for UI update
+    const filesOnly = await this.filterOutDirectories(files);
+
+    // Run SVN command to update working copy state (files only)
+    if (filesOnly.length > 0) {
+      await this.repository.addChangelist(filesOnly, STAGING_CHANGELIST);
+    }
+    // Optimistically update UI (includes directories for visual grouping)
     this.groupManager.moveToStaged(files);
+    this.updateActionButton();
+    this.triggerInputValidation();
+  }
+
+  /**
+   * Stage files with optimistic UI update, expanding directories.
+   * When staging a directory, includes all changed descendant files.
+   * For unversioned files, `svn add` is called first before changelist.
+   */
+  public async stageOptimisticWithChildren(files: string[]): Promise<void> {
+    // Expand directories to include all changed descendant files
+    // (SVN changelists don't support directories)
+    const expanded = this.expandDirectoriesToChangedFiles(files);
+
+    // Find unversioned items that need `svn add` first
+    const unversionedPaths = this.findUnversionedPaths(expanded);
+    if (unversionedPaths.length > 0) {
+      // svn add handles parent directories automatically
+      await this.repository.addFiles(unversionedPaths);
+    }
+
+    // Filter out directories for SVN command (changelists are file-only)
+    // but keep them for UI update
+    const filesOnly = await this.filterOutDirectories(expanded);
+
+    // Run SVN command to update working copy state (files only)
+    if (filesOnly.length > 0) {
+      await this.repository.addChangelist(filesOnly, STAGING_CHANGELIST);
+    }
+    // Optimistically update UI (includes directories for visual grouping)
+    this.groupManager.moveToStaged(expanded);
+    this.updateActionButton();
+    this.triggerInputValidation();
+  }
+
+  /**
+   * Find paths that are unversioned (need `svn add` before changelist).
+   */
+  private findUnversionedPaths(paths: string[]): string[] {
+    const unversioned: string[] = [];
+    for (const p of paths) {
+      const resource = this.groupManager.getResourceFromFile(p);
+      if (resource && resource.type === Status.UNVERSIONED) {
+        unversioned.push(p);
+      }
+    }
+    return unversioned;
+  }
+
+  /**
+   * Filter out directories from path list.
+   */
+  private async filterOutDirectories(paths: string[]): Promise<string[]> {
+    const files: string[] = [];
+    for (const p of paths) {
+      try {
+        const stats = await stat(p);
+        if (!stats.isDirectory()) {
+          files.push(p);
+        }
+      } catch {
+        // If stat fails (file doesn't exist), include it anyway
+        files.push(p);
+      }
+    }
+    return files;
+  }
+
+  /**
+   * Expand directory paths to include all changed descendant files.
+   * SVN changelists only work with files, not directories.
+   */
+  private expandDirectoriesToChangedFiles(paths: string[]): string[] {
+    const result = new Set<string>();
+    const changedPaths = this.groupManager.changes.resourceStates.map(
+      r => r.resourceUri.fsPath
+    );
+
+    for (const p of paths) {
+      // Always include the original path
+      result.add(p);
+
+      // Check if any changed files are descendants of this path
+      for (const changed of changedPaths) {
+        if (isDescendant(p, changed)) {
+          result.add(changed);
+        }
+      }
+    }
+
+    return Array.from(result);
   }
 
   /**
@@ -752,15 +1189,47 @@ export class Repository implements IRemoteRepository {
     files: string[],
     targetChangelist?: string
   ): Promise<void> {
-    if (targetChangelist) {
-      // Restore to original changelist
-      await this.repository.addChangelist(files, targetChangelist);
-    } else {
-      // Remove from changelist entirely
-      await this.repository.removeChangelist(files);
+    // Expand directories to include all staged descendant files
+    const expanded = this.expandDirectoriesToStagedFiles(files);
+
+    // Filter out directories for SVN command (changelists are file-only)
+    const filesOnly = await this.filterOutDirectories(expanded);
+
+    if (filesOnly.length > 0) {
+      if (targetChangelist) {
+        // Restore to original changelist
+        await this.repository.addChangelist(filesOnly, targetChangelist);
+      } else {
+        // Remove from changelist entirely
+        await this.repository.removeChangelist(filesOnly);
+      }
     }
     // Optimistically update UI without status refresh
-    this.groupManager.moveFromStaged(files, targetChangelist);
+    this.groupManager.moveFromStaged(expanded, targetChangelist);
+    this.updateActionButton();
+    this.triggerInputValidation();
+  }
+
+  /**
+   * Expand directory paths to include all staged descendant files.
+   */
+  private expandDirectoriesToStagedFiles(paths: string[]): string[] {
+    const result = new Set<string>();
+    const stagedPaths = this.groupManager.staged.resourceStates.map(
+      r => r.resourceUri.fsPath
+    );
+
+    for (const p of paths) {
+      result.add(p);
+
+      for (const staged of stagedPaths) {
+        if (isDescendant(p, staged)) {
+          result.add(staged);
+        }
+      }
+    }
+
+    return Array.from(result);
   }
 
   public async getCurrentBranch() {
@@ -800,13 +1269,17 @@ export class Repository implements IRemoteRepository {
   public async updateRevision(
     ignoreExternals: boolean = false
   ): Promise<IUpdateResult> {
-    return this.run<IUpdateResult>(Operation.Update, async () => {
-      const result = await this.repository.update(ignoreExternals);
+    const result = await this.run<IUpdateResult>(Operation.Update, async () => {
+      const updateResult = await this.repository.update(ignoreExternals);
       // Note: status refresh handled by run() via updateModelState() after callback
       // Do NOT call this.status() here - causes credentialLock deadlock (nested retryRun)
       // Skip updateRemoteChangedFiles - after update we're at HEAD, no remote changes
-      return result;
+      return updateResult;
     });
+    // Fetch history views to show new commits from update
+    await commands.executeCommand("svn.repolog.fetch");
+    await commands.executeCommand("svn.itemlog.refresh");
+    return result;
   }
 
   /**
@@ -820,9 +1293,18 @@ export class Repository implements IRemoteRepository {
   public async pullIncomingChange(path: string) {
     return this.run<string>(Operation.Update, async () => {
       const response = await this.repository.pullIncomingChange(path);
-      void this.updateRemoteChangedFiles();
+      // Note: updateRemoteChangedFiles() called by caller after batch completes
+      // to avoid N redundant calls when pulling N files
       return response;
     });
+  }
+
+  /**
+   * Trigger remote changes refresh after batch operations complete.
+   * Call this once after pulling multiple incoming changes.
+   */
+  public refreshRemoteChanges(): void {
+    void this.updateRemoteChangedFiles();
   }
 
   public async resolve(files: string[], action: string) {
@@ -832,9 +1314,61 @@ export class Repository implements IRemoteRepository {
   }
 
   public async commitFiles(message: string, files: string[]) {
-    return this.run(Operation.Commit, () =>
+    // Check for needs-lock files that aren't locked
+    const unlockedNeedsLock: string[] = [];
+    for (const file of files) {
+      const hasNeedsLock = await this.hasNeedsLock(file);
+      if (hasNeedsLock) {
+        // Check if file has lock token
+        const resource = this.getResourceFromFile(file);
+        if (!resource?.hasLockToken) {
+          unlockedNeedsLock.push(file);
+        }
+      }
+    }
+
+    if (unlockedNeedsLock.length > 0) {
+      const answer = await window.showWarningMessage(
+        `${unlockedNeedsLock.length} file(s) have svn:needs-lock but are not locked. Commit anyway?`,
+        { modal: true },
+        "Commit Anyway",
+        "Cancel"
+      );
+      if (answer !== "Commit Anyway") {
+        throw new Error("Commit cancelled: unlock files or lock them first");
+      }
+    }
+
+    const result = await this.run(Operation.Commit, () =>
       this.repository.commitFiles(message, files)
     );
+    // Clear log cache so fresh data is fetched (log cache has 60s TTL)
+    this.clearLogCache();
+
+    // Parse commit revision from result (e.g., "3 files commited: revision 106.")
+    // For partial commits, svn info on root might not show new revision
+    const revMatch = result.match(/revision (\d+)/i);
+    if (revMatch && revMatch[1]) {
+      const newRevision = revMatch[1];
+      // Update info.revision directly so BASE indicator is correct
+      // This handles mixed-revision working copies after partial commit
+      if (
+        parseInt(newRevision, 10) > parseInt(this.repository.info.revision, 10)
+      ) {
+        (this.repository.info as { revision: string }).revision = newRevision;
+      }
+    }
+
+    // Refresh repo info (will use cache if revision unchanged)
+    await this.repository.updateInfo(true);
+    // Fetch history views to show new commit
+    await commands.executeCommand("svn.repolog.fetch");
+    await commands.executeCommand("svn.itemlog.refresh");
+    return result;
+  }
+
+  public clearLogCache(): void {
+    this.repository.clearLogCache();
   }
 
   public async revert(files: string[], depth: keyof typeof SvnDepth) {
@@ -1203,6 +1737,12 @@ export class Repository implements IRemoteRepository {
   }
 
   public onDidSaveTextDocument(document: TextDocument) {
+    // Schedule status refresh on save to update Changes view
+    // Uses same debounce path as file watcher for consistency
+    // The 500ms debounce handles rapid saves, then status() runs
+    this.eventuallyUpdateWhenIdleAndWait();
+
+    // Handle conflict auto-resolution
     const uriString = document.uri.toString();
     const conflict = this.conflicts.resourceStates.find(
       resource => resource.resourceUri.toString() === uriString
@@ -1235,18 +1775,43 @@ export class Repository implements IRemoteRepository {
         const result = await this.retryRun(runOperation);
 
         const checkRemote = operation === Operation.StatusRemote;
-        // Force refresh for changelist operations to bypass 2s cache
-        // These operations modify which group files appear in
+        // Force refresh to bypass 2s cache for operations that change file status
+        // Without this, Explorer decorations may show stale state
         const forceRefresh =
+          operation === Operation.Commit ||
+          operation === Operation.Revert ||
+          operation === Operation.Add ||
+          operation === Operation.Remove ||
+          operation === Operation.Update ||
+          operation === Operation.Resolve ||
           operation === Operation.AddChangelist ||
-          operation === Operation.RemoveChangelist;
+          operation === Operation.RemoveChangelist ||
+          operation === Operation.Lock ||
+          operation === Operation.Unlock;
+
+        // Always fetch lock status to show K/O/B/T badges in explorer
+        const fetchLockStatus = true;
 
         if (!isReadOnly(operation)) {
-          await this.updateModelState(checkRemote, forceRefresh);
+          await this.updateModelState(
+            checkRemote,
+            forceRefresh,
+            fetchLockStatus
+          );
         }
 
         return result;
       } catch (err) {
+        // Lock/Unlock: refresh status even on error (e.g., "already locked")
+        // to show correct lock state regardless of command success
+        if (operation === Operation.Lock || operation === Operation.Unlock) {
+          try {
+            await this.updateModelState(false, true, true);
+          } catch {
+            // Ignore status errors during error handling
+          }
+        }
+
         const svnError = err as ISvnErrorData;
         if (svnError.svnErrorCode === svnErrorCodes.NotASvnRepository) {
           this.state = RepositoryState.Disposed;
@@ -1407,10 +1972,87 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Check if file has svn:needs-lock property.
+   * Refresh the batch cache of files with svn:needs-lock property.
+   * Called during status updates to populate cache efficiently.
+   */
+  public async refreshNeedsLockCache(): Promise<void> {
+    try {
+      this.needsLockFilesSet = await this.repository.getAllNeedsLockFiles();
+      this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+    } catch {
+      // Keep existing cache on error
+    }
+  }
+
+  /**
+   * Check if file has svn:needs-lock property (sync, uses batch cache).
+   * Returns true if file is in the cached set. Fast for decorations.
+   */
+  public hasNeedsLockCached(filePath: string): boolean {
+    // Convert absolute path to relative
+    let relativePath = filePath;
+    if (filePath.startsWith(this.workspaceRoot)) {
+      relativePath = filePath.substring(this.workspaceRoot.length);
+      // Remove leading separator
+      if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+        relativePath = relativePath.substring(1);
+      }
+    }
+    return this.needsLockFilesSet.has(relativePath);
+  }
+
+  /**
+   * Check if file has svn:needs-lock property (async, accurate).
+   * Uses cache if valid, otherwise queries SVN directly.
    */
   public async hasNeedsLock(filePath: string): Promise<boolean> {
-    return this.repository.hasNeedsLock(filePath);
+    // If cache is valid, use it
+    if (Date.now() < this.needsLockCacheExpiry) {
+      return this.hasNeedsLockCached(filePath);
+    }
+
+    // Cache expired - do single file check (for prompt on open)
+    try {
+      return await this.repository.hasNeedsLock(filePath);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Update lock status cache with info from --show-updates status call.
+   * Called when fetchLockStatus=true in updateModelState.
+   */
+  public updateLockCache(
+    relativePath: string,
+    lockStatus: LockStatus,
+    lockOwner?: string,
+    hasLockToken: boolean = false
+  ): void {
+    this.lockStatusCache.set(relativePath, {
+      lockStatus,
+      lockOwner,
+      hasLockToken
+    });
+  }
+
+  /**
+   * Get cached lock status for a file.
+   * Returns undefined if not in cache.
+   */
+  public getCachedLockStatus(
+    relativePath: string
+  ):
+    | { lockStatus: LockStatus; lockOwner?: string; hasLockToken: boolean }
+    | undefined {
+    return this.lockStatusCache.get(relativePath);
+  }
+
+  /**
+   * Clear lock cache for a specific file (after unlock).
+   */
+  public clearLockCacheEntry(relativePath: string): void {
+    this.lockStatusCache.delete(relativePath);
   }
 
   /**
@@ -1431,11 +2073,50 @@ export class Repository implements IRemoteRepository {
     );
   }
 
+  /**
+   * Check if file needs lock and prompt user to lock it.
+   * Called when opening a file that might need locking.
+   */
+  public async promptLockIfNeeded(uri: Uri): Promise<void> {
+    // Only check files in this repository's working copy
+    if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+      return;
+    }
+
+    // Check if file already has a lock (any lock status means it's locked)
+    const resource = this.getResourceFromFile(uri.fsPath);
+    if (resource?.lockStatus || resource?.locked) {
+      return; // Already locked
+    }
+
+    // Check if file has needs-lock property
+    const needsLock = await this.hasNeedsLock(uri.fsPath);
+    if (!needsLock) {
+      return;
+    }
+
+    // File has needs-lock but isn't locked - prompt user
+    const choice = await window.showInformationMessage(
+      "This file requires a lock before editing. Lock it now?",
+      "Lock File",
+      "Not Now"
+    );
+
+    if (choice === "Lock File") {
+      await commands.executeCommand("svn.lock", uri);
+    }
+  }
+
   public dispose(): void {
     // Clear auth cooldown timer to prevent memory leak
     if (this.promptAuthCooldownTimer) {
       clearTimeout(this.promptAuthCooldownTimer);
       this.promptAuthCooldownTimer = undefined;
+    }
+    // Clear grace period refresh timer
+    if (this.pendingGraceRefresh) {
+      clearTimeout(this.pendingGraceRefresh);
+      this.pendingGraceRefresh = undefined;
     }
     // Stop remote change polling to prevent timer leak
     this.remoteChangeService.dispose();

@@ -160,7 +160,10 @@ export interface ISvnResourceGroup extends SourceControlResourceGroup {
 }
 
 export interface IWcStatus {
+  /** True if file has a user lock (K/O/B/T) */
   locked: boolean;
+  /** True if WC is administratively locked (from wc-locked attribute, needs cleanup) */
+  wcAdminLocked?: boolean;
   switched: boolean;
   /** Lock owner username (from repos-status) */
   lockOwner?: string;
@@ -190,6 +193,7 @@ export interface IFileStatus {
   status: string;
   props: string;
   path: string;
+  kind?: "file" | "dir";
   changelist?: string;
   rename?: string;
   wcStatus: IWcStatus;
@@ -208,6 +212,7 @@ export interface IFileStatus {
 
 export interface IEntry {
   path: string;
+  kind?: "file" | "dir";
   wcStatus: {
     item: string;
     revision: string;
@@ -216,6 +221,14 @@ export interface IEntry {
     movedFrom?: string;
     wcLocked?: string;
     switched?: string;
+    /** Local lock token when you have locked this file */
+    lock?: {
+      token?: string;
+      owner?: string;
+      created?: string;
+      expires?: string;
+      comment?: string;
+    };
     commit: {
       revision: string;
       author: string;

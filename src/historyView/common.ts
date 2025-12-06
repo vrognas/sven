@@ -83,6 +83,8 @@ export interface ILogTreeItem {
   readonly kind: LogTreeItemKind;
   data: TreeItemData;
   readonly parent?: ILogTreeItem;
+  isBase?: boolean; // True if this commit is the BASE revision
+  isServerOnly?: boolean; // True if revision > BASE (not synced yet)
 }
 
 export function transform(
@@ -144,26 +146,36 @@ function needFetch(
   return true;
 }
 
+/**
+ * Mark commit status in the output list:
+ * - isBase: true if revision === BASE (your working copy revision)
+ * - isServerOnly: true if revision > BASE (not synced yet)
+ */
 export function insertBaseMarker(
   item: ICachedLog,
   entries: ISvnLogEntry[],
   out: ILogTreeItem[]
-): TreeItem | undefined {
+): void {
   const baseRev = item.persisted.baseRevision;
-  if (
-    entries.length &&
-    baseRev &&
-    parseInt(entries[0]!.revision, 10) > baseRev
-  ) {
-    let i = 1;
-    while (entries.length > i && parseInt(entries[i]!.revision, 10) > baseRev) {
-      i++;
-    }
-    const titem = new TreeItem("BASE");
-    titem.tooltip = "Log entries above do not exist in working copy";
-    out.splice(i, 0, { kind: LogTreeItemKind.TItem, data: titem });
+  if (!entries.length || !baseRev) {
+    return;
   }
-  return undefined;
+
+  for (let i = 0; i < out.length; i++) {
+    const logItem = out[i];
+    if (logItem?.kind !== LogTreeItemKind.Commit) {
+      continue;
+    }
+    const commit = logItem.data as ISvnLogEntry;
+    const rev = parseInt(commit.revision, 10);
+    if (rev === baseRev) {
+      // Mark this commit as BASE
+      logItem.isBase = true;
+    } else if (rev > baseRev) {
+      // Mark commits above BASE as server-only (not synced)
+      logItem.isServerOnly = true;
+    }
+  }
 }
 
 export async function checkIfFile(
@@ -208,8 +220,13 @@ export async function fetchMore(cached: ICachedLog) {
   let rfrom = cached.persisted.commitFrom;
   const entries = cached.entries;
   if (entries.length) {
-    rfrom = entries[entries.length - 1]!.revision;
-    rfrom = (Number.parseInt(rfrom, 10) - 1).toString();
+    const lastRev = Number.parseInt(entries[entries.length - 1]!.revision, 10);
+    // Already at r1, nothing more to fetch
+    if (lastRev <= 1) {
+      cached.isComplete = true;
+      return;
+    }
+    rfrom = (lastRev - 1).toString();
   }
   let moreCommits: ISvnLogEntry[] = [];
   const limit = getLimit();
@@ -221,7 +238,10 @@ export async function fetchMore(cached: ICachedLog) {
   if (!needFetch(entries, moreCommits, limit)) {
     cached.isComplete = true;
   }
-  entries.push(...moreCommits);
+  // Deduplicate: skip commits already in entries
+  const existingRevs = new Set(entries.map(e => e.revision));
+  const newCommits = moreCommits.filter(c => !existingRevs.has(c.revision));
+  entries.push(...newCommits);
 }
 
 /**

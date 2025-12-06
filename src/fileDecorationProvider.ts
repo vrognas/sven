@@ -11,6 +11,7 @@ import {
   Uri
 } from "vscode";
 import { LockStatus, Status } from "./common/types";
+import { configuration } from "./helpers/configuration";
 import { Repository } from "./repository";
 
 /**
@@ -19,12 +20,26 @@ import { Repository } from "./repository";
 export class SvnFileDecorationProvider
   implements FileDecorationProvider, Disposable
 {
-  private _onDidChangeFileDecorations = new EventEmitter<Uri | Uri[]>();
+  private _onDidChangeFileDecorations = new EventEmitter<
+    Uri | Uri[] | undefined
+  >();
   readonly onDidChangeFileDecorations = this._onDidChangeFileDecorations.event;
   private disposables: Disposable[] = [];
 
   constructor(private repository: Repository) {
     this.disposables.push(this._onDidChangeFileDecorations);
+
+    // Refresh decorations when decorator color settings change
+    this.disposables.push(
+      configuration.onDidChange(e => {
+        if (
+          e.affectsConfiguration("svn.decorator.baseColor") ||
+          e.affectsConfiguration("svn.decorator.serverColor")
+        ) {
+          this._onDidChangeFileDecorations.fire(undefined);
+        }
+      })
+    );
   }
 
   dispose(): void {
@@ -34,7 +49,35 @@ export class SvnFileDecorationProvider
   /**
    * Provide decoration for a file URI
    */
-  provideFileDecoration(uri: Uri): FileDecoration | undefined {
+  async provideFileDecoration(uri: Uri): Promise<FileDecoration | undefined> {
+    // Check for commit decorations (from repo/item log)
+    if (uri.scheme === "svn-commit") {
+      const queryParams = new URLSearchParams(uri.query);
+      if (queryParams.get("isBase") === "true") {
+        const baseColor = configuration.get<string>(
+          "decorator.baseColor",
+          "charts.blue"
+        );
+        return {
+          badge: "B",
+          tooltip: "Your working copy's BASE revision",
+          color: new ThemeColor(baseColor)
+        };
+      }
+      if (queryParams.get("isServerOnly") === "true") {
+        const serverColor = configuration.get<string>(
+          "decorator.serverColor",
+          "charts.orange"
+        );
+        return {
+          badge: "S",
+          tooltip: "Server revision - not synced yet (run svn update)",
+          color: new ThemeColor(serverColor)
+        };
+      }
+      return undefined;
+    }
+
     // Check if this is a historical file from repository log (has action query param)
     const queryParams = new URLSearchParams(uri.query);
     const action = queryParams.get("action");
@@ -66,7 +109,8 @@ export class SvnFileDecorationProvider
     const resource = this.repository.getResourceFromFile(uri.fsPath);
 
     if (!resource) {
-      return undefined;
+      // File not in changes list - check if needs-lock (from batch cache)
+      return this.getNeedsLockDecoration(uri);
     }
 
     const status = resource.type;
@@ -76,20 +120,28 @@ export class SvnFileDecorationProvider
       return undefined;
     }
 
-    let badge = this.getBadge(status, resource.renameResourceUri);
-    const color = this.getColor(status);
-    let tooltip = this.getTooltip(status, resource.renameResourceUri);
+    const isFolder = resource.kind === "dir";
+    let badge = this.getBadge(status, resource.renameResourceUri, isFolder);
+    let color = this.getColor(status);
+    let tooltip = this.getTooltip(status, resource.renameResourceUri, isFolder);
 
-    // Add lock info to tooltip and badge (K/O/B/T per SVN convention)
+    // Add lock info to tooltip, badge, and color (K/O/B/T per SVN convention)
     if (resource.lockStatus) {
       const lockInfo = this.getLockTooltip(
         resource.lockStatus,
         resource.lockOwner
       );
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
-      // Show lock badge if no other badge
-      if (!badge) {
-        badge = resource.lockStatus;
+      // Use SVN lock letters: K=yours, O=others, B=broken, T=stolen
+      const lockLetter = resource.lockStatus;
+      badge = badge ? `${lockLetter}${badge}` : lockLetter;
+      // Lock color: B/T always red, K/O if no status color
+      if (
+        resource.lockStatus === LockStatus.B ||
+        resource.lockStatus === LockStatus.T ||
+        !color
+      ) {
+        color = this.getLockColor(resource.lockStatus);
       }
     } else if (resource.locked) {
       // Fallback for legacy lock detection without lockStatus
@@ -99,13 +151,18 @@ export class SvnFileDecorationProvider
           ? `Locked by ${resource.lockOwner}`
           : "Locked by others";
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
-      if (!badge) {
-        badge = resource.hasLockToken ? "K" : "O";
+      // K=yours, O=others
+      const lockLetter = resource.hasLockToken ? LockStatus.K : LockStatus.O;
+      badge = badge ? `${lockLetter}${badge}` : lockLetter;
+      // Use lock color if no status color
+      if (!color) {
+        color = this.getLockColor(lockLetter);
       }
     }
 
     if (!badge && !color) {
-      return undefined;
+      // No status decoration - check if needs-lock
+      return this.getNeedsLockDecoration(uri);
     }
 
     return {
@@ -117,11 +174,40 @@ export class SvnFileDecorationProvider
   }
 
   /**
+   * Get decoration for files with svn:needs-lock property (not locked).
+   * Uses batch-populated cache - no SVN calls.
+   */
+  private getNeedsLockDecoration(uri: Uri): FileDecoration | undefined {
+    // Only check file scheme
+    if (uri.scheme !== "file") {
+      return undefined;
+    }
+
+    // Check if file is in working copy
+    if (!uri.fsPath.startsWith(this.repository.workspaceRoot)) {
+      return undefined;
+    }
+
+    // Check batch cache (sync, no SVN call)
+    if (!this.repository.hasNeedsLockCached(uri.fsPath)) {
+      return undefined;
+    }
+
+    return {
+      badge: "L",
+      tooltip: "Needs lock - file is read-only until locked",
+      color: new ThemeColor("list.deemphasizedForeground"),
+      propagate: false
+    };
+  }
+
+  /**
    * Refresh decorations for changed files
    */
   refresh(uris?: Uri | Uri[]): void {
-    // Fire event with uris if provided, otherwise fire with empty array to refresh all
-    this._onDidChangeFileDecorations.fire(uris || []);
+    // Fire with undefined to refresh all, or specific URIs to refresh those
+    // Note: empty array [] means refresh nothing, undefined means refresh all
+    this._onDidChangeFileDecorations.fire(uris);
   }
 
   /**
@@ -142,32 +228,48 @@ export class SvnFileDecorationProvider
     }
   }
 
-  private getBadge(status: string, renameUri?: Uri): string | undefined {
-    // Renamed files (added with rename source) get R badge
+  private getBadge(
+    status: string,
+    renameUri?: Uri,
+    isFolder: boolean = false
+  ): string | undefined {
+    // Renamed files/folders (added with rename source) get R/📁R badge
     if (status === Status.ADDED && renameUri) {
-      return "R";
+      return isFolder ? "📁R" : "R";
     }
 
+    let badge: string | undefined;
     switch (status) {
       case Status.ADDED:
-        return "A";
+        badge = "A";
+        break;
       case Status.CONFLICTED:
-        return "C";
+        badge = "C";
+        break;
       case Status.DELETED:
-        return "D";
+        badge = "D";
+        break;
       case Status.MODIFIED:
-        return "M";
+        badge = "M";
+        break;
       case Status.REPLACED:
-        return "R";
+        badge = "R";
+        break;
       case Status.UNVERSIONED:
-        return "U";
+        badge = "U";
+        break;
       case Status.MISSING:
-        return "!";
+        badge = "!";
+        break;
       case Status.IGNORED:
-        return "I";
+        badge = "I";
+        break;
       default:
         return undefined;
     }
+
+    // Prefix with folder emoji for folders (📁A, 📁M, 📁D, etc.)
+    return isFolder ? `📁${badge}` : badge;
   }
 
   private getColor(status: string): ThemeColor | undefined {
@@ -205,28 +307,50 @@ export class SvnFileDecorationProvider
     }
   }
 
-  private getTooltip(status: string, renameUri?: Uri): string | undefined {
+  /**
+   * Get color for lock status
+   * K=blue (safe), O=orange (blocked), B/T=red (error)
+   */
+  private getLockColor(lockStatus: LockStatus): ThemeColor {
+    switch (lockStatus) {
+      case LockStatus.K:
+        return new ThemeColor("charts.blue");
+      case LockStatus.O:
+        return new ThemeColor("charts.orange");
+      case LockStatus.B:
+      case LockStatus.T:
+        return new ThemeColor("errorForeground");
+    }
+  }
+
+  private getTooltip(
+    status: string,
+    renameUri?: Uri,
+    isFolder: boolean = false
+  ): string | undefined {
+    const prefix = isFolder ? "Folder " : "";
+
     if (status === Status.ADDED && renameUri) {
-      return `Renamed from ${renameUri.fsPath}`;
+      return `${prefix}Renamed from ${renameUri.fsPath}`;
     }
 
     switch (status) {
       case Status.ADDED:
-        return "Added";
+        return `${prefix}Added`;
       case Status.CONFLICTED:
-        return "Conflicted";
+        return `${prefix}Conflicted`;
       case Status.DELETED:
-        return "Deleted";
+        return `${prefix}Deleted`;
       case Status.MODIFIED:
-        return "Modified";
+        return `${prefix}Modified`;
       case Status.REPLACED:
-        return "Replaced";
+        return `${prefix}Replaced`;
       case Status.UNVERSIONED:
-        return "Unversioned";
+        return `${prefix}Unversioned`;
       case Status.MISSING:
-        return "Missing";
+        return `${prefix}Missing`;
       case Status.IGNORED:
-        return "Ignored";
+        return `${prefix}Ignored`;
       default:
         return undefined;
     }

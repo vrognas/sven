@@ -9,7 +9,7 @@ describe("Author Color Dots", () => {
           hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash % 360);
-        return `hsl(${hue}, 65%, 50%)`;
+        return `hsl(${hue}, 45%, 55%)`;
       };
 
       const color1 = hashToColor("john.doe");
@@ -24,7 +24,7 @@ describe("Author Color Dots", () => {
           hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash % 360);
-        return `hsl(${hue}, 65%, 50%)`;
+        return `hsl(${hue}, 45%, 55%)`;
       };
 
       const color1 = hashToColor("john.doe");
@@ -39,11 +39,11 @@ describe("Author Color Dots", () => {
           hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash % 360);
-        return `hsl(${hue}, 65%, 50%)`;
+        return `hsl(${hue}, 45%, 55%)`;
       };
 
       const color = hashToColor("test");
-      expect(color).toMatch(/^hsl\(\d+, 65%, 50%\)$/);
+      expect(color).toMatch(/^hsl\(\d+, 45%, 55%\)$/);
     });
   });
 
@@ -51,26 +51,26 @@ describe("Author Color Dots", () => {
     it("generates valid SVG data URI", () => {
       const createColorDotSvg = (color: string): string => {
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-<circle cx="8" cy="8" r="6" fill="${color}"/>
+<circle cx="8" cy="8" r="5" fill="${color}"/>
 </svg>`;
         return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
       };
 
-      const uri = createColorDotSvg("hsl(200, 65%, 50%)");
+      const uri = createColorDotSvg("hsl(200, 45%, 55%)");
       expect(uri.startsWith("data:image/svg+xml;base64,")).toBe(true);
     });
 
     it("creates circle element in SVG", () => {
       const createColorDotSvg = (color: string): string => {
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-<circle cx="8" cy="8" r="6" fill="${color}"/>
+<circle cx="8" cy="8" r="5" fill="${color}"/>
 </svg>`;
         return svg;
       };
 
-      const svg = createColorDotSvg("hsl(200, 65%, 50%)");
+      const svg = createColorDotSvg("hsl(200, 45%, 55%)");
       expect(svg).toContain("circle");
-      expect(svg).toContain('r="6"');
+      expect(svg).toContain('r="5"');
     });
   });
 });

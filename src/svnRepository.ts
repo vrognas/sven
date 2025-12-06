@@ -108,10 +108,10 @@ export class Repository {
     })() as unknown as Repository;
   }
 
-  public async updateInfo() {
-    // Check cache first
+  public async updateInfo(forceRefresh: boolean = false) {
+    // Check cache first (skip if forced)
     const now = Date.now();
-    if (now - this.lastInfoUpdate < this.INFO_CACHE_MS) {
+    if (!forceRefresh && now - this.lastInfoUpdate < this.INFO_CACHE_MS) {
       return;
     }
     this.lastInfoUpdate = now;
@@ -208,6 +208,7 @@ export class Repository {
     includeIgnored?: boolean;
     includeExternals?: boolean;
     checkRemoteChanges?: boolean;
+    fetchLockStatus?: boolean;
     fetchExternalUuids?: boolean;
   }): Promise<IFileStatus[]> {
     params = Object.assign(
@@ -216,13 +217,15 @@ export class Repository {
         includeIgnored: false,
         includeExternals: true,
         checkRemoteChanges: false,
+        fetchLockStatus: false,
         fetchExternalUuids: false
       },
       params
     );
 
     // Optimization: Check for remote changes before expensive status call
-    if (params.checkRemoteChanges) {
+    // Skip this optimization if fetchLockStatus=true (need --show-updates for locks)
+    if (params.checkRemoteChanges && !params.fetchLockStatus) {
       const hasChanges = await this.hasRemoteChanges();
       if (!hasChanges) {
         console.log("Remote poll: No new revisions, skipping status");
@@ -238,7 +241,8 @@ export class Repository {
     if (!params.includeExternals) {
       args.push("--ignore-externals");
     }
-    if (params.checkRemoteChanges) {
+    // --show-updates needed for both remote changes AND lock status
+    if (params.checkRemoteChanges || params.fetchLockStatus) {
       args.push("--show-updates");
     }
 
@@ -369,6 +373,15 @@ export class Repository {
       clearTimeout(entry.timeout);
       this._logCache.delete(cacheKey);
     }
+  }
+
+  /**
+   * Clear all log cache entries.
+   * Call after operations that create new revisions (commit, update).
+   */
+  public clearLogCache(): void {
+    this._logCache.forEach(entry => clearTimeout(entry.timeout));
+    this._logCache.clear();
   }
 
   private evictLogEntry(): void {
@@ -1493,6 +1506,11 @@ export class Repository {
     }
 
     const args = ["cleanup"];
+    const hasOptions =
+      options.vacuumPristines ||
+      options.removeUnversioned ||
+      options.removeIgnored ||
+      options.includeExternals;
 
     if (options.vacuumPristines) {
       args.push("--vacuum-pristines");
@@ -1507,15 +1525,36 @@ export class Repository {
       args.push("--include-externals");
     }
 
-    const result = await this.exec(args);
-    this.svn.logOutput(result.stdout);
+    try {
+      const result = await this.exec(args);
+      this.svn.logOutput(result.stdout);
 
-    // Invalidate cache if files were deleted
-    if (options.removeUnversioned || options.removeIgnored) {
-      this.resetInfoCache();
+      // Invalidate cache if files were deleted
+      if (options.removeUnversioned || options.removeIgnored) {
+        this.resetInfoCache();
+      }
+
+      return result.stdout;
+    } catch (err) {
+      // E155037: Working copy locked from interrupted operation
+      // Auto-retry: run plain cleanup first to clear lock, then retry with options
+      const error = err as { svnErrorCode?: string };
+      if (error.svnErrorCode === "E155037" && hasOptions) {
+        // Clear the lock with plain cleanup
+        await this.exec(["cleanup"]);
+
+        // Retry with original options
+        const result = await this.exec(args);
+        this.svn.logOutput(result.stdout);
+
+        if (options.removeUnversioned || options.removeIgnored) {
+          this.resetInfoCache();
+        }
+
+        return result.stdout;
+      }
+      throw err;
     }
-
-    return result.stdout;
   }
 
   public async finishCheckout() {
@@ -1831,7 +1870,9 @@ export class Repository {
       throw new Error(`Invalid file path: ${filePath}`);
     }
 
-    return this.exec(["propset", "svn:needs-lock", "*", filePath]);
+    // Note: Value doesn't matter - SVN just checks property presence
+    // Using 'yes' instead of '*' to avoid glob expansion on Windows
+    return this.exec(["propset", "svn:needs-lock", "yes", filePath]);
   }
 
   /**
@@ -1845,6 +1886,35 @@ export class Repository {
     }
 
     return this.exec(["propdel", "svn:needs-lock", filePath]);
+  }
+
+  /**
+   * Get all files with svn:needs-lock property in the working copy.
+   * Returns relative paths from working copy root.
+   */
+  public async getAllNeedsLockFiles(): Promise<Set<string>> {
+    try {
+      // svn propget -R lists all files with the property
+      const result = await this.exec(["propget", "svn:needs-lock", "-R", "."]);
+      const files = new Set<string>();
+
+      // Output format: "path - *" for each file with the property
+      for (const line of result.stdout.split("\n")) {
+        const trimmed = line.trim();
+        if (trimmed && trimmed.includes(" - ")) {
+          // Extract path before " - "
+          const path = trimmed.substring(0, trimmed.lastIndexOf(" - ")).trim();
+          if (path) {
+            files.add(path);
+          }
+        }
+      }
+
+      return files;
+    } catch {
+      // Property doesn't exist or other error - return empty set
+      return new Set<string>();
+    }
   }
 
   /**

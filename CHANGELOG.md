@@ -1,3 +1,248 @@
+## [2.33.30] (2025-12-06)
+
+### Feature: Semantic Lock Colors
+
+- **K** (your lock): Blue - safe, you control it
+- **O** (others' lock): Orange - blocked by another user
+- **B/T** (broken/stolen): Red - error state, always overrides
+- **L** (needs-lock): Gray - subtle reminder
+- **Logic**: B/T always use error color; K/O use lock color only if no status color
+- **Affected**: fileDecorationProvider.ts, sparseFileDecorationProvider.ts
+
+## [2.33.29] (2025-12-06)
+
+### Fix: Lock Badges Appear Immediately
+
+- **Bug**: Lock badges (K/O/B/T) only appeared after periodic remote check
+- **Cause**: `fetchLockStatus` was only true for Lock/Unlock operations
+- **Fix**: Always fetch lock status with `--show-updates` on status refresh
+- **Result**: Lock badges now appear immediately on any status refresh
+- **Affected**: repository.ts
+
+## [2.33.28] (2025-12-06)
+
+### Fix: User-Locked Files Now Appear in Resource Groups
+
+- **Bug**: User-locked files (K/O/B/T) were being skipped entirely
+- **Cause**: StatusService checked `wcStatus.locked` which includes user locks
+- **Fix**: Now only skips `wcStatus.wcAdminLocked` (WC admin locks from interrupted checkouts)
+- **Result**: Locked files now appear in Changes group with K/O/B/T badge
+- **Affected**: types.ts, statusParser.ts, StatusService.ts
+
+## [2.33.27] (2025-12-06)
+
+### UI: SVN Lock Status Letters
+
+- **Change**: Lock badges now use SVN standard letters instead of emojis
+- **K**: File locked by you (you hold lock token)
+- **O**: File locked by others
+- **B**: Your lock was broken (stale token)
+- **T**: Your lock was stolen
+- **L**: File has svn:needs-lock (read-only until locked)
+- **Affected**: fileDecorationProvider.ts, sparseFileDecorationProvider.ts, resource.ts
+
+## [2.33.26] (2025-12-06)
+
+### Fix: Preserve Lock Status Across Status Refreshes
+
+- **Fix**: Lock badge no longer disappears after status refresh
+- **Root cause**: SVN only reports lock info with `--show-updates` flag
+- **Solution**: Preserve lock status in ResourceGroupManager when status called without `--show-updates`
+- **Technical**: New `lockStatusFresh` flag prevents stale lock info from being cleared
+- **Tests**: Updated lock status tests to use correct XML structure (`<lock>` element)
+- **Affected**: ResourceGroupManager.ts, repository.ts, lockStatus.test.ts
+
+## [2.33.25] (2025-12-06)
+
+### Fix: Needs-Lock Workflow Enforcement
+
+- **Fix**: Lock makes files writable (for needs-lock files)
+- **Fix**: Unlock/BreakLock makes files read-only (if has needs-lock)
+- **New**: Commit warns if committing needs-lock files without locks
+- **Workflow**: needs-lock → lock → edit → commit
+- **Affected**: lock.ts, unlock.ts, repository.ts
+
+## [2.33.24] (2025-12-05)
+
+### Fix: Lock Token Detection
+
+- **Fix**: Lock badge now detects local lock token correctly
+- **Root cause**: Was checking `wcLocked` attr (WC admin lock) instead of `lock` element (user lock)
+- **Technical**: wcStatus.lock element indicates local lock token, not wcLocked attribute
+- **Affected**: types.ts, statusParser.ts
+
+## [2.33.23] (2025-12-05)
+
+### Fix: Lock Decorator and Needs-Lock Toggle
+
+- **Fix**: Lock badge now shows even when lock command fails ("already locked")
+- **Fix**: Needs-lock toggle now sets file read-only/writable in filesystem
+- **Behavior**: Toggle needs-lock ON → file becomes read-only
+- **Behavior**: Toggle needs-lock OFF → file becomes writable
+- **Affected**: repository.ts, needsLock.ts, fs/chmod.ts (new)
+
+## [2.33.22] (2025-12-05)
+
+### Feature: Server Revision Decorator (S badge)
+
+- **New**: Revisions above BASE now show "S" badge (Server - not synced yet)
+- **New**: `svn.decorator.serverColor` setting to customize S badge color (default: orange)
+- **Visual**: Helps identify commits you haven't updated to yet
+- **Affected**: common.ts, repoLogProvider.ts, fileDecorationProvider.ts, package.json
+
+## [2.33.21] (2025-12-05)
+
+### Fix: BASE Correct for Partial Commits
+
+- **Fix**: BASE now correctly shows new revision after partial commit (mixed-revision)
+- **Scenario**: Commit to r106 without updating, but root is still at r101
+- **Solution**: Parse revision from commit output, update `info.revision` directly
+- **Affected**: repository.ts
+
+## [2.33.20] (2025-12-05)
+
+### Fix: BASE Updates After Commit in Repo History
+
+- **Fix**: BASE decorator now updates to new revision after commit
+- **Root cause 1**: Used `info.commit.revision` (Last Changed Rev) instead of `info.revision` (BASE)
+- **Root cause 2**: Explicit refresh didn't force `baseRevision` update
+- **Solution**: Use `info.revision` and always update `baseRevision` on explicit refresh
+- **Affected**: repoLogProvider.ts
+
+## [2.33.19] (2025-12-05)
+
+### Fix: Lock Decorator Shows After Lock/Unlock
+
+- **Fix**: Lock decorator (🔒) now reliably shows after lock/unlock operations
+- **Root cause**: `run()` method didn't use `fetchLockStatus` for Lock/Unlock operations
+- **Solution**: Added Lock/Unlock to forceRefresh list and pass fetchLockStatus to updateModelState
+- **Cleanup**: Removed redundant manual updateModelState calls from lock.ts/unlock.ts
+- **Affected**: repository.ts, lock.ts, unlock.ts
+
+## [2.33.18] (2025-12-05)
+
+### Change: Default BASE Color to Blue + Live Updates
+
+- **Change**: Default BASE decorator color changed from purple to blue
+- **New**: Changing `svn.decorator.baseColor` now updates immediately (no reload)
+- **Affected**: package.json, fileDecorationProvider.ts
+
+## [2.33.17] (2025-12-05)
+
+### Fix: Multi-file Delete Shows All as Deleted
+
+- **Fix**: Deleting multiple files now marks all as deleted (not missing)
+- **Root cause**: Sequential `svn delete` calls caused race conditions
+- **Solution**: Batch all tracked files into single `svn delete` call
+- **Affected**: repository.ts
+
+## [2.33.16] (2025-12-05)
+
+### Feature: Configurable BASE Decorator Color
+
+- **New**: `svn.decorator.baseColor` setting to customize BASE revision badge color
+- **Options**: blue (default), purple, green, yellow, orange, red, info, warning
+- **Affected**: package.json, fileDecorationProvider.ts
+
+## [2.33.15] (2025-12-05)
+
+### Fix: BASE Updates After Commit
+
+- **Fix**: BASE revision badge (B) now updates to new commit after committing
+- **Root cause**: Repository info wasn't refreshed before history views fetched
+- **Affected**: repository.ts
+
+## [2.33.14] (2025-12-05)
+
+### Fix: Renamed File Shows Once in Commit
+
+- **Fix**: Renamed files now show only once in commit file picker (not both old and new paths)
+- **Behavior**: Old path is automatically included in commit when selecting renamed file
+- **Affected**: commitAll.ts, commitStaged.ts, commitFromInputBox.ts
+
+## [2.33.13] (2025-12-05)
+
+### Fix: Lock Decorator Now Shows
+
+- **Fix**: Lock decorator (🔒) now properly shows after lock/unlock operations
+- **Root cause**: Previous fix disabled `--show-updates` flag needed to see lock status
+- **Solution**: Added `fetchLockStatus` option that adds `--show-updates` without the `hasRemoteChanges()` optimization
+- **Affected**: svnRepository.ts, StatusService.ts, repository.ts, lock.ts, unlock.ts
+
+## [2.33.12] (2025-12-05)
+
+### Change: Auto-Delete Default
+
+- **Change**: `svn.delete.actionForDeletedFiles` now defaults to `"remove"` instead of `"prompt"`
+- **Behavior**: Deleting tracked files in Explorer now auto-runs `svn delete` by default
+- **Affected**: package.json, repository.ts, README.md
+
+## [2.33.11] (2025-12-05)
+
+### Fix: Faster Extension Activation
+
+- **Fix**: Extension now activates faster when opening SVN workspaces
+- **Root cause**: Recursive `.svn` glob pattern was slow; added root `.svn` check
+- **Affected**: package.json
+
+## [2.33.10] (2025-12-05)
+
+### Fix: Revert Renamed Files
+
+- **Fix**: Reverting a renamed file now properly restores the original file
+- **Root cause**: Only the new path was reverted, leaving the original path deleted
+- **Affected**: revert.ts
+
+## [2.33.9] (2025-12-05)
+
+### Fix: Lock Decorator Not Showing
+
+- **Fix**: Lock decorator (🔒) now shows immediately after locking files
+- **Root cause**: `hasRemoteChanges()` optimization was skipping status call when no new commits existed
+- **Affected**: lock.ts, unlock.ts
+
+## [2.33.8] (2025-12-05)
+
+### Feat: Immediate Auto-Delete Intercept
+
+- **Feat**: Deleting tracked files in Explorer now immediately runs `svn delete` (when setting is "remove")
+- **Docs**: Added Smart File Deletion section to README
+- **Affected**: repository.ts, README.md
+
+## [2.33.7] (2025-12-05)
+
+### Fix: Log Cache & Performance
+
+- **Fix**: Fetch/Refresh buttons now properly clear low-level SVN log cache (60s TTL was preventing fresh fetches)
+- **Perf**: 5-second grace period after Update/Commit prevents redundant file watcher status calls
+- **Style**: B decorator (BASE revision) changed from green to purple
+- **Affected**: repoLogProvider.ts, itemLogProvider.ts, remoteRepository.ts, repository.ts, fileDecorationProvider.ts
+
+## [2.33.6] (2025-12-05)
+
+### Remove: Native Graph View
+
+- **Removed**: `SourceControlHistoryProvider` implementation
+- **Reason**: VS Code's proposed `scmHistoryProvider` API has internal bugs causing "Tree input not set" errors
+- **Note**: TreeView (repolog) remains the primary history view
+- **Affected**: Removed src/historyView/historyProvider.ts, cleaned up package.json and repository.ts
+
+## [2.33.5] (2025-12-04)
+
+### Fix: Resource Index Stale Data
+
+- **Fix**: `clearAll()` now clears `_resourceIndex` and resets `_resourceHash` to prevent stale resource lookups after state reset
+- **Affected**: src/services/ResourceGroupManager.ts
+
+## [2.33.4] (2025-12-04)
+
+### Fix: Critical Bug Fixes (v2.33.4)
+
+- **Fix**: validateSvnPath() crash - parameter shadowed path module causing TypeError (CRITICAL)
+- **Fix**: Log parser crash - empty `<paths>` tag caused undefined array element
+- **Fix**: Unhandled promise rejection in file watcher callback - now properly caught and logged
+- **Affected**: src/util.ts, src/parser/logParser.ts, src/repository.ts
+
 ## [2.33.3] (2025-12-04)
 
 ### UX: Clearer Commands & Terminology

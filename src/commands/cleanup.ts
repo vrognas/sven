@@ -142,7 +142,26 @@ export class Cleanup extends Command {
         `Cleanup completed. ${completedOps}${externalsNote}`.trim()
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const error = err as { svnErrorCode?: string; message?: string };
+      const message = error.message ?? String(err);
+
+      // Provide helpful message for locked working copy
+      if (error.svnErrorCode === "E155037") {
+        window
+          .showErrorMessage(
+            "Cleanup failed: Working copy is locked. " +
+              "A previous SVN operation was interrupted. " +
+              "Try running cleanup again, or use 'svn cleanup' in terminal.",
+            "Retry Cleanup"
+          )
+          .then(choice => {
+            if (choice === "Retry Cleanup") {
+              this.execute(repository);
+            }
+          });
+        return;
+      }
+
       window.showErrorMessage(`Cleanup failed: ${message}`);
     }
   }

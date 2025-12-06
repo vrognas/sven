@@ -105,10 +105,10 @@ export class SourceControlManager implements IDisposable {
   constructor(
     private _svn: Svn,
     policy: ConstructorPolicy,
-    private extensionContact: ExtensionContext
+    private extensionContext: ExtensionContext
   ) {
     if (policy !== ConstructorPolicy.Async) {
-      throw new Error("Unsopported policy");
+      throw new Error("Unsupported policy");
     }
     this.enabled = configuration.get<boolean>("enabled") === true;
 
@@ -306,7 +306,7 @@ export class SourceControlManager implements IDisposable {
 
         const repository = new Repository(
           await this.svn.open(repositoryRoot, path),
-          this.extensionContact.secrets
+          this.extensionContext.secrets
         );
 
         this.open(repository);
