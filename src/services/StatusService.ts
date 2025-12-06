@@ -341,6 +341,7 @@ export class StatusService implements IStatusService {
 
       // Detect T (stolen) lock: we have token but server shows different owner
       let lockStatus = status.wcStatus.lockStatus;
+
       if (
         lockStatus === LockStatus.K &&
         status.wcStatus.hasLockToken &&
@@ -378,12 +379,15 @@ export class StatusService implements IStatusService {
       );
 
       // Skip normal/unchanged items (but keep locked files for decoration)
-      if (
-        (status.status === Status.NORMAL || status.status === Status.NONE) &&
-        (status.props === Status.NORMAL || status.props === Status.NONE) &&
-        !status.changelist &&
-        !lockStatus // Keep locked files even if otherwise unchanged
-      ) {
+      const isNormal =
+        status.status === Status.NORMAL || status.status === Status.NONE;
+      const propsNormal =
+        status.props === Status.NORMAL || status.props === Status.NONE;
+      const noChangelist = !status.changelist;
+      const noLockStatus = !lockStatus;
+      const willSkip = isNormal && propsNormal && noChangelist && noLockStatus;
+
+      if (willSkip) {
         continue;
       } else if (status.status === Status.IGNORED) {
         statusIgnored.push(status);

@@ -401,7 +401,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
   private rebuildResourceIndex(): void {
     this._resourceIndex.clear();
 
-    const allResources = [
+    // Add local resources first (these have lock status and real file status)
+    const localResources = [
       ...this._staged.resourceStates,
       ...this._changes.resourceStates,
       ...this._conflicts.resourceStates,
@@ -410,19 +411,27 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
     // Add changelist resources
     this._changelists.forEach(group => {
-      allResources.push(...group.resourceStates);
+      localResources.push(...group.resourceStates);
     });
 
-    // Add remote changes if exists
-    if (this._remoteChanges) {
-      allResources.push(...this._remoteChanges.resourceStates);
-    }
-
-    // Build index
-    for (const resource of allResources) {
+    // Build index from local resources
+    for (const resource of localResources) {
       if (resource instanceof Resource) {
         const normalizedPath = normalizePath(resource.resourceUri.fsPath);
         this._resourceIndex.set(normalizedPath, resource);
+      }
+    }
+
+    // Add remote changes only if no local resource exists for that path
+    // Remote resources have type="none" and no lock status, so local takes precedence
+    if (this._remoteChanges) {
+      for (const resource of this._remoteChanges.resourceStates) {
+        if (resource instanceof Resource) {
+          const normalizedPath = normalizePath(resource.resourceUri.fsPath);
+          if (!this._resourceIndex.has(normalizedPath)) {
+            this._resourceIndex.set(normalizedPath, resource);
+          }
+        }
       }
     }
   }
