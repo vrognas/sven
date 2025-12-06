@@ -1,3 +1,14 @@
+## [2.33.30] (2025-12-06)
+
+### Feature: Semantic Lock Colors
+
+- **K** (your lock): Blue - safe, you control it
+- **O** (others' lock): Orange - blocked by another user
+- **B/T** (broken/stolen): Red - error state, always overrides
+- **L** (needs-lock): Gray - subtle reminder
+- **Logic**: B/T always use error color; K/O use lock color only if no status color
+- **Affected**: fileDecorationProvider.ts, sparseFileDecorationProvider.ts
+
 ## [2.33.29] (2025-12-06)
 
 ### Fix: Lock Badges Appear Immediately
