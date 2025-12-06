@@ -6,5 +6,5 @@
 /out
 /test-reports
 positron-svn*.vsix
-.tsbuildinfo
+*.tsbuildinfo
 .claude/settings.local.json

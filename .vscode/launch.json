@@ -8,12 +8,30 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--disable-extensions",
-        "--extensionDevelopmentPath=${workspaceRoot}"
+        // "--disable-extensions",
+        "--disable-extension",
+        "mark-wiemer.vscode-autohotkey-plus-plus",
+        "--disable-extension",
+        "activitywatch.aw-watcher-vscode",
+        "--disable-extension",
+        "ms-azuretools.vscode-containers",
+        "--disable-extension",
+        "posit.databot",
+        "--disable-extension",
+        "usernamehw.errorlens",
+        "--disable-extension",
+        "tamasfe.even-better-toml",
+        "--disable-extension",
+        "ms-vscode.hexeditor",
+        "--disable-extension",
+        "oderwat.indent-rainbow",
+        "--disable-extension",
+        "etiennebacher.jarl-vscode",
+        "--extensionDevelopmentPath=${workspaceRoot}",
+        "C:/Projects/test/Test-Viktor"
       ],
-      "stopOnEntry": false,
       "sourceMaps": true,
-      "outFiles": ["${workspaceRoot}/out/**/*.js"],
+      "outFiles": ["${workspaceRoot}/dist/**/*.js"]
     },
     {
       "name": "Launch Tests",
@@ -25,7 +43,6 @@
         "--extensionTestsPath=${workspaceRoot}/out/test",
         "--disable-extensions"
       ],
-      "stopOnEntry": false,
       "sourceMaps": true,
       "outFiles": ["${workspaceRoot}/out/test/**/*.js"],
       "preLaunchTask": "build"

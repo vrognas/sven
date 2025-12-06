@@ -44,32 +44,32 @@
     "*.scss"
   ],
   "scripts": {
-    "prepare": "husky",
-    "security:validate-errors": "tsc -p scripts/tsconfig.json && node out/scripts/validate-error-logging.js",
     "build": "node build.js && npm run build:css",
     "build:css": "sass scss/:css/ --style=compressed --no-source-map",
     "build:ts": "tsc -p ./",
     "compile": "node build.js --watch",
+    "dev": "npm-run-all --parallel compile watch:css",
     "lint": "npx eslint .",
     "lint:fix": "npx eslint . --fix",
     "organize": "node ./out/tools/organize.js",
+    "package": "npx @vscode/vsce package --no-yarn",
+    "prepare": "husky",
+    "pretest": "npm-run-all --parallel build:ts lint",
+    "security:validate-errors": "tsc -p scripts/tsconfig.json && node out/scripts/validate-error-logging.js",
     "semantic-release": "semantic-release",
     "size": "size-limit",
-    "style-check": "prettylint 'src/**/*.ts'",
+    "style-check": "prettier --check 'src/**/*.ts'",
     "style-fix": "prettier --write \"src/**/*.ts\"",
-    "pretest": "npm-run-all --parallel build:ts lint",
     "test": "npm run test:unit && if [ \"$CI\" = \"true\" ]; then npm run test:e2e; fi",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",
     "test:e2e": "vscode-test",
-    "test-compile": "npm run build:ts",
     "test:coverage": "vitest run --coverage && c8 --reporter=html --reporter=text --reporter=lcov vscode-test",
     "test:fast": "vitest run",
     "tools:genReadme": "node ./out/tools/generateConfigSectionForReadme.js",
     "vscode:prepublish": "npm run build",
-    "watch:css": "sass scss/:css/ --watch --style=compressed --no-source-map",
-    "package": "npx @vscode/vsce package --no-yarn"
+    "watch:css": "sass scss/:css/ --watch --style=compressed --no-source-map"
   },
   "size-limit": [
     {
@@ -1742,11 +1742,21 @@
             "workflow"
           ]
         },
+        "svn.commit.updateAfterCommit": {
+          "type": "boolean",
+          "markdownDescription": "Run `svn update` after commit to sync BASE revision. Makes your working copy match the just-committed revision (more Git-like behavior).",
+          "default": true,
+          "order": 12,
+          "tags": [
+            "commit",
+            "workflow"
+          ]
+        },
         "svn.commit.useQuickPick": {
           "type": "boolean",
           "markdownDescription": "Use native VS Code QuickPick for commit dialog. Set `false` for webview-based commit form.",
           "default": true,
-          "order": 12,
+          "order": 13,
           "tags": [
             "commit",
             "workflow"

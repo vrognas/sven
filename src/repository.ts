@@ -1345,6 +1345,29 @@ export class Repository implements IRemoteRepository {
     // Clear log cache so fresh data is fetched (log cache has 60s TTL)
     this.clearLogCache();
 
+    // Post-commit update: sync working copy to new revision (if enabled)
+    const updateAfterCommit = configuration.get<boolean>(
+      "commit.updateAfterCommit",
+      true
+    );
+    if (updateAfterCommit) {
+      try {
+        await window.withProgress(
+          {
+            location: ProgressLocation.Notification,
+            title: "Syncing working copy...",
+            cancellable: false
+          },
+          async () => {
+            await this.update();
+          }
+        );
+      } catch (updateErr) {
+        // Log but don't fail the commit - it already succeeded
+        console.warn("Post-commit update failed:", updateErr);
+      }
+    }
+
     // Parse commit revision from result (e.g., "3 files commited: revision 106.")
     // For partial commits, svn info on root might not show new revision
     const revMatch = result.match(/revision (\d+)/i);
