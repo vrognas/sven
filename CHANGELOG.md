@@ -1,3 +1,19 @@
+## [2.33.32] (2025-12-06)
+
+### Feature: Auto-Update After Commit
+
+- **New setting**: `svn.commit.updateAfterCommit` (default: true)
+- **Behavior**: Runs `svn update` after commit to sync BASE revision
+- **Result**: Working copy matches just-committed revision (Git-like behavior)
+- **UI**: Shows "Syncing working copy..." progress notification
+
+### Fix: Lock Badges in Explorer
+
+- **Bug**: Lock badges (K/O/B/T) missing from some files in Explorer
+- **Cause**: Remote resources overwrote local resources in index
+- **Fix**: Local resources take precedence; remote only adds, never overwrites
+- **Affected**: ResourceGroupManager.ts
+
 ## [2.33.30] (2025-12-06)
 
 ### Feature: Semantic Lock Colors
