@@ -160,9 +160,28 @@ export class SvnFileDecorationProvider
       }
     }
 
+    // Check if file has needs-lock property (always show L prefix)
+    const hasNeedsLock = this.repository.hasNeedsLockCached(uri.fsPath);
+
     if (!badge && !color) {
-      // No status decoration - check if needs-lock
-      return this.getNeedsLockDecoration(uri);
+      // No status decoration - show just L if needs-lock
+      if (hasNeedsLock) {
+        return {
+          badge: "L",
+          tooltip: "Needs lock - file is read-only until locked",
+          color: new ThemeColor("list.deemphasizedForeground"),
+          propagate: false
+        };
+      }
+      return undefined;
+    }
+
+    // Prepend L to badge if needs-lock (e.g., LM, LA, LKM)
+    if (hasNeedsLock) {
+      badge = badge ? `L${badge}` : "L";
+      tooltip = tooltip
+        ? `${tooltip} (needs-lock)`
+        : "Needs lock - file is read-only until locked";
     }
 
     return {

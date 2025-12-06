@@ -1331,8 +1331,7 @@ export class Repository implements IRemoteRepository {
       const answer = await window.showWarningMessage(
         `${unlockedNeedsLock.length} file(s) have svn:needs-lock but are not locked. Commit anyway?`,
         { modal: true },
-        "Commit Anyway",
-        "Cancel"
+        "Commit Anyway"
       );
       if (answer !== "Commit Anyway") {
         throw new Error("Commit cancelled: unlock files or lock them first");
