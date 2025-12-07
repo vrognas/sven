@@ -326,17 +326,23 @@ export class StatusService implements IStatusService {
         ? Uri.file(path.join(this.workspaceRoot, status.rename))
         : undefined;
 
-      // Handle remote changes
+      // Handle remote changes (skip if only lock-related, no content changes)
       if (status.reposStatus) {
-        remoteChanges.push(
-          new Resource(
-            uri,
-            status.reposStatus.item,
-            undefined,
-            status.reposStatus.props,
-            true
-          )
-        );
+        const remoteItem = status.reposStatus.item;
+        const remoteProps = status.reposStatus.props;
+        const hasRemoteContentChanges =
+          (remoteItem &&
+            remoteItem !== Status.NONE &&
+            remoteItem !== Status.NORMAL) ||
+          (remoteProps &&
+            remoteProps !== Status.NONE &&
+            remoteProps !== Status.NORMAL);
+
+        if (hasRemoteContentChanges) {
+          remoteChanges.push(
+            new Resource(uri, remoteItem, undefined, remoteProps, true)
+          );
+        }
       }
 
       // Detect T (stolen) lock: we have token but server shows different owner

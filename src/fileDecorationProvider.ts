@@ -134,7 +134,7 @@ export class SvnFileDecorationProvider
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
       // Use SVN lock letters: K=yours, O=others, B=broken, T=stolen
       const lockLetter = resource.lockStatus;
-      badge = badge ? `${lockLetter}${badge}` : lockLetter;
+      badge = badge ? `${badge}${lockLetter}` : lockLetter;
       // Lock color: B/T always red, K/O if no status color
       if (
         resource.lockStatus === LockStatus.B ||
@@ -153,7 +153,7 @@ export class SvnFileDecorationProvider
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
       // K=yours, O=others
       const lockLetter = resource.hasLockToken ? LockStatus.K : LockStatus.O;
-      badge = badge ? `${lockLetter}${badge}` : lockLetter;
+      badge = badge ? `${badge}${lockLetter}` : lockLetter;
       // Use lock color if no status color
       if (!color) {
         color = this.getLockColor(lockLetter);
