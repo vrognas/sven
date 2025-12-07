@@ -874,8 +874,11 @@ export class Repository implements IRemoteRepository {
 
     this._onDidChangeStatus.fire();
 
-    // Refresh needs-lock cache before decorations (single batch SVN call)
-    await this.refreshNeedsLockCache();
+    // Refresh needs-lock cache only when expired (60s TTL)
+    // Avoids redundant propget calls on frequent status updates
+    if (Date.now() >= this.needsLockCacheExpiry) {
+      await this.refreshNeedsLockCache();
+    }
 
     // Refresh file decorations in Explorer view
     if (this.fileDecorationProvider) {
