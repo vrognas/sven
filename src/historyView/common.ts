@@ -62,6 +62,15 @@ export class SvnPath {
   }
 }
 
+// Import and re-export filter types from separate file (no vscode deps for easy testing)
+import {
+  ILogFilter,
+  filterLogEntries,
+  hasActiveFilter,
+  getFilterSummary
+} from "./logFilter";
+export { ILogFilter, filterLogEntries, hasActiveFilter, getFilterSummary };
+
 export interface ICachedLog {
   entries: ISvnLogEntry[];
   // Uri of svn repository (remote URL)
@@ -77,6 +86,7 @@ export interface ICachedLog {
   };
   order: number;
   lastAccessed?: number; // LRU tracking
+  filter?: ILogFilter; // Active filter for this cache
 }
 
 type TreeItemData = ISvnLogEntry | ISvnLogEntryPath | SvnPath | TreeItem;
