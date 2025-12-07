@@ -10,9 +10,11 @@ import {
   ConstructorPolicy,
   ICpOptions,
   ICleanupOptions,
+  IDeletedItem,
   IExecutionResult,
   IFileStatus,
   ILockOptions,
+  IResurrectOptions,
   ISvnInfo,
   ISvnLockInfo,
   ISvnLogEntry,
@@ -1968,5 +1970,120 @@ export class Repository {
     this._blameCache.clear();
     this._logCache.forEach(entry => clearTimeout(entry.timeout));
     this._logCache.clear();
+  }
+
+  /**
+   * Get recently deleted items from repository log.
+   * Searches log for items with action="D" (deleted).
+   *
+   * @param limit Maximum number of log entries to search (default: 100)
+   * @param targetPath Optional path to filter deleted items (relative to repo root)
+   * @returns Array of deleted items with path, kind, revision info
+   *
+   * @example
+   * const deleted = await repository.getDeletedItems(50);
+   * // Returns: [{ path: "/trunk/old.c", kind: "file", deletedInRevision: "400", ... }]
+   */
+  public async getDeletedItems(
+    limit: number = 100,
+    targetPath?: string
+  ): Promise<IDeletedItem[]> {
+    // Use verbose log to get changed paths
+    const args = ["log", "-r", "HEAD:1", `--limit=${limit}`, "--xml", "-v"];
+
+    if (targetPath) {
+      args.push(fixPegRevision(targetPath));
+    }
+
+    const result = await this.exec(args);
+    const entries = await parseSvnLog(result.stdout);
+
+    const deleted: IDeletedItem[] = [];
+
+    for (const entry of entries) {
+      for (const pathEntry of entry.paths) {
+        if (pathEntry.action === "D") {
+          // Calculate revision before deletion (where item still existed)
+          const deletedRev = parseInt(entry.revision, 10);
+          const lastExistingRev = deletedRev - 1;
+
+          deleted.push({
+            path: pathEntry._,
+            kind: pathEntry.kind,
+            deletedInRevision: entry.revision,
+            lastExistingRevision: lastExistingRev.toString(),
+            author: entry.author,
+            date: entry.date,
+            msg: entry.msg
+          });
+        }
+      }
+    }
+
+    return deleted;
+  }
+
+  /**
+   * Resurrect a deleted file or directory from a previous revision.
+   * Uses `svn copy` with peg revision to restore with full history.
+   *
+   * The resurrected item will be scheduled for addition with history ("A +").
+   * Running `svn log` on the restored file will show its full history.
+   *
+   * @param remotePath Path from repository root (e.g., /trunk/src/old.c)
+   * @param pegRevision Revision where item last existed (before deletion)
+   * @param options Optional: override target path
+   * @returns SVN output message
+   *
+   * @example
+   * // Resurrect file deleted in r400 (last existed in r399)
+   * await repository.resurrect("/trunk/src/real.c", "399");
+   *
+   * @example
+   * // Resurrect to a different location
+   * await repository.resurrect("/trunk/src/real.c", "399", {
+   *   targetPath: "src/real_restored.c"
+   * });
+   */
+  public async resurrect(
+    remotePath: string,
+    pegRevision: string,
+    options: IResurrectOptions = {}
+  ): Promise<IExecutionResult> {
+    const info = await this.getInfo();
+    const repoRoot = info.repository.root;
+
+    // Build source URL with peg revision
+    // Format: URL@revision tells SVN to look at path as it existed at that revision
+    const sourceUrl = `${repoRoot}${remotePath}@${pegRevision}`;
+
+    // Determine target path
+    let targetPath: string;
+    if (options.targetPath) {
+      targetPath = options.targetPath;
+    } else {
+      // Extract relative path from remotePath
+      // e.g., /trunk/src/file.c -> src/file.c (if working copy is at /trunk)
+      const currentUrl = info.url;
+      const currentPath = currentUrl.replace(repoRoot, "");
+
+      if (remotePath.startsWith(currentPath)) {
+        // Item was under current working copy path
+        targetPath = remotePath.substring(currentPath.length + 1);
+      } else {
+        // Item was elsewhere - use filename only
+        targetPath = remotePath.substring(remotePath.lastIndexOf("/") + 1);
+      }
+    }
+
+    // Execute svn copy
+    const args = ["copy", sourceUrl, targetPath];
+
+    const result = await this.exec(args);
+
+    // Reset info cache since we added new content
+    this.resetInfoCache();
+
+    return result;
   }
 }

@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.33.32",
+  "version": "2.34.0",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -836,6 +836,12 @@
         "category": "SVN"
       },
       {
+        "command": "svn.resurrect",
+        "title": "Resurrect Deleted Item",
+        "category": "SVN",
+        "icon": "$(history)"
+      },
+      {
         "command": "svn.revert",
         "title": "Revert",
         "category": "SVN",
@@ -1148,6 +1154,10 @@
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },
         {
+          "command": "svn.resurrect",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
           "command": "svn.revert",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },
@@ -1401,6 +1411,10 @@
         },
         {
           "command": "svn.resolveAll",
+          "when": "config.svn.enabled && scmProvider == svn"
+        },
+        {
+          "command": "svn.resurrect",
           "when": "config.svn.enabled && scmProvider == svn"
         },
         {

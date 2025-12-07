@@ -67,9 +67,11 @@ import { STAGING_CHANGELIST } from "./services/stagingService";
 import {
   IAuth,
   ICleanupOptions,
+  IDeletedItem,
   IFileStatus,
   ILockOptions,
   IOperations,
+  IResurrectOptions,
   ISvnErrorData,
   ISvnInfo,
   ISvnLockInfo,
@@ -284,6 +286,11 @@ export class Repository implements IRemoteRepository {
   /** 'svn://repo.x/branches/b1' e.g. */
   get branchRoot(): Uri {
     return Uri.parse(this.repository.info.url);
+  }
+
+  /** Repository info (URL, root, revision, etc.) */
+  get repoInfo(): ISvnInfo {
+    return this.repository.info;
   }
 
   get inputBox(): SourceControlInputBox {
@@ -2244,6 +2251,40 @@ export class Repository implements IRemoteRepository {
     if (choice === "Lock File") {
       await commands.executeCommand("svn.lock", uri);
     }
+  }
+
+  /**
+   * Get recently deleted items from repository log.
+   * @param limit Max log entries to search (default: 100)
+   * @param targetPath Optional path filter
+   * @returns Array of deleted items with path, kind, revision info
+   */
+  public async getDeletedItems(
+    limit: number = 100,
+    targetPath?: string
+  ): Promise<IDeletedItem[]> {
+    return this.run(Operation.Log, () =>
+      this.repository.getDeletedItems(limit, targetPath)
+    );
+  }
+
+  /**
+   * Resurrect a deleted file or directory from a previous revision.
+   * Uses `svn copy` with peg revision to restore with full history.
+   *
+   * @param remotePath Path from repository root (e.g., /trunk/src/old.c)
+   * @param pegRevision Revision where item last existed
+   * @param options Optional target path override
+   * @returns SVN execution result
+   */
+  public async resurrect(
+    remotePath: string,
+    pegRevision: string,
+    options: IResurrectOptions = {}
+  ) {
+    return this.run(Operation.Add, () =>
+      this.repository.resurrect(remotePath, pegRevision, options)
+    );
   }
 
   public dispose(): void {

@@ -48,6 +48,7 @@ import { RenameExplorer } from "./commands/renameExplorer";
 import { Resolve } from "./commands/resolve";
 import { ResolveAll } from "./commands/resolveAll";
 import { Resolved } from "./commands/resolved";
+import { Resurrect } from "./commands/resurrect";
 import { Revert } from "./commands/revert";
 import { RevertAll } from "./commands/revertAll";
 import { Stage, StageAll, StageWithChildren } from "./commands/stage";
@@ -119,6 +120,7 @@ export function registerCommands(
   disposables.push(new ResolveAll());
   disposables.push(new Resolve());
   disposables.push(new Resolved());
+  disposables.push(new Resurrect());
   disposables.push(new Lock());
   disposables.push(new StealLock());
   disposables.push(new ToggleNeedsLock());

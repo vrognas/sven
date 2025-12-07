@@ -9,7 +9,31 @@
 - **Confirmation**: Modal warning before rollback
 - **Files**: svnRepository.ts, repository.ts, remoteRepository.ts, itemLogProvider.ts, input/rollback.ts
 
-## [2.33.32] (2025-12-06)### Feature: Unified Auto-Update Setting- **New setting**: `svn.commit.autoUpdate` (dropdown)- **Options**: `both` (default), `before`, `after`, `none`- **Replaces**: `updateBeforeCommit` and `updateAfterCommit` booleans- **Result**: Single setting controls pre/post commit updates### Fix: Lock Badges in Explorer- **Bug**: Lock badges (K/O/B/T) missing from some files in Explorer- **Cause**: Remote resources overwrote local resources in index- **Fix**: Local resources take precedence; remote only adds, never overwrites- **Affected**: ResourceGroupManager.ts
+### Feature: Resurrect Deleted Items
+
+- **New Command**: `SVN: Resurrect Deleted Item` restores deleted files/directories
+- **Preserves History**: Uses `svn copy` with peg revision (A+ status)
+- **QuickPick UI**: Browse recently deleted items with path, revision, author, date
+- **Collision Handling**: Choose overwrite or rename when target exists
+- **Recursive**: Supports both files and directories
+- **Access**: Command Palette, SCM menu, or call from Repository Log
+- **Files**: resurrect.ts, svnRepository.ts, repository.ts, types.ts
+
+## [2.33.32] (2025-12-06)
+
+### Feature: Unified Auto-Update Setting
+
+- **New setting**: `svn.commit.autoUpdate` (dropdown)
+- **Options**: `both` (default), `before`, `after`, `none`
+- **Replaces**: `updateBeforeCommit` and `updateAfterCommit` booleans
+- **Result**: Single setting controls pre/post commit updates
+
+### Fix: Lock Badges in Explorer
+
+- **Bug**: Lock badges (K/O/B/T) missing from some files in Explorer
+- **Cause**: Remote resources overwrote local resources in index
+- **Fix**: Local resources take precedence; remote only adds, never overwrites
+- **Affected**: ResourceGroupManager.ts
 
 ## [2.33.30] (2025-12-06)
 

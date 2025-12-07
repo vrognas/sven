@@ -464,3 +464,27 @@ export interface IUnlockOptions {
   /** Force break lock owned by another user (--force) */
   force?: boolean;
 }
+
+/** Deleted item info from svn log */
+export interface IDeletedItem {
+  /** Full path from repository root (e.g., /trunk/src/file.c) */
+  path: string;
+  /** "file" or "dir" */
+  kind: string;
+  /** Revision where item was deleted */
+  deletedInRevision: string;
+  /** Revision before deletion (item existed here) */
+  lastExistingRevision: string;
+  /** Author who deleted */
+  author: string;
+  /** Date of deletion */
+  date: string;
+  /** Commit message */
+  msg: string;
+}
+
+/** Options for resurrect command */
+export interface IResurrectOptions {
+  /** Override target path (default: same relative path) */
+  targetPath?: string;
+}
