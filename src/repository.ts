@@ -800,9 +800,10 @@ export class Repository implements IRemoteRepository {
     // Force refresh repository info after revision-changing operations
     // (Commit, Update, etc.) so repo history can detect the new revision
     if (forceRefresh) {
-      await this.repository.updateInfo(true);
-      // Set grace period to avoid redundant file watcher status calls
+      // Set grace period BEFORE updateInfo to block file watcher events
+      // that fire during lock/unlock .svn directory changes
       this.lastForceRefresh = Date.now();
+      await this.repository.updateInfo(true);
     }
 
     // Get categorized status from StatusService
@@ -1800,23 +1801,29 @@ export class Repository implements IRemoteRepository {
       this._operations.start(operation);
       this._onRunOperation.fire(operation);
 
+      // Determine forceRefresh BEFORE operation to set grace period early
+      const forceRefresh =
+        operation === Operation.Commit ||
+        operation === Operation.Revert ||
+        operation === Operation.Add ||
+        operation === Operation.Remove ||
+        operation === Operation.Update ||
+        operation === Operation.Resolve ||
+        operation === Operation.AddChangelist ||
+        operation === Operation.RemoveChangelist ||
+        operation === Operation.Lock ||
+        operation === Operation.Unlock;
+
+      // Set grace period BEFORE operation runs to block file watcher events
+      // that fire during .svn directory changes from lock/unlock/commit/etc.
+      if (forceRefresh) {
+        this.lastForceRefresh = Date.now();
+      }
+
       try {
         const result = await this.retryRun(runOperation);
 
         const checkRemote = operation === Operation.StatusRemote;
-        // Force refresh to bypass 2s cache for operations that change file status
-        // Without this, Explorer decorations may show stale state
-        const forceRefresh =
-          operation === Operation.Commit ||
-          operation === Operation.Revert ||
-          operation === Operation.Add ||
-          operation === Operation.Remove ||
-          operation === Operation.Update ||
-          operation === Operation.Resolve ||
-          operation === Operation.AddChangelist ||
-          operation === Operation.RemoveChangelist ||
-          operation === Operation.Lock ||
-          operation === Operation.Unlock;
 
         // Always fetch lock status to show K/O/B/T badges in explorer
         const fetchLockStatus = true;
