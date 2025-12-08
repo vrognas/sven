@@ -10,6 +10,9 @@ import { makeReadOnly, makeWritable } from "../fs";
  * Files with this property are read-only until locked.
  */
 export class ToggleNeedsLock extends Command {
+  // Prevent concurrent toggles on same paths
+  private inProgress = new Set<string>();
+
   constructor() {
     super("svn.toggleNeedsLock");
   }
@@ -48,40 +51,50 @@ export class ToggleNeedsLock extends Command {
     let action = "";
 
     for (const filePath of paths) {
-      const hasProperty = await repository.hasNeedsLock(filePath);
+      // Skip if already toggling this path
+      if (this.inProgress.has(filePath)) {
+        continue;
+      }
+      this.inProgress.add(filePath);
 
-      if (hasProperty) {
-        const result = await repository.removeNeedsLock(filePath);
-        if (result.exitCode === 0) {
-          // Make file writable since needs-lock is removed
-          try {
-            await makeWritable(filePath);
-          } catch {
-            // Ignore permission errors
+      try {
+        const hasProperty = await repository.hasNeedsLock(filePath);
+
+        if (hasProperty) {
+          const result = await repository.removeNeedsLock(filePath);
+          if (result.exitCode === 0) {
+            // Make file writable since needs-lock is removed
+            try {
+              await makeWritable(filePath);
+            } catch {
+              // Ignore permission errors
+            }
+            successCount++;
+            action = "removed";
+          } else {
+            window.showErrorMessage(
+              `Failed to remove needs-lock: ${result.stderr || "Unknown error"}`
+            );
           }
-          successCount++;
-          action = "removed";
         } else {
-          window.showErrorMessage(
-            `Failed to remove needs-lock: ${result.stderr || "Unknown error"}`
-          );
-        }
-      } else {
-        const result = await repository.setNeedsLock(filePath);
-        if (result.exitCode === 0) {
-          // Make file read-only since needs-lock is set
-          try {
-            await makeReadOnly(filePath);
-          } catch {
-            // Ignore permission errors
+          const result = await repository.setNeedsLock(filePath);
+          if (result.exitCode === 0) {
+            // Make file read-only since needs-lock is set
+            try {
+              await makeReadOnly(filePath);
+            } catch {
+              // Ignore permission errors
+            }
+            successCount++;
+            action = "set";
+          } else {
+            window.showErrorMessage(
+              `Failed to set needs-lock: ${result.stderr || "Unknown error"}`
+            );
           }
-          successCount++;
-          action = "set";
-        } else {
-          window.showErrorMessage(
-            `Failed to set needs-lock: ${result.stderr || "Unknown error"}`
-          );
         }
+      } finally {
+        this.inProgress.delete(filePath);
       }
     }
 

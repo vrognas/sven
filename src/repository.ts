@@ -2021,6 +2021,14 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
+   * Invalidate the needs-lock cache so it will be refreshed on next status.
+   * Called after propset/propdel svn:needs-lock.
+   */
+  public invalidateNeedsLockCache(): void {
+    this.needsLockCacheExpiry = 0;
+  }
+
+  /**
    * Check if file has svn:needs-lock property (sync, uses batch cache).
    * Returns true if file is in the cached set. Fast for decorations.
    */
@@ -2116,18 +2124,22 @@ export class Repository implements IRemoteRepository {
    * Set svn:needs-lock property on file (makes read-only until locked).
    */
   public async setNeedsLock(filePath: string) {
-    return this.run(Operation.Update, () =>
+    const result = await this.run(Operation.Update, () =>
       this.repository.setNeedsLock(filePath)
     );
+    this.invalidateNeedsLockCache();
+    return result;
   }
 
   /**
    * Remove svn:needs-lock property from file.
    */
   public async removeNeedsLock(filePath: string) {
-    return this.run(Operation.Update, () =>
+    const result = await this.run(Operation.Update, () =>
       this.repository.removeNeedsLock(filePath)
     );
+    this.invalidateNeedsLockCache();
+    return result;
   }
 
   /**
