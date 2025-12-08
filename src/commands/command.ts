@@ -19,6 +19,7 @@ import {
 } from "vscode";
 import {
   ICommandOptions,
+  PropStatus,
   Status,
   SvnUriAction,
   LineChange
@@ -260,6 +261,20 @@ export abstract class Command implements Disposable {
     preserveFocus?: boolean,
     preserveSelection?: boolean
   ): Promise<void> {
+    // Property-only changes (status=NORMAL, props!=NONE) - show info message
+    // VS Code diff can't show property changes, so inform user instead
+    if (
+      resource.type === Status.NORMAL &&
+      resource.props &&
+      resource.props !== PropStatus.NONE
+    ) {
+      window.showInformationMessage(
+        `Only SVN properties changed (no file content diff). ` +
+          `Use 'svn diff' in terminal to see property changes.`
+      );
+      return;
+    }
+
     let left = await this.getLeftResource(resource, against);
     let right = this.getRightResource(resource, against);
     const title = this.getTitle(resource, against);

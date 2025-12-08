@@ -10,7 +10,7 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { LockStatus, Status } from "./common/types";
+import { LockStatus, PropStatus, Status } from "./common/types";
 import { configuration } from "./helpers/configuration";
 import { Repository } from "./repository";
 
@@ -124,6 +124,17 @@ export class SvnFileDecorationProvider
     let badge = this.getBadge(status, resource.renameResourceUri, isFolder);
     let color = this.getColor(status);
     let tooltip = this.getTooltip(status, resource.renameResourceUri, isFolder);
+
+    // Property-only changes (status=NORMAL, props=modified) get "P" badge
+    if (
+      status === Status.NORMAL &&
+      resource.props &&
+      resource.props !== PropStatus.NONE
+    ) {
+      badge = "P";
+      color = new ThemeColor("gitDecoration.modifiedResourceForeground");
+      tooltip = "Property modified";
+    }
 
     // Add lock info to tooltip, badge, and color (K/O/B/T per SVN convention)
     if (resource.lockStatus) {
