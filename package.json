@@ -156,35 +156,35 @@
           "name": "Server Changes",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "visible",
-          "order": 10
+          "order": 1
         },
         {
           "id": "branchchanges",
           "name": "Branch Changes",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && svn.hasBranch",
           "visibility": "visible",
-          "order": 20
+          "order": 2
         },
         {
           "id": "repolog",
           "name": "Repo History",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "collapsed",
-          "order": 30
+          "order": 3
         },
         {
           "id": "itemlog",
           "name": "File History",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "collapsed",
-          "order": 40
+          "order": 4
         },
         {
           "id": "sparseCheckout",
           "name": "Selective Download",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "collapsed",
-          "order": 50
+          "order": 5
         }
       ]
     },
