@@ -169,7 +169,11 @@ export class ItemLogProvider
       const message = error instanceof Error ? error.message : String(error);
       window.showErrorMessage(`Rollback failed: ${message}`);
     } finally {
-      this.isRollingBack = false;
+      // Keep blocking refreshes briefly to let file change events settle.
+      // Rollback doesn't change BASE revision, so no refresh is needed.
+      setTimeout(() => {
+        this.isRollingBack = false;
+      }, 500);
     }
   }
 
