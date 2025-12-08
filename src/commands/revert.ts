@@ -50,6 +50,8 @@ export class Revert extends Command {
 
       await this.handleRepositoryOperation(async () => {
         await repository.revert(allPaths, "infinity");
+        // Invalidate needs-lock cache (revert may have changed svn:needs-lock)
+        repository.invalidateNeedsLockCache();
         // Auto-unstage reverted files (they have no changes to commit)
         const revertedStaged = paths.filter(p => stagedPaths.includes(p));
         if (revertedStaged.length > 0) {
