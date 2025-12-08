@@ -139,11 +139,11 @@ export class ItemLogProvider
       await this.currentItem.repo.revert([filePath]);
       await this.currentItem.repo.rollbackToRevision(filePath, commit.revision);
 
-      // Get full Repository for cache invalidation
+      // Get full Repository for cache refresh
       const repo = this.sourceControlManager.getRepository(fileUri);
       if (repo) {
-        // Invalidate needs-lock cache (rollback may change svn:needs-lock)
-        repo.invalidateNeedsLockCache();
+        // Rebuild needs-lock cache from SVN for immediate L badge update
+        await repo.refreshNeedsLockCache();
         // Refresh Explorer decorations (L badge, etc)
         repo.refreshExplorerDecorations([fileUri]);
       }
