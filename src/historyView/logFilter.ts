@@ -48,14 +48,18 @@ export function filterLogEntries(
 
     // Date range filter (client-side verification after SVN fetch)
     if (filter.dateFrom) {
+      if (!entry.date) return false;
       const entryDate = new Date(entry.date);
+      if (isNaN(entryDate.getTime())) return false;
       const fromDate = new Date(filter.dateFrom);
       if (entryDate < fromDate) {
         return false;
       }
     }
     if (filter.dateTo) {
+      if (!entry.date) return false;
       const entryDate = new Date(entry.date);
+      if (isNaN(entryDate.getTime())) return false;
       // dateTo is inclusive - add 1 day to include full day
       const toDate = new Date(filter.dateTo);
       toDate.setDate(toDate.getDate() + 1);
@@ -77,8 +81,8 @@ export function filterLogEntries(
 
     // Action filter - check if any path in commit has matching action
     if (filter.actions && filter.actions.length > 0) {
-      const hasMatchingAction = entry.paths.some(p =>
-        filter.actions!.includes(p.action)
+      const hasMatchingAction = entry.paths.some(
+        p => p.action && filter.actions!.includes(p.action)
       );
       if (!hasMatchingAction) {
         return false;
