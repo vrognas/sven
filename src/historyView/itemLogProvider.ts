@@ -135,12 +135,18 @@ export class ItemLogProvider
     try {
       const filePath = this.currentItem.localPath;
       const fileUri = Uri.file(filePath);
+
+      // Get full Repository for grace period and cache refresh
+      const repo = this.sourceControlManager.getRepository(fileUri);
+      if (repo) {
+        // Block file watcher status updates during SVN operations
+        repo.setGracePeriod();
+      }
+
       // Revert any local changes first to prevent merge conflicts
       await this.currentItem.repo.revert([filePath]);
       await this.currentItem.repo.rollbackToRevision(filePath, commit.revision);
 
-      // Get full Repository for cache refresh
-      const repo = this.sourceControlManager.getRepository(fileUri);
       if (repo) {
         // Rebuild needs-lock cache from SVN for immediate L badge update
         await repo.refreshNeedsLockCache();
