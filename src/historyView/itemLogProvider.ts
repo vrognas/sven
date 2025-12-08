@@ -121,9 +121,20 @@ export class ItemLogProvider
 
     try {
       const filePath = this.currentItem.localPath;
+      const fileUri = Uri.file(filePath);
       // Revert any local changes first to prevent merge conflicts
       await this.currentItem.repo.revert([filePath]);
       await this.currentItem.repo.rollbackToRevision(filePath, commit.revision);
+
+      // Get full Repository for cache invalidation
+      const repo = this.sourceControlManager.getRepository(fileUri);
+      if (repo) {
+        // Invalidate needs-lock cache (rollback may change svn:needs-lock)
+        repo.invalidateNeedsLockCache();
+        // Refresh Explorer decorations (L badge, etc)
+        repo.refreshExplorerDecorations([fileUri]);
+      }
+
       window.showInformationMessage(
         `Rolled back to revision ${commit.revision}. Review changes and commit.`
       );
