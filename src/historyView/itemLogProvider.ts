@@ -50,6 +50,7 @@ export class ItemLogProvider
   private currentItem?: ICachedLog;
   private _dispose: Disposable[] = [];
   private isRollingBack = false;
+  private refreshDebounceTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private sourceControlManager: SourceControlManager) {
     this._dispose.push(
@@ -168,6 +169,9 @@ export class ItemLogProvider
   }
 
   public dispose() {
+    if (this.refreshDebounceTimer) {
+      clearTimeout(this.refreshDebounceTimer);
+    }
     dispose(this._dispose);
   }
 
@@ -243,7 +247,14 @@ export class ItemLogProvider
     if (this.isRollingBack) {
       return;
     }
-    return this.refresh(undefined, te);
+    // Debounce rapid editor changes to prevent flashing
+    if (this.refreshDebounceTimer) {
+      clearTimeout(this.refreshDebounceTimer);
+    }
+    this.refreshDebounceTimer = setTimeout(() => {
+      this.refreshDebounceTimer = undefined;
+      this.refresh(undefined, te);
+    }, 100);
   }
 
   public async refresh(
