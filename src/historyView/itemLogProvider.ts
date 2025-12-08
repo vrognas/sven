@@ -202,21 +202,20 @@ export class ItemLogProvider
       if (uri.scheme === "file") {
         const repo = this.sourceControlManager.getRepository(uri);
         if (repo !== null) {
-          // Skip unversioned files to avoid SVN errors
+          // Skip unversioned/ignored/added files - they have no history
           const resource = repo.getResourceFromFile(uri);
-          if (!resource) {
-            this._onDidChangeTreeData.fire(element);
-            return;
+          if (resource) {
+            const { Status } = await import("../common/types");
+            if (
+              resource.type === Status.UNVERSIONED ||
+              resource.type === Status.IGNORED ||
+              resource.type === Status.ADDED
+            ) {
+              this._onDidChangeTreeData.fire(element);
+              return;
+            }
           }
-          const { Status } = await import("../common/types");
-          if (
-            resource.type === Status.UNVERSIONED ||
-            resource.type === Status.IGNORED ||
-            resource.type === Status.ADDED
-          ) {
-            this._onDidChangeTreeData.fire(element);
-            return;
-          }
+          // Clean versioned files have no resource but still have history
           try {
             // Clear low-level log cache on explicit refresh to force fresh SVN call
             if (explicitRefresh) {
