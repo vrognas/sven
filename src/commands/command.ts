@@ -580,7 +580,13 @@ export abstract class Command implements Disposable {
         await operation(repository, paths);
       } catch (error) {
         logError("Repository resource operation failed", error);
-        window.showErrorMessage(errorMsg);
+        // Extract SVN error message if available
+        const err = error as
+          | Error
+          | { message?: string; stderr?: string; stderrFormated?: string };
+        const rawStderr = err?.stderrFormated || err?.stderr || "";
+        const svnMsg = this.sanitizeStderr(rawStderr) || err?.message || "";
+        window.showErrorMessage(svnMsg ? `${errorMsg}: ${svnMsg}` : errorMsg);
       }
     });
   }
