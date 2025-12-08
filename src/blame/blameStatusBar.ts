@@ -257,17 +257,21 @@ export class BlameStatusBar implements Disposable {
     // Skip files that can't be blamed:
     // - UNVERSIONED/IGNORED/NONE: not under version control
     // - ADDED: scheduled for addition but never committed (E195002)
+    // - No resource found: assume unversioned (may not be in status cache yet)
     const resource = repository.getResourceFromFile(uri);
-    if (resource) {
-      const { Status } = await import("../common/types");
-      if (
-        resource.type === Status.UNVERSIONED ||
-        resource.type === Status.IGNORED ||
-        resource.type === Status.NONE ||
-        resource.type === Status.ADDED
-      ) {
-        return undefined;
-      }
+    if (!resource) {
+      // File not in status cache - check if it's a known unversioned path
+      // or assume it's unversioned to avoid SVN errors
+      return undefined;
+    }
+    const { Status } = await import("../common/types");
+    if (
+      resource.type === Status.UNVERSIONED ||
+      resource.type === Status.IGNORED ||
+      resource.type === Status.NONE ||
+      resource.type === Status.ADDED
+    ) {
+      return undefined;
     }
 
     // Fetch from repository
