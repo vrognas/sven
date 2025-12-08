@@ -15,6 +15,7 @@ import { registerCommands } from "./commands";
 import { ConstructorPolicy } from "./common/types";
 import { CheckActiveEditor } from "./contexts/checkActiveEditor";
 import { OpenRepositoryCount } from "./contexts/openRepositoryCount";
+import { HasBranch } from "./contexts/hasBranch";
 import { BlameIconState } from "./contexts/blameIconState";
 import { configuration } from "./helpers/configuration";
 import { ItemLogProvider } from "./historyView/itemLogProvider";
@@ -102,6 +103,7 @@ async function init(
     new SparseCheckoutProvider(sourceControlManager),
     new CheckActiveEditor(sourceControlManager),
     new OpenRepositoryCount(sourceControlManager),
+    new HasBranch(sourceControlManager),
     new IsSvn18orGreater(info.version),
     new IsSvn19orGreater(info.version),
     new BlameIconState(sourceControlManager)

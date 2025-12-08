@@ -169,7 +169,7 @@
         {
           "id": "branchchanges",
           "name": "Branch Changes",
-          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && svn.hasBranch"
         },
         {
           "id": "sparseCheckout",
@@ -197,7 +197,7 @@
       {
         "view": "branchchanges",
         "contents": "Compare your branch against trunk to see what's changed.\n\nThis view shows commits unique to your branch that haven't been merged to trunk yet.",
-        "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && svn.hasBranch"
       },
       {
         "view": "sparseCheckout",
