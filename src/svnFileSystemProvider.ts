@@ -136,7 +136,8 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
             error !== null &&
             "stderr" in error &&
             typeof error.stderr === "string" &&
-            error.stderr.includes("W155010");
+            (error.stderr.includes("W155010") ||
+              error.stderr.includes("E155010"));
           if (!isUntrackedFile) {
             logError("Failed to list SVN file", error);
           }
