@@ -729,6 +729,14 @@ export class BlameProvider implements Disposable {
               );
             }
           });
+      } else if (
+        errorMsg.includes("E170013") ||
+        errorMsg.includes("No such host") ||
+        errorMsg.includes("Unable to connect")
+      ) {
+        window.showErrorMessage(
+          "Unable to connect to SVN server. Check VPN/network."
+        );
       }
 
       return undefined;

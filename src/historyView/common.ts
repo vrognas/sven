@@ -13,6 +13,8 @@ import {
   window
 } from "vscode";
 import { ISvnLogEntry, ISvnLogEntryPath } from "../common/types";
+import SvnError from "../svnError";
+import { svnErrorCodes } from "../svn";
 import { exists, lstat } from "../fs";
 import { configuration } from "../helpers/configuration";
 import { IRemoteRepository } from "../remoteRepository";
@@ -234,8 +236,20 @@ export async function fetchMore(cached: ICachedLog) {
   const limit = getLimit();
   try {
     moreCommits = await cached.repo.log(rfrom, "1", limit, cached.svnTarget);
-  } catch {
-    // Item didn't exist
+  } catch (e) {
+    // Show user-friendly message for connection errors
+    if (e instanceof SvnError) {
+      if (
+        e.svnErrorCode === svnErrorCodes.UnableToConnect ||
+        e.stderrFormated?.includes("No such host")
+      ) {
+        window.showErrorMessage(
+          "Unable to connect to SVN server. Check VPN/network."
+        );
+        return;
+      }
+    }
+    // Silently ignore other errors (e.g., item didn't exist)
   }
   if (!needFetch(entries, moreCommits, limit)) {
     cached.isComplete = true;
