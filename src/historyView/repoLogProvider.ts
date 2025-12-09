@@ -47,7 +47,6 @@ import {
 import { revealFileInOS, diffWithExternalTool } from "../util/fileOperations";
 import { logError } from "../util/errorLogger";
 import { HistoryFilterService, ActionType } from "./historyFilter";
-import { RevisionCache } from "./revisionCache";
 
 // Reserved for future use - icon rendering in history view
 /*
@@ -93,9 +92,6 @@ export class RepoLogProvider
 
   // History filtering
   private readonly filterService = new HistoryFilterService();
-
-  // Persistent revision cache (never cleared - SVN history is immutable)
-  private readonly revisionCache = new RevisionCache();
 
   private evictOldestLogEntry(): void {
     let oldestKey: string | null = null;
@@ -581,13 +577,13 @@ export class RepoLogProvider
   }
 
   private async promptFilterAuthor(current?: string) {
-    // Extract unique authors from persistent revision cache
-    // (RevisionCache survives filter changes, unlike logCache)
+    // Extract unique authors from cached entries
     const authors = new Set<string>();
     for (const cached of this.logCache.values()) {
-      const repoUrl = cached.svnTarget.toString(true);
-      for (const author of this.revisionCache.getAuthors(repoUrl)) {
-        authors.add(author);
+      for (const entry of cached.entries) {
+        if (entry.author) {
+          authors.add(entry.author);
+        }
       }
     }
 
@@ -806,9 +802,6 @@ export class RepoLogProvider
       const cached = this.getCached(element);
       if (cached) {
         await fetchMore(cached);
-        // Populate persistent revision cache
-        const repoUrl = cached.svnTarget.toString(true);
-        this.revisionCache.addEntries(repoUrl, cached.entries);
       }
     } else if (element === undefined) {
       // Determine if we should clear or preserve cache
@@ -890,8 +883,6 @@ export class RepoLogProvider
         // Don't rely on getChildren - VS Code may not call it if tree is hidden
         if (clearEntries) {
           await fetchMore(newCached);
-          // Populate persistent revision cache
-          this.revisionCache.addEntries(repoUrl, newCached.entries);
         }
       }
     }
@@ -985,9 +976,6 @@ export class RepoLogProvider
 
       if (logentries.length === 0) {
         await fetchMore(cached);
-        // Populate persistent revision cache
-        const repoUrl = cached.svnTarget.toString(true);
-        this.revisionCache.addEntries(repoUrl, cached.entries);
       }
       const result = transform(logentries, LogTreeItemKind.Commit, undefined);
       insertBaseMarker(cached, logentries, result);
