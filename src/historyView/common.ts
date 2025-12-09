@@ -13,7 +13,7 @@ import {
   window
 } from "vscode";
 import { ISvnLogEntry, ISvnLogEntryPath } from "../common/types";
-import { IHistoryFilter } from "./historyFilter";
+import { IHistoryFilter, filterEntriesByAction } from "./historyFilter";
 import SvnError from "../svnError";
 import { svnErrorCodes } from "../svn";
 import { exists, lstat } from "../fs";
@@ -268,6 +268,11 @@ export async function fetchMore(cached: ICachedLog) {
     } else {
       // No server-side filter, use regular log
       moreCommits = await cached.repo.log(rfrom, "1", limit, cached.svnTarget);
+
+      // Apply client-side action filter if present
+      if (filter?.actions?.length) {
+        moreCommits = filterEntriesByAction(moreCommits, filter.actions);
+      }
     }
   } catch (e) {
     // Show user-friendly message for connection errors
