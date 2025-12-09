@@ -133,6 +133,46 @@ export class HistoryFilterService implements Disposable {
   }
 
   /**
+   * Get a short description for tree view title (concise format)
+   */
+  public getShortDescription(): string {
+    if (!this._filter) return "";
+
+    const parts: string[] = [];
+    const truncate = (s: string, max: number) =>
+      s.length > max ? s.slice(0, max - 3) + "..." : s;
+
+    if (this._filter.message) {
+      parts.push(`msg:${truncate(this._filter.message, 15)}`);
+    }
+    if (this._filter.author) {
+      parts.push(`author:${truncate(this._filter.author, 12)}`);
+    }
+    if (this._filter.path) {
+      parts.push(`path:${truncate(this._filter.path, 12)}`);
+    }
+    if (
+      this._filter.revisionFrom !== undefined ||
+      this._filter.revisionTo !== undefined
+    ) {
+      const from = this._filter.revisionFrom ?? 1;
+      const to = this._filter.revisionTo ?? "HEAD";
+      parts.push(`rev:${from}-${to}`);
+    }
+    if (this._filter.dateFrom || this._filter.dateTo) {
+      const fmt = (d: Date) => d.toISOString().split("T")[0];
+      const from = this._filter.dateFrom ? fmt(this._filter.dateFrom) : "...";
+      const to = this._filter.dateTo ? fmt(this._filter.dateTo) : "...";
+      parts.push(`date:${from}~${to}`);
+    }
+    if (this._filter.actions?.length) {
+      parts.push(`actions:${this._filter.actions.join(",")}`);
+    }
+
+    return parts.join(" ");
+  }
+
+  /**
    * Filter entries with caching (client-side filtering for cached data)
    */
   public filterEntries(

@@ -226,45 +226,15 @@ export class RepoLogProvider
       this.sourceControlManager.onDidCloseRepository(() => {
         this.refresh();
       }),
-      // Filter commands
+      // Filter commands - unified entry point
       commands.registerCommand(
-        "svn.repolog.filterByMessage",
-        this.filterByMessage,
-        this
-      ),
-      commands.registerCommand(
-        "svn.repolog.filterByAuthor",
-        this.filterByAuthor,
-        this
-      ),
-      commands.registerCommand(
-        "svn.repolog.filterByPath",
-        this.filterByPath,
-        this
-      ),
-      commands.registerCommand(
-        "svn.repolog.filterByRevision",
-        this.filterByRevision,
-        this
-      ),
-      commands.registerCommand(
-        "svn.repolog.filterByDate",
-        this.filterByDate,
-        this
-      ),
-      commands.registerCommand(
-        "svn.repolog.filterByAction",
-        this.filterByAction,
+        "svn.repolog.filterHistory",
+        this.filterHistory,
         this
       ),
       commands.registerCommand(
         "svn.repolog.clearFilter",
         this.clearFilter,
-        this
-      ),
-      commands.registerCommand(
-        "svn.repolog.showActiveFilters",
-        this.showActiveFilters,
         this
       ),
       // Subscribe to filter changes
@@ -502,47 +472,141 @@ export class RepoLogProvider
     }
   }
 
-  // Filter commands
-  public async filterByMessage() {
+  /**
+   * Unified filter command - multi-step QuickPick for native UX
+   */
+  public async filterHistory() {
+    const currentFilter = this.filterService.getFilter() || {};
+
+    // Step 1: Select filter types
+    const filterTypes = [
+      {
+        label: "$(search) Message",
+        id: "message",
+        detail: currentFilter.message
+          ? `Current: "${currentFilter.message}"`
+          : undefined
+      },
+      {
+        label: "$(person) Author",
+        id: "author",
+        detail: currentFilter.author
+          ? `Current: "${currentFilter.author}"`
+          : undefined
+      },
+      {
+        label: "$(file) Path",
+        id: "path",
+        detail: currentFilter.path
+          ? `Current: "${currentFilter.path}"`
+          : undefined
+      },
+      {
+        label: "$(git-commit) Revision Range",
+        id: "revision",
+        detail:
+          currentFilter.revisionFrom || currentFilter.revisionTo
+            ? `Current: ${currentFilter.revisionFrom ?? 1}-${currentFilter.revisionTo ?? "HEAD"}`
+            : undefined
+      },
+      {
+        label: "$(calendar) Date Range",
+        id: "date",
+        detail:
+          currentFilter.dateFrom || currentFilter.dateTo
+            ? `Current: ${currentFilter.dateFrom?.toLocaleDateString() ?? "..."} to ${currentFilter.dateTo?.toLocaleDateString() ?? "..."}`
+            : undefined
+      },
+      {
+        label: "$(symbol-event) Action Types",
+        id: "action",
+        detail: currentFilter.actions?.length
+          ? `Current: ${currentFilter.actions.join(", ")}`
+          : undefined
+      }
+    ];
+
+    const selected = await window.showQuickPick(filterTypes, {
+      placeHolder: "Select filter type to configure",
+      title: "Filter History"
+    });
+
+    if (!selected) return;
+
+    // Step 2: Configure selected filter type
+    switch (selected.id) {
+      case "message":
+        await this.promptFilterMessage(currentFilter.message);
+        break;
+      case "author":
+        await this.promptFilterAuthor(currentFilter.author);
+        break;
+      case "path":
+        await this.promptFilterPath(currentFilter.path);
+        break;
+      case "revision":
+        await this.promptFilterRevision(
+          currentFilter.revisionFrom,
+          currentFilter.revisionTo
+        );
+        break;
+      case "date":
+        await this.promptFilterDate(
+          currentFilter.dateFrom,
+          currentFilter.dateTo
+        );
+        break;
+      case "action":
+        await this.promptFilterAction(currentFilter.actions);
+        break;
+    }
+  }
+
+  private async promptFilterMessage(current?: string) {
     const input = await window.showInputBox({
       prompt: "Filter by commit message",
-      placeHolder: "Enter text to search in commit messages"
+      placeHolder: "Enter text to search in commit messages",
+      value: current
     });
     if (input !== undefined) {
       this.filterService.updateFilter({ message: input || undefined });
     }
   }
 
-  public async filterByAuthor() {
+  private async promptFilterAuthor(current?: string) {
     const input = await window.showInputBox({
       prompt: "Filter by author",
-      placeHolder: "Enter author name"
+      placeHolder: "Enter author name",
+      value: current
     });
     if (input !== undefined) {
       this.filterService.updateFilter({ author: input || undefined });
     }
   }
 
-  public async filterByPath() {
+  private async promptFilterPath(current?: string) {
     const input = await window.showInputBox({
       prompt: "Filter by path",
-      placeHolder: "Enter file or folder path pattern"
+      placeHolder: "Enter file or folder path pattern",
+      value: current
     });
     if (input !== undefined) {
       this.filterService.updateFilter({ path: input || undefined });
     }
   }
 
-  public async filterByRevision() {
+  private async promptFilterRevision(fromVal?: number, toVal?: number) {
     const fromStr = await window.showInputBox({
       prompt: "Revision range - From (older)",
-      placeHolder: "e.g., 100 (leave empty for 1)"
+      placeHolder: "e.g., 100 (leave empty for 1)",
+      value: fromVal?.toString()
     });
     if (fromStr === undefined) return;
 
     const toStr = await window.showInputBox({
       prompt: "Revision range - To (newer)",
-      placeHolder: "e.g., 200 (leave empty for HEAD)"
+      placeHolder: "e.g., 200 (leave empty for HEAD)",
+      value: toVal?.toString()
     });
     if (toStr === undefined) return;
 
@@ -561,16 +625,19 @@ export class RepoLogProvider
     this.filterService.updateFilter({ revisionFrom, revisionTo });
   }
 
-  public async filterByDate() {
+  private async promptFilterDate(fromVal?: Date, toVal?: Date) {
+    const fmt = (d?: Date) => (d ? d.toISOString().split("T")[0] : "");
     const fromStr = await window.showInputBox({
       prompt: "Date range - From",
-      placeHolder: "YYYY-MM-DD (e.g., 2024-01-01)"
+      placeHolder: "YYYY-MM-DD (e.g., 2024-01-01)",
+      value: fmt(fromVal)
     });
     if (fromStr === undefined) return;
 
     const toStr = await window.showInputBox({
       prompt: "Date range - To",
-      placeHolder: "YYYY-MM-DD (e.g., 2024-12-31)"
+      placeHolder: "YYYY-MM-DD (e.g., 2024-12-31)",
+      value: fmt(toVal)
     });
     if (toStr === undefined) return;
 
@@ -589,7 +656,7 @@ export class RepoLogProvider
     this.filterService.updateFilter({ dateFrom, dateTo });
   }
 
-  public async filterByAction() {
+  private async promptFilterAction(current?: ActionType[]) {
     const items = [
       { label: "$(add) Added", value: "A" as ActionType, picked: false },
       { label: "$(edit) Modified", value: "M" as ActionType, picked: false },
@@ -597,10 +664,9 @@ export class RepoLogProvider
       { label: "$(replace) Renamed", value: "R" as ActionType, picked: false }
     ];
 
-    const currentFilter = this.filterService.getFilter();
-    if (currentFilter?.actions) {
+    if (current) {
       for (const item of items) {
-        item.picked = currentFilter.actions.includes(item.value);
+        item.picked = current.includes(item.value);
       }
     }
 
@@ -618,24 +684,6 @@ export class RepoLogProvider
 
   public clearFilter() {
     this.filterService.clearFilter();
-    window.showInformationMessage("History filter cleared");
-  }
-
-  public async showActiveFilters() {
-    const filter = this.filterService.getFilter();
-    if (!filter || !this.filterService.hasActiveFilter()) {
-      window.showInformationMessage("No active filters");
-      return;
-    }
-
-    const desc = this.filterService.getFilterDescription();
-    const choice = await window.showInformationMessage(
-      `Active filters: ${desc}`,
-      "Clear All"
-    );
-    if (choice === "Clear All") {
-      this.clearFilter();
-    }
   }
 
   private onFilterChange() {
@@ -644,18 +692,24 @@ export class RepoLogProvider
       cached.entries = [];
       cached.isComplete = false;
     }
-    // Update tree view title to show filter indicator
-    this.updateTreeViewTitle();
+    // Update tree view description and context variable
+    this.updateFilterUI();
     // Refresh tree
     this.refresh(undefined, false, true);
   }
 
-  private updateTreeViewTitle() {
-    if (!this.treeView) return;
+  private updateFilterUI() {
     const hasFilter = this.filterService.hasActiveFilter();
-    this.treeView.title = hasFilter
-      ? "Repo History (filtered)"
-      : "Repo History";
+
+    // Set context variable for dynamic icon (filter vs filter-filled)
+    commands.executeCommand("setContext", "svn.historyFilterActive", hasFilter);
+
+    if (!this.treeView) return;
+
+    // Use description for filter summary (appears next to title)
+    this.treeView.description = hasFilter
+      ? this.filterService.getShortDescription()
+      : undefined;
   }
 
   // Navigate to a specific revision in the tree view

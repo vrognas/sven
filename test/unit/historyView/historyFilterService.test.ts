@@ -111,6 +111,41 @@ describe("HistoryFilterService", () => {
       expect(desc).toContain("author");
     });
   });
+
+  describe("short filter description for tree view", () => {
+    it("returns empty string for no filter", () => {
+      expect(service.getShortDescription()).toBe("");
+    });
+
+    it("shows single filter concisely", () => {
+      service.setFilter({ author: "john" });
+      expect(service.getShortDescription()).toBe("author:john");
+    });
+
+    it("shows multiple filters with separator", () => {
+      service.setFilter({ author: "john", message: "fix" });
+      const desc = service.getShortDescription();
+      expect(desc).toContain("author:john");
+      expect(desc).toContain("msg:fix");
+    });
+
+    it("truncates long values", () => {
+      service.setFilter({ message: "very long commit message text" });
+      const desc = service.getShortDescription();
+      expect(desc.length).toBeLessThan(35);
+      expect(desc).toContain("...");
+    });
+
+    it("shows action types as letters", () => {
+      service.setFilter({ actions: ["A", "M"] });
+      expect(service.getShortDescription()).toBe("actions:A,M");
+    });
+
+    it("shows revision range compactly", () => {
+      service.setFilter({ revisionFrom: 100, revisionTo: 200 });
+      expect(service.getShortDescription()).toBe("rev:100-200");
+    });
+  });
 });
 
 describe("buildSvnLogArgs", () => {

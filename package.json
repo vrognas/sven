@@ -825,52 +825,16 @@
         "title": "Diff with External Tool"
       },
       {
-        "command": "svn.repolog.filterByMessage",
+        "command": "svn.repolog.filterHistory",
         "category": "SVN",
-        "title": "Filter by Message",
-        "icon": "$(search)"
-      },
-      {
-        "command": "svn.repolog.filterByAuthor",
-        "category": "SVN",
-        "title": "Filter by Author",
-        "icon": "$(account)"
-      },
-      {
-        "command": "svn.repolog.filterByPath",
-        "category": "SVN",
-        "title": "Filter by Path",
-        "icon": "$(file)"
-      },
-      {
-        "command": "svn.repolog.filterByRevision",
-        "category": "SVN",
-        "title": "Filter by Revision Range",
-        "icon": "$(symbol-number)"
-      },
-      {
-        "command": "svn.repolog.filterByDate",
-        "category": "SVN",
-        "title": "Filter by Date Range",
-        "icon": "$(calendar)"
-      },
-      {
-        "command": "svn.repolog.filterByAction",
-        "category": "SVN",
-        "title": "Filter by Action Type",
+        "title": "Filter History",
         "icon": "$(filter)"
       },
       {
         "command": "svn.repolog.clearFilter",
         "category": "SVN",
         "title": "Clear Filters",
-        "icon": "$(close)"
-      },
-      {
-        "command": "svn.repolog.showActiveFilters",
-        "category": "SVN",
-        "title": "Show Active Filters",
-        "icon": "$(info)"
+        "icon": "$(clear-all)"
       },
       {
         "command": "svn.resolve",
@@ -1319,44 +1283,20 @@
           "group": "navigation@3"
         },
         {
-          "command": "svn.repolog.filterByMessage",
-          "when": "view == repolog",
-          "group": "filter@1"
+          "command": "svn.repolog.filterHistory",
+          "when": "view == repolog && !svn.historyFilterActive",
+          "group": "navigation@4"
         },
         {
-          "command": "svn.repolog.filterByAuthor",
-          "when": "view == repolog",
-          "group": "filter@2"
-        },
-        {
-          "command": "svn.repolog.filterByPath",
-          "when": "view == repolog",
-          "group": "filter@3"
-        },
-        {
-          "command": "svn.repolog.filterByRevision",
-          "when": "view == repolog",
-          "group": "filter@4"
-        },
-        {
-          "command": "svn.repolog.filterByDate",
-          "when": "view == repolog",
-          "group": "filter@5"
-        },
-        {
-          "command": "svn.repolog.filterByAction",
-          "when": "view == repolog",
-          "group": "filter@6"
+          "command": "svn.repolog.filterHistory",
+          "when": "view == repolog && svn.historyFilterActive",
+          "group": "navigation@4",
+          "alt": "svn.repolog.clearFilter"
         },
         {
           "command": "svn.repolog.clearFilter",
-          "when": "view == repolog",
-          "group": "filter@7"
-        },
-        {
-          "command": "svn.repolog.showActiveFilters",
-          "when": "view == repolog",
-          "group": "filter@8"
+          "when": "view == repolog && svn.historyFilterActive",
+          "group": "navigation@5"
         },
         {
           "command": "svn.itemlog.refresh",
