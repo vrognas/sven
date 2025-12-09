@@ -758,11 +758,17 @@ export class RepoLogProvider
   }
 
   private onFilterChange() {
-    // Clear cached entries when filter changes
-    for (const cached of this.logCache.values()) {
-      cached.entries = [];
-      cached.isComplete = false;
-      cached.isLoading = false; // Reset to allow new fetch
+    // Replace cached objects (not mutate) to invalidate ongoing fetches
+    // This ensures identity check in fetchMore.finally() fails for stale fetches
+    const newFilter = this.filterService.getFilter();
+    for (const [key, cached] of this.logCache.entries()) {
+      this.logCache.set(key, {
+        ...cached,
+        entries: [],
+        isComplete: false,
+        isLoading: false,
+        filter: newFilter
+      });
     }
     // Update tree view description and context variable
     this.updateFilterUI();

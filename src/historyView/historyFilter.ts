@@ -106,6 +106,7 @@ export class HistoryFilterService implements Disposable {
       v =>
         v !== undefined &&
         v !== null &&
+        v !== "" &&
         (Array.isArray(v) ? v.length > 0 : true)
     );
   }
@@ -231,7 +232,10 @@ export class HistoryFilterService implements Disposable {
     // Filter by date range
     if (filter.dateFrom || filter.dateTo) {
       const fromTime = filter.dateFrom?.getTime() ?? 0;
-      const toTime = filter.dateTo?.getTime() ?? Date.now();
+      // Include entire end day (add 23:59:59.999 = 86399999ms)
+      const toTime = filter.dateTo
+        ? filter.dateTo.getTime() + 86399999
+        : Date.now();
       result = result.filter(e => {
         const entryTime = new Date(e.date).getTime();
         return entryTime >= fromTime && entryTime <= toTime;

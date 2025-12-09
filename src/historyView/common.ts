@@ -233,8 +233,8 @@ export async function fetchMore(cached: ICachedLog) {
   let rfrom = cached.persisted.commitFrom;
   if (entries.length) {
     const lastRev = Number.parseInt(entries[entries.length - 1]!.revision, 10);
-    // Already at r1, nothing more to fetch
-    if (lastRev <= 1) {
+    // Already at r1 or invalid revision, nothing more to fetch
+    if (isNaN(lastRev) || lastRev <= 1) {
       cached.isComplete = true;
       return;
     }
@@ -258,9 +258,10 @@ export async function fetchMore(cached: ICachedLog) {
       // Build filter with revision range for pagination
       // Use min of user's revisionTo and current position (rfrom)
       const rfromNum = parseInt(rfrom, 10);
+      const validRfrom = !isNaN(rfromNum) ? rfromNum : undefined;
       const paginatedRevisionTo = filter.revisionTo
-        ? Math.min(filter.revisionTo, rfromNum || Infinity)
-        : rfromNum || undefined;
+        ? Math.min(filter.revisionTo, validRfrom ?? Infinity)
+        : validRfrom;
       const paginatedFilter: IHistoryFilter = {
         ...filter,
         revisionTo: paginatedRevisionTo
