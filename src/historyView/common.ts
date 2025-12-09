@@ -13,6 +13,7 @@ import {
   window
 } from "vscode";
 import { ISvnLogEntry, ISvnLogEntryPath } from "../common/types";
+import { IHistoryFilter } from "./historyFilter";
 import SvnError from "../svnError";
 import { svnErrorCodes } from "../svn";
 import { exists, lstat } from "../fs";
@@ -79,6 +80,8 @@ export interface ICachedLog {
   };
   order: number;
   lastAccessed?: number; // LRU tracking
+  // Active filter for this cache
+  filter?: IHistoryFilter;
 }
 
 type TreeItemData = ISvnLogEntry | ISvnLogEntryPath | SvnPath | TreeItem;
@@ -221,8 +224,12 @@ export function getLimit(): number {
 
 /// @note: cached.svnTarget should be valid
 export async function fetchMore(cached: ICachedLog) {
-  let rfrom = cached.persisted.commitFrom;
   const entries = cached.entries;
+  const limit = getLimit();
+  const filter = cached.filter;
+
+  // Build revision range based on existing entries
+  let rfrom = cached.persisted.commitFrom;
   if (entries.length) {
     const lastRev = Number.parseInt(entries[entries.length - 1]!.revision, 10);
     // Already at r1, nothing more to fetch
@@ -232,10 +239,36 @@ export async function fetchMore(cached: ICachedLog) {
     }
     rfrom = (lastRev - 1).toString();
   }
+
   let moreCommits: ISvnLogEntry[] = [];
-  const limit = getLimit();
   try {
-    moreCommits = await cached.repo.log(rfrom, "1", limit, cached.svnTarget);
+    // Use filtered log when filter is active (and has server-side filters)
+    const hasServerSideFilter =
+      filter &&
+      (filter.message ||
+        filter.author ||
+        filter.path ||
+        filter.revisionFrom !== undefined ||
+        filter.revisionTo !== undefined ||
+        filter.dateFrom ||
+        filter.dateTo);
+
+    if (hasServerSideFilter) {
+      // Build filter with revision range for pagination
+      const paginatedFilter: IHistoryFilter = {
+        ...filter,
+        // Override revisionTo with current position for pagination
+        revisionTo: filter.revisionTo ?? (parseInt(rfrom, 10) || undefined)
+      };
+      moreCommits = await cached.repo.logWithFilter(
+        paginatedFilter,
+        limit,
+        cached.svnTarget
+      );
+    } else {
+      // No server-side filter, use regular log
+      moreCommits = await cached.repo.log(rfrom, "1", limit, cached.svnTarget);
+    }
   } catch (e) {
     // Show user-friendly message for connection errors
     if (e instanceof SvnError) {

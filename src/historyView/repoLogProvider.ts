@@ -46,6 +46,7 @@ import {
 } from "./common";
 import { revealFileInOS, diffWithExternalTool } from "../util/fileOperations";
 import { logError } from "../util/errorLogger";
+import { HistoryFilterService, ActionType } from "./historyFilter";
 
 // Reserved for future use - icon rendering in history view
 /*
@@ -88,6 +89,9 @@ export class RepoLogProvider
   private treeView?: TreeView<ILogTreeItem>;
   private refreshTimeout?: NodeJS.Timeout;
   private readonly DEBOUNCE_MS = 1000;
+
+  // History filtering
+  private readonly filterService = new HistoryFilterService();
 
   private evictOldestLogEntry(): void {
     let oldestKey: string | null = null;
@@ -221,7 +225,53 @@ export class RepoLogProvider
       }),
       this.sourceControlManager.onDidCloseRepository(() => {
         this.refresh();
-      })
+      }),
+      // Filter commands
+      commands.registerCommand(
+        "svn.repolog.filterByMessage",
+        this.filterByMessage,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.filterByAuthor",
+        this.filterByAuthor,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.filterByPath",
+        this.filterByPath,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.filterByRevision",
+        this.filterByRevision,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.filterByDate",
+        this.filterByDate,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.filterByAction",
+        this.filterByAction,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.clearFilter",
+        this.clearFilter,
+        this
+      ),
+      commands.registerCommand(
+        "svn.repolog.showActiveFilters",
+        this.showActiveFilters,
+        this
+      ),
+      // Subscribe to filter changes
+      this.filterService.onDidChangeFilter(() => {
+        this.onFilterChange();
+      }),
+      this.filterService
     );
   }
 
@@ -452,6 +502,162 @@ export class RepoLogProvider
     }
   }
 
+  // Filter commands
+  public async filterByMessage() {
+    const input = await window.showInputBox({
+      prompt: "Filter by commit message",
+      placeHolder: "Enter text to search in commit messages"
+    });
+    if (input !== undefined) {
+      this.filterService.updateFilter({ message: input || undefined });
+    }
+  }
+
+  public async filterByAuthor() {
+    const input = await window.showInputBox({
+      prompt: "Filter by author",
+      placeHolder: "Enter author name"
+    });
+    if (input !== undefined) {
+      this.filterService.updateFilter({ author: input || undefined });
+    }
+  }
+
+  public async filterByPath() {
+    const input = await window.showInputBox({
+      prompt: "Filter by path",
+      placeHolder: "Enter file or folder path pattern"
+    });
+    if (input !== undefined) {
+      this.filterService.updateFilter({ path: input || undefined });
+    }
+  }
+
+  public async filterByRevision() {
+    const fromStr = await window.showInputBox({
+      prompt: "Revision range - From (older)",
+      placeHolder: "e.g., 100 (leave empty for 1)"
+    });
+    if (fromStr === undefined) return;
+
+    const toStr = await window.showInputBox({
+      prompt: "Revision range - To (newer)",
+      placeHolder: "e.g., 200 (leave empty for HEAD)"
+    });
+    if (toStr === undefined) return;
+
+    const revisionFrom = fromStr ? parseInt(fromStr, 10) : undefined;
+    const revisionTo = toStr ? parseInt(toStr, 10) : undefined;
+
+    if (fromStr && isNaN(revisionFrom!)) {
+      window.showErrorMessage("Invalid 'from' revision number");
+      return;
+    }
+    if (toStr && isNaN(revisionTo!)) {
+      window.showErrorMessage("Invalid 'to' revision number");
+      return;
+    }
+
+    this.filterService.updateFilter({ revisionFrom, revisionTo });
+  }
+
+  public async filterByDate() {
+    const fromStr = await window.showInputBox({
+      prompt: "Date range - From",
+      placeHolder: "YYYY-MM-DD (e.g., 2024-01-01)"
+    });
+    if (fromStr === undefined) return;
+
+    const toStr = await window.showInputBox({
+      prompt: "Date range - To",
+      placeHolder: "YYYY-MM-DD (e.g., 2024-12-31)"
+    });
+    if (toStr === undefined) return;
+
+    const dateFrom = fromStr ? new Date(fromStr) : undefined;
+    const dateTo = toStr ? new Date(toStr) : undefined;
+
+    if (fromStr && isNaN(dateFrom!.getTime())) {
+      window.showErrorMessage("Invalid 'from' date format. Use YYYY-MM-DD");
+      return;
+    }
+    if (toStr && isNaN(dateTo!.getTime())) {
+      window.showErrorMessage("Invalid 'to' date format. Use YYYY-MM-DD");
+      return;
+    }
+
+    this.filterService.updateFilter({ dateFrom, dateTo });
+  }
+
+  public async filterByAction() {
+    const items = [
+      { label: "$(add) Added", value: "A" as ActionType, picked: false },
+      { label: "$(edit) Modified", value: "M" as ActionType, picked: false },
+      { label: "$(trash) Deleted", value: "D" as ActionType, picked: false },
+      { label: "$(replace) Renamed", value: "R" as ActionType, picked: false }
+    ];
+
+    const currentFilter = this.filterService.getFilter();
+    if (currentFilter?.actions) {
+      for (const item of items) {
+        item.picked = currentFilter.actions.includes(item.value);
+      }
+    }
+
+    const selected = await window.showQuickPick(items, {
+      canPickMany: true,
+      placeHolder: "Select action types to show"
+    });
+
+    if (selected !== undefined) {
+      const actions =
+        selected.length > 0 ? selected.map(s => s.value) : undefined;
+      this.filterService.updateFilter({ actions });
+    }
+  }
+
+  public clearFilter() {
+    this.filterService.clearFilter();
+    window.showInformationMessage("History filter cleared");
+  }
+
+  public async showActiveFilters() {
+    const filter = this.filterService.getFilter();
+    if (!filter || !this.filterService.hasActiveFilter()) {
+      window.showInformationMessage("No active filters");
+      return;
+    }
+
+    const desc = this.filterService.getFilterDescription();
+    const choice = await window.showInformationMessage(
+      `Active filters: ${desc}`,
+      "Clear All"
+    );
+    if (choice === "Clear All") {
+      this.clearFilter();
+    }
+  }
+
+  private onFilterChange() {
+    // Clear cached entries when filter changes
+    for (const cached of this.logCache.values()) {
+      cached.entries = [];
+      cached.isComplete = false;
+    }
+    // Update tree view title to show filter indicator
+    this.updateTreeViewTitle();
+    // Refresh tree
+    this.refresh(undefined, false, true);
+  }
+
+  private updateTreeViewTitle() {
+    if (!this.treeView) return;
+    const hasFilter = this.filterService.hasActiveFilter();
+    this.treeView.title = hasFilter
+      ? "Repo History (filtered)"
+      : "Repo History";
+  }
+
   // Navigate to a specific revision in the tree view
   public async goToRevision(revision: number) {
     if (!this.treeView) {
@@ -567,7 +773,8 @@ export class RepoLogProvider
           svnTarget: remoteRoot,
           persisted,
           order: this.logCache.size,
-          lastAccessed: Date.now()
+          lastAccessed: Date.now(),
+          filter: this.filterService.getFilter()
         };
         this.logCache.set(repoUrl, newCached);
 
