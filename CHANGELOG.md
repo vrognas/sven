@@ -1,3 +1,23 @@
+## [2.35.0] (2025-12-09)
+
+### Feature: History Filtering
+
+- **New commands**: Filter repo history by message, author, path, revision, date, action
+- **Filter by Message**: Search commit messages (`--search` via SVN)
+- **Filter by Author**: Filter by author name
+- **Filter by Path**: Filter by file/folder path pattern
+- **Filter by Revision**: Specify revision range (from-to)
+- **Filter by Date**: Specify date range (YYYY-MM-DD format)
+- **Filter by Action**: Show only Added/Modified/Deleted/Renamed changes
+- **Clear Filter**: Remove all active filters
+- **Show Active Filters**: Display current filter criteria
+- **Caching**: LRU cache (50 entries) for filtered results - immutable SVN history
+- **Server-side**: Uses SVN `--search` and `-r` for efficient filtering
+- **Client-side**: Action filtering (A/M/D/R) applied locally
+- **UI**: Tree view title shows "(filtered)" when filter is active
+- **Menu**: Filter commands available in Repo History view menu
+- **Files**: historyFilter.ts, repoLogProvider.ts, common.ts, svnRepository.ts
+
 ## [2.34.0] (2025-12-08)
 
 ### Feature: File Rollback to Revision
