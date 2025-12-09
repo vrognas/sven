@@ -173,7 +173,7 @@ export class ItemLogProvider
       // Rollback doesn't change BASE revision, so no refresh is needed.
       setTimeout(() => {
         this.isRollingBack = false;
-      }, 500);
+      }, 1000);
     }
   }
 
@@ -322,6 +322,8 @@ export class ItemLogProvider
               },
               order: 0
             };
+            // Pre-load entries before firing tree change to prevent flash
+            await fetchMore(this.currentItem);
           } catch (e) {
             // doesn't belong to this repo
           }
