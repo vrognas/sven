@@ -1152,35 +1152,11 @@
           "when": "false"
         },
         {
-          "command": "svn.repolog.filterByMessage",
-          "when": "false"
-        },
-        {
-          "command": "svn.repolog.filterByAuthor",
-          "when": "false"
-        },
-        {
-          "command": "svn.repolog.filterByPath",
-          "when": "false"
-        },
-        {
-          "command": "svn.repolog.filterByRevision",
-          "when": "false"
-        },
-        {
-          "command": "svn.repolog.filterByDate",
-          "when": "false"
-        },
-        {
-          "command": "svn.repolog.filterByAction",
+          "command": "svn.repolog.filterHistory",
           "when": "false"
         },
         {
           "command": "svn.repolog.clearFilter",
-          "when": "false"
-        },
-        {
-          "command": "svn.repolog.showActiveFilters",
           "when": "false"
         },
         {
