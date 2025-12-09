@@ -285,9 +285,9 @@ export class SvnFileDecorationProvider
     renameUri?: Uri,
     isFolder: boolean = false
   ): string | undefined {
-    // Renamed files/folders (added with rename source) get R/📁R badge
+    // Addition with history (rename/copy) - 2 char limit for badges
     if (status === Status.ADDED && renameUri) {
-      return isFolder ? "📁R" : "R";
+      return "A+";
     }
 
     let badge: string | undefined;

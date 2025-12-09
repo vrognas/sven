@@ -162,7 +162,7 @@ export class Resource implements SourceControlResourceState {
     switch (this.type) {
       case Status.ADDED:
         if (this.renameResourceUri) {
-          return "R";
+          return "A+"; // Addition with history (rename/copy)
         }
         return "A";
       case Status.CONFLICTED:
