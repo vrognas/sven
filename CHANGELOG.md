@@ -1,3 +1,14 @@
+## [2.35.1] (2025-12-10)
+
+### Fix: Silent Commit Failure
+
+- **Bug**: Commit silently failed when SVN returned empty output (no files to commit)
+- **Symptom**: User clicked commit, command executed, but no success/error message shown
+- **Cause**: Staged files had no actual changes (status cache stale or changes reverted)
+- **Fix**: Throw descriptive error when SVN returns empty commit output
+- **Message**: "No files were committed. Check that files have changes and are properly staged."
+- **Affected**: svnRepository.ts:commitFiles()
+
 ## [2.35.0] (2025-12-09)
 
 ### Feature: History Filtering

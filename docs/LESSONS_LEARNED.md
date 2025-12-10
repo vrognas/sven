@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: v2.35.0
-**Updated**: 2025-12-09
+**Version**: v2.35.1
+**Updated**: 2025-12-10
 
 ---
 
@@ -1038,5 +1038,47 @@ Initial implementation: 8 separate filter commands in toolbar menu. Overwhelming
 - Avoid webviews when native UI suffices
 
 **Rule**: Fewer toolbar buttons = better UX. Use multi-step QuickPick for complex operations.
+
+---
+
+### 28. Command Output Validation: Always Check for Unexpected Empty Results
+
+**Lesson**: CLI commands that succeed (exitCode 0) but return empty output should be treated as errors.
+
+**Issue** (v2.35.1):
+
+- SVN commit succeeded (exit 0) but stdout was empty
+- Empty stdout meant nothing was committed (no changes)
+- User saw no success/error message - silent failure
+- Files remained in "staged" state but had no actual changes
+
+**Root Cause**:
+
+- Staging cache showed files as modified
+- User changes were reverted or never existed
+- SVN correctly returned nothing to commit
+- Code returned empty string → empty notification
+
+**Fix**:
+
+```typescript
+// BAD: Return raw stdout (might be empty)
+return result.stdout;
+
+// GOOD: Validate non-empty output
+if (!result.stdout || result.stdout.trim() === "") {
+  throw new Error("No files were committed. Check files have changes.");
+}
+return result.stdout;
+```
+
+**When to apply**:
+
+- ✅ Commands that should ALWAYS produce output on success
+- ✅ User-facing operations where silence = confusion
+- ✅ Operations with side effects (commit, update, merge)
+- ❌ Commands where empty output is valid (status with no changes)
+
+**Rule**: Empty output from a command that should produce output is an error, not success.
 
 ---

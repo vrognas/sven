@@ -547,6 +547,66 @@ suite("Svn Repository Tests", () => {
     );
   });
 
+  test("commitFiles: Throws error on empty stdout", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tmp",
+      ConstructorPolicy.LateInit
+    );
+
+    repository.exec = async () => {
+      // Simulate SVN returning empty stdout (no files committed)
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: ""
+      };
+    };
+
+    try {
+      await repository.commitFiles("test message", ["test.txt"]);
+      assert.fail("Should throw error on empty stdout");
+    } catch (e: unknown) {
+      assert.match(
+        (e as Error).message,
+        /No files were committed/,
+        "Error should mention no files committed"
+      );
+    }
+  });
+
+  test("commitFiles: Throws error on whitespace-only stdout", async () => {
+    svn = new Svn(options);
+    const repository = await new Repository(
+      svn,
+      "/tmp",
+      "/tmp",
+      ConstructorPolicy.LateInit
+    );
+
+    repository.exec = async () => {
+      // Simulate SVN returning only whitespace
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: "   \n\n   "
+      };
+    };
+
+    try {
+      await repository.commitFiles("test message", ["test.txt"]);
+      assert.fail("Should throw error on whitespace-only stdout");
+    } catch (e: unknown) {
+      assert.match(
+        (e as Error).message,
+        /No files were committed/,
+        "Error should mention no files committed"
+      );
+    }
+  });
+
   test("getScopedStatus: Fetches status for specific path with depth", async () => {
     svn = new Svn(options);
     const repository = await new Repository(

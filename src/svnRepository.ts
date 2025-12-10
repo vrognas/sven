@@ -884,6 +884,14 @@ export class Repository {
       return `${filesMessage}: revision ${matches[1]}.`;
     }
 
+    // Check for unexpected empty output - SVN should always return something on commit
+    // Empty output typically means: no changes to commit, path issues, or SVN internal error
+    if (!result.stdout || result.stdout.trim() === "") {
+      throw new Error(
+        "No files were committed. Check that files have changes and are properly staged."
+      );
+    }
+
     return result.stdout;
   }
 
