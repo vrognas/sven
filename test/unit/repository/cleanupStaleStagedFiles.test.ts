@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { Status } from "../../../src/common/types";
+import { PropStatus, Status } from "../../../src/common/types";
 
 // Mock vscode
 vi.mock("vscode", () => ({
@@ -46,21 +46,21 @@ describe("cleanupStaleStagedFiles", () => {
     it("considers undefined props as normal", () => {
       const props: string | undefined = undefined;
       const isNormalProps =
-        !props || props === Status.NORMAL || props === Status.NONE;
+        !props || props === PropStatus.NORMAL || props === PropStatus.NONE;
       expect(isNormalProps).toBe(true);
     });
 
     it("considers NORMAL props as normal", () => {
-      const props = Status.NORMAL;
+      const props = PropStatus.NORMAL;
       const isNormalProps =
-        !props || props === Status.NORMAL || props === Status.NONE;
+        !props || props === PropStatus.NORMAL || props === PropStatus.NONE;
       expect(isNormalProps).toBe(true);
     });
 
     it("considers MODIFIED props as not normal (property changes)", () => {
-      const props = Status.MODIFIED;
+      const props = PropStatus.MODIFIED;
       const isNormalProps =
-        !props || props === Status.NORMAL || props === Status.NONE;
+        !props || props === PropStatus.NORMAL || props === PropStatus.NONE;
       expect(isNormalProps).toBe(false);
     });
   });
@@ -71,16 +71,16 @@ describe("cleanupStaleStagedFiles", () => {
       const props: string | undefined = undefined;
       const isStale =
         (status === Status.NORMAL || status === Status.NONE) &&
-        (!props || props === Status.NORMAL || props === Status.NONE);
+        (!props || props === PropStatus.NORMAL || props === PropStatus.NONE);
       expect(isStale).toBe(true);
     });
 
     it("file with NORMAL status but MODIFIED props is NOT stale", () => {
       const status = Status.NORMAL;
-      const props = Status.MODIFIED;
+      const props = PropStatus.MODIFIED;
       const isStale =
         (status === Status.NORMAL || status === Status.NONE) &&
-        (!props || props === Status.NORMAL || props === Status.NONE);
+        (!props || props === PropStatus.NORMAL || props === PropStatus.NONE);
       expect(isStale).toBe(false);
     });
 
@@ -89,7 +89,7 @@ describe("cleanupStaleStagedFiles", () => {
       const props: string | undefined = undefined;
       const isStale =
         (status === Status.NORMAL || status === Status.NONE) &&
-        (!props || props === Status.NORMAL || props === Status.NONE);
+        (!props || props === PropStatus.NORMAL || props === PropStatus.NONE);
       expect(isStale).toBe(false);
     });
   });

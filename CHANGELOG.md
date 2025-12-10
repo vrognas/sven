@@ -1,3 +1,13 @@
+## [2.35.3] (2025-12-10)
+
+### Fix: Auto-Unstage Robustness
+
+- **Error handling**: Cleanup failures no longer fail the update operation
+- **PropStatus enum**: Fixed props comparison using correct enum type
+- **Notification**: Long file lists truncated to prevent UI overflow
+- **Coverage**: Cleanup also runs after `switchBranch()` and `merge()`
+- **Affected**: repository.ts:updateRevision(), switchBranch(), merge()
+
 ## [2.35.2] (2025-12-10)
 
 ### Feature: Auto-Unstage After Update

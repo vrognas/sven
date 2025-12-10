@@ -78,6 +78,7 @@ import {
   IUpdateResult,
   LockStatus,
   Operation,
+  PropStatus,
   RepositoryState,
   Status,
   SvnDepth,
@@ -1278,7 +1279,7 @@ export class Repository implements IRemoteRepository {
   /**
    * Clean up stale staged files that no longer have actual modifications.
    * This can happen after `svn update` brings in changes that match local changes.
-   * Files in __staged__ changelist with Status.NORMAL are auto-unstaged.
+   * Files in __staged__ changelist with no modifications are auto-unstaged.
    * @returns Names of files that were auto-unstaged
    */
   public async cleanupStaleStagedFiles(): Promise<string[]> {
@@ -1293,7 +1294,7 @@ export class Repository implements IRemoteRepository {
       const props = resource.props;
       const isNormalStatus = status === Status.NORMAL || status === Status.NONE;
       const isNormalProps =
-        !props || props === Status.NORMAL || props === Status.NONE;
+        !props || props === PropStatus.NORMAL || props === PropStatus.NONE;
 
       if (isNormalStatus && isNormalProps) {
         staledFiles.push(resource.resourceUri.fsPath);
@@ -1342,6 +1343,13 @@ export class Repository implements IRemoteRepository {
       await this.repository.switchBranch(name, force);
       void this.updateRemoteChangedFiles();
     });
+
+    // Clean up stale staged files after switch - files may no longer have changes
+    try {
+      await this.cleanupStaleStagedFiles();
+    } catch {
+      // Best-effort cleanup
+    }
   }
 
   public async merge(
@@ -1353,6 +1361,13 @@ export class Repository implements IRemoteRepository {
       await this.repository.merge(name, reintegrate, accept_action);
       void this.updateRemoteChangedFiles();
     });
+
+    // Clean up stale staged files after merge - files may no longer have changes
+    try {
+      await this.cleanupStaleStagedFiles();
+    } catch {
+      // Best-effort cleanup
+    }
   }
 
   public async updateRevision(
@@ -1368,12 +1383,22 @@ export class Repository implements IRemoteRepository {
 
     // Clean up stale staged files after update brings in matching changes
     // This prevents confusion when staged files no longer have modifications
-    const stalledFiles = await this.cleanupStaleStagedFiles();
-    if (stalledFiles.length > 0) {
-      const fileNames = stalledFiles.map(f => path.basename(f)).join(", ");
-      window.showInformationMessage(
-        `Auto-unstaged ${stalledFiles.length} file(s) with no changes: ${fileNames}`
-      );
+    // Wrapped in try-catch to not fail the update on cleanup errors
+    try {
+      const stalledFiles = await this.cleanupStaleStagedFiles();
+      if (stalledFiles.length > 0) {
+        const fileNames = stalledFiles.map(f => path.basename(f));
+        const displayNames =
+          fileNames.length <= 3
+            ? fileNames.join(", ")
+            : `${fileNames.slice(0, 3).join(", ")} +${fileNames.length - 3} more`;
+        window.showInformationMessage(
+          `Auto-unstaged ${stalledFiles.length} file(s): ${displayNames}`
+        );
+      }
+    } catch (err) {
+      // Log but don't fail update - cleanup is best-effort
+      console.error("Failed to cleanup stale staged files:", err);
     }
 
     // Fetch history views to show new commits from update
