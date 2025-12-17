@@ -4,7 +4,7 @@
 
 - **File badges**: Ignored files now show "I" badge in file explorer
 - **Unversioned folder badges**: Files inside unversioned/ignored folders now show "?" or "I" badge
-- **Blame errors**: Skip blame for files in unversioned/ignored folders (fixes E200009)
+- **Blame errors**: Skip blame for files outside working copy (shallow checkout) - silently ignores W155010/E200009
 - **Startup errors**: Suppress expected E200009/W160013/W200005 errors for unversioned files
 - **Performance**: Reduced redundant SVN calls when toggling svn:ignore or svn:needs-lock
 - **UX**: Added SVN Properties submenu with Toggle Ignore and Toggle Needs Lock commands
