@@ -440,6 +440,12 @@
         "category": "SVN"
       },
       {
+        "command": "svn.toggleIgnore",
+        "title": "Toggle svn:ignore",
+        "category": "SVN",
+        "icon": "$(eye-closed)"
+      },
+      {
         "command": "svn.viewIgnorePatterns",
         "title": "View/Edit Ignore Patterns",
         "category": "SVN"
@@ -951,7 +957,23 @@
         "icon": "$(gear)"
       }
     ],
+    "submenus": [
+      {
+        "id": "svn.propertiesSubmenu",
+        "label": "SVN Properties"
+      }
+    ],
     "menus": {
+      "svn.propertiesSubmenu": [
+        {
+          "command": "svn.toggleIgnore",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "svn.toggleNeedsLock",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
+        }
+      ],
       "commandPalette": [
         {
           "command": "svn.add",
@@ -963,6 +985,10 @@
         },
         {
           "command": "svn.removeFromIgnore",
+          "when": "false"
+        },
+        {
+          "command": "svn.toggleIgnore",
           "when": "false"
         },
         {
@@ -1625,9 +1651,9 @@
           "group": "3_lock@3"
         },
         {
-          "command": "svn.toggleNeedsLock",
-          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != remotechanges",
-          "group": "3_lock@4"
+          "submenu": "svn.propertiesSubmenu",
+          "when": "config.svn.enabled && scmProvider == svn && scmResourceGroup != external && scmResourceGroup != remotechanges",
+          "group": "4_properties"
         },
         {
           "command": "svn.revert",
@@ -1730,12 +1756,7 @@
       ],
       "explorer/context": [
         {
-          "command": "svn.addToIgnoreExplorer",
-          "group": "9_svn",
-          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
-        },
-        {
-          "command": "svn.removeFromIgnore",
+          "submenu": "svn.propertiesSubmenu",
           "group": "9_svn",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },
@@ -1758,11 +1779,6 @@
           "command": "svn.unlock",
           "group": "9_svn@3",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
-        },
-        {
-          "command": "svn.toggleNeedsLock",
-          "group": "9_svn@4",
-          "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
         },
         {
           "command": "svn.setDepth",
