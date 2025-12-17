@@ -29,7 +29,11 @@ export class ToggleIgnore extends Command {
     const dirName = path.dirname(uri.fsPath);
     const fileName = path.basename(uri.fsPath);
 
-    return this.runByRepository(allUris, async (repository: Repository) => {
+    // Use parent directory for repository lookup (more reliable for ignored files)
+    // The directory is always versioned since it has the svn:ignore property
+    const dirUri = Uri.file(dirName);
+
+    return this.runByRepository(dirUri, async (repository: Repository) => {
       // Check if file is ignored
       const resource = repository.getResourceFromFile(uri);
       const isIgnored = resource?.type === Status.IGNORED;
