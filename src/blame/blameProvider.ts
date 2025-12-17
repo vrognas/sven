@@ -728,6 +728,15 @@ export class BlameProvider implements Disposable {
       return cached.data;
     }
 
+    // Pre-check: verify file is under version control before attempting blame
+    // This avoids SVN errors for files outside working copy (shallow checkout)
+    try {
+      await this.repository.getInfo(uri.fsPath);
+    } catch {
+      // File not under version control - skip blame silently
+      return undefined;
+    }
+
     // Fetch from repository
     try {
       const data = await this.repository.blame(uri.fsPath);
