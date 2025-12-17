@@ -130,14 +130,21 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
             mtime = Date.parse(listResults[0]!.commit.date);
           }
         } catch (error) {
-          // Suppress "node not found" errors for untracked files (expected)
+          // Suppress "not found" errors for untracked/unversioned files (expected)
+          // W155010/E155010: node not found in working copy
+          // W160013: path not found on server
+          // E200009: could not list/cat targets (some don't exist)
+          // W200005: not under version control
           const isUntrackedFile =
             typeof error === "object" &&
             error !== null &&
             "stderr" in error &&
             typeof error.stderr === "string" &&
             (error.stderr.includes("W155010") ||
-              error.stderr.includes("E155010"));
+              error.stderr.includes("E155010") ||
+              error.stderr.includes("W160013") ||
+              error.stderr.includes("E200009") ||
+              error.stderr.includes("W200005"));
           if (!isUntrackedFile) {
             logError("Failed to list SVN file", error);
           }
