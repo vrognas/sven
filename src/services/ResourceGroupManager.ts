@@ -67,6 +67,7 @@ export interface IResourceGroupManager {
   readonly changes: ISvnResourceGroup;
   readonly conflicts: ISvnResourceGroup;
   readonly unversioned: ISvnResourceGroup;
+  readonly ignored: ISvnResourceGroup;
   readonly changelists: ReadonlyMap<string, ISvnResourceGroup>;
 
   /**
@@ -93,6 +94,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
   private _changes: ISvnResourceGroup;
   private _conflicts: ISvnResourceGroup;
   private _unversioned: ISvnResourceGroup;
+  private _ignored: ISvnResourceGroup;
   private _changelists = new Map<string, ISvnResourceGroup>();
   private _remoteChanges?: ISvnResourceGroup;
   private _disposables: Disposable[] = [];
@@ -116,6 +118,10 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
   get unversioned(): ISvnResourceGroup {
     return this._unversioned;
+  }
+
+  get ignored(): ISvnResourceGroup {
+    return this._ignored;
   }
 
   get changelists(): ReadonlyMap<string, ISvnResourceGroup> {
@@ -155,12 +161,17 @@ export class ResourceGroupManager implements IResourceGroupManager {
     this._unversioned = this.createGroup("unversioned", "Unversioned");
     this._unversioned.hideWhenEmpty = true;
 
+    // Ignored files - hidden from SCM panel but indexed for badges
+    this._ignored = this.createGroup("ignored", "Ignored");
+    this._ignored.hideWhenEmpty = true;
+
     // Register with parent for disposal
     this._disposables.push(this._staged, this._changes, this._conflicts);
     this._disposables.push(this._staging);
 
-    // Unversioned can be recreated, use toDisposable wrapper
+    // Unversioned and Ignored can be recreated, use toDisposable wrapper
     this._disposables.push(toDisposable(() => this._unversioned.dispose()));
+    this._disposables.push(toDisposable(() => this._ignored.dispose()));
 
     // Remote changes can be recreated and may be undefined
     this._disposables.push(
@@ -329,6 +340,9 @@ export class ResourceGroupManager implements IResourceGroupManager {
       result.unversioned
     );
 
+    // Ignored files (for file explorer badges, not shown in SCM panel)
+    this._ignored.resourceStates = result.ignored;
+
     // Recreate or create remote changes group (must be last)
     if (
       !this._remoteChanges ||
@@ -373,6 +387,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
       this.hashPaths(result.changes),
       this.hashPaths(result.conflicts),
       this.hashPaths(result.unversioned),
+      this.hashPaths(result.ignored),
       this.hashPaths(result.remoteChanges)
     ];
 
@@ -409,7 +424,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
       ...this._staged.resourceStates,
       ...this._changes.resourceStates,
       ...this._conflicts.resourceStates,
-      ...this._unversioned.resourceStates
+      ...this._unversioned.resourceStates,
+      ...this._ignored.resourceStates
     ];
 
     // Add changelist resources

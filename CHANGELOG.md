@@ -1,3 +1,10 @@
+## [2.36.3] (2025-12-17)
+
+### Fix: Ignored File Badges
+
+- **File badges**: Ignored files now show "I" badge in file explorer
+- Added `_ignored` resource group for badge indexing
+
 ## [2.36.2] (2025-12-17)
 
 ### Fix: svn:ignore Round 2

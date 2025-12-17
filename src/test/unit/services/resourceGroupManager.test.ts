@@ -91,7 +91,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: new Map(),
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -157,7 +157,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: changelists1,
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -201,7 +201,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: changelists2,
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -235,7 +235,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: new Map(),
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -273,7 +273,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: new Map(),
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -289,7 +289,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: new Map(),
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -337,7 +337,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists: new Map(),
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()
@@ -355,7 +355,7 @@ suite("ResourceGroupManager Tests", () => {
       changelists,
       remoteChanges: [],
       statusExternal: [],
-      statusIgnored: [],
+      ignored: [],
       isIncomplete: false,
       needCleanUp: false,
       lockStatuses: new Map()

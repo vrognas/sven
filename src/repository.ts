@@ -137,7 +137,7 @@ type RepositoryConfig = {
 export class Repository implements IRemoteRepository {
   public sourceControl: SourceControl;
   public statusBar: StatusBarCommands;
-  public statusIgnored: IFileStatus[] = [];
+  public ignored: Resource[] = [];
   public statusExternal: IFileStatus[] = [];
   private disposables: Disposable[] = [];
   public currentBranch = "";
@@ -833,7 +833,7 @@ export class Repository implements IRemoteRepository {
 
     // Update metadata
     this.statusExternal = [...result.statusExternal];
-    this.statusIgnored = [...result.statusIgnored];
+    this.ignored = [...result.ignored];
     this.isIncomplete = result.isIncomplete;
     this.needCleanUp = result.needCleanUp;
 

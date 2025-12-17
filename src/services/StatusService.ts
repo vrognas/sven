@@ -31,7 +31,7 @@ export type StatusResult = {
   readonly changelists: ReadonlyMap<string, Resource[]>;
   readonly remoteChanges: Resource[];
   readonly statusExternal: readonly IFileStatus[];
-  readonly statusIgnored: readonly IFileStatus[];
+  readonly ignored: Resource[];
   readonly isIncomplete: boolean;
   readonly needCleanUp: boolean;
   /** Lock statuses for all locked files (by relative path) */
@@ -135,7 +135,7 @@ export class StatusService implements IStatusService {
       changelists: categorized.changelists,
       remoteChanges: categorized.remoteChanges,
       statusExternal,
-      statusIgnored: categorized.statusIgnored,
+      ignored: categorized.ignored,
       isIncomplete: categorized.isIncomplete,
       needCleanUp: categorized.needCleanUp,
       lockStatuses: categorized.lockStatuses
@@ -283,7 +283,7 @@ export class StatusService implements IStatusService {
     unversioned: Resource[];
     changelists: Map<string, Resource[]>;
     remoteChanges: Resource[];
-    statusIgnored: IFileStatus[];
+    ignored: Resource[];
     isIncomplete: boolean;
     needCleanUp: boolean;
     lockStatuses: Map<string, LockInfo>;
@@ -293,7 +293,7 @@ export class StatusService implements IStatusService {
     const unversioned: Resource[] = [];
     const changelists = new Map<string, Resource[]>();
     const remoteChanges: Resource[] = [];
-    const statusIgnored: IFileStatus[] = [];
+    const ignored: Resource[] = [];
     const lockStatuses = new Map<string, LockInfo>();
     let isIncomplete = false;
     let needCleanUp = false;
@@ -420,7 +420,7 @@ export class StatusService implements IStatusService {
       if (willSkip) {
         continue;
       } else if (status.status === Status.IGNORED) {
-        statusIgnored.push(status);
+        ignored.push(resource);
       } else if (status.status === Status.CONFLICTED) {
         conflicts.push(resource);
       } else if (status.status === Status.UNVERSIONED) {
@@ -467,7 +467,7 @@ export class StatusService implements IStatusService {
       unversioned,
       changelists,
       remoteChanges,
-      statusIgnored,
+      ignored,
       isIncomplete,
       needCleanUp,
       lockStatuses

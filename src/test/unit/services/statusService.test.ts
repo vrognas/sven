@@ -44,17 +44,43 @@ suite("StatusService E2E", () => {
     assert.ok(Array.isArray(result.conflicts), "conflicts should be array");
     assert.ok(Array.isArray(result.unversioned), "unversioned should be array");
     assert.ok(result.changelists instanceof Map, "changelists should be Map");
-    assert.ok(Array.isArray(result.remoteChanges), "remoteChanges should be array");
-    assert.ok(Array.isArray(result.statusExternal), "statusExternal should be array");
-    assert.ok(Array.isArray(result.statusIgnored), "statusIgnored should be array");
-    assert.strictEqual(typeof result.isIncomplete, "boolean", "isIncomplete should be boolean");
-    assert.strictEqual(typeof result.needCleanUp, "boolean", "needCleanUp should be boolean");
+    assert.ok(
+      Array.isArray(result.remoteChanges),
+      "remoteChanges should be array"
+    );
+    assert.ok(
+      Array.isArray(result.statusExternal),
+      "statusExternal should be array"
+    );
+    assert.ok(Array.isArray(result.ignored), "ignored should be array");
+    assert.strictEqual(
+      typeof result.isIncomplete,
+      "boolean",
+      "isIncomplete should be boolean"
+    );
+    assert.strictEqual(
+      typeof result.needCleanUp,
+      "boolean",
+      "needCleanUp should be boolean"
+    );
 
     // Verify categorization worked
     assert.strictEqual(result.changes.length, 1, "Should have 1 modified file");
-    assert.strictEqual(result.conflicts.length, 1, "Should have 1 conflicted file");
-    assert.strictEqual(result.unversioned.length, 1, "Should have 1 unversioned file");
-    assert.strictEqual(result.statusExternal.length, 1, "Should have 1 external");
+    assert.strictEqual(
+      result.conflicts.length,
+      1,
+      "Should have 1 conflicted file"
+    );
+    assert.strictEqual(
+      result.unversioned.length,
+      1,
+      "Should have 1 unversioned file"
+    );
+    assert.strictEqual(
+      result.statusExternal.length,
+      1,
+      "Should have 1 external"
+    );
 
     service.dispose();
   });
@@ -85,24 +111,44 @@ suite("StatusService E2E", () => {
     const result = await service.updateStatus({ checkRemoteChanges: false });
 
     // Verify external descendants were filtered out
-    assert.strictEqual(result.statusExternal.length, 1, "Should have 1 external");
-    assert.strictEqual(result.changes.length, 2, "Should have 2 changes (not 3)");
+    assert.strictEqual(
+      result.statusExternal.length,
+      1,
+      "Should have 1 external"
+    );
+    assert.strictEqual(
+      result.changes.length,
+      2,
+      "Should have 2 changes (not 3)"
+    );
 
     // Verify the descendant file was NOT included in changes
-    const hasExternalDescendant = result.changes.some(
-      (r: any) => r.resourceUri.fsPath.includes("libs/external1/file.ts")
+    const hasExternalDescendant = result.changes.some((r: any) =>
+      r.resourceUri.fsPath.includes("libs/external1/file.ts")
     );
-    assert.strictEqual(hasExternalDescendant, false, "External descendant should be filtered");
+    assert.strictEqual(
+      hasExternalDescendant,
+      false,
+      "External descendant should be filtered"
+    );
 
     // Verify non-descendant files were included
-    const hasSrcFile1 = result.changes.some(
-      (r: any) => r.resourceUri.fsPath.includes("src/file1.ts")
+    const hasSrcFile1 = result.changes.some((r: any) =>
+      r.resourceUri.fsPath.includes("src/file1.ts")
     );
-    const hasSrcFile2 = result.changes.some(
-      (r: any) => r.resourceUri.fsPath.includes("src/file2.ts")
+    const hasSrcFile2 = result.changes.some((r: any) =>
+      r.resourceUri.fsPath.includes("src/file2.ts")
     );
-    assert.strictEqual(hasSrcFile1, true, "Non-descendant src/file1.ts should remain");
-    assert.strictEqual(hasSrcFile2, true, "Non-descendant src/file2.ts should remain");
+    assert.strictEqual(
+      hasSrcFile1,
+      true,
+      "Non-descendant src/file1.ts should remain"
+    );
+    assert.strictEqual(
+      hasSrcFile2,
+      true,
+      "Non-descendant src/file2.ts should remain"
+    );
 
     service.dispose();
   });

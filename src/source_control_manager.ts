@@ -235,8 +235,8 @@ export class SourceControlManager implements IDisposable {
       return;
     }
 
-    repository.statusIgnored
-      .map(r => path.join(repository.workspaceRoot, r.path))
+    repository.ignored
+      .map(r => r.resourceUri.fsPath)
       .forEach(p => this.eventuallyScanPossibleSvnRepository(p));
   }
 
@@ -482,8 +482,8 @@ export class SourceControlManager implements IDisposable {
       for (const ext of repository.statusExternal) {
         excluded.add(path.join(repository.workspaceRoot, ext.path));
       }
-      for (const ign of repository.statusIgnored) {
-        excluded.add(path.join(repository.workspaceRoot, ign.path));
+      for (const ign of repository.ignored) {
+        excluded.add(ign.resourceUri.fsPath);
       }
       this.excludedPathsCache.set(repository.workspaceRoot, excluded);
     };
