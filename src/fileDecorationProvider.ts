@@ -2,6 +2,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import * as path from "path";
 import {
   Disposable,
   EventEmitter,
@@ -209,8 +210,9 @@ export class SvnFileDecorationProvider
   }
 
   /**
-   * Get decoration for locked-only files or needs-lock files (not in Changes).
-   * Checks lock cache first (for K/O/B/T badge), then falls back to needs-lock.
+   * Get decoration for locked-only files, needs-lock files, or files inside
+   * unversioned/ignored folders (not directly in resource index).
+   * Checks: 1) lock cache, 2) parent folder status, 3) needs-lock
    */
   private getLockOnlyDecoration(uri: Uri): FileDecoration | undefined {
     // Only check file scheme
@@ -240,6 +242,21 @@ export class SvnFileDecorationProvider
       };
     }
 
+    // Check if file is inside an unversioned or ignored folder
+    const parentStatus = this.getParentFolderStatus(uri.fsPath);
+    if (parentStatus) {
+      const badge = this.getBadge(parentStatus, undefined, false);
+      const color = this.getColor(parentStatus);
+      const statusName =
+        parentStatus === Status.UNVERSIONED ? "Unversioned" : "Ignored";
+      return {
+        badge,
+        tooltip: `${statusName} (inside ${statusName.toLowerCase()} folder)`,
+        color,
+        propagate: false
+      };
+    }
+
     // Fall back to needs-lock check
     if (!this.repository.hasNeedsLockCached(uri.fsPath)) {
       return undefined;
@@ -251,6 +268,34 @@ export class SvnFileDecorationProvider
       color: new ThemeColor("list.deemphasizedForeground"),
       propagate: false
     };
+  }
+
+  /**
+   * Check if file is inside an unversioned or ignored folder.
+   * Returns the parent folder's status if found, undefined otherwise.
+   */
+  private getParentFolderStatus(filePath: string): Status | undefined {
+    // Check unversioned folders
+    for (const resource of this.repository.unversioned.resourceStates) {
+      if (
+        resource.kind === "dir" &&
+        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
+      ) {
+        return Status.UNVERSIONED;
+      }
+    }
+
+    // Check ignored folders (repository.ignored is Resource[])
+    for (const resource of this.repository.ignored) {
+      if (
+        resource.kind === "dir" &&
+        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
+      ) {
+        return Status.IGNORED;
+      }
+    }
+
+    return undefined;
   }
 
   /**
