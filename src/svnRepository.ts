@@ -412,10 +412,17 @@ export class Repository {
     skipCache: boolean = false,
     isUrl: boolean = false
   ): Promise<ISvnInfo> {
-    const cacheEntry = this._infoCache.get(file);
+    // Build cache key (include revision for revision-specific queries)
+    const cacheKey = revision ? `${file}@${revision}` : file;
+
+    const cacheEntry = this._infoCache.get(cacheKey);
     if (!skipCache && cacheEntry) {
       // Update access time on cache hit
       cacheEntry.lastAccessed = Date.now();
+      // Check for negative cache (unversioned file marker)
+      if (cacheEntry.info === null) {
+        throw new Error(`File not under version control: ${file}`);
+      }
       return cacheEntry.info;
     }
 
@@ -425,23 +432,47 @@ export class Repository {
       args.push("-r", revision);
     }
 
+    let targetFile = file;
     if (file) {
       if (!isUrl) {
-        file = fixPathSeparator(file);
+        targetFile = fixPathSeparator(file);
       }
       // Add peg revision for non-working-copy revisions to handle renamed/moved/deleted files
       if (
         revision &&
         !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
       ) {
-        file = fixPegRevision(file) + "@" + revision;
+        targetFile = fixPegRevision(targetFile) + "@" + revision;
       } else {
-        file = fixPegRevision(file);
+        targetFile = fixPegRevision(targetFile);
       }
-      args.push(file);
+      args.push(targetFile);
     }
 
-    const result = await this.exec(args);
+    let result;
+    try {
+      result = await this.exec(args);
+    } catch (err) {
+      // Negative cache for unversioned files (W155010/E200009)
+      // Cache for 30 seconds to avoid repeated failed calls
+      if (
+        err &&
+        typeof err === "object" &&
+        "stderr" in err &&
+        typeof err.stderr === "string" &&
+        (err.stderr.includes("W155010") || err.stderr.includes("E200009"))
+      ) {
+        const timer = setTimeout(() => {
+          this._infoCache.delete(cacheKey);
+        }, 30 * 1000);
+        this._infoCache.set(cacheKey, {
+          info: null as unknown as ISvnInfo, // Sentinel for negative cache
+          timeout: timer,
+          lastAccessed: Date.now()
+        });
+      }
+      throw err;
+    }
 
     let info: ISvnInfo;
     try {
@@ -461,12 +492,12 @@ export class Repository {
     // Cache for 2 minutes
     const timer = setTimeout(
       () => {
-        this.resetInfoCache(file);
+        this._infoCache.delete(cacheKey);
       },
       2 * 60 * 1000
     );
 
-    this._infoCache.set(file, {
+    this._infoCache.set(cacheKey, {
       info,
       timeout: timer,
       lastAccessed: Date.now()

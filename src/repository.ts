@@ -1563,7 +1563,7 @@ export class Repository implements IRemoteRepository {
 
   public async getInfo(path: string, revision?: string): Promise<ISvnInfo> {
     return this.run(Operation.Info, () =>
-      this.repository.getInfo(path, revision, true)
+      this.repository.getInfo(path, revision)
     );
   }
 
