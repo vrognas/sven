@@ -1739,17 +1739,20 @@ export class Repository {
       const args = ["propget", "svn:ignore"];
 
       if (directory) {
-        args.push(directory);
+        args.push(fixPegRevision(directory));
       }
 
       const currentIgnoreResult = await this.exec(args);
 
       currentIgnore = currentIgnoreResult.stdout.trim();
     } catch (error) {
-      logError(
-        `Failed to get svn:ignore property for ${directory || "."}`,
-        error
-      );
+      // W200017 = "Property 'svn:ignore' not found" - expected when no patterns set
+      if (!String(error).includes("W200017")) {
+        logError(
+          `Failed to get svn:ignore property for ${directory || "."}`,
+          error
+        );
+      }
     }
 
     const ignores = currentIgnore.split(/[\r\n]+/);
@@ -1791,6 +1794,9 @@ export class Repository {
   /**
    * Remove a pattern from svn:ignore property.
    * If the pattern is the last one, deletes the property entirely.
+   *
+   * WARNING: Non-atomic read-modify-write. Concurrent modifications may be lost.
+   * SVN doesn't support atomic property updates.
    */
   public async removeFromIgnore(
     expression: string,
@@ -1805,7 +1811,7 @@ export class Repository {
       // No patterns left, delete the property
       const args = ["propdel", "svn:ignore"];
       if (directory) {
-        args.push(directory);
+        args.push(fixPegRevision(directory));
       } else {
         args.push(".");
       }
@@ -1815,12 +1821,46 @@ export class Repository {
       const newIgnore = filtered.sort().join("\n");
       const args = ["propset", "svn:ignore", newIgnore];
       if (directory) {
-        args.push(directory);
+        args.push(fixPegRevision(directory));
       } else {
         args.push(".");
       }
       await this.exec(args);
     }
+  }
+
+  /**
+   * Delete the svn:ignore property from a directory.
+   */
+  public async deleteIgnoreProperty(directory: string): Promise<void> {
+    directory = this.removeAbsolutePath(directory);
+    const args = ["propdel", "svn:ignore"];
+    if (directory) {
+      args.push(fixPegRevision(directory));
+    } else {
+      args.push(".");
+    }
+    await this.exec(args);
+  }
+
+  /**
+   * Set the svn:ignore property to specific patterns.
+   *
+   * WARNING: Non-atomic operation. Concurrent modifications may be lost.
+   */
+  public async setIgnoreProperty(
+    patterns: string[],
+    directory: string
+  ): Promise<void> {
+    directory = this.removeAbsolutePath(directory);
+    const newIgnore = patterns.sort().join("\n");
+    const args = ["propset", "svn:ignore", newIgnore];
+    if (directory) {
+      args.push(fixPegRevision(directory));
+    } else {
+      args.push(".");
+    }
+    await this.exec(args);
   }
 
   /**
@@ -1831,7 +1871,12 @@ export class Repository {
     const result = new Map<string, string[]>();
 
     try {
-      const execResult = await this.exec(["propget", "svn:ignore", "-R", "."]);
+      const execResult = await this.exec([
+        "propget",
+        "svn:ignore",
+        "-R",
+        fixPegRevision(".")
+      ]);
       const output = execResult.stdout;
 
       if (!output || output.trim().length === 0) {
@@ -1845,7 +1890,8 @@ export class Repository {
 
       for (const line of lines) {
         // Check for directory header (ends with " - ")
-        const dirMatch = line.match(/^(.+?)\s+-\s*$/);
+        // Use greedy match to handle directories containing " - " in name
+        const dirMatch = line.match(/^(.+)\s+-\s*$/);
         if (dirMatch) {
           currentDir = dirMatch[1]!;
           if (!result.has(currentDir)) {
@@ -1859,8 +1905,8 @@ export class Repository {
           result.get(currentDir)!.push(line.trim());
         }
       }
-    } catch {
-      // Property not set or other error - return empty map
+    } catch (error) {
+      logError("Failed to get all ignore patterns", error);
     }
 
     return result;

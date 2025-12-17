@@ -29,7 +29,7 @@ export class IgnoreSingleItem implements QuickPickItem {
       ? path.basename(this.directory)
       : "this directory";
     return this.recursive
-      ? `Sets svn:global-ignores - pattern '${this.expression}' inherited by subdirectories`
+      ? `Sets svn:ignore recursively - pattern '${this.expression}' applied to all subdirectories`
       : `Sets svn:ignore on ${dir} - pattern '${this.expression}' only matches here`;
   }
 }
@@ -81,6 +81,12 @@ export async function inputIgnoreList(repository: Repository, uris: Uri[]) {
         validateInput: value => {
           if (!value || value.trim().length === 0) {
             return "Pattern cannot be empty";
+          }
+          if (value.includes("\n") || value.includes("\r")) {
+            return "Pattern cannot contain newlines";
+          }
+          if (value.length > 255) {
+            return "Pattern too long (max 255 chars)";
           }
           return undefined;
         }

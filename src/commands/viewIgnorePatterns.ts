@@ -5,6 +5,7 @@ import { commands, window } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
 import { SourceControlManager } from "../source_control_manager";
+import { logError } from "../util/errorLogger";
 
 interface DirectoryItem {
   label: string;
@@ -159,29 +160,32 @@ export class ViewIgnorePatterns extends Command {
       return;
     }
 
-    if (newValue.trim() === "") {
-      // Delete property
-      await repository.repository.exec(["propdel", "svn:ignore", directory]);
-      window.showInformationMessage(
-        `Removed all ignore patterns from ${directory}`
-      );
-    } else {
-      // Parse patterns (handle both actual newlines and \n escape sequences)
-      const newPatterns = newValue
-        .split(/\\n|\r?\n/)
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
+    try {
+      if (newValue.trim() === "") {
+        // Delete property
+        await repository.deleteIgnoreProperty(directory);
+        window.showInformationMessage(
+          `Removed all ignore patterns from ${directory}`
+        );
+        // Navigate back to directory picker after clearing
+        await this.showDirectoryPicker(repository);
+      } else {
+        // Parse patterns (handle both actual newlines and \n escape sequences)
+        const newPatterns = newValue
+          .split(/\\n|\r?\n/)
+          .map(p => p.trim())
+          .filter(p => p.length > 0);
 
-      const newIgnore = newPatterns.sort().join("\n");
-      await repository.repository.exec([
-        "propset",
-        "svn:ignore",
-        newIgnore,
-        directory
-      ]);
-      window.showInformationMessage(
-        `Updated ignore patterns for ${directory}: ${newPatterns.join(", ")}`
-      );
+        await repository.setIgnoreProperty(newPatterns, directory);
+        window.showInformationMessage(
+          `Updated ignore patterns for ${directory}: ${newPatterns.join(", ")}`
+        );
+        // Refresh and show updated list
+        await this.showActionPicker(repository, directory, newPatterns);
+      }
+    } catch (error) {
+      logError("Failed to update ignore patterns", error);
+      window.showErrorMessage("Failed to update ignore patterns");
     }
   }
 
@@ -222,17 +226,24 @@ export class ViewIgnorePatterns extends Command {
       return;
     }
 
-    await repository.removeFromIgnore(pick.pattern, directory);
-    window.showInformationMessage(
-      `Removed '${pick.pattern}' from ${directory}`
-    );
+    try {
+      await repository.removeFromIgnore(pick.pattern, directory);
+      window.showInformationMessage(
+        `Removed '${pick.pattern}' from ${directory}`
+      );
 
-    // Refresh and show updated list
-    const updatedPatterns = await repository.getCurrentIgnore(directory);
-    if (updatedPatterns.length > 0) {
-      await this.showActionPicker(repository, directory, updatedPatterns);
-    } else {
-      await this.showDirectoryPicker(repository);
+      // Refresh and show updated list
+      const updatedPatterns = (
+        await repository.getCurrentIgnore(directory)
+      ).filter(p => p.trim() !== "");
+      if (updatedPatterns.length > 0) {
+        await this.showActionPicker(repository, directory, updatedPatterns);
+      } else {
+        await this.showDirectoryPicker(repository);
+      }
+    } catch (error) {
+      logError("Failed to remove pattern", error);
+      window.showErrorMessage("Failed to remove ignore pattern");
     }
   }
 }

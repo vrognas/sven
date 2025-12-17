@@ -1,3 +1,18 @@
+## [2.36.1] (2025-12-17)
+
+### Fix: svn:ignore Bug Fixes
+
+- **@ escaping**: Fix directories with `@` in name being misinterpreted as peg revision
+- **Parsing**: Fix propget output parsing for directories containing `-` in name
+- **Error handling**: Add try-catch and user-friendly errors in viewIgnorePatterns, removeFromIgnore
+- **UI refresh**: Navigate back to updated view after editing patterns
+- **UI text**: Correct "svn:global-ignores" text to "svn:ignore recursively"
+- **Glob matching**: Use picomatch for proper glob pattern matching
+- **Empty patterns**: Filter out empty strings from pattern arrays
+- **Input validation**: Reject patterns with newlines or exceeding 255 chars
+- **Logging**: Improve error logging, filter expected W200017 errors
+- **Affected**: svnRepository.ts, repository.ts, viewIgnorePatterns.ts, removeFromIgnore.ts, ignoreitems.ts
+
 ## [2.36.0] (2025-12-17)
 
 ### Feature: Enhanced svn:ignore Management

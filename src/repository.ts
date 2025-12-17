@@ -1611,6 +1611,21 @@ export class Repository implements IRemoteRepository {
     );
   }
 
+  public async deleteIgnoreProperty(directory: string): Promise<void> {
+    return this.run(Operation.Ignore, () =>
+      this.repository.deleteIgnoreProperty(directory)
+    );
+  }
+
+  public async setIgnoreProperty(
+    patterns: string[],
+    directory: string
+  ): Promise<void> {
+    return this.run(Operation.Ignore, () =>
+      this.repository.setIgnoreProperty(patterns, directory)
+    );
+  }
+
   public async rename(oldFile: string, newFile: string) {
     return this.run(Operation.Rename, () =>
       this.repository.rename(oldFile, newFile)
