@@ -1892,7 +1892,9 @@ export class Repository implements IRemoteRepository {
         operation === Operation.AddChangelist ||
         operation === Operation.RemoveChangelist ||
         operation === Operation.Lock ||
-        operation === Operation.Unlock;
+        operation === Operation.Unlock ||
+        operation === Operation.Ignore ||
+        operation === Operation.PropertyChange;
 
       // Set grace period BEFORE operation runs to block file watcher events
       // that fire during .svn directory changes from lock/unlock/commit/etc.
