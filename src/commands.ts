@@ -6,6 +6,8 @@ import { Disposable } from "vscode";
 import { Add } from "./commands/add";
 import { AddToIgnoreExplorer } from "./commands/addToIgnoreExplorer";
 import { AddToIgnoreSCM } from "./commands/addToIgnoreSCM";
+import { RemoveFromIgnore } from "./commands/removeFromIgnore";
+import { ViewIgnorePatterns } from "./commands/viewIgnorePatterns";
 import { ChangeList } from "./commands/changeList";
 import { Checkout } from "./commands/checkout";
 import { Cleanup } from "./commands/cleanup";
@@ -130,6 +132,8 @@ export function registerCommands(
   disposables.push(new FinishCheckout());
   disposables.push(new AddToIgnoreSCM());
   disposables.push(new AddToIgnoreExplorer());
+  disposables.push(new RemoveFromIgnore());
+  disposables.push(new ViewIgnorePatterns());
   disposables.push(new RenameExplorer());
   disposables.push(new Unlock());
   disposables.push(new BreakLock());

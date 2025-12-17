@@ -2,7 +2,7 @@
   "name": "positron-svn",
   "displayName": "SVN (Positron)",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "2.35.1",
+  "version": "2.36.0",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -432,6 +432,16 @@
       {
         "command": "svn.addToIgnoreExplorer",
         "title": "Ignore file/ext from SVN (svn:ignore)",
+        "category": "SVN"
+      },
+      {
+        "command": "svn.removeFromIgnore",
+        "title": "Remove from svn:ignore",
+        "category": "SVN"
+      },
+      {
+        "command": "svn.viewIgnorePatterns",
+        "title": "View/Edit Ignore Patterns",
         "category": "SVN"
       },
       {
@@ -950,6 +960,14 @@
         {
           "command": "svn.addToIgnoreExplorer",
           "when": "false"
+        },
+        {
+          "command": "svn.removeFromIgnore",
+          "when": "false"
+        },
+        {
+          "command": "svn.viewIgnorePatterns",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },
         {
           "command": "svn.addToIgnoreSCM",
@@ -1713,6 +1731,11 @@
       "explorer/context": [
         {
           "command": "svn.addToIgnoreExplorer",
+          "group": "9_svn",
+          "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "svn.removeFromIgnore",
           "group": "9_svn",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
         },

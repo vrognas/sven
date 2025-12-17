@@ -1593,6 +1593,24 @@ export class Repository implements IRemoteRepository {
     );
   }
 
+  public async removeFromIgnore(expression: string, directory: string) {
+    return this.run(Operation.Ignore, () =>
+      this.repository.removeFromIgnore(expression, directory)
+    );
+  }
+
+  public async getAllIgnorePatterns(): Promise<Map<string, string[]>> {
+    return this.run(Operation.Log, () =>
+      this.repository.getAllIgnorePatterns()
+    );
+  }
+
+  public async getCurrentIgnore(directory: string): Promise<string[]> {
+    return this.run(Operation.Log, () =>
+      this.repository.getCurrentIgnore(directory)
+    );
+  }
+
   public async rename(oldFile: string, newFile: string) {
     return this.run(Operation.Rename, () =>
       this.repository.rename(oldFile, newFile)

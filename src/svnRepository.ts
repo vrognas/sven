@@ -1730,7 +1730,7 @@ export class Repository {
     return parseSvnList(result.stdout);
   }
 
-  private async getCurrentIgnore(directory: string) {
+  public async getCurrentIgnore(directory: string) {
     directory = this.removeAbsolutePath(directory);
 
     let currentIgnore = "";
@@ -1786,6 +1786,84 @@ export class Repository {
     const result = await this.exec(args);
 
     return result.stdout;
+  }
+
+  /**
+   * Remove a pattern from svn:ignore property.
+   * If the pattern is the last one, deletes the property entirely.
+   */
+  public async removeFromIgnore(
+    expression: string,
+    directory: string
+  ): Promise<void> {
+    const ignores = await this.getCurrentIgnore(directory);
+    directory = this.removeAbsolutePath(directory);
+
+    const filtered = ignores.filter(p => p !== expression && p.trim() !== "");
+
+    if (filtered.length === 0) {
+      // No patterns left, delete the property
+      const args = ["propdel", "svn:ignore"];
+      if (directory) {
+        args.push(directory);
+      } else {
+        args.push(".");
+      }
+      await this.exec(args);
+    } else {
+      // Set remaining patterns
+      const newIgnore = filtered.sort().join("\n");
+      const args = ["propset", "svn:ignore", newIgnore];
+      if (directory) {
+        args.push(directory);
+      } else {
+        args.push(".");
+      }
+      await this.exec(args);
+    }
+  }
+
+  /**
+   * Get all svn:ignore patterns recursively from the repository.
+   * Returns a Map of directory path to array of patterns.
+   */
+  public async getAllIgnorePatterns(): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+
+    try {
+      const execResult = await this.exec(["propget", "svn:ignore", "-R", "."]);
+      const output = execResult.stdout;
+
+      if (!output || output.trim().length === 0) {
+        return result;
+      }
+
+      // Parse output format: "path - pattern" or multi-line patterns per directory
+      // SVN propget -R output format varies, handle both cases
+      let currentDir = ".";
+      const lines = output.split(/\r?\n/);
+
+      for (const line of lines) {
+        // Check for directory header (ends with " - ")
+        const dirMatch = line.match(/^(.+?)\s+-\s*$/);
+        if (dirMatch) {
+          currentDir = dirMatch[1]!;
+          if (!result.has(currentDir)) {
+            result.set(currentDir, []);
+          }
+        } else if (line.trim()) {
+          // This is a pattern line
+          if (!result.has(currentDir)) {
+            result.set(currentDir, []);
+          }
+          result.get(currentDir)!.push(line.trim());
+        }
+      }
+    } catch {
+      // Property not set or other error - return empty map
+    }
+
+    return result;
   }
 
   public async rename(oldName: string, newName: string): Promise<string> {

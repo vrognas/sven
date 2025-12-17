@@ -9,7 +9,8 @@ import { Repository } from "./repository";
 export class IgnoreSingleItem implements QuickPickItem {
   constructor(
     public expression: string,
-    public recursive: boolean = false
+    public recursive: boolean = false,
+    public directory?: string
   ) {}
 
   get label(): string {
@@ -18,9 +19,25 @@ export class IgnoreSingleItem implements QuickPickItem {
   }
 
   get description(): string {
-    const text = this.recursive ? " (Recursive)" : "";
-    return `Add '${this.expression}' to 'svn:ignore'${text}`;
+    return this.recursive
+      ? "Applies to this folder AND all subfolders"
+      : "Applies to this folder only";
   }
+
+  get detail(): string {
+    const dir = this.directory
+      ? path.basename(this.directory)
+      : "this directory";
+    return this.recursive
+      ? `Sets svn:global-ignores - pattern '${this.expression}' inherited by subdirectories`
+      : `Sets svn:ignore on ${dir} - pattern '${this.expression}' only matches here`;
+  }
+}
+
+export class IgnoreCustomItem implements QuickPickItem {
+  label = "$(edit) Custom pattern...";
+  description = "Enter a custom ignore pattern";
+  detail = "Use glob syntax: *.log, temp_*, build/, etc.";
 }
 
 export async function inputIgnoreList(repository: Repository, uris: Uri[]) {
@@ -37,20 +54,65 @@ export async function inputIgnoreList(repository: Repository, uris: Uri[]) {
     const fileName = path.basename(uri.fsPath);
     const dirName = path.dirname(uri.fsPath);
 
-    const picks: IgnoreSingleItem[] = [];
-    picks.push(new IgnoreSingleItem(fileName));
+    const picks: (IgnoreSingleItem | IgnoreCustomItem)[] = [];
+    picks.push(new IgnoreSingleItem(fileName, false, dirName));
     if (ext) {
-      picks.push(new IgnoreSingleItem("*" + ext));
+      picks.push(new IgnoreSingleItem("*" + ext, false, dirName));
     }
-    picks.push(new IgnoreSingleItem(fileName, true));
+    picks.push(new IgnoreSingleItem(fileName, true, dirName));
     if (ext) {
-      picks.push(new IgnoreSingleItem("*" + ext, true));
+      picks.push(new IgnoreSingleItem("*" + ext, true, dirName));
     }
+    picks.push(new IgnoreCustomItem());
 
-    const pick = await window.showQuickPick(picks);
+    const pick = await window.showQuickPick(picks, {
+      placeHolder: "Select pattern to ignore"
+    });
 
     if (!pick) {
       return false;
+    }
+
+    // Handle custom pattern
+    if (pick instanceof IgnoreCustomItem) {
+      const customPattern = await window.showInputBox({
+        prompt: "Enter ignore pattern",
+        placeHolder: "e.g., *.log, temp_*, __pycache__",
+        validateInput: value => {
+          if (!value || value.trim().length === 0) {
+            return "Pattern cannot be empty";
+          }
+          return undefined;
+        }
+      });
+      if (!customPattern) {
+        return false;
+      }
+      // Ask if recursive
+      const recursiveChoice = await window.showQuickPick(
+        [
+          {
+            label: "This folder only",
+            description: "Pattern applies only to this directory",
+            recursive: false
+          },
+          {
+            label: "Recursive (all subfolders)",
+            description:
+              "Pattern applies to this directory and all subdirectories",
+            recursive: true
+          }
+        ],
+        { placeHolder: "Select scope for the pattern" }
+      );
+      if (!recursiveChoice) {
+        return false;
+      }
+      return repository.addToIgnore(
+        [customPattern.trim()],
+        dirName,
+        recursiveChoice.recursive
+      );
     }
 
     return repository.addToIgnore([pick.expression], dirName, pick.recursive);

@@ -1,3 +1,15 @@
+## [2.36.0] (2025-12-17)
+
+### Feature: Enhanced svn:ignore Management
+
+- **Improved QuickPick**: Descriptions explain "this folder only" vs "all subfolders"
+- **Custom pattern**: New option to enter custom ignore patterns with glob syntax
+- **Remove from Ignore**: Right-click ignored files to remove patterns from svn:ignore
+- **View/Edit Patterns**: New command to view, edit, and remove ignore patterns by directory
+- **Multi-step UX**: Select directory → choose action → edit/remove patterns
+- **Commands**: `svn.removeFromIgnore`, `svn.viewIgnorePatterns`
+- **Affected**: ignoreitems.ts, svnRepository.ts, repository.ts, package.json
+
 ## [2.35.1] (2025-12-17)
 
 ### Fix: Property-Only Commits in Repo History
