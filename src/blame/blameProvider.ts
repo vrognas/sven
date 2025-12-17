@@ -743,11 +743,28 @@ export class BlameProvider implements Disposable {
 
       return data;
     } catch (err) {
-      logError("BlameProvider: Failed to fetch blame data", err);
-
-      // Show user-friendly notification for auth failures
+      // Extract error details
       const errorMsg =
         err instanceof Error ? err.message : String(err) || "Unknown error";
+      const stderrStr =
+        err && typeof err === "object" && "stderr" in err
+          ? String((err as { stderr?: unknown }).stderr)
+          : "";
+
+      // Suppress expected errors for unversioned/untracked files (not actual errors)
+      // W155010: node not found in working copy
+      // E200009: could not perform operation on some targets
+      const isUntrackedFile =
+        stderrStr.includes("W155010") ||
+        stderrStr.includes("E200009") ||
+        errorMsg.includes("W155010") ||
+        errorMsg.includes("E200009");
+
+      if (isUntrackedFile) {
+        return undefined; // Silently skip unversioned files
+      }
+
+      logError("BlameProvider: Failed to fetch blame data", err);
       if (
         errorMsg.includes("Authentication failed") ||
         errorMsg.includes("No more credentials") ||

@@ -545,6 +545,12 @@ export class Repository {
         if (err.stderr.includes("E160006")) {
           throw new Error(`Invalid revision: ${revision}`);
         }
+        // W155010: node not found (file/dir outside working copy or shallow checkout)
+        // E200009: could not perform operation on some targets
+        // These are expected for unversioned/non-existent files - don't log as errors
+        if (err.stderr.includes("W155010") || err.stderr.includes("E200009")) {
+          throw err; // Re-throw without logging (caller handles silently)
+        }
       }
       logError(`Failed to execute blame for ${relativePath}`, err);
       throw new Error(
