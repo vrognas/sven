@@ -18,7 +18,7 @@ import {
 } from "vscode";
 import { SourceControlManager } from "./source_control_manager";
 import { fromSvnUri } from "./uri";
-import { SvnUriAction, RepositoryChangeEvent } from "./common/types";
+import { SvnUriAction, RepositoryChangeEvent, Status } from "./common/types";
 import { debounce, throttle } from "./decorators";
 import {
   filterEvent,
@@ -122,6 +122,15 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       let mtime = new Date().getTime();
 
       if (repository) {
+        // Skip SVN calls for files we know are unversioned/ignored
+        const resource = repository.getResourceFromFile(fsPath);
+        if (
+          resource?.type === Status.UNVERSIONED ||
+          resource?.type === Status.IGNORED
+        ) {
+          return { type: FileType.File, size: 0, mtime: 0, ctime: 0 };
+        }
+
         try {
           const listResults = await repository.list(fsPath);
 
@@ -205,6 +214,14 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       this.cache.set(cacheKey, cacheValue);
 
       if (action === SvnUriAction.SHOW) {
+        // Skip SVN calls for files we know are unversioned/ignored
+        const resource = repository.getResourceFromFile(fsPath);
+        if (
+          resource?.type === Status.UNVERSIONED ||
+          resource?.type === Status.IGNORED
+        ) {
+          throw FileSystemError.FileNotFound(uri);
+        }
         return await repository.showBuffer(fsPath, extra.ref);
       }
       if (action === SvnUriAction.LOG) {
