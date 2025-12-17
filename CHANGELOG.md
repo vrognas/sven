@@ -1,9 +1,13 @@
 ## [2.36.3] (2025-12-17)
 
-### Fix: Ignored File Badges
+### Fix: Ignored File Badges & UX Improvements
 
 - **File badges**: Ignored files now show "I" badge in file explorer
-- Added `_ignored` resource group for badge indexing
+- **Unversioned folder badges**: Files inside unversioned/ignored folders now show "?" or "I" badge
+- **Blame errors**: Skip blame for files in unversioned/ignored folders (fixes E200009)
+- **Performance**: Reduced redundant SVN calls when toggling svn:ignore or svn:needs-lock
+- **UX**: Added SVN Properties submenu with Toggle Ignore and Toggle Needs Lock commands
+- **UX**: Added danger indicators (⚠️, 🗑️) to destructive dialogs
 
 ## [2.36.2] (2025-12-17)
 
