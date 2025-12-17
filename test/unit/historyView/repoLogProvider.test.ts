@@ -85,4 +85,28 @@ describe("RepoLogProvider - Revision Expansion E2E", () => {
     const basename = path.basename(pathElem._);
     expect(basename).toBe("my file (copy).txt");
   });
+
+  it("handles property-only commits with root path", async () => {
+    // SVN property-only commits include "/" for root directory changes
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<log>
+  <logentry revision="56">
+    <author>testuser</author>
+    <date>2025-12-17T14:18:42.118799Z</date>
+    <msg>chore(ignore): add svn:ignore prop</msg>
+    <paths>
+      <path action="M" prop-mods="true" text-mods="false" kind="dir">/</path>
+      <path action="M" prop-mods="true" text-mods="false" kind="dir">/Main Development</path>
+    </paths>
+  </logentry>
+</log>`;
+
+    const logEntries = await parseSvnLog(xml);
+    expect(logEntries.length).toBe(1);
+    expect(logEntries[0].paths.length).toBe(2);
+
+    // Root path "/" should be parseable
+    expect(logEntries[0].paths[0]._).toBe("/");
+    expect(logEntries[0].paths[1]._).toBe("/Main Development");
+  });
 });

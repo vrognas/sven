@@ -1076,7 +1076,9 @@ export class RepoLogProvider
       return result;
     } else if (element.kind === LogTreeItemKind.Commit) {
       const commit = element.data as ISvnLogEntry;
-      return transform(commit.paths, LogTreeItemKind.CommitDetail, element);
+      // Filter out root "/" path - occurs in property-only commits and cannot be parsed
+      const paths = commit.paths.filter(p => p._ !== "/");
+      return transform(paths, LogTreeItemKind.CommitDetail, element);
     }
     return [];
   }

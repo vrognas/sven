@@ -1,3 +1,12 @@
+## [2.35.1] (2025-12-17)
+
+### Fix: Property-Only Commits in Repo History
+
+- **Bug**: Expanding commits with only property changes (svn:ignore) threw "Invalid \_path" error
+- **Cause**: Root "/" path in property-only commits couldn't be parsed by PathNormalizer
+- **Fix**: Filter out root "/" paths from commit details since they're not meaningful to display
+- **Affected**: repoLogProvider.ts
+
 ## [2.35.0] (2025-12-09)
 
 ### Feature: History Filtering
