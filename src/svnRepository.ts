@@ -1778,7 +1778,7 @@ export class Repository {
     const args = ["propset", "svn:ignore", newIgnore];
 
     if (directory) {
-      args.push(directory);
+      args.push(fixPegRevision(directory));
     } else {
       args.push(".");
     }
@@ -1866,6 +1866,7 @@ export class Repository {
   /**
    * Get all svn:ignore patterns recursively from the repository.
    * Returns a Map of directory path to array of patterns.
+   * Uses XML output for reliable parsing (handles dirs with special chars).
    */
   public async getAllIgnorePatterns(): Promise<Map<string, string[]>> {
     const result = new Map<string, string[]>();
@@ -1875,6 +1876,7 @@ export class Repository {
         "propget",
         "svn:ignore",
         "-R",
+        "--xml",
         fixPegRevision(".")
       ]);
       const output = execResult.stdout;
@@ -1883,26 +1885,41 @@ export class Repository {
         return result;
       }
 
-      // Parse output format: "path - pattern" or multi-line patterns per directory
-      // SVN propget -R output format varies, handle both cases
-      let currentDir = ".";
-      const lines = output.split(/\r?\n/);
+      // Parse XML output format:
+      // <properties>
+      //   <target path="dir1">
+      //     <property name="svn:ignore">pattern1\npattern2</property>
+      //   </target>
+      // </properties>
+      const { XmlParserAdapter } = await import("./parser/xmlParserAdapter");
+      const parsed = XmlParserAdapter.parse(output, {
+        mergeAttrs: true,
+        explicitRoot: false,
+        explicitArray: false,
+        camelcase: true
+      });
 
-      for (const line of lines) {
-        // Check for directory header (ends with " - ")
-        // Use greedy match to handle directories containing " - " in name
-        const dirMatch = line.match(/^(.+)\s+-\s*$/);
-        if (dirMatch) {
-          currentDir = dirMatch[1]!;
-          if (!result.has(currentDir)) {
-            result.set(currentDir, []);
+      // Handle single target vs multiple targets
+      const targets = parsed?.target
+        ? Array.isArray(parsed.target)
+          ? parsed.target
+          : [parsed.target]
+        : [];
+
+      for (const target of targets) {
+        const targetPath = target?.path || ".";
+        const property = target?.property;
+        if (property) {
+          // Property value contains newline-separated patterns
+          const propValue =
+            typeof property === "string" ? property : property?._ || "";
+          const patterns = propValue
+            .split(/\r?\n/)
+            .map((p: string) => p.trim())
+            .filter((p: string) => p.length > 0);
+          if (patterns.length > 0) {
+            result.set(targetPath, patterns);
           }
-        } else if (line.trim()) {
-          // This is a pattern line
-          if (!result.has(currentDir)) {
-            result.set(currentDir, []);
-          }
-          result.get(currentDir)!.push(line.trim());
         }
       }
     } catch (error) {

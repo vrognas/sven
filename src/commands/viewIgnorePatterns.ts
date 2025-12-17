@@ -5,7 +5,7 @@ import { commands, window } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
 import { SourceControlManager } from "../source_control_manager";
-import { logError } from "../util/errorLogger";
+import { formatSvnError, logError } from "../util/errorLogger";
 
 interface DirectoryItem {
   label: string;
@@ -162,6 +162,21 @@ export class ViewIgnorePatterns extends Command {
 
     try {
       if (newValue.trim() === "") {
+        // Confirm before deleting all patterns
+        const confirm = await window.showQuickPick(
+          [
+            {
+              label: "Yes",
+              description: `Remove all patterns from ${directory}`
+            },
+            { label: "No", description: "Cancel" }
+          ],
+          { placeHolder: "Remove ALL ignore patterns?" }
+        );
+        if (confirm?.label !== "Yes") {
+          await this.showActionPicker(repository, directory, patterns);
+          return;
+        }
         // Delete property
         await repository.deleteIgnoreProperty(directory);
         window.showInformationMessage(
@@ -185,7 +200,10 @@ export class ViewIgnorePatterns extends Command {
       }
     } catch (error) {
       logError("Failed to update ignore patterns", error);
-      window.showErrorMessage("Failed to update ignore patterns");
+      window.showErrorMessage(
+        formatSvnError(error, "Failed to update ignore patterns")
+      );
+      await this.showActionPicker(repository, directory, patterns);
     }
   }
 
@@ -243,7 +261,10 @@ export class ViewIgnorePatterns extends Command {
       }
     } catch (error) {
       logError("Failed to remove pattern", error);
-      window.showErrorMessage("Failed to remove ignore pattern");
+      window.showErrorMessage(
+        formatSvnError(error, "Failed to remove ignore pattern")
+      );
+      await this.showActionPicker(repository, directory, patterns);
     }
   }
 }

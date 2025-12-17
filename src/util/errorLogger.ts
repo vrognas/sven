@@ -51,9 +51,10 @@ export function logWarning(message: string, data?: unknown): void {
   const sanitizedMessage = sanitizeString(message);
 
   if (data !== undefined) {
-    const sanitizedData = typeof data === "string"
-      ? sanitizeString(data)
-      : sanitizeString(JSON.stringify(data, null, 2));
+    const sanitizedData =
+      typeof data === "string"
+        ? sanitizeString(data)
+        : sanitizeString(JSON.stringify(data, null, 2));
     console.warn(`${sanitizedMessage}:`, sanitizedData);
   } else {
     console.warn(sanitizedMessage);
@@ -68,7 +69,10 @@ export function logWarning(message: string, data?: unknown): void {
  * @param originalError Optional original error for context
  * @returns Error with sanitized message
  */
-export function createSafeError(message: string, originalError?: unknown): Error {
+export function createSafeError(
+  message: string,
+  originalError?: unknown
+): Error {
   const sanitizedMessage = sanitizeString(message);
   const error = new Error(sanitizedMessage);
 
@@ -80,4 +84,18 @@ export function createSafeError(message: string, originalError?: unknown): Error
   }
 
   return error;
+}
+
+/**
+ * Format SVN error message with error code if available
+ * Extracts SVN error codes (E12345) from error string
+ *
+ * @param error The error to extract code from
+ * @param defaultMsg Default message if no code found
+ * @returns Formatted message with error code appended
+ */
+export function formatSvnError(error: unknown, defaultMsg: string): string {
+  const errStr = String(error);
+  const match = errStr.match(/svn: E(\d+)/);
+  return match ? `${defaultMsg} (E${match[1]})` : defaultMsg;
 }

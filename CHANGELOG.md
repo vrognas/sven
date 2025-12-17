@@ -1,3 +1,13 @@
+## [2.36.2] (2025-12-17)
+
+### Fix: svn:ignore Round 2
+
+- **XML parsing**: Use `--xml` for propget output (safer than text parsing)
+- **@ escaping**: Fix missing `fixPegRevision()` in `addToIgnore`
+- **Confirmation**: Prompt before clearing all ignore patterns
+- **Navigation**: Return to action picker after errors
+- **Error codes**: Show SVN error codes (E12345) in error messages
+
 ## [2.36.1] (2025-12-17)
 
 ### Fix: svn:ignore Bug Fixes

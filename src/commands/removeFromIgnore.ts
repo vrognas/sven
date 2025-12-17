@@ -6,7 +6,7 @@ import picomatch from "picomatch";
 import { Uri, window } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
-import { logError } from "../util/errorLogger";
+import { formatSvnError, logError } from "../util/errorLogger";
 
 export class RemoveFromIgnore extends Command {
   constructor() {
@@ -59,7 +59,9 @@ export class RemoveFromIgnore extends Command {
           );
         } catch (error) {
           logError("Failed to remove pattern", error);
-          window.showErrorMessage("Failed to remove ignore pattern");
+          window.showErrorMessage(
+            formatSvnError(error, "Failed to remove ignore pattern")
+          );
         }
       } else if (matchingPatterns.length === 1) {
         // Single match - confirm and remove
@@ -80,7 +82,9 @@ export class RemoveFromIgnore extends Command {
           window.showInformationMessage(`Removed '${pattern}' from svn:ignore`);
         } catch (error) {
           logError("Failed to remove pattern", error);
-          window.showErrorMessage("Failed to remove ignore pattern");
+          window.showErrorMessage(
+            formatSvnError(error, "Failed to remove ignore pattern")
+          );
         }
       } else {
         // Multiple matches - let user pick
@@ -99,7 +103,9 @@ export class RemoveFromIgnore extends Command {
           );
         } catch (error) {
           logError("Failed to remove pattern", error);
-          window.showErrorMessage("Failed to remove ignore pattern");
+          window.showErrorMessage(
+            formatSvnError(error, "Failed to remove ignore pattern")
+          );
         }
       }
     });
