@@ -43,7 +43,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(svn info:*)",
-      "Bash(svn log:*)"
+      "Bash(svn log:*)",
+      "WebFetch(domain:tortoisesvn.net)",
+      "WebFetch(domain:cwiki.apache.org)"
     ],
     "deny": [],
     "ask": []

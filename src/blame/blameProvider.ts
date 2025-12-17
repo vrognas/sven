@@ -4,6 +4,7 @@
 
 "use strict";
 
+import * as path from "path";
 import {
   ColorThemeKind,
   commands,
@@ -29,6 +30,7 @@ import {
   CompiledTemplateFn
 } from "./templateCompiler";
 import { logError } from "../util/errorLogger";
+import { Status } from "../common/types";
 
 /**
  * BlameProvider manages gutter decorations for SVN blame
@@ -157,7 +159,6 @@ export class BlameProvider implements Disposable {
 
     // Only check status if resource exists (null means clean file, not untracked)
     if (resource) {
-      const { Status } = await import("../common/types");
       // Skip files that can't be blamed:
       // - UNVERSIONED/IGNORED/NONE: not under version control
       // - ADDED: scheduled for addition but never committed (E195002)
@@ -166,6 +167,18 @@ export class BlameProvider implements Disposable {
         resource.type === Status.IGNORED ||
         resource.type === Status.NONE ||
         resource.type === Status.ADDED
+      ) {
+        this.clearDecorations(target);
+        return;
+      }
+    } else {
+      // Check if file is inside unversioned/ignored folder (not in resource index directly)
+      const parentStatus = this.getParentFolderStatus(
+        target.document.uri.fsPath
+      );
+      if (
+        parentStatus === Status.UNVERSIONED ||
+        parentStatus === Status.IGNORED
       ) {
         this.clearDecorations(target);
         return;
@@ -671,6 +684,34 @@ export class BlameProvider implements Disposable {
     }
 
     return true;
+  }
+
+  /**
+   * Check if file is inside an unversioned or ignored folder.
+   * Returns the parent folder's status if found, undefined otherwise.
+   */
+  private getParentFolderStatus(filePath: string): string | undefined {
+    // Check unversioned folders
+    for (const resource of this.repository.unversioned.resourceStates) {
+      if (
+        resource.kind === "dir" &&
+        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
+      ) {
+        return Status.UNVERSIONED;
+      }
+    }
+
+    // Check ignored folders
+    for (const resource of this.repository.ignored) {
+      if (
+        resource.kind === "dir" &&
+        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
+      ) {
+        return Status.IGNORED;
+      }
+    }
+
+    return undefined;
   }
 
   /**
