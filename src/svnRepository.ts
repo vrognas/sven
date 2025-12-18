@@ -412,8 +412,12 @@ export class Repository {
     skipCache: boolean = false,
     isUrl: boolean = false
   ): Promise<ISvnInfo> {
+    // Normalize path for consistent cache keys (forward slashes, lowercase on Windows)
+    const normalizedFile = file ? fixPathSeparator(file).toLowerCase() : "";
     // Build cache key (include revision for revision-specific queries)
-    const cacheKey = revision ? `${file}@${revision}` : file;
+    const cacheKey = revision
+      ? `${normalizedFile}@${revision}`
+      : normalizedFile;
 
     const cacheEntry = this._infoCache.get(cacheKey);
     if (!skipCache && cacheEntry) {
