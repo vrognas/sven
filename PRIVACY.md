@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Extension**: SVN (Positron)
+**Extension**: Sven
 **Version**: 2.17.236+
 **Last Updated**: 2025-11-21
 
