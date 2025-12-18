@@ -3,7 +3,7 @@
 // Licensed under MIT License
 
 import { Disposable, SourceControl, Uri } from "vscode";
-import { ISvnResourceGroup, LockStatus } from "../common/types";
+import { ISvnResourceGroup, LockStatus, Status } from "../common/types";
 import { Resource } from "../resource";
 import { StatusResult } from "./StatusService";
 import { StagingService, STAGING_CHANGELIST } from "./stagingService";
@@ -60,6 +60,12 @@ export interface IResourceGroupManager {
    * Find resource by URI across all groups
    */
   getResourceFromFile(uri: string | Uri): Resource | undefined;
+
+  /**
+   * Check if a file path is inside an unversioned or ignored FOLDER.
+   * Used when getResourceFromFile() returns undefined.
+   */
+  isInsideUnversionedOrIgnored(filePath: string): Status | undefined;
 
   /**
    * Get flat resource map for batch operations (Phase 21.A perf)
@@ -494,6 +500,44 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
     const normalizedPath = normalizePath(uri.fsPath);
     return this._resourceIndex.get(normalizedPath);
+  }
+
+  /**
+   * Check if a file path is inside an unversioned or ignored FOLDER.
+   * Used when getResourceFromFile() returns undefined - the file might not be
+   * individually indexed but could be inside an unversioned/ignored folder.
+   * Uses _allUnversioned (not UI-filtered) to correctly detect hidden folders.
+   */
+  isInsideUnversionedOrIgnored(filePath: string): Status | undefined {
+    const normalizedPath = normalizePath(filePath);
+
+    // Check unversioned folders (uses _allUnversioned, not UI-filtered list)
+    for (const resource of this._allUnversioned) {
+      if (
+        resource.kind === "dir" &&
+        normalizedPath.startsWith(
+          normalizePath(resource.resourceUri.fsPath) + path.sep
+        )
+      ) {
+        return Status.UNVERSIONED;
+      }
+    }
+
+    // Check ignored folders
+    for (const resource of this._ignored.resourceStates) {
+      if (resource instanceof Resource) {
+        if (
+          resource.kind === "dir" &&
+          normalizedPath.startsWith(
+            normalizePath(resource.resourceUri.fsPath) + path.sep
+          )
+        ) {
+          return Status.IGNORED;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   /**

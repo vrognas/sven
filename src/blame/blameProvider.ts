@@ -4,7 +4,6 @@
 
 "use strict";
 
-import * as path from "path";
 import {
   ColorThemeKind,
   commands,
@@ -691,30 +690,11 @@ export class BlameProvider implements Disposable {
 
   /**
    * Check if file is inside an unversioned or ignored folder.
-   * Returns the parent folder's status if found, undefined otherwise.
+   * Delegates to Repository.isInsideUnversionedOrIgnored which uses _allUnversioned
+   * (not UI-filtered) to correctly detect hidden folders.
    */
-  private getParentFolderStatus(filePath: string): string | undefined {
-    // Check unversioned folders
-    for (const resource of this.repository.unversioned.resourceStates) {
-      if (
-        resource.kind === "dir" &&
-        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
-      ) {
-        return Status.UNVERSIONED;
-      }
-    }
-
-    // Check ignored folders
-    for (const resource of this.repository.ignored) {
-      if (
-        resource.kind === "dir" &&
-        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
-      ) {
-        return Status.IGNORED;
-      }
-    }
-
-    return undefined;
+  private getParentFolderStatus(filePath: string): Status | undefined {
+    return this.repository.isInsideUnversionedOrIgnored(filePath);
   }
 
   /**

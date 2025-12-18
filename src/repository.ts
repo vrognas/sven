@@ -1039,6 +1039,14 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
+   * Check if a file path is inside an unversioned or ignored FOLDER.
+   * Used when getResourceFromFile() returns undefined.
+   */
+  public isInsideUnversionedOrIgnored(filePath: string): Status | undefined {
+    return this.groupManager.isInsideUnversionedOrIgnored(filePath);
+  }
+
+  /**
    * Get flat resource map for batch operations (Phase 21.A perf)
    * Avoids repeated URI conversion overhead in hot loops
    * @returns Map of file paths to resources

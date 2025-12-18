@@ -134,6 +134,18 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
           return { type: FileType.File, size: 0, mtime: 0, ctime: 0 };
         }
 
+        // Fallback: check if file is inside an unversioned/ignored folder
+        // (Files inside unversioned folders aren't individually indexed)
+        if (!resource) {
+          const parentStatus = repository.isInsideUnversionedOrIgnored(fsPath);
+          if (
+            parentStatus === Status.UNVERSIONED ||
+            parentStatus === Status.IGNORED
+          ) {
+            return { type: FileType.File, size: 0, mtime: 0, ctime: 0 };
+          }
+        }
+
         try {
           const listResults = await repository.list(fsPath);
 
@@ -227,6 +239,16 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
           resource?.type === Status.IGNORED
         ) {
           throw FileSystemError.FileNotFound(uri);
+        }
+        // Fallback: check if file is inside an unversioned/ignored folder
+        if (!resource) {
+          const parentStatus = repository.isInsideUnversionedOrIgnored(fsPath);
+          if (
+            parentStatus === Status.UNVERSIONED ||
+            parentStatus === Status.IGNORED
+          ) {
+            throw FileSystemError.FileNotFound(uri);
+          }
         }
         return await repository.showBuffer(fsPath, extra.ref);
       }

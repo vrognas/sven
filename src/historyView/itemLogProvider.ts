@@ -295,12 +295,22 @@ export class ItemLogProvider
 
           // Skip unversioned/ignored/added files - they have no history
           const resource = repo.getResourceFromFile(uri);
+          const { Status } = await import("../common/types");
           if (resource) {
-            const { Status } = await import("../common/types");
             if (
               resource.type === Status.UNVERSIONED ||
               resource.type === Status.IGNORED ||
               resource.type === Status.ADDED
+            ) {
+              this._onDidChangeTreeData.fire(element);
+              return;
+            }
+          } else {
+            // Fallback: check if file is inside an unversioned/ignored folder
+            const parentStatus = repo.isInsideUnversionedOrIgnored(uri.fsPath);
+            if (
+              parentStatus === Status.UNVERSIONED ||
+              parentStatus === Status.IGNORED
             ) {
               this._onDidChangeTreeData.fire(element);
               return;
