@@ -869,7 +869,9 @@ export class Repository implements IRemoteRepository {
         hideUnversioned: configuration.get<boolean>(
           "sourceControl.hideUnversioned",
           false
-        )
+        ),
+        ignoreList: configuration.get<string[]>("sourceControl.ignore", []),
+        workspaceRoot: this.workspaceRoot
       },
       // Lock status is authoritative when fetched with --show-updates
       lockStatusFresh: fetchLockStatus

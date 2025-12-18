@@ -732,7 +732,19 @@ export class BlameProvider implements Disposable {
     }
 
     // Pre-check: verify file is under version control before attempting blame
-    // This avoids SVN errors for files outside working copy (shallow checkout)
+    // First check resource index (avoids SVN call for known unversioned files)
+    const resource = this.repository.getResourceFromFile(uri);
+    if (resource) {
+      if (
+        resource.type === Status.UNVERSIONED ||
+        resource.type === Status.IGNORED ||
+        resource.type === Status.ADDED
+      ) {
+        return undefined;
+      }
+    }
+
+    // Fallback: check with svn info for files not in index (shallow checkout edge case)
     try {
       await this.repository.getInfo(uri.fsPath);
     } catch {

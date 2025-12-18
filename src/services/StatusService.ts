@@ -276,7 +276,7 @@ export class StatusService implements IStatusService {
   private async categorizeStatuses(
     statuses: IFileStatus[],
     excludeList: string[],
-    config: StatusConfig
+    _config: StatusConfig // Kept for API stability, ignoreList filtering moved to ResourceGroupManager
   ): Promise<{
     changes: Resource[];
     conflicts: Resource[];
@@ -432,17 +432,8 @@ export class StatusService implements IStatusService {
           continue;
         }
 
-        // Check against ignore list
-        if (
-          config.ignoreList.length > 0 &&
-          matchAll(path.sep + status.path, config.ignoreList, {
-            dot: true,
-            matchBase: true
-          })
-        ) {
-          continue;
-        }
-
+        // Note: ignoreList filtering moved to ResourceGroupManager for UI only
+        // All unversioned files are returned for resource index (enables pre-checks)
         unversioned.push(resource);
       } else if (status.changelist) {
         // Add to changelist group

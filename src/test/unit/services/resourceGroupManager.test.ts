@@ -101,7 +101,9 @@ suite("ResourceGroupManager Tests", () => {
     const config = {
       ignoreOnStatusCountList: [],
       countUnversioned: false,
-      hideUnversioned: false
+      hideUnversioned: false,
+      ignoreList: [],
+      workspaceRoot: "/workspace"
     };
     manager.updateGroups({ result: statusResult, config });
 
@@ -171,7 +173,9 @@ suite("ResourceGroupManager Tests", () => {
     const testConfig = {
       ignoreOnStatusCountList: [],
       countUnversioned: false,
-      hideUnversioned: false
+      hideUnversioned: false,
+      ignoreList: [],
+      workspaceRoot: "/workspace"
     };
     manager.updateGroups({ result: result1, config: testConfig });
 
@@ -254,7 +258,9 @@ suite("ResourceGroupManager Tests", () => {
     const config = {
       ignoreOnStatusCountList: [],
       countUnversioned: false,
-      hideUnversioned: false
+      hideUnversioned: false,
+      ignoreList: [],
+      workspaceRoot: "/workspace"
     };
 
     // Act - first call should rebuild
@@ -312,7 +318,9 @@ suite("ResourceGroupManager Tests", () => {
     const config = {
       ignoreOnStatusCountList: [],
       countUnversioned: false,
-      hideUnversioned: false
+      hideUnversioned: false,
+      ignoreList: [],
+      workspaceRoot: "/workspace"
     };
 
     // Act
@@ -382,7 +390,9 @@ suite("ResourceGroupManager Tests", () => {
     const config = {
       ignoreOnStatusCountList: [],
       countUnversioned: false,
-      hideUnversioned: false
+      hideUnversioned: false,
+      ignoreList: [],
+      workspaceRoot: "/workspace"
     };
 
     // Act

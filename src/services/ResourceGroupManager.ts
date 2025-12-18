@@ -8,6 +8,8 @@ import { Resource } from "../resource";
 import { StatusResult } from "./StatusService";
 import { StagingService, STAGING_CHANGELIST } from "./stagingService";
 import { normalizePath, toDisposable } from "../util";
+import { matchAll } from "../util/globMatch";
+import * as path from "path";
 
 /**
  * Configuration for resource group updates
@@ -16,6 +18,10 @@ export type ResourceGroupConfig = {
   readonly ignoreOnStatusCountList: readonly string[];
   readonly countUnversioned: boolean;
   readonly hideUnversioned: boolean;
+  /** Patterns to filter from UI display (but keep in index for pre-checks) */
+  readonly ignoreList: readonly string[];
+  /** Workspace root for computing relative paths */
+  readonly workspaceRoot: string;
 };
 
 /**
@@ -338,12 +344,28 @@ export class ResourceGroupManager implements IResourceGroupManager {
       this._unversioned.hideWhenEmpty = true;
     }
 
-    // Store all unversioned for index lookup (including hidden)
+    // Store all unversioned for index lookup (including hidden and ignored-by-pattern)
     this._allUnversioned = mergePreservedLockStatus(result.unversioned);
-    // Filter for UI display only when hideUnversioned is enabled
-    this._unversioned.resourceStates = config.hideUnversioned
-      ? []
-      : this._allUnversioned;
+
+    // Filter for UI display: hide if hideUnversioned enabled, or matches ignoreList
+    if (config.hideUnversioned) {
+      this._unversioned.resourceStates = [];
+    } else if (config.ignoreList.length > 0) {
+      // Filter out files matching ignoreList patterns (for UI only, index keeps all)
+      this._unversioned.resourceStates = this._allUnversioned.filter(r => {
+        // Compute relative path from workspace root (matches original StatusService logic)
+        const relativePath = path.relative(
+          config.workspaceRoot,
+          r.resourceUri.fsPath
+        );
+        return !matchAll(path.sep + relativePath, config.ignoreList, {
+          dot: true,
+          matchBase: true
+        });
+      });
+    } else {
+      this._unversioned.resourceStates = this._allUnversioned;
+    }
 
     // Ignored files (for file explorer badges, not shown in SCM panel)
     this._ignored.resourceStates = result.ignored;
