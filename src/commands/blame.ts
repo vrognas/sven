@@ -6,6 +6,7 @@ import { window, Uri } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
+import { Status } from "../common/types";
 import { logError } from "../util/errorLogger";
 
 /**
@@ -54,6 +55,34 @@ export class Blame extends Command {
         return;
       }
 
+      // Wait for status to load before checking file version
+      await repository.statusReady;
+
+      // Skip unversioned/ignored/added files - can't blame
+      const resource = repository.getResourceFromFile(uri);
+      if (resource) {
+        if (
+          resource.type === Status.UNVERSIONED ||
+          resource.type === Status.IGNORED ||
+          resource.type === Status.ADDED
+        ) {
+          window.showWarningMessage("Cannot blame unversioned or added file");
+          return;
+        }
+      } else {
+        // Fallback: check if file is inside unversioned/ignored folder
+        const parentStatus = repository.isInsideUnversionedOrIgnored(
+          uri.fsPath
+        );
+        if (
+          parentStatus === Status.UNVERSIONED ||
+          parentStatus === Status.IGNORED
+        ) {
+          window.showWarningMessage("Cannot blame file in unversioned folder");
+          return;
+        }
+      }
+
       // Execute blame
       try {
         const blameLines = await repository.blame(
@@ -69,7 +98,6 @@ export class Blame extends Command {
 
         // TODO: Trigger BlameProvider to display results
         // This will be wired up when BlameProvider is implemented
-
       } catch (err) {
         logError("Blame command failed", err);
         throw err; // handleRepositoryOperation will catch and show to user
