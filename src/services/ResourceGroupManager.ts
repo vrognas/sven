@@ -448,9 +448,11 @@ export class ResourceGroupManager implements IResourceGroupManager {
   /**
    * Rebuild resource index from all groups (Phase 8.1 perf fix)
    * Called conditionally after updating resource groups (Phase 16 perf fix)
+   * Uses atomic swap to prevent race conditions during rebuild.
    */
   private rebuildResourceIndex(): void {
-    this._resourceIndex.clear();
+    // Build new index first (atomic - no race window)
+    const newIndex = new Map<string, Resource>();
 
     // Add local resources first (these have lock status and real file status)
     // Use _allUnversioned for index (includes hidden unversioned files)
@@ -471,7 +473,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
     for (const resource of localResources) {
       if (resource instanceof Resource) {
         const normalizedPath = normalizePath(resource.resourceUri.fsPath);
-        this._resourceIndex.set(normalizedPath, resource);
+        newIndex.set(normalizedPath, resource);
       }
     }
 
@@ -481,12 +483,15 @@ export class ResourceGroupManager implements IResourceGroupManager {
       for (const resource of this._remoteChanges.resourceStates) {
         if (resource instanceof Resource) {
           const normalizedPath = normalizePath(resource.resourceUri.fsPath);
-          if (!this._resourceIndex.has(normalizedPath)) {
-            this._resourceIndex.set(normalizedPath, resource);
+          if (!newIndex.has(normalizedPath)) {
+            newIndex.set(normalizedPath, resource);
           }
         }
       }
     }
+
+    // Atomic swap - eliminates race window where old index is cleared but new not ready
+    this._resourceIndex = newIndex;
   }
 
   /**
@@ -503,15 +508,24 @@ export class ResourceGroupManager implements IResourceGroupManager {
   }
 
   /**
-   * Check if a file path is inside an unversioned or ignored FOLDER.
-   * Used when getResourceFromFile() returns undefined - the file might not be
-   * individually indexed but could be inside an unversioned/ignored folder.
-   * Uses _allUnversioned (not UI-filtered) to correctly detect hidden folders.
+   * Check if a file path is unversioned/ignored (directly or inside a folder).
+   * Used when getResourceFromFile() returns undefined - checks:
+   * 1. If the file ITSELF is in _allUnversioned (exact match)
+   * 2. If the file is INSIDE an unversioned/ignored folder
+   * Uses _allUnversioned (not UI-filtered) to correctly detect hidden files/folders.
    */
   isInsideUnversionedOrIgnored(filePath: string): Status | undefined {
     const normalizedPath = normalizePath(filePath);
 
-    // Check unversioned folders (uses _allUnversioned, not UI-filtered list)
+    // First check if file ITSELF is unversioned (exact match)
+    // This catches standalone unversioned files not inside unversioned folders
+    for (const resource of this._allUnversioned) {
+      if (normalizePath(resource.resourceUri.fsPath) === normalizedPath) {
+        return Status.UNVERSIONED;
+      }
+    }
+
+    // Then check unversioned FOLDERS (file inside unversioned folder)
     for (const resource of this._allUnversioned) {
       if (
         resource.kind === "dir" &&
@@ -523,7 +537,16 @@ export class ResourceGroupManager implements IResourceGroupManager {
       }
     }
 
-    // Check ignored folders
+    // Check if file ITSELF is ignored (exact match)
+    for (const resource of this._ignored.resourceStates) {
+      if (resource instanceof Resource) {
+        if (normalizePath(resource.resourceUri.fsPath) === normalizedPath) {
+          return Status.IGNORED;
+        }
+      }
+    }
+
+    // Check ignored FOLDERS (file inside ignored folder)
     for (const resource of this._ignored.resourceStates) {
       if (resource instanceof Resource) {
         if (
