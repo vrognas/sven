@@ -290,6 +290,9 @@ export class ItemLogProvider
       if (uri.scheme === "file") {
         const repo = this.sourceControlManager.getRepository(uri);
         if (repo !== null) {
+          // Wait for initial status to load before checking file version
+          await repo.statusReady;
+
           // Skip unversioned/ignored/added files - they have no history
           const resource = repo.getResourceFromFile(uri);
           if (resource) {

@@ -198,6 +198,12 @@ export class Repository implements IRemoteRepository {
   private needsLockCacheExpiry = 0;
   private static readonly NEEDS_LOCK_CACHE_TTL = 60000; // 60 seconds
 
+  // Promise that resolves after initial status refresh completes
+  private _statusReadyResolve!: () => void;
+  public readonly statusReady: Promise<void> = new Promise(resolve => {
+    this._statusReadyResolve = resolve;
+  });
+
   // Lock status cache: preserves lock info between status calls
   // Lock status is only visible with --show-updates, so we cache it
   // Map: relative path -> { lockStatus, lockOwner, hasLockToken }
@@ -455,18 +461,22 @@ export class Repository implements IRemoteRepository {
       }
     });
 
-    this.status().catch(err => {
-      // Show user-friendly message for connection errors on startup
-      const svnError = err as ISvnErrorData;
-      if (
-        svnError.svnErrorCode === svnErrorCodes.UnableToConnect ||
-        svnError.stderrFormated?.includes("No such host")
-      ) {
-        window.showErrorMessage(
-          "Unable to connect to SVN server. Check VPN/network."
-        );
-      }
-    });
+    this.status()
+      .then(() => this._statusReadyResolve())
+      .catch(err => {
+        // Resolve even on error so callers don't hang
+        this._statusReadyResolve();
+        // Show user-friendly message for connection errors on startup
+        const svnError = err as ISvnErrorData;
+        if (
+          svnError.svnErrorCode === svnErrorCodes.UnableToConnect ||
+          svnError.stderrFormated?.includes("No such host")
+        ) {
+          window.showErrorMessage(
+            "Unable to connect to SVN server. Check VPN/network."
+          );
+        }
+      });
 
     this.disposables.push(
       workspace.onDidSaveTextDocument(document => {

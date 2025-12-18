@@ -45,7 +45,8 @@
       "Bash(svn info:*)",
       "Bash(svn log:*)",
       "WebFetch(domain:tortoisesvn.net)",
-      "WebFetch(domain:cwiki.apache.org)"
+      "WebFetch(domain:cwiki.apache.org)",
+      "Bash(svn status:*)"
     ],
     "deny": [],
     "ask": []

@@ -154,6 +154,9 @@ export class BlameProvider implements Disposable {
       return;
     }
 
+    // Wait for initial status to load before checking file version
+    await this.repository.statusReady;
+
     // Skip untracked files (prevents SVN errors for UNVERSIONED/IGNORED files)
     const resource = this.repository.getResourceFromFile(target.document.uri);
 
