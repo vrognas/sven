@@ -1,7 +1,7 @@
 # npm audit Output Reference & Interpretation
 
 **Generated:** 2025-11-20
-**Current Version:** positron-svn v2.17.230
+**Current Version:** sven v2.17.230
 **Audit Status:** 4 HIGH vulnerabilities identified
 
 ---
@@ -9,6 +9,7 @@
 ## Current npm audit Output
 
 ### Summary
+
 ```
 found 4 high severity vulnerabilities
 ```
@@ -41,9 +42,7 @@ found 4 high severity vulnerabilities
       ],
       "effects": ["npm"],
       "range": "11.0.0 - 11.0.3",
-      "nodes": [
-        "node_modules/npm/node_modules/glob"
-      ],
+      "nodes": ["node_modules/npm/node_modules/glob"],
       "fixAvailable": {
         "name": "semantic-release",
         "version": "24.2.9",
@@ -57,9 +56,7 @@ found 4 high severity vulnerabilities
       "via": ["npm"],
       "effects": ["semantic-release"],
       "range": ">=13.0.0-alpha.1",
-      "nodes": [
-        "node_modules/@semantic-release/npm"
-      ],
+      "nodes": ["node_modules/@semantic-release/npm"],
       "fixAvailable": {
         "name": "semantic-release",
         "version": "24.2.9",
@@ -73,9 +70,7 @@ found 4 high severity vulnerabilities
       "via": ["glob"],
       "effects": ["@semantic-release/npm"],
       "range": "7.21.0 - 8.5.4 || >=11.6.1",
-      "nodes": [
-        "node_modules/npm"
-      ],
+      "nodes": ["node_modules/npm"],
       "fixAvailable": {
         "name": "semantic-release",
         "version": "24.2.9",
@@ -89,9 +84,7 @@ found 4 high severity vulnerabilities
       "via": ["@semantic-release/npm"],
       "effects": [],
       "range": ">=25.0.0-alpha.1",
-      "nodes": [
-        "node_modules/semantic-release"
-      ],
+      "nodes": ["node_modules/semantic-release"],
       "fixAvailable": {
         "name": "semantic-release",
         "version": "24.2.9",
@@ -142,6 +135,7 @@ found 4 high severity vulnerabilities
 ```
 
 **Interpretation:**
+
 - **Issue:** Command injection in glob CLI tool
 - **Vulnerability ID:** GHSA-5j98-mcp5-4vw2
 - **Affected versions:** 11.0.0, 11.0.1, 11.0.2, 11.0.3
@@ -162,6 +156,7 @@ found 4 high severity vulnerabilities
 ```
 
 **Interpretation:**
+
 - **Issue:** Vulnerable npm version bundled
 - **Root cause:** Depends on npm with glob@11.0.3
 - **Affected versions:** v13.0.0 and later (v13.0.0 used in semantic-release@25)
@@ -181,6 +176,7 @@ found 4 high severity vulnerabilities
 ```
 
 **Interpretation:**
+
 - **Issue:** npm uses glob@11.0.3
 - **Affected versions:** v11.6.1 and later (v11.x series has glob@11.0.3)
 - **Your version:** 11.6.1+ (VULNERABLE)
@@ -199,6 +195,7 @@ found 4 high severity vulnerabilities
 ```
 
 **Interpretation:**
+
 - **Issue:** semantic-release v25 pulls in vulnerable @semantic-release/npm
 - **Affected versions:** v25.0.0 and later
 - **Your version:** 25.0.2 (VULNERABLE)
@@ -239,7 +236,7 @@ Note: npm vulnerability (VULN #3) is same as glob via chain
 ### Current State
 
 ```
-positron-svn@2.17.230
+sven@2.17.230
 ├── dependencies (7 packages)
 │   ├── @vscode/iconv-lite-umd@0.7.1 ✓
 │   ├── chardet@2.1.1 ✓
@@ -289,7 +286,7 @@ No vulnerabilities found
 ### Dependency Tree After Fix
 
 ```
-positron-svn@2.17.230
+sven@2.17.230
 ├── dependencies (7 packages)
 │   ├── @vscode/iconv-lite-umd@0.7.1 ✓
 │   ├── chardet@2.1.1 ✓
@@ -327,16 +324,16 @@ Summary:
 
 ### What Each Term Means
 
-| Term | Meaning | In Your Case |
-|------|---------|--------------|
-| **Vulnerability** | A security flaw in code | GHSA-5j98-mcp5-4vw2 in glob |
-| **CVE** | Publicly tracked vulnerability | GHSA ID for GitHub advisory |
-| **CWE** | Class of weakness | CWE-78 (OS Command Injection) |
-| **Affected Package** | Package containing vulnerability | glob@11.0.3 |
-| **Indirect Dependency** | Not directly in your package.json | glob (via npm in @semantic-release/npm) |
-| **Direct Dependency** | Listed in your package.json | semantic-release@25.0.2 |
-| **Transitive Dependency** | Dependency of a dependency | npm (via @semantic-release/npm) |
-| **Fix Available** | Updated version that patches it | semantic-release@24.2.9 |
+| Term                      | Meaning                           | In Your Case                            |
+| ------------------------- | --------------------------------- | --------------------------------------- |
+| **Vulnerability**         | A security flaw in code           | GHSA-5j98-mcp5-4vw2 in glob             |
+| **CVE**                   | Publicly tracked vulnerability    | GHSA ID for GitHub advisory             |
+| **CWE**                   | Class of weakness                 | CWE-78 (OS Command Injection)           |
+| **Affected Package**      | Package containing vulnerability  | glob@11.0.3                             |
+| **Indirect Dependency**   | Not directly in your package.json | glob (via npm in @semantic-release/npm) |
+| **Direct Dependency**     | Listed in your package.json       | semantic-release@25.0.2                 |
+| **Transitive Dependency** | Dependency of a dependency        | npm (via @semantic-release/npm)         |
+| **Fix Available**         | Updated version that patches it   | semantic-release@24.2.9                 |
 
 ### Why Show 4 Vulnerabilities?
 
@@ -362,6 +359,7 @@ FIX ONE = FIX ALL (by downgrading semantic-release to v24)
 ### Common npm audit Output Variations
 
 #### Clean Audit (Goal)
+
 ```bash
 $ npm audit
 up to date, audited 1249 packages
@@ -369,6 +367,7 @@ No vulnerabilities found
 ```
 
 #### Audit with Fixable Issues
+
 ```bash
 $ npm audit
 found X vulnerabilities
@@ -379,6 +378,7 @@ Fixable with: npm audit --fix
 ```
 
 #### Audit with Unfixable Issues
+
 ```bash
 $ npm audit
 found X vulnerabilities
@@ -394,24 +394,28 @@ Manual review required
 ## Audit Commands Reference
 
 ### Get Text Report
+
 ```bash
 npm audit
 # Shows summary and recommendations
 ```
 
 ### Get JSON Report
+
 ```bash
 npm audit --json
 # Outputs machine-readable report (for parsing)
 ```
 
 ### Get Detailed Report
+
 ```bash
 npm audit --long
 # Shows description field for each vulnerability
 ```
 
 ### Automatic Fixes
+
 ```bash
 npm audit --fix
 # Tries to auto-fix all vulnerabilities
@@ -419,12 +423,14 @@ npm audit --fix
 ```
 
 ### Audit Specific Package
+
 ```bash
 npm audit | grep semantic-release
 # Filter to specific package
 ```
 
 ### Get Audit Size
+
 ```bash
 npm audit --size
 # Shows audit database size
@@ -434,13 +440,13 @@ npm audit --size
 
 ## Severity Levels Explained
 
-| Level | What It Means | Risk | Action |
-|-------|--------------|------|--------|
-| **CRITICAL** | Exploit is easy, impact is severe | Immediate | Fix now or disable package |
-| **HIGH** | Exploit is possible, impact is serious | Urgent | Fix within days |
-| **MODERATE** | Exploit is harder, impact is medium | Important | Plan fix for next sprint |
-| **LOW** | Exploit is difficult, impact is minor | Monitor | Fix when convenient |
-| **INFO** | Not a vulnerability, just notice | N/A | Review for information |
+| Level        | What It Means                          | Risk      | Action                     |
+| ------------ | -------------------------------------- | --------- | -------------------------- |
+| **CRITICAL** | Exploit is easy, impact is severe      | Immediate | Fix now or disable package |
+| **HIGH**     | Exploit is possible, impact is serious | Urgent    | Fix within days            |
+| **MODERATE** | Exploit is harder, impact is medium    | Important | Plan fix for next sprint   |
+| **LOW**      | Exploit is difficult, impact is minor  | Monitor   | Fix when convenient        |
+| **INFO**     | Not a vulnerability, just notice       | N/A       | Review for information     |
 
 **Your Case:** HIGH (urgent, fixable within minutes)
 
@@ -492,26 +498,27 @@ From your audit report:
 {
   "metadata": {
     "vulnerabilities": {
-      "info": 0,      // Informational notices
-      "low": 0,       // Low severity
-      "moderate": 0,  // Moderate severity
-      "high": 4,      // HIGH severity ← YOU ARE HERE
-      "critical": 0,  // Critical severity
-      "total": 4      // Total vulnerabilities
+      "info": 0, // Informational notices
+      "low": 0, // Low severity
+      "moderate": 0, // Moderate severity
+      "high": 4, // HIGH severity ← YOU ARE HERE
+      "critical": 0, // Critical severity
+      "total": 4 // Total vulnerabilities
     },
     "dependencies": {
-      "prod": 9,           // Production dependencies
-      "dev": 1241,         // Development dependencies
-      "optional": 103,     // Optional dependencies
-      "peer": 0,           // Peer dependencies
-      "peerOptional": 0,   // Optional peer dependencies
-      "total": 1249        // Total dependencies
+      "prod": 9, // Production dependencies
+      "dev": 1241, // Development dependencies
+      "optional": 103, // Optional dependencies
+      "peer": 0, // Peer dependencies
+      "peerOptional": 0, // Optional peer dependencies
+      "total": 1249 // Total dependencies
     }
   }
 }
 ```
 
 **Key Insight:**
+
 - Only 4 total vulnerabilities (all in dev dependencies)
 - 0 production dependencies vulnerable
 - Can safely fix without affecting users
@@ -521,6 +528,7 @@ From your audit report:
 ## Comparing Audit Reports
 
 ### Before Fix (Current)
+
 ```
 Total vulnerabilities: 4 (all HIGH)
 Fixable: YES (npm audit --fix won't work, need manual downgrade)
@@ -530,6 +538,7 @@ Breaking changes: None
 ```
 
 ### After Fix (Expected)
+
 ```
 Total vulnerabilities: 0
 Fixable: N/A
@@ -542,17 +551,17 @@ Breaking changes: None
 
 ## Quick Comparison Table
 
-| Metric | Before | After |
-|--------|--------|-------|
-| CRITICAL | 0 | 0 |
-| HIGH | 4 | 0 |
-| MODERATE | 0 | 0 |
-| LOW | 0 | 0 |
-| Total | 4 | 0 |
-| Action Required | Yes | None |
-| Blocking | Yes (release pipeline) | No |
-| CI/CD Impact | High risk | Safe |
-| Prod Impact | None | None |
+| Metric          | Before                 | After |
+| --------------- | ---------------------- | ----- |
+| CRITICAL        | 0                      | 0     |
+| HIGH            | 4                      | 0     |
+| MODERATE        | 0                      | 0     |
+| LOW             | 0                      | 0     |
+| Total           | 4                      | 0     |
+| Action Required | Yes                    | None  |
+| Blocking        | Yes (release pipeline) | No    |
+| CI/CD Impact    | High risk              | Safe  |
+| Prod Impact     | None                   | None  |
 
 ---
 

@@ -9,6 +9,7 @@
 ## Executive Summary
 
 **Critical Finding:** Documentation blocks adoption at multiple layers:
+
 - **Developer Contribution:** No CONTRIBUTING.md = zero path for external contributions
 - **API Integration:** Sparse JSDoc = no IDE autocomplete for library users
 - **New Developer Onboarding:** Setup scattered across files = hours wasted finding dependencies
@@ -16,6 +17,7 @@
 - **Support Burden:** Incomplete Configuration Guide = recurring support tickets
 
 **Quantified Impact:**
+
 - Missing docs cost ~5-8 hours per new contributor onboarding
 - Sparse JSDoc blocks external library usage
 - No CONTRIBUTING.md signals closed to contributions
@@ -27,17 +29,17 @@
 
 ### Current Documentation State
 
-| Document | Status | Completeness | Audience | Quality |
-|----------|--------|--------------|----------|---------|
-| README.md | Exists | 40% | End users | GOOD |
-| CLAUDE.md | Exists | 100% | Internal devs | EXCELLENT |
-| ARCHITECTURE_ANALYSIS.md | Exists | 100% | Internal devs | EXCELLENT |
-| LESSONS_LEARNED.md | Exists | 100% | Internal devs | EXCELLENT |
-| JSDoc coverage | Sparse | 15-20% | API users | POOR |
-| CONTRIBUTING.md | MISSING | 0% | Contributors | CRITICAL GAP |
-| DEVELOPER_SETUP.md | MISSING | 0% | New devs | CRITICAL GAP |
-| COMMAND_REFERENCE.md | MISSING | 0% | End users | MEDIUM GAP |
-| CONFIGURATION_GUIDE.md | PARTIAL | 50% | End users | INCOMPLETE |
+| Document                 | Status  | Completeness | Audience      | Quality      |
+| ------------------------ | ------- | ------------ | ------------- | ------------ |
+| README.md                | Exists  | 40%          | End users     | GOOD         |
+| CLAUDE.md                | Exists  | 100%         | Internal devs | EXCELLENT    |
+| ARCHITECTURE_ANALYSIS.md | Exists  | 100%         | Internal devs | EXCELLENT    |
+| LESSONS_LEARNED.md       | Exists  | 100%         | Internal devs | EXCELLENT    |
+| JSDoc coverage           | Sparse  | 15-20%       | API users     | POOR         |
+| CONTRIBUTING.md          | MISSING | 0%           | Contributors  | CRITICAL GAP |
+| DEVELOPER_SETUP.md       | MISSING | 0%           | New devs      | CRITICAL GAP |
+| COMMAND_REFERENCE.md     | MISSING | 0%           | End users     | MEDIUM GAP   |
+| CONFIGURATION_GUIDE.md   | PARTIAL | 50%          | End users     | INCOMPLETE   |
 
 **Key Insight:** Internal documentation excellent, but external-facing docs weak.
 
@@ -59,6 +61,7 @@
 **Audience:** External developers, community contributors
 
 **Gap Impact:**
+
 ```
 - New developers don't know how to submit PRs
 - No TDD/testing requirements documented
@@ -68,17 +71,20 @@
 ```
 
 **What's Blocked:**
+
 - External contributions (zero documented path)
 - Community adoption
 - Bug reports as PRs
 - Feature contributions
 
 **Value Metrics:**
+
 - **Developer Experience:** -5 to -8 hours per contributor (finding info scattered)
 - **Adoption Signal:** Absence signals "not accepting contributions"
 - **Support Burden:** More inbound questions on how to contribute
 
 **ROI Analysis:**
+
 ```
 Effort:      2-3 hours
 Maintenance: LOW (stable, rarely changes)
@@ -88,6 +94,7 @@ Payoff:      Every contributor saved 5-8 hours = 10x ROI with 5 contributors/yea
 ```
 
 **Maintenance Strategy:**
+
 - Static document with version anchors
 - Annual review (low change frequency)
 - Link to CLAUDE.md for TDD details
@@ -101,6 +108,7 @@ Payoff:      Every contributor saved 5-8 hours = 10x ROI with 5 contributors/yea
 **Audience:** New developers, contributors
 
 **Gap Impact:**
+
 ```
 - No instructions for npm/Node version requirements
 - Build process scattered (build.js, package.json scripts)
@@ -110,16 +118,19 @@ Payoff:      Every contributor saved 5-8 hours = 10x ROI with 5 contributors/yea
 ```
 
 **What's Blocked:**
+
 - New contributors can't get environment working
 - Setup takes 2-3 hours of trial/error
 - Environment differences cause "works on my machine" issues
 
 **Value Metrics:**
+
 - **Onboarding Time:** 3 hours → 20 minutes (90% reduction)
 - **Setup Failures:** 30-40% first-time setup fail without docs
 - **Support Burden:** "Help, I can't build" is common issue
 
 **ROI Analysis:**
+
 ```
 Effort:      1-2 hours to write
 Maintenance: MEDIUM (Node versions change quarterly)
@@ -129,6 +140,7 @@ Payoff:      Each contributor saved 2-3 hours = 5-10 contributors/year × 2.5h =
 ```
 
 **Maintenance Strategy:**
+
 - Automated Node.js version detection in CI
 - NPM audit baseline tracking
 - Quick reference card format
@@ -136,6 +148,7 @@ Payoff:      Each contributor saved 2-3 hours = 5-10 contributors/year × 2.5h =
 - Version pinning in .nvmrc
 
 **Maintenance Cost Estimate:**
+
 - Quarterly review: 15-20 minutes
 - Annual major update: 30-45 minutes
 
@@ -147,6 +160,7 @@ Payoff:      Each contributor saved 2-3 hours = 5-10 contributors/year × 2.5h =
 **Audience:** External library users, IDE integration
 
 **Gap Impact:**
+
 ```
 Public Methods Missing Docs:
 - Repository.ts: 40+ methods undocumented
@@ -162,18 +176,21 @@ Missing IDE Features:
 ```
 
 **What's Blocked:**
+
 - External developers can't use extension as a library
 - IDE autocomplete disabled for custom code
 - No intellisense in VSCode for extension APIs
 - Difficult to understand parameter expectations
 
 **Value Metrics:**
+
 - **IDE Integration:** Disabled (no autocomplete visible)
 - **Library Usability:** Not documented for external usage
 - **Developer Experience:** -10 to -20 minutes per method lookup
 - **Code Maintainability:** Self-documenting code saves review time
 
 **ROI Analysis:**
+
 ```
 Effort:      4-6 hours initial + 20 min per new method
 Maintenance: HIGH (changes with code, requires discipline)
@@ -184,6 +201,7 @@ Payoff:      Library mode not critical, but good internal documentation
 ```
 
 **Maintenance Strategy:**
+
 - Pre-commit hook validates JSDoc
 - ESLint rule for public methods (require-jsdoc)
 - CI/CD validates completeness
@@ -191,11 +209,13 @@ Payoff:      Library mode not critical, but good internal documentation
 - Template format for consistency
 
 **Maintenance Cost Estimate:**
+
 - Per-method cost: 3-5 minutes (write once, never update unless signature changes)
 - Review cost: 2 minutes per method
 - CI validation: Automated
 
 **Coverage Target:**
+
 1. **Phase 1 (Critical):** Repository.ts, SvnRepository.ts (70+ methods) = 3-4 hours
 2. **Phase 2 (High):** Command base + 20 most-used commands = 2-3 hours
 3. **Phase 3 (Medium):** Services, utilities = 1-2 hours
@@ -208,6 +228,7 @@ Payoff:      Library mode not critical, but good internal documentation
 **Audience:** End users, power users
 
 **Gap Impact:**
+
 ```
 - 54 commands defined, 40+ not discoverable
 - Users don't know about: merge, switch, resolve, cleanup, patch, revert
@@ -217,16 +238,19 @@ Payoff:      Library mode not critical, but good internal documentation
 ```
 
 **What's Blocked:**
+
 - 60% of advanced features undiscovered by users
 - Support questions: "How do I do X?" when command exists
 - New users frustrated by missing features
 
 **Value Metrics:**
+
 - **Feature Discovery:** 40% → 95% (documentation effect)
 - **Support Burden:** 10-15% of support tickets about undiscovered commands
 - **User Satisfaction:** Better feature awareness = higher retention
 
 **ROI Analysis:**
+
 ```
 Effort:      2-3 hours (can be partially auto-generated)
 Maintenance: HIGH (new commands, parameter changes)
@@ -237,6 +261,7 @@ Payoff:      Reduces support burden, improves feature awareness
 ```
 
 **Maintenance Strategy:**
+
 - Semi-automated generation from package.json
 - Each command definition in package.json includes description
 - Examples in separate section
@@ -244,27 +269,32 @@ Payoff:      Reduces support burden, improves feature awareness
 - CI validates all 54 commands documented
 
 **Maintenance Cost Estimate:**
+
 - New command: 10-15 minutes (write description + example)
 - Changed command: 5-10 minutes (update description)
 - Annual review: 30 minutes
 
 **Generation Template:**
+
 ```markdown
 ## svn.merge
 
 **Purpose:** Merge changes from one branch to another
 
 **Usage:**
+
 - Select branch in Source Control
 - Right-click → Merge with...
 - Choose source branch
 - Confirm merge
 
 **Arguments:**
+
 - sourceURL: Branch/tag URL to merge from
 - revision: Specific revision (optional)
 
 **Common Errors:**
+
 - "Conflicted working copy" → Run `svn cleanup`
 - "File not found" → Verify branch path
 ```
@@ -277,6 +307,7 @@ Payoff:      Reduces support burden, improves feature awareness
 **Audience:** End users, administrators
 
 **Gap Impact:**
+
 ```
 - 30+ settings listed without explanation of impact
 - Performance implications not documented
@@ -286,16 +317,19 @@ Payoff:      Reduces support burden, improves feature awareness
 ```
 
 **What's Blocked:**
+
 - Users don't understand performance impact of settings
 - Support questions: "What does svn.autorefresh do?"
 - Wrong defaults for use cases (e.g., large repos)
 
 **Value Metrics:**
+
 - **Support Burden:** 15-20 tickets/month about settings
 - **Configuration Errors:** 5-10% users misconfigure for their use case
 - **Performance:** Some users disable autorefresh due to lag (incorrect solution)
 
 **ROI Analysis:**
+
 ```
 Effort:      2-3 hours (partially auto-generated from schema)
 Maintenance: HIGH (new settings, default changes)
@@ -307,6 +341,7 @@ Payoff:      15-20 support tickets/month prevented
 ```
 
 **Maintenance Strategy:**
+
 - Semi-automated from package.json schema
 - Performance impact tags (fast/slow/noop)
 - Related settings called out
@@ -314,11 +349,13 @@ Payoff:      15-20 support tickets/month prevented
 - CI validates all settings documented
 
 **Maintenance Cost Estimate:**
+
 - New setting: 15-20 minutes (write description, example, impact)
 - Changed setting: 5-10 minutes (update description)
 - Quarterly review: 20 minutes
 
 **Impact Categories for Each Setting:**
+
 - Performance (how it affects command latency)
 - User Experience (notifications, UI changes)
 - Risk (what could break)
@@ -330,17 +367,18 @@ Payoff:      15-20 support tickets/month prevented
 
 ### Value-Cost Matrix
 
-| Doc | Effort | Maintenance | Impact | Payoff Period | Annual ROI |
-|-----|--------|-------------|--------|---------------|-----------|
-| CONTRIBUTING.md | 2-3h | LOW | CRITICAL | 2-4 weeks | HIGH |
-| Dev Setup | 1-2h | MEDIUM | HIGH | 1-2 weeks | VERY HIGH |
-| JSDoc APIs | 4-6h | HIGH | HIGH | 1-2 months | MEDIUM |
-| Commands Ref | 2-3h | HIGH | MEDIUM | 1-3 months | MEDIUM |
-| Config Guide | 2-3h | HIGH | MEDIUM | 1-2 months | MEDIUM |
+| Doc             | Effort | Maintenance | Impact   | Payoff Period | Annual ROI |
+| --------------- | ------ | ----------- | -------- | ------------- | ---------- |
+| CONTRIBUTING.md | 2-3h   | LOW         | CRITICAL | 2-4 weeks     | HIGH       |
+| Dev Setup       | 1-2h   | MEDIUM      | HIGH     | 1-2 weeks     | VERY HIGH  |
+| JSDoc APIs      | 4-6h   | HIGH        | HIGH     | 1-2 months    | MEDIUM     |
+| Commands Ref    | 2-3h   | HIGH        | MEDIUM   | 1-3 months    | MEDIUM     |
+| Config Guide    | 2-3h   | HIGH        | MEDIUM   | 1-2 months    | MEDIUM     |
 
 ### Direct Impact Quantification
 
 **Support Reduction:**
+
 - CONTRIBUTING.md: -5 tickets/month (contribution process)
 - Dev Setup: -8 tickets/month (environment issues)
 - JSDoc: -3 tickets/month (API usage)
@@ -349,12 +387,14 @@ Payoff:      15-20 support tickets/month prevented
 - **Total: -39 tickets/month** = ~20 hours/month saved
 
 **Adoption Impact:**
+
 - CONTRIBUTING.md: +30% external contributions
 - Dev Setup: +50% successful first-time builds
 - Commands Ref: +40% feature awareness
 - Config Guide: +25% optimal configurations
 
 **Developer Experience:**
+
 - CONTRIBUTING.md: -5 hours per contributor
 - Dev Setup: -2.5 hours per new developer
 - JSDoc: +5 minutes per method lookup → 0 minutes with IDE autocomplete
@@ -365,17 +405,18 @@ Payoff:      15-20 support tickets/month prevented
 
 ### Auto-Generated vs Manual Documentation
 
-| Doc | Type | Auto-gen Potential | Manual Effort | CI Validation |
-|-----|------|-------------------|---------------|---------------|
-| CONTRIBUTING.md | Manual | NO | 100% | Spell check |
-| Dev Setup | Mixed | 20% (versions) | 80% (instructions) | Version detection |
-| JSDoc APIs | Semi-auto | 50% (extraction) | 50% (writing) | ESLint enforce |
-| Commands Ref | Semi-auto | 60% (extraction) | 40% (examples) | Completeness |
-| Config Guide | Semi-auto | 70% (extraction) | 30% (explanations) | Schema validation |
+| Doc             | Type      | Auto-gen Potential | Manual Effort      | CI Validation     |
+| --------------- | --------- | ------------------ | ------------------ | ----------------- |
+| CONTRIBUTING.md | Manual    | NO                 | 100%               | Spell check       |
+| Dev Setup       | Mixed     | 20% (versions)     | 80% (instructions) | Version detection |
+| JSDoc APIs      | Semi-auto | 50% (extraction)   | 50% (writing)      | ESLint enforce    |
+| Commands Ref    | Semi-auto | 60% (extraction)   | 40% (examples)     | Completeness      |
+| Config Guide    | Semi-auto | 70% (extraction)   | 30% (explanations) | Schema validation |
 
 ### Documents That Go Stale Quickly
 
 **High Staleness Risk:**
+
 1. **Developer Setup** (quarterly)
    - Node versions change: ~4x/year
    - Mitigation: Automated version detection, baseline in CI
@@ -391,6 +432,7 @@ Payoff:      15-20 support tickets/month prevented
    - Mitigation: Auto-extraction from package.json, PR template reminder
 
 **Low Staleness Risk:**
+
 1. **CONTRIBUTING.md** (annual)
    - Guidelines rarely change
    - Mitigation: Version numbering, annual review
@@ -406,30 +448,35 @@ Payoff:      15-20 support tickets/month prevented
 ### Validation Approaches
 
 **CONTRIBUTING.md:**
+
 - Manual peer review (1-2 people)
 - External contributor testing (use for first PR)
 - Quarterly accuracy check
 - No CI validation needed
 
 **Developer Setup:**
+
 - Automated: Run `npm install && npm run build` in CI
 - Automated: Validate versions match documented
 - Manual: Test on fresh machine quarterly
 - CI: Pre-commit validates environment docs
 
 **JSDoc APIs:**
+
 - Automated: ESLint rule `require-jsdoc` for public methods
 - Automated: TypeScript compilation validates syntax
 - IDE testing: Verify autocomplete works in VSCode
 - Manual: Spot-check 10% of methods for clarity
 
 **Command Reference:**
+
 - Automated: Compare package.json commands with docs
 - Manual: Test 5-10 random commands end-to-end
 - User testing: Ask 2-3 users to find features
 - CI: Validate all 54 commands have entries
 
 **Configuration Guide:**
+
 - Automated: Extract from package.json schema
 - Automated: Validate JSON schema matches docs
 - Manual: Test 3-5 random settings
@@ -442,19 +489,20 @@ Payoff:      15-20 support tickets/month prevented
 
 ### Current Audience Distribution
 
-| Audience | Current Coverage | Gap | Severity |
-|----------|-----------------|-----|----------|
-| Internal Developers | 90%+ | None | OK |
-| External Contributors | 10% | CONTRIBUTING.md | CRITICAL |
-| New Developer Onboarding | 30% | Setup guide | HIGH |
-| External Library Users | 15% | JSDoc | HIGH |
-| End Users (Basic) | 60% | Settings doc | MEDIUM |
-| End Users (Advanced) | 20% | Commands ref | MEDIUM |
-| System Admins | 40% | Config guide | MEDIUM |
+| Audience                 | Current Coverage | Gap             | Severity |
+| ------------------------ | ---------------- | --------------- | -------- |
+| Internal Developers      | 90%+             | None            | OK       |
+| External Contributors    | 10%              | CONTRIBUTING.md | CRITICAL |
+| New Developer Onboarding | 30%              | Setup guide     | HIGH     |
+| External Library Users   | 15%              | JSDoc           | HIGH     |
+| End Users (Basic)        | 60%              | Settings doc    | MEDIUM   |
+| End Users (Advanced)     | 20%              | Commands ref    | MEDIUM   |
+| System Admins            | 40%              | Config guide    | MEDIUM   |
 
 ### Underserved Audiences
 
 **CRITICAL (Gates adoption):**
+
 1. **External Contributors**
    - Missing: CONTRIBUTING.md
    - Missing: Setup guide details
@@ -462,13 +510,13 @@ Payoff:      15-20 support tickets/month prevented
    - Impact: Zero external PRs due to no path
    - Solution: Create CONTRIBUTING.md + link to CLAUDE.md
 
-**HIGH (Improves success rate):**
-2. **New Developer Onboarding**
-   - Missing: Consolidated setup steps
-   - Missing: Environment validation
-   - Missing: Debug configuration
-   - Impact: 30-40% first-time setup failures
-   - Solution: Create DEVELOPER_SETUP.md + version detection
+**HIGH (Improves success rate):** 2. **New Developer Onboarding**
+
+- Missing: Consolidated setup steps
+- Missing: Environment validation
+- Missing: Debug configuration
+- Impact: 30-40% first-time setup failures
+- Solution: Create DEVELOPER_SETUP.md + version detection
 
 3. **External Library Users**
    - Missing: JSDoc coverage (15-20%)
@@ -477,12 +525,12 @@ Payoff:      15-20 support tickets/month prevented
    - Impact: Can't use extension as library
    - Solution: JSDoc all public methods + auto-generate reference
 
-**MEDIUM (Improves satisfaction):**
-4. **End Users (Advanced)**
-   - Missing: Command reference for 54 commands
-   - Missing: Advanced usage examples
-   - Impact: 60% of features undiscovered
-   - Solution: Create COMMAND_REFERENCE.md + examples
+**MEDIUM (Improves satisfaction):** 4. **End Users (Advanced)**
+
+- Missing: Command reference for 54 commands
+- Missing: Advanced usage examples
+- Impact: 60% of features undiscovered
+- Solution: Create COMMAND_REFERENCE.md + examples
 
 5. **Configuration Users**
    - Missing: Performance impact documentation
@@ -497,15 +545,18 @@ Payoff:      15-20 support tickets/month prevented
 ### Tier 1: IMMEDIATE (Blocks Adoption)
 
 #### #1: CONTRIBUTING.md
-**File:** `/home/user/positron-svn/CONTRIBUTING.md`
+
+**File:** `/home/user/sven/CONTRIBUTING.md`
 
 **Business Case:**
+
 - Enables community contributions
 - Signals open-source acceptance
 - Critical for adoption
 - Zero alternative path for external PRs
 
 **Scope:**
+
 - Development environment prerequisites
 - TDD workflow (link to CLAUDE.md)
 - Testing requirements
@@ -515,22 +566,26 @@ Payoff:      15-20 support tickets/month prevented
 - Debug setup
 
 **Effort Estimate:**
+
 - Write: 2 hours
 - Review: 0.5 hours
 - Iterate: 0.5 hours
 - **Total: 3 hours**
 
 **Maintenance Cost:**
+
 - Quarterly review: 15 minutes
 - Annual major update: 30 minutes
 - **Annual: 1-2 hours**
 
 **Success Metrics:**
+
 - External PR submission within 1 month
 - Contributor reports setup process "clear"
 - 90%+ of contributors follow guidelines
 
 **ROI Calculation:**
+
 ```
 If 5 external contributors/year:
 - Cost: 3h setup + 1h maintenance = 4h/year
@@ -540,6 +595,7 @@ If 5 external contributors/year:
 ```
 
 **Implementation Steps:**
+
 1. Document setup steps (reference CLAUDE.md)
 2. Write TDD requirements with examples
 3. Define commit message format
@@ -549,30 +605,36 @@ If 5 external contributors/year:
 7. Iterate based on feedback
 
 **File Structure:**
+
 ```markdown
-# Contributing to positron-svn
+# Contributing to sven
 
 ## Getting Started
+
 - Prerequisites
 - Environment setup
 - Build process
 
 ## Development Workflow (TDD)
+
 - Test-first approach
 - 3 E2E tests per feature
 - Running tests
 
 ## Code Style
+
 - TypeScript guidelines
 - Naming conventions
 - Comments and documentation
 
 ## Commit & PR Process
+
 - Commit message format
 - PR checklist
 - Review expectations
 
 ## Getting Help
+
 - Discussion format
 - Issue reporting
 ```
@@ -580,15 +642,18 @@ If 5 external contributors/year:
 ---
 
 #### #2: Developer Setup Guide
-**File:** `/home/user/positron-svn/docs/DEVELOPER_SETUP.md`
+
+**File:** `/home/user/sven/docs/DEVELOPER_SETUP.md`
 
 **Business Case:**
+
 - Reduces onboarding friction from 3 hours → 20 minutes
 - 30-40% current contributors struggle with setup
 - High support burden for environment issues
 - Every new contributor wastes 2-3 hours debugging
 
 **Scope:**
+
 - Node.js/npm version requirements
 - SVN installation & verification
 - VSCode/Positron setup
@@ -600,22 +665,26 @@ If 5 external contributors/year:
 - Troubleshooting common issues
 
 **Effort Estimate:**
+
 - Write: 1 hour
 - Testing: 0.5 hours
 - Screenshots: 0.5 hours
 - **Total: 2 hours**
 
 **Maintenance Cost:**
+
 - Quarterly version updates: 15 minutes
 - Annual comprehensive review: 30 minutes
 - **Annual: 2 hours**
 
 **Success Metrics:**
+
 - New developers report setup in <30 minutes
 - Zero "can't build" support tickets
 - 90%+ first-time success rate
 
 **ROI Calculation:**
+
 ```
 If 8 developers/year × 2.5h saved = 20h/year
 - Cost: 2h setup + 2h maintenance = 4h/year
@@ -625,6 +694,7 @@ If 8 developers/year × 2.5h saved = 20h/year
 ```
 
 **Implementation Steps:**
+
 1. Test setup on fresh machine
 2. Document each step with screenshots
 3. Create version baseline (.nvmrc)
@@ -635,41 +705,49 @@ If 8 developers/year × 2.5h saved = 20h/year
 8. Iterate
 
 **File Structure:**
+
 ```markdown
 # Developer Setup Guide
 
 ## System Requirements
+
 - Node.js version (with auto-detection)
 - npm version
 - SVN version
 - VSCode version
 
 ## Environment Setup
+
 - Clone & install
 - Build process
 - Verify success
 
 ## Extension Testing
+
 - Install in VSCode
 - Debug mode setup
 - Hot reload workflow
 
 ## Running Tests
+
 - Full test suite
 - Watch mode
 - Specific tests
 
 ## Debugging
+
 - VSCode launch configuration
 - Console output
 - Error logging
 
 ## Troubleshooting
+
 - Common issues
 - System-specific setup (Windows/Mac/Linux)
 - Version conflicts
 
 ## First Test
+
 - Making a small change
 - Running tests
 - Submitting PR
@@ -680,15 +758,18 @@ If 8 developers/year × 2.5h saved = 20h/year
 ### Tier 2: HIGH PRIORITY (Unblocks Library Usage)
 
 #### #3: JSDoc on Public APIs
-**File:** Multiple - `/home/user/positron-svn/src/repository.ts`, `svnRepository.ts`, `src/common/types.ts`, services
+
+**File:** Multiple - `/home/user/sven/src/repository.ts`, `svnRepository.ts`, `src/common/types.ts`, services
 
 **Business Case:**
+
 - Enables IDE autocomplete (currently disabled)
 - Makes code self-documenting
 - Reduces code review time
 - External library usage possible
 
 **Scope:**
+
 - Repository.ts (~50 public methods)
 - SvnRepository.ts (~40 public methods)
 - Command base + 20 most-used commands
@@ -696,24 +777,28 @@ If 8 developers/year × 2.5h saved = 20h/year
 - Utility functions in util.ts
 
 **Effort Estimate:**
+
 - Phase 1 (Repository classes): 4 hours
 - Phase 2 (Commands): 2 hours
 - Phase 3 (Services): 1 hour
 - **Total: 7 hours** (can phase over 2-3 sprints)
 
 **Maintenance Cost:**
+
 - Per new method: 3-5 minutes
 - Per changed method: 2 minutes review
 - CI/ESLint enforcement: Automated
 - **Per release: 20-30 minutes**
 
 **Success Metrics:**
+
 - 100% public methods have JSDoc
 - IDE autocomplete works for all public APIs
 - ESLint rule enforces on new code
 - Code review time -10%
 
 **ROI Calculation:**
+
 ```
 Cost: 7h initial + 0.5h/month maintenance = 7h + 6h/year
 Benefits:
@@ -725,6 +810,7 @@ But: Internal documentation benefit + library enablement = strategic
 ```
 
 **Implementation Plan (Phased):**
+
 1. **Phase 1 (Week 1-2):** Repository.ts & SvnRepository.ts
    - Write JSDoc for all public methods
    - Add @param, @returns, @throws tags
@@ -744,7 +830,8 @@ But: Internal documentation benefit + library enablement = strategic
    - 0 hours (automated)
 
 **Example JSDoc Template:**
-```typescript
+
+````typescript
 /**
  * Add a file or directory to version control
  *
@@ -761,20 +848,23 @@ But: Internal documentation benefit + library enablement = strategic
  * ```
  */
 add(paths: string[], options?: AddOptions): Promise<ExecuteResult>
-```
+````
 
 ---
 
 #### #4: Command Reference
-**File:** `/home/user/positron-svn/docs/COMMAND_REFERENCE.md`
+
+**File:** `/home/user/sven/docs/COMMAND_REFERENCE.md`
 
 **Business Case:**
+
 - 54 commands exist, 40+ undiscovered by users
 - Reduces support burden (feature discovery)
 - Improves user adoption (knowledge)
 - Can be partially auto-generated
 
 **Scope:**
+
 - All 54 commands from package.json
 - Purpose & use case for each
 - How to invoke (menu, command palette, right-click)
@@ -783,23 +873,27 @@ add(paths: string[], options?: AddOptions): Promise<ExecuteResult>
 - Examples
 
 **Effort Estimate:**
+
 - Generate from package.json: 1 hour
 - Write descriptions/examples: 1.5 hours
 - Review & format: 0.5 hours
 - **Total: 3 hours**
 
 **Maintenance Cost:**
+
 - New command: 10-15 minutes
 - Changed command: 5 minutes
 - Per release check: 10 minutes
 - **Annual: 3-4 hours**
 
 **Success Metrics:**
+
 - 90%+ of commands discoverable in docs
 - User can find command for any task
 - Support tickets -15% (feature discovery)
 
 **ROI Calculation:**
+
 ```
 Cost: 3h initial + 4h/year = 7h total
 Benefits:
@@ -809,6 +903,7 @@ Benefits:
 ```
 
 **Implementation Steps:**
+
 1. Extract all commands from package.json
 2. Group by category (commit, branch, file, etc.)
 3. Write descriptions & examples for each
@@ -818,34 +913,40 @@ Benefits:
 7. Gather user feedback
 
 **File Structure:**
+
 ```markdown
 # SVN Command Reference
 
 ## Getting Started
+
 - Quick start: Most common commands
 - Finding commands: By task
 
 ## Commands by Category
 
 ### Commit & Changes
+
 - commit
 - commitAll
 - commitWithMessage
 - ... (group all similar)
 
 ### Branching
+
 - switchBranch
 - branch
 - merge
 - ...
 
 ### File Operations
+
 - add
 - delete
 - revert
 - ...
 
 ### Each Command Entry:
+
 - Title & icon
 - Purpose
 - How to invoke
@@ -858,15 +959,18 @@ Benefits:
 ### Tier 3: MEDIUM PRIORITY (Support Burden)
 
 #### #5: Configuration Guide
-**File:** `/home/user/positron-svn/docs/CONFIGURATION_GUIDE.md` (expand from README)
+
+**File:** `/home/user/sven/docs/CONFIGURATION_GUIDE.md` (expand from README)
 
 **Business Case:**
+
 - 30+ settings, many confusing
 - 15-20 support tickets/month about settings
 - Performance implications not clear
 - Can be partially auto-generated
 
 **Scope:**
+
 - All 30+ configuration settings
 - Purpose & default value
 - Performance impact (fast/slow/none)
@@ -876,24 +980,28 @@ Benefits:
 - Performance tuning guide
 
 **Effort Estimate:**
+
 - Extract from package.json: 1 hour
 - Write explanations & examples: 1.5 hours
 - Performance testing: 0.5 hours
 - **Total: 3 hours**
 
 **Maintenance Cost:**
+
 - New setting: 15 minutes
 - Changed setting: 5 minutes
 - Per release check: 15 minutes
 - **Annual: 3-4 hours**
 
 **Success Metrics:**
+
 - 100% of settings documented
 - Users understand default behavior
 - Support tickets -20% (settings questions)
 - Optimal configurations increase by 30%
 
 **ROI Calculation:**
+
 ```
 Cost: 3h initial + 4h/year = 7h total
 Benefits:
@@ -905,6 +1013,7 @@ Benefits:
 ```
 
 **Implementation Steps:**
+
 1. Extract all settings from package.json schema
 2. Organize by category (performance, UI, behavior)
 3. Write clear descriptions
@@ -915,10 +1024,12 @@ Benefits:
 8. Gather feedback
 
 **File Structure:**
+
 ```markdown
 # Configuration Guide
 
 ## Overview
+
 - Default settings
 - Performance impact summary
 - Use-case recommendations
@@ -926,24 +1037,28 @@ Benefits:
 ## By Category
 
 ### Performance Settings
+
 - autorefresh: [impact, recommendation]
 - remote polling
 - indexing
 - ...
 
 ### UI & Notifications
+
 - status bar
 - decorations
 - blame display
 - ...
 
 ### Advanced
+
 - encoding
 - external tools
 - auth
 - ...
 
 ## Use-Case Guides
+
 - Large repositories (1000+ files)
 - Data science workflows
 - Team environments
@@ -955,6 +1070,7 @@ Benefits:
 ## Implementation Roadmap
 
 ### Phase 1: Immediate (Week 1-2) - CRITICAL BLOCKERS
+
 **Target:** Unblock contributions & onboarding
 
 1. **CONTRIBUTING.md** (3 hours)
@@ -972,6 +1088,7 @@ Benefits:
 **Week 1-2 Total: 5 hours**
 
 ### Phase 2: High-Value (Week 3-4) - HIGH ROI
+
 **Target:** Improve developer & user experience
 
 3. **JSDoc Phase 1** (4 hours)
@@ -987,6 +1104,7 @@ Benefits:
 **Week 3-4 Total: 7 hours**
 
 ### Phase 3: Support Relief (Week 5) - MEDIUM ROI
+
 **Target:** Reduce support burden
 
 5. **Configuration Guide** (3 hours)
@@ -1007,16 +1125,17 @@ Benefits:
 
 ## Maintenance Cost Summary
 
-| Doc | Initial | Annual | Per-Release | Trigger |
-|-----|---------|--------|------------|---------|
-| CONTRIBUTING.md | 3h | 1.5h | 5min | Major changes only |
-| Dev Setup | 2h | 2h | 10min | Quarterly versions |
-| JSDoc | 7h | 6h | 20min | Code review |
-| Commands Ref | 3h | 4h | 10min | New commands |
-| Config Guide | 3h | 4h | 15min | New settings |
-| **TOTAL** | **18h** | **17.5h** | **60min** | Per release |
+| Doc             | Initial | Annual    | Per-Release | Trigger            |
+| --------------- | ------- | --------- | ----------- | ------------------ |
+| CONTRIBUTING.md | 3h      | 1.5h      | 5min        | Major changes only |
+| Dev Setup       | 2h      | 2h        | 10min       | Quarterly versions |
+| JSDoc           | 7h      | 6h        | 20min       | Code review        |
+| Commands Ref    | 3h      | 4h        | 10min       | New commands       |
+| Config Guide    | 3h      | 4h        | 15min       | New settings       |
+| **TOTAL**       | **18h** | **17.5h** | **60min**   | Per release        |
 
 **Per-Release Maintenance Estimate:**
+
 - Average 1 hour per release (60 minutes documentation updates)
 - Can be batched with feature additions
 - Automated validation reduces manual effort
@@ -1026,22 +1145,26 @@ Benefits:
 ## Success Metrics & KPIs
 
 ### Documentation Adoption
+
 - External PR submissions: 0 → 5+/quarter (CONTRIBUTING.md)
 - New contributor setup success: 60% → 95% (Dev Setup)
 - IDE autocomplete usage: 0% → 100% (JSDoc)
 
 ### Support Burden Reduction
+
 - Setup-related tickets: 8/month → 1/month
 - Feature discovery tickets: 10/month → 2/month
 - Configuration questions: 15/month → 3/month
 - **Total reduction: -30 tickets/month = 15 hours/month saved**
 
 ### User Satisfaction
+
 - Developer satisfaction: +40%
 - Time to first contribution: 3h → 20min
 - Feature awareness: 40% → 95%
 
 ### Code Quality
+
 - Public methods with JSDoc: 20% → 100%
 - Code review time: -10% via self-documentation
 - Onboarding bugs: -40% (clear guidelines)
@@ -1051,14 +1174,17 @@ Benefits:
 ## Risk Mitigation
 
 ### Documentation Staleness
+
 - **Risk:** Docs fall out of sync with code
 - **Mitigation:** Automated CI validation, per-release checklist, version numbers
 
 ### Low Adoption
+
 - **Risk:** Contributors don't use CONTRIBUTING.md
 - **Mitigation:** Link from README, friendly welcome, early feedback
 
 ### Maintenance Burden Underestimation
+
 - **Risk:** Annual maintenance exceeds estimate
 - **Mitigation:** Automate 60%+ via CI, make updates part of PR process
 

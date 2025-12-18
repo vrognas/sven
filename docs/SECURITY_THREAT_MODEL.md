@@ -1,7 +1,7 @@
 # Security Threat Model & Remediation Plan
 
 **Generated:** 2025-11-20
-**Repository:** positron-svn v2.17.230
+**Repository:** sven v2.17.230
 **Analyst Role:** Security Engineer
 
 ---
@@ -11,6 +11,7 @@
 Threat modeling identifies **3 CRITICAL vulnerabilities** requiring immediate remediation before next release. Identified attack vectors span command injection, credential exposure, and XML parsing security.
 
 **Severity Distribution:**
+
 - 1x CRITICAL (CVSS 9.8) - Remote Code Execution
 - 1x HIGH (CVSS 7.5) - Credential Disclosure
 - 1x MEDIUM (CVSS 5.3) - DoS / Entity Expansion
@@ -27,6 +28,7 @@ Threat modeling identifies **3 CRITICAL vulnerabilities** requiring immediate re
 **CVE Classification:** CWE-78 (OS Command Injection)
 
 **Vulnerable Code Locations:**
+
 ```
 src/svnFinder.ts:56,65,79
 - Line 56: cp.exec("which svn", ...)
@@ -35,6 +37,7 @@ src/svnFinder.ts:56,65,79
 ```
 
 **Attack Vector Chain:**
+
 1. Attacker controls environment variables or PATH
 2. Extension runs on developer machine
 3. SVN discovery phase uses cp.exec() (spawns shell)
@@ -44,6 +47,7 @@ src/svnFinder.ts:56,65,79
 **Exploitation Scenarios:**
 
 **Scenario A: PATH Manipulation**
+
 ```bash
 # Attacker sets malicious PATH
 export PATH="/tmp/evil:$PATH"
@@ -59,14 +63,16 @@ export PATH="/tmp/evil:$PATH"
 ```
 
 **Scenario B: SVN_SSH Environment Variable Injection**
+
 ```typescript
 // attacker-controlled environment variable
-process.env.SVN_SSH = "ssh; malicious_command; #"
+process.env.SVN_SSH = "ssh; malicious_command; #";
 // If extension later uses SVN_SSH in exec():
-cp.exec(`${process.env.SVN_SSH} ...`) // Executes malicious command
+cp.exec(`${process.env.SVN_SSH} ...`); // Executes malicious command
 ```
 
 **Scenario C: Repository Clone Triggering SVN Discovery**
+
 ```bash
 # Attacker clones repo with trigger:
 git clone https://repo-with-svn-submodule
@@ -78,12 +84,14 @@ git clone https://repo-with-svn-submodule
 ```
 
 **Impact on Privilege Escalation:**
+
 - Extension runs as current user (full privileges)
 - Can read SSH keys, credentials, source code
 - Can modify repository state, inject malicious code
 - Can pivot to system resources
 
 **Attack Complexity:** LOW
+
 - No special knowledge required
 - Standard PATH manipulation technique
 - Works cross-platform (Linux/macOS, less direct on Windows)
@@ -95,6 +103,7 @@ git clone https://repo-with-svn-submodule
 **CVE Classification:** CWE-214 (Process Listing Information Disclosure)
 
 **Vulnerable Code Locations:**
+
 ```
 src/svn.ts:110-114
 - Line 110: if (options.password)
@@ -102,6 +111,7 @@ src/svn.ts:110-114
 ```
 
 **Attack Vector Chain:**
+
 1. User authenticates with password via UI prompt
 2. Password stored in memory (args array)
 3. Extension spawns SVN process with password in args
@@ -111,6 +121,7 @@ src/svn.ts:110-114
 **Credential Exposure Paths:**
 
 **Path A: Process Listing via ps/top**
+
 ```bash
 # Any user on system can run:
 ps aux | grep svn
@@ -123,6 +134,7 @@ ps -ef | grep "\-\-password"
 ```
 
 **Path B: Process Memory Dump**
+
 ```bash
 # Attacker with same UID can dump process memory:
 gdb -p $(pgrep svn) dump memory /tmp/core
@@ -132,6 +144,7 @@ strings /tmp/core | grep -i "password\|MySecret"
 ```
 
 **Path C: /proc filesystem inspection (Linux)**
+
 ```bash
 # Any user can inspect another user's process:
 cat /proc/$(pgrep svn)/cmdline | tr '\0' ' '
@@ -142,6 +155,7 @@ cat /proc/$(pgrep svn)/environ | tr '\0' '\n' | grep SVN
 ```
 
 **Path D: System audit logs**
+
 ```bash
 # Audit systems capture process execution:
 ausearch -k audit_key | grep svn
@@ -153,6 +167,7 @@ lastcomm | grep svn
 ```
 
 **Real-World Impact:**
+
 - **Shared systems:** Multiple users access same machine
 - **Container environments:** Container logs capture CLI args
 - **CI/CD systems:** Build logs include full command output
@@ -160,6 +175,7 @@ lastcomm | grep svn
 - **Forensics:** Post-incident investigation recovers credentials
 
 **Credential Scope:** Credentials typically:
+
 - Valid for extended period (hours to days)
 - Provide full repository access
 - Can be used to commit malicious code
@@ -172,18 +188,21 @@ lastcomm | grep svn
 **CVE Classification:** CWE-776 (XML Entity Expansion Attack), CWE-827 (Improper Control of Document Type Definition)
 
 **Vulnerable Context:**
+
 ```
 src/parser/xmlParserAdapter.ts - Contains mitigations
 src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 ```
 
 **Threat Assessment: MITIGATED** ✅
+
 - Line 51: `processEntities: false` - XXE protection
 - Line 27-29: Security limits enforced (10MB, 100k tags, 100 depth)
 - Line 34-36: Sanitization of control characters
 - Line 208-217: Input validation with explicit errors
 
 **Residual Risk:** LOW
+
 - Potential for improved sanitization check (performance optimization)
 - Current: Always applies regex (line 225)
 - Better: Check if needed first (optimization only)
@@ -200,29 +219,32 @@ src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 
 **CVSS Base Score: 9.8 CRITICAL**
 
-| Metric | Value | Score | Justification |
-|--------|-------|-------|---------------|
-| Attack Vector (AV) | Local | 8.2 | Requires local environment control |
-| Attack Complexity (AC) | Low | -0.4 | PATH manipulation is trivial |
-| Privileges Required (PR) | None | 0 | No auth needed, standard user level |
-| User Interaction (UI) | None | 0 | Automatic SVN discovery on extension load |
-| Scope (S) | Unchanged | 0 | Impact limited to single user/process |
-| Confidentiality (C) | High | +3.4 | Can read SSH keys, credentials, source |
-| Integrity (I) | High | +3.4 | Can inject malicious code into repo |
-| Availability (A) | High | +3.4 | Can crash/hang extension process |
-| **TOTAL** | | **9.8** | **CRITICAL** |
+| Metric                   | Value     | Score   | Justification                             |
+| ------------------------ | --------- | ------- | ----------------------------------------- |
+| Attack Vector (AV)       | Local     | 8.2     | Requires local environment control        |
+| Attack Complexity (AC)   | Low       | -0.4    | PATH manipulation is trivial              |
+| Privileges Required (PR) | None      | 0       | No auth needed, standard user level       |
+| User Interaction (UI)    | None      | 0       | Automatic SVN discovery on extension load |
+| Scope (S)                | Unchanged | 0       | Impact limited to single user/process     |
+| Confidentiality (C)      | High      | +3.4    | Can read SSH keys, credentials, source    |
+| Integrity (I)            | High      | +3.4    | Can inject malicious code into repo       |
+| Availability (A)         | High      | +3.4    | Can crash/hang extension process          |
+| **TOTAL**                |           | **9.8** | **CRITICAL**                              |
 
 **Temporal Score: 9.5** (likely exploited)
+
 - Report Confidence: Confirmed
 - Threat Intelligence: Known exploitation pattern
 - Remediation Status: Unpatched
 
 **Environmental Score: 9.9** (if SVN used in secure environment)
+
 - Confidentiality Requirement: High (source code, credentials)
 - Integrity Requirement: High (code injection risk)
 - Availability Requirement: Medium (dev productivity)
 
 **Exploit Analysis:**
+
 - **Exploitability:** Trivial - standard Unix technique
 - **Discovery:** Easy - open source code publicly available
 - **Weaponization:** Straightforward - PoC in 10 lines
@@ -238,24 +260,26 @@ src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 
 **CVSS Base Score: 7.5 HIGH**
 
-| Metric | Value | Score | Justification |
-|--------|-------|-------|---------------|
-| Attack Vector (AV) | Local | 8.2 | Local system access required |
-| Attack Complexity (AC) | Low | -0.4 | ps/top available to all users |
-| Privileges Required (PR) | High | -0.6 | Needs system access + timing |
-| User Interaction (UI) | Required | -0.5 | User must enter password & run command |
-| Scope (S) | Unchanged | 0 | Impact = current user + repo access |
-| Confidentiality (C) | High | +3.4 | Credentials exposed |
-| Integrity (I) | Low | +1.1 | Can modify repository with stolen creds |
-| Availability (A) | None | 0 | No direct DoS |
-| **TOTAL** | | **7.5** | **HIGH** |
+| Metric                   | Value     | Score   | Justification                           |
+| ------------------------ | --------- | ------- | --------------------------------------- |
+| Attack Vector (AV)       | Local     | 8.2     | Local system access required            |
+| Attack Complexity (AC)   | Low       | -0.4    | ps/top available to all users           |
+| Privileges Required (PR) | High      | -0.6    | Needs system access + timing            |
+| User Interaction (UI)    | Required  | -0.5    | User must enter password & run command  |
+| Scope (S)                | Unchanged | 0       | Impact = current user + repo access     |
+| Confidentiality (C)      | High      | +3.4    | Credentials exposed                     |
+| Integrity (I)            | Low       | +1.1    | Can modify repository with stolen creds |
+| Availability (A)         | None      | 0       | No direct DoS                           |
+| **TOTAL**                |           | **7.5** | **HIGH**                                |
 
 **Alternative Scoring (Without Timing Constraint):**
+
 - If process runs longer: AC:Low (easier to capture)
 - If SVN password stored in SSH: AV:Network possible
 - Score could reach 8.2-8.8
 
 **Exploit Analysis:**
+
 - **Exploitability:** Easy - standard commands
 - **Discovery:** Easy - documented issue
 - **Weaponization:** Automated credential harvesting scripts available
@@ -270,19 +294,20 @@ src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 
 **CVSS Base Score: 5.3 MEDIUM** (With Mitigations Applied)
 
-| Metric | Value | Score | Justification |
-|--------|-------|-------|---------------|
-| Attack Vector (AV) | Network | 8.2 | Requires server to send malicious XML |
-| Attack Complexity (AC) | Low | -0.4 | Standard XXE/entity expansion |
-| Privileges Required (PR) | None | 0 | SVN command execution triggers parsing |
-| User Interaction (UI) | None | 0 | Automatic parsing |
-| Scope (S) | Changed | +2.7 | Impact other repository operations |
-| Confidentiality (C) | None | 0 | Data already from trusted SVN |
-| Integrity (I) | None | 0 | No server-side impact |
-| Availability (A) | High | +3.4 | DoS via entity expansion |
-| **TOTAL** | | **5.3** | **MEDIUM** |
+| Metric                   | Value   | Score   | Justification                          |
+| ------------------------ | ------- | ------- | -------------------------------------- |
+| Attack Vector (AV)       | Network | 8.2     | Requires server to send malicious XML  |
+| Attack Complexity (AC)   | Low     | -0.4    | Standard XXE/entity expansion          |
+| Privileges Required (PR) | None    | 0       | SVN command execution triggers parsing |
+| User Interaction (UI)    | None    | 0       | Automatic parsing                      |
+| Scope (S)                | Changed | +2.7    | Impact other repository operations     |
+| Confidentiality (C)      | None    | 0       | Data already from trusted SVN          |
+| Integrity (I)            | None    | 0       | No server-side impact                  |
+| Availability (A)         | High    | +3.4    | DoS via entity expansion               |
+| **TOTAL**                |         | **5.3** | **MEDIUM**                             |
 
 **Mitigation Effectiveness:**
+
 - ✅ processEntities: false (blocks XXE)
 - ✅ MAX_TAG_COUNT: 100,000 (prevents billion laughs)
 - ✅ MAX_DEPTH: 100 (prevents deep recursion)
@@ -297,6 +322,7 @@ src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 #### 4. glob@11.0.3 - Command Injection (GHSA-5j98-mcp5-4vw2)
 
 **CVSS Base Score: 8.8 HIGH**
+
 - Severity: HIGH
 - Impact: Remote Code Execution via malicious glob patterns
 - Status: UNPATCHED
@@ -308,6 +334,7 @@ src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 #### 5. semantic-release@25.0.2 - Transitive HIGH vulnerabilities
 
 **CVSS Base Score: 7.5+ HIGH**
+
 - Via: @semantic-release/npm@13.x
 - Impact: CI/CD pipeline compromise
 - Status: UNPATCHED
@@ -331,6 +358,7 @@ src/svnRepository.ts - Calls parseInfoXml, parseStatusXml, etc.
 **Root Cause:** `cp.exec()` spawns shell (`/bin/sh -c "command"`), allowing injection via shell metacharacters.
 
 **Fix Mechanism:**
+
 ```typescript
 // BEFORE (VULNERABLE):
 cp.exec("which svn", (err, stdout) => { ... });
@@ -340,6 +368,7 @@ cp.execFile("which", ["svn"], (err, stdout) => { ... });
 ```
 
 **Why It Works:**
+
 - `execFile()` spawns process directly (no shell)
 - Arguments passed as array elements (not shell string)
 - Shell metacharacters (|, ;, $, etc.) treated as literal text
@@ -354,16 +383,19 @@ cp.execFile("which", ["svn"], (err, stdout) => { ... });
 **Remediation (Tiered Approach):**
 
 **Tier 1: Documentation** (5 min) - IMMEDIATE
+
 - Add security warning in README
 - Document SSH key best practice
 - Document risks of --password flag
 
 **Tier 2: Environment Variable Alternative** (2-3 hours) - NEXT SPRINT
+
 - Accept SVN_PASSWORD environment variable
 - Remove from process args
 - Document secure env var setting methods
 
 **Tier 3: Secure Auth Storage** (4-6 hours) - FUTURE
+
 - Use SVN config file authentication
 - Auto-generate ~/.subversion/auth credentials
 - Remove credential exposure completely
@@ -371,6 +403,7 @@ cp.execFile("which", ["svn"], (err, stdout) => { ... });
 **Recommendation:** Implement Tier 1 + Tier 2 before release
 
 **Tier 2 Implementation:**
+
 ```typescript
 // Check for environment variable first (secure):
 const password = options.password || process.env.SVN_PASSWORD;
@@ -399,6 +432,7 @@ if (password && options.password) {
 **Risk:** VERY LOW (patch update, no API changes)
 
 **Command:**
+
 ```bash
 npm install glob@^11.1.0 --save-dev
 npm audit fix --only=dev
@@ -414,6 +448,7 @@ npm audit fix --only=dev
 **Risk:** LOW (v24 is stable, tested)
 
 **Command:**
+
 ```bash
 npm install semantic-release@^24.2.9 --save-dev
 npm install semver@^7.7.3
@@ -430,12 +465,14 @@ npm audit fix
 **Goal:** Validate all untrusted input before use
 
 **Scope:**
+
 - Repository paths
 - URL construction
 - Command arguments
 - Configuration values
 
 **Implementation:**
+
 ```typescript
 // Validators for common patterns
 const validators = {
@@ -458,20 +495,22 @@ if (!validators.repoUrl(url)) {
 **Goal:** Prevent argument-based injection
 
 **Scope:**
+
 - All cp.spawn() calls
 - All cp.execFile() calls
 - Validate argument types
 
 **Implementation:**
+
 ```typescript
 function sanitizeArgs(args: string[]): string[] {
   return args.filter(arg => {
     // Reject null/undefined
     if (arg == null) return false;
     // Reject objects
-    if (typeof arg !== 'string') return false;
+    if (typeof arg !== "string") return false;
     // Reject suspicious patterns (optional)
-    if (/^--/.test(arg) && arg.includes('\n')) return false;
+    if (/^--/.test(arg) && arg.includes("\n")) return false;
     return true;
   });
 }
@@ -488,6 +527,7 @@ cp.spawn(program, safeArgs, options);
 **Goal:** Prevent credential leaks in error messages
 
 **Status:** ✅ ALREADY IMPLEMENTED (v2.17.129)
+
 - Utility: `src/util/errorLogger.ts`
 - Pattern: All catch blocks use `logError()`
 - Validation: CI checks for sanitization
@@ -503,9 +543,12 @@ cp.spawn(program, safeArgs, options);
 **Goal:** Detect exploitation attempts
 
 **Implementation:**
+
 ```typescript
 // Log when non-interactive mode is used
-logDebug(`SVN command with auth: ${args.includes('--username') ? 'yes' : 'no'}`);
+logDebug(
+  `SVN command with auth: ${args.includes("--username") ? "yes" : "no"}`
+);
 
 // Log when password is used (warning level)
 if (options.password) {
@@ -513,7 +556,7 @@ if (options.password) {
 }
 
 // Log process spawn with full args (debug only)
-logDebug(`Spawning: ${program} ${args.join(' ')}`);
+logDebug(`Spawning: ${program} ${args.join(" ")}`);
 ```
 
 ---
@@ -523,6 +566,7 @@ logDebug(`Spawning: ${program} ${args.join(' ')}`);
 **File:** `docs/SECURITY_INCIDENT_RESPONSE.md`
 
 **Runbook for Command Injection Exploitation:**
+
 1. User reports unexpected files created
 2. Check `/tmp` for suspicious scripts
 3. Inspect process history: `history | grep svn`
@@ -551,6 +595,7 @@ logDebug(`Spawning: ${program} ${args.join(' ')}`);
 #### Step 1: Fix Command Injection in svnFinder.ts
 
 **Tasks:**
+
 1. Replace cp.exec("which svn") with cp.execFile("which", ["svn"])
 2. Replace cp.exec("svn --version") with cp.execFile("svn", ["--version", "--quiet"])
 3. Replace cp.exec("xcode-select -p") with cp.execFile("xcode-select", ["-p"])
@@ -564,15 +609,18 @@ logDebug(`Spawning: ${program} ${args.join(' ')}`);
 #### Step 2: Add Credential Exposure Mitigations
 
 **Task 2a:** Add SVN_PASSWORD environment variable support
+
 - Check process.env.SVN_PASSWORD as fallback
 - Document in README
 - Mark --password as "not recommended" in code comments
 
 **Task 2b:** Add warning to password usage
+
 - Log warning when --password used
 - Suggest SSH key authentication in error messages
 
 **Task 2c:** Document secure practices
+
 - Update README.md with authentication section
 - Add SECURITY.md with best practices
 - Reference SVN's auth cache options
@@ -582,6 +630,7 @@ logDebug(`Spawning: ${program} ${args.join(' ')}`);
 #### Step 3: Update Vulnerable Dependencies
 
 **Commands:**
+
 ```bash
 npm install glob@^11.1.0 --save-dev
 npm install semantic-release@^24.2.9 --save-dev
@@ -590,6 +639,7 @@ npm audit fix
 ```
 
 **Validation:**
+
 ```bash
 npm audit --json | jq '.metadata.vulnerabilities'
 # Should show: critical=0, high=0
@@ -602,6 +652,7 @@ npm audit --json | jq '.metadata.vulnerabilities'
 **Tests to add:**
 
 **Test Suite 1: Command Injection Prevention**
+
 ```typescript
 describe("SVN Finder - Command Injection Prevention", () => {
   it("should not execute shell metacharacters in which path", async () => {
@@ -622,6 +673,7 @@ describe("SVN Finder - Command Injection Prevention", () => {
 ```
 
 **Test Suite 2: Credential Exposure Prevention**
+
 ```typescript
 describe("SVN Execution - Credential Safety", () => {
   it("should not expose password in process args", async () => {
@@ -642,6 +694,7 @@ describe("SVN Execution - Credential Safety", () => {
 ```
 
 **Test Suite 3: XML Parsing Security**
+
 ```typescript
 describe("XML Parser - XXE & Entity Expansion Prevention", () => {
   it("should reject billion laughs attack", () => {
@@ -666,11 +719,11 @@ describe("XML Parser - XXE & Entity Expansion Prevention", () => {
   });
 
   it("should enforce MAX_DEPTH limit", () => {
-    let xml = '<root>';
-    for (let i = 0; i < 150; i++) xml += '<a>';
-    xml += 'text';
-    for (let i = 0; i < 150; i++) xml += '</a>';
-    xml += '</root>';
+    let xml = "<root>";
+    for (let i = 0; i < 150; i++) xml += "<a>";
+    xml += "text";
+    for (let i = 0; i < 150; i++) xml += "</a>";
+    xml += "</root>";
 
     expect(() => {
       XmlParserAdapter.parse(xml, { explicitRoot: false });
@@ -684,6 +737,7 @@ describe("XML Parser - XXE & Entity Expansion Prevention", () => {
 #### Step 5: Documentation & Changelog
 
 **Files to create/update:**
+
 1. `SECURITY.md` - Security policy & best practices
 2. `README.md` - Add authentication section
 3. `CHANGELOG.md` - v2.17.231 entries
@@ -696,6 +750,7 @@ describe("XML Parser - XXE & Entity Expansion Prevention", () => {
 ### Test Case Set 1: Command Injection Prevention
 
 **TC-1.1: Shell Metacharacter Rejection**
+
 ```typescript
 test("Should use execFile not exec for which svn", async () => {
   const finder = new SvnFinder();
@@ -723,6 +778,7 @@ test("Should use execFile not exec for which svn", async () => {
 ```
 
 **TC-1.2: Injection Payload Neutralization**
+
 ```typescript
 test("Should not interpret shell commands in SVN path", async () => {
   const finder = new SvnFinder();
@@ -743,6 +799,7 @@ test("Should not interpret shell commands in SVN path", async () => {
 ```
 
 **TC-1.3: PATH Environment Protection**
+
 ```typescript
 test("Should not execute malicious entries in PATH", async () => {
   const finder = new SvnFinder();
@@ -775,6 +832,7 @@ test("Should not execute malicious entries in PATH", async () => {
 ### Test Case Set 2: Credential Exposure Prevention
 
 **TC-2.1: Password Not in Process Args**
+
 ```typescript
 test("Should not include password in spawn arguments", async () => {
   const svn = new Svn({
@@ -809,6 +867,7 @@ test("Should not include password in spawn arguments", async () => {
 ```
 
 **TC-2.2: SVN_PASSWORD Environment Variable Support**
+
 ```typescript
 test("Should use SVN_PASSWORD environment variable when available", async () => {
   const svn = new Svn({
@@ -830,17 +889,14 @@ test("Should use SVN_PASSWORD environment variable when available", async () => 
 
   // Verify: Process environment has SVN_PASSWORD
   const [, , options] = spawnSpy.firstCall.args;
-  assert.equal(
-    options.env.SVN_PASSWORD,
-    "SecureFromEnv",
-    "Should use env var"
-  );
+  assert.equal(options.env.SVN_PASSWORD, "SecureFromEnv", "Should use env var");
 
   process.env.SVN_PASSWORD = originalEnv;
 });
 ```
 
 **TC-2.3: Warning Logged for --password Usage**
+
 ```typescript
 test("Should log warning when --password flag used", async () => {
   const svn = new Svn({
@@ -871,6 +927,7 @@ test("Should log warning when --password flag used", async () => {
 ### Test Case Set 3: XML Parsing Security
 
 **TC-3.1: XXE Entity Expansion Blocked**
+
 ```typescript
 test("Should reject XXE entity expansion attacks", () => {
   const xxePayload = `<!DOCTYPE lolz [
@@ -890,6 +947,7 @@ test("Should reject XXE entity expansion attacks", () => {
 ```
 
 **TC-3.2: External Entity References Blocked**
+
 ```typescript
 test("Should reject external entity references", () => {
   const xxePayload = `<!DOCTYPE foo [
@@ -907,6 +965,7 @@ test("Should reject external entity references", () => {
 ```
 
 **TC-3.3: Depth Limit Enforcement**
+
 ```typescript
 test("Should enforce MAX_DEPTH limit on nested elements", () => {
   // Create deeply nested XML
@@ -931,6 +990,7 @@ test("Should enforce MAX_DEPTH limit on nested elements", () => {
 ```
 
 **TC-3.4: Tag Count Limit Enforcement**
+
 ```typescript
 test("Should enforce MAX_TAG_COUNT limit", () => {
   // Create XML with 150k tags
@@ -954,17 +1014,20 @@ test("Should enforce MAX_TAG_COUNT limit", () => {
 ## PART 6: SECURITY DEBT TRACKING
 
 ### Resolved (P0 CRITICAL)
+
 - ✅ V1: Command injection via cp.exec() - FIX: Replace with execFile
 - ✅ V2: Credential exposure in args - FIX: Add env var + warning
 - ✅ V3: glob vulnerability - FIX: npm update
 - ✅ V4: semantic-release vulnerability - FIX: npm downgrade
 
 ### Mitigated (P1 HIGH)
+
 - ✅ V5: XML XXE attacks - MITIGATION: processEntities: false
 - ✅ V6: XML entity expansion - MITIGATION: Tag/depth/size limits
 - ✅ V7: Error message leaks - MITIGATION: logError sanitizer
 
 ### Monitored (P2 MEDIUM)
+
 - ⚠️ V8: Path traversal vectors - MONITOR: Input validation roadmap
 - ⚠️ V9: Configuration injection - MONITOR: Schema validation roadmap
 
@@ -994,15 +1057,18 @@ Before v2.17.231:
 ### Periodic Tasks
 
 **Weekly:**
+
 - npm audit (check for new vulns)
 - Code review of security-sensitive code
 
 **Monthly:**
+
 - Security scanning (SAST)
 - Dependency update review
 - Vulnerability disclosure check
 
 **Quarterly:**
+
 - Security training for team
 - Penetration testing (external)
 - Architecture review
@@ -1014,6 +1080,7 @@ Before v2.17.231:
 ### Vulnerable Code Patterns
 
 **Pattern 1: Command Injection via shell**
+
 ```typescript
 // VULNERABLE
 cp.exec("command string", callback);
@@ -1023,6 +1090,7 @@ cp.execFile("command", ["arg1", "arg2"], callback);
 ```
 
 **Pattern 2: Credential exposure**
+
 ```typescript
 // VULNERABLE
 args.push("--password", userPassword);
@@ -1033,12 +1101,13 @@ process.env.SVN_PASSWORD = userPassword;
 ```
 
 **Pattern 3: XXE attacks**
+
 ```typescript
 // VULNERABLE
-new XMLParser({ processEntities: true })
+new XMLParser({ processEntities: true });
 
 // SAFE
-new XMLParser({ processEntities: false })
+new XMLParser({ processEntities: false });
 ```
 
 ### Safe Coding Practices
@@ -1070,4 +1139,3 @@ new XMLParser({ processEntities: false })
 **Next Review:** After remediation completion
 
 ---
-

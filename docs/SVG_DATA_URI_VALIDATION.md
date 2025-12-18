@@ -4,7 +4,7 @@
 
 **Current Implementation: VALID AND RECOMMENDED**
 
-The current SVG data URI format in `/home/user/positron-svn/src/blame/blameProvider.ts:586-588` is **correct and compatible** with VS Code's `gutterIconPath` API.
+The current SVG data URI format in `/home/user/sven/src/blame/blameProvider.ts:586-588` is **correct and compatible** with VS Code's `gutterIconPath` API.
 
 ```typescript
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="3" height="16" viewBox="0 0 3 16"><rect width="3" height="16" fill="${color}"/></svg>`;
@@ -25,6 +25,7 @@ const uri = Uri.parse(`data:image/svg+xml;base64,${base64}`);
 - No special imports or polyfills required
 
 **Evidence**:
+
 ```typescript
 // Used in src/temp_svn_fs.ts
 contentBuffer = Buffer.from(iconv.encode(content, encoding));
@@ -38,24 +39,26 @@ const buffer = Buffer.from(textDocument.getText(), "utf-8");
 **Question**: Should we use `vscode.Uri.parse` or `Uri.file`?
 **Answer**: `Uri.parse` is CORRECT for data URIs
 
-| URI Type | Method | Scheme | Use Case |
-|----------|--------|--------|----------|
-| Data URI | `Uri.parse()` | `data:` | Inline SVG/images |
-| File Path | `Uri.file()` | `file:` | Filesystem resources |
+| URI Type  | Method        | Scheme  | Use Case             |
+| --------- | ------------- | ------- | -------------------- |
+| Data URI  | `Uri.parse()` | `data:` | Inline SVG/images    |
+| File Path | `Uri.file()`  | `file:` | Filesystem resources |
 
 **Rationale**:
+
 - `Uri.file()` creates URIs with `file://` scheme for filesystem paths
 - `Uri.parse()` creates URIs with any scheme, including `data:`
 - Data URIs are self-contained and don't require filesystem access
 
 **Example**:
+
 ```typescript
 // CORRECT for data URIs
-Uri.parse("data:image/svg+xml;base64,PHN2Zy4uLjwvc3ZnPg==")
+Uri.parse("data:image/svg+xml;base64,PHN2Zy4uLjwvc3ZnPg==");
 // Result: { scheme: "data", fsPath: "" }
 
 // INCORRECT for data URIs (would fail)
-Uri.file("data:image/svg+xml;base64,...")
+Uri.file("data:image/svg+xml;base64,...");
 // Error: Invalid file path
 ```
 
@@ -65,17 +68,20 @@ Uri.file("data:image/svg+xml;base64,...")
 **Answer**: YES, format is correct
 
 VS Code `gutterIconPath` accepts:
+
 - ✓ `Uri.file()` for filesystem paths
 - ✓ `Uri.parse()` for data URIs
 - ✓ Base64-encoded data URIs
 - ✓ Percent-encoded data URIs (less efficient)
 
 **Current Format**:
+
 ```
 data:image/svg+xml;base64,<BASE64_ENCODED_SVG>
 ```
 
 **Format Breakdown**:
+
 - `data:` - Data URI scheme
 - `image/svg+xml` - MIME type for SVG
 - `;base64` - Encoding indicator
@@ -88,14 +94,17 @@ data:image/svg+xml;base64,<BASE64_ENCODED_SVG>
 **Answer**: NO issues found
 
 **Base64 Advantages**:
+
 - No special character escaping needed
 - More compact than percent-encoding (30-40% smaller)
 - No URL-unsafe characters (`<`, `>`, `"`, `#`, etc.)
 - Handles all Unicode correctly
 
 **Comparison** (176-char test SVG):
+
 ```typescript
-const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="3" height="16" viewBox="0 0 3 16"><rect width="3" height="16" fill="#ff0000"/></svg>';
+const svg =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="3" height="16" viewBox="0 0 3 16"><rect width="3" height="16" fill="#ff0000"/></svg>';
 
 // Base64: 176 characters
 const base64 = Buffer.from(svg, "utf-8").toString("base64");
@@ -107,8 +116,9 @@ const percentEncoded = encodeURIComponent(svg);
 ```
 
 **Roundtrip Test**:
+
 ```typescript
-const original = '<svg>...</svg>';
+const original = "<svg>...</svg>";
 const base64 = Buffer.from(original, "utf-8").toString("base64");
 const decoded = Buffer.from(base64, "base64").toString("utf-8");
 assert.strictEqual(original, decoded); // PASS
@@ -120,6 +130,7 @@ assert.strictEqual(original, decoded); // PASS
 **Answer**: YES, confirmed compatible
 
 **VS Code API Documentation**:
+
 ```typescript
 interface DecorationRenderOptions {
   gutterIconPath?: string | Uri;
@@ -128,11 +139,13 @@ interface DecorationRenderOptions {
 ```
 
 **Evidence from Codebase**:
+
 - `src/uri.ts` and `src/resource.ts` use `Uri.file()` for filesystem icons
 - Current implementation uses `Uri.parse()` for dynamic SVG generation
 - Both approaches are valid for `gutterIconPath`
 
 **Why Data URIs for Dynamic SVGs**:
+
 1. No filesystem I/O required
 2. No temp file cleanup needed
 3. Cached in memory (Map<color, Uri>)
@@ -145,12 +158,17 @@ interface DecorationRenderOptions {
 
 ```typescript
 // Write SVG to temp file
-const tempPath = path.join(extensionPath, '.cache', `${color.substring(1)}.svg`);
+const tempPath = path.join(
+  extensionPath,
+  ".cache",
+  `${color.substring(1)}.svg`
+);
 fs.writeFileSync(tempPath, svg);
 const uri = Uri.file(tempPath);
 ```
 
 **Disadvantages**:
+
 - ✗ Filesystem I/O overhead
 - ✗ Temp file cleanup required
 - ✗ Race conditions with concurrent updates
@@ -165,6 +183,7 @@ const uri = Uri.parse(`data:image/svg+xml;charset=utf-8,${encoded}`);
 ```
 
 **Disadvantages**:
+
 - ✗ 30-40% larger than base64
 - ✗ Less readable (special chars escaped)
 - ✗ Same memory footprint (still string)
@@ -178,6 +197,7 @@ const uri = Uri.parse(`data:image/svg+xml,<svg>...</svg>`);
 ```
 
 **Disadvantages**:
+
 - ✗ Breaks on special chars (`#`, `"`, `<`, `>`)
 - ✗ Invalid URI format
 - ✗ Parsing errors in VS Code
@@ -204,12 +224,14 @@ private generateColorBarSvg(color: string): Uri {
 ```
 
 **Performance Metrics** (1000 iterations):
+
 - Encoding: ~0.01ms per operation
 - Total: ~10ms for 1000 different colors
 - Cache hit: O(1) instant retrieval
 - Memory: ~200 bytes per cached URI
 
 **Typical Usage** (100-line file):
+
 - Unique revisions: 5-20
 - Unique colors: 5-20
 - Cache size: 1-4KB
@@ -220,11 +242,12 @@ private generateColorBarSvg(color: string): Uri {
 
 ```typescript
 // Red (oldest) → Yellow → Green (newest)
-const hue = (revision - min) / (max - min) * 120;
-const color = hslToHex(hue, 70, 50);  // e.g., "#d9a34a"
+const hue = ((revision - min) / (max - min)) * 120;
+const color = hslToHex(hue, 70, 50); // e.g., "#d9a34a"
 ```
 
 **Color Space**:
+
 - Hue range: 0-120 (red to green)
 - Possible values: Infinite (continuous gradient)
 - Practical cache: 10-50 colors per file
@@ -235,6 +258,7 @@ const color = hslToHex(hue, 70, 50);  // e.g., "#d9a34a"
 ### ✅ Keep Current Implementation
 
 **Rationale**:
+
 1. **Correct API Usage**: `Uri.parse()` with data URI scheme
 2. **Efficient**: Base64 encoding is optimal for binary/complex data
 3. **Performant**: Sub-millisecond encoding + memory caching
@@ -249,6 +273,7 @@ private svgCache = new Map<string, Uri>();
 ```
 
 **Benefits**:
+
 - O(1) retrieval
 - Bounded size (max ~100 colors per project)
 - Auto-cleared on dispose()
@@ -261,6 +286,7 @@ width="3" height="16" viewBox="0 0 3 16"
 ```
 
 **Rationale**:
+
 - 3px width: Visible but not intrusive
 - 16px height: Matches line height
 - ViewBox: Scalable for different zoom levels
@@ -311,9 +337,10 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="3" height="16"><rect
 
 ## Test Coverage
 
-Created comprehensive test suite: `/home/user/positron-svn/src/test/unit/blame/svgUriFormats.test.ts`
+Created comprehensive test suite: `/home/user/sven/src/test/unit/blame/svgUriFormats.test.ts`
 
 **Test Suites**:
+
 1. ✓ Base64 Data URI (Current Implementation)
 2. ✓ Alternative: Percent-Encoded Data URI
 3. ✓ Color Embedding in SVG
@@ -323,6 +350,7 @@ Created comprehensive test suite: `/home/user/positron-svn/src/test/unit/blame/s
 7. ✓ Current Implementation Validation
 
 **Run Tests**:
+
 ```bash
 npm test -- --grep "SVG URI Format"
 ```
@@ -332,12 +360,14 @@ npm test -- --grep "SVG URI Format"
 **Issue**: Tests expect different SVG dimensions than implementation
 
 **Tests** (`svgGeneration.test.ts`, `gutterIcons.test.ts`):
+
 ```typescript
 assert.ok(decoded.includes('width="4"'));
 assert.ok(decoded.includes('viewBox="0 0 4 20"'));
 ```
 
 **Implementation** (`blameProvider.ts:586`):
+
 ```typescript
 width="3" height="16" viewBox="0 0 3 16"
 ```
@@ -356,6 +386,7 @@ width="3" height="16" viewBox="0 0 3 16"
 **Current Implementation: APPROVED**
 
 The SVG data URI format in `blameProvider.ts` is:
+
 - ✓ Correct for VS Code's `gutterIconPath` API
 - ✓ Using proper `Uri.parse()` method
 - ✓ Efficient base64 encoding

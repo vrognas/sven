@@ -83,21 +83,21 @@ jobs:
         run: npm run build:ts
 
       - name: Package extension
-        run: npm run organize && npx @vscode/vsce package -o positron-svn.vsix
+        run: npm run organize && npx @vscode/vsce package -o sven.vsix
 
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v2
         with:
           pat: ${{ secrets.OVSX_PAT }}
           registryUrl: https://open-vsx.org
-          extensionFile: positron-svn.vsix
+          extensionFile: sven.vsix
 
       - name: Publish to VS Code Marketplace
         uses: HaaLeo/publish-vscode-extension@v2
         with:
           pat: ${{ secrets.VSCE_PAT }}
           registryUrl: https://marketplace.visualstudio.com
-          extensionFile: positron-svn.vsix
+          extensionFile: sven.vsix
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -105,7 +105,7 @@ jobs:
           tag_name: ${{ steps.get_version.outputs.TAG }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
           body: ${{ steps.changelog.outputs.NOTES }}
-          files: positron-svn.vsix
+          files: sven.vsix
           draft: false
           prerelease: false
         env:

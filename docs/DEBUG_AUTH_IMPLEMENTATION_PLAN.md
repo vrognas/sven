@@ -13,6 +13,7 @@
 **Change:** Add `[auth: <method>]` to command logs
 
 **Implementation:**
+
 ```typescript
 // In src/svn.ts, around line 110:
 
@@ -43,30 +44,35 @@ if (options.log !== false) {
 ```
 
 **Before:**
+
 ```
 [repo]$ svn update --username john
 ```
 
 **After:**
+
 ```
 [repo]$ svn update --username john [auth: password provided]
 ```
 
 **Impact:**
+
 - Users can see what auth method is active
 - Debug "credentials not being used" issues instantly
 - Zero security impact (shows method, not content)
 - No configuration changes needed
 
 **Files Modified:**
-- /home/user/positron-svn/src/svn.ts (lines ~109-114, ~293-296)
+
+- /home/user/sven/src/svn.ts (lines ~109-114, ~293-296)
 
 **Test Cases:**
+
 ```typescript
 it("logs auth method without exposing password", () => {
   const spy = sinon.spy(svn, "logOutput");
   svn.exec("/repo", ["update"], { username: "john", password: "secret" });
-  
+
   assert(spy.calledWith(sinon.match(/\[auth: password provided\]/)));
   assert(!spy.calledWith(sinon.match(/secret/)));
 });
@@ -79,6 +85,7 @@ it("logs auth method without exposing password", () => {
 **Change:** Show prominent warning when `debug.disableSanitization` enabled
 
 **Implementation:**
+
 ```typescript
 // In src/extension.ts, around line 115:
 
@@ -97,28 +104,32 @@ if (configuration.get<boolean>("debug.disableSanitization", false)) {
   outputChannel.appendLine("⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️");
   outputChannel.appendLine("");
   outputChannel.show(); // Force show
-  
-  window.showWarningMessage(
-    "⚠️ SVN: Error sanitization disabled. Credentials visible in logs. " +
-    "Disable svn.debug.disableSanitization after debugging.",
-    "Disable Now",
-    "OK"
-  ).then(choice => {
-    if (choice === "Disable Now") {
-      configuration.update("debug.disableSanitization", false, true);
-    }
-  });
+
+  window
+    .showWarningMessage(
+      "⚠️ SVN: Error sanitization disabled. Credentials visible in logs. " +
+        "Disable svn.debug.disableSanitization after debugging.",
+      "Disable Now",
+      "OK"
+    )
+    .then(choice => {
+      if (choice === "Disable Now") {
+        configuration.update("debug.disableSanitization", false, true);
+      }
+    });
 }
 ```
 
 **Impact:**
+
 - Prevents users from forgetting debug mode is on
 - Clear visual warning in Output Channel
 - One-click disable option
 - Helps prevent accidental credential exposure
 
 **Files Modified:**
-- /home/user/positron-svn/src/extension.ts (~line 115)
+
+- /home/user/sven/src/extension.ts (~line 115)
 
 ---
 
@@ -127,6 +138,7 @@ if (configuration.get<boolean>("debug.disableSanitization", false)) {
 **Change:** Add context to authentication failures
 
 **Implementation:**
+
 ```typescript
 // In src/services/authService.ts or src/commands/command.ts:
 
@@ -137,9 +149,9 @@ function getAuthFailureContext(
   if (error.svnErrorCode !== svnErrorCodes.AuthorizationFailed) {
     return "";
   }
-  
+
   const lines: string[] = [];
-  
+
   // What was attempted
   if (options.credentialFile) {
     lines.push("✗ Authentication failed using credential file");
@@ -156,38 +168,40 @@ function getAuthFailureContext(
     lines.push("  Extension will prompt for credentials");
     return lines.join("\n");
   }
-  
+
   // Common causes
   lines.push("");
   lines.push("Possible causes:");
   lines.push("  - Password incorrect or expired");
   lines.push("  - Username doesn't have repository access");
   lines.push("  - Account locked or disabled");
-  
+
   return lines.join("\n");
 }
 
 // Use in error handlers:
 catch (err) {
   const svnError = err as ISvnErrorData;
-  
+
   if (this.authService.isAuthError(svnError)) {
     const context = getAuthFailureContext(svnError, options);
     if (context) {
       this.logOutput(`\n${context}\n\n`);
     }
   }
-  
+
   throw err;
 }
 ```
 
 **Before:**
+
 ```
 svn: E170001: Authentication failed
 ```
 
 **After:**
+
 ```
 svn: E170001: Authentication failed
 ✗ Authentication failed using provided password
@@ -200,15 +214,17 @@ Possible causes:
 ```
 
 **Impact:**
+
 - Users know if credentials were provided
 - Clear distinction between "wrong password" and "no credentials"
 - Actionable guidance
 - Reduces support requests
 
 **Files Modified:**
-- /home/user/positron-svn/src/services/authService.ts (add helper)
-- /home/user/positron-svn/src/commands/command.ts (use in error handlers)
-- /home/user/positron-svn/src/svnRepository.ts (use in retry logic)
+
+- /home/user/sven/src/services/authService.ts (add helper)
+- /home/user/sven/src/commands/command.ts (use in error handlers)
+- /home/user/sven/src/svnRepository.ts (use in retry logic)
 
 ---
 
@@ -217,12 +233,13 @@ Possible causes:
 **Change:** Show credential cycling during auth retries
 
 **Implementation:**
+
 ```typescript
 // In src/services/authService.ts retryWithAuth() method:
 
 while (attempt < maxAttempts) {
   attempt++;
-  
+
   // Add this before try:
   if (attempt > 1 && configuration.get<boolean>("debug.verboseAuth", false)) {
     if (attempt <= storedAccounts.length) {
@@ -231,15 +248,15 @@ while (attempt < maxAttempts) {
       this.logOutput(`→ Prompting for credentials (attempt ${attempt - storedAccounts.length} of 3)...\n`);
     }
   }
-  
+
   try {
     const result = await operation();
-    
+
     // Add success log:
     if (attempt > 1 && configuration.get<boolean>("debug.verboseAuth", false)) {
       this.logOutput(`✓ Authentication successful\n`);
     }
-    
+
     await this.saveCredentials();
     return result;
   }
@@ -248,6 +265,7 @@ while (attempt < maxAttempts) {
 ```
 
 **Output:**
+
 ```
 [repo]$ svn update --username john [auth: password provided]
 svn: E170001: Authentication failed
@@ -260,9 +278,11 @@ svn: E170001: Authentication failed
 ```
 
 **Files Modified:**
-- /home/user/positron-svn/src/services/authService.ts (lines ~149-198)
+
+- /home/user/sven/src/services/authService.ts (lines ~149-198)
 
 **Config Addition:**
+
 ```json
 {
   "svn.debug.verboseAuth": {
@@ -287,46 +307,56 @@ import { Svn } from "../../../src/svn";
 describe("SVN Authentication Logging", () => {
   let svn: Svn;
   let logSpy: sinon.SinonSpy;
-  
+
   beforeEach(() => {
     svn = new Svn({ svnPath: "/usr/bin/svn", version: "1.14.0" });
     logSpy = sinon.spy(svn, "logOutput");
   });
-  
+
   it("shows 'password provided' without exposing password", async () => {
     await svn.exec("/repo", ["update"], {
       username: "john",
       password: "secret123"
     });
-    
+
     assert(logSpy.calledWith(sinon.match(/\[auth: password provided\]/)));
     assert(!logSpy.calledWith(sinon.match(/secret123/)));
   });
-  
+
   it("shows SVN_PASSWORD env var without exposing value", async () => {
     process.env.SVN_PASSWORD = "test_pass";
-    
+
     await svn.exec("/repo", ["update"], { username: "john" });
-    
-    assert(logSpy.calledWith(sinon.match(/\[auth: SVN_PASSWORD environment variable\]/)));
+
+    assert(
+      logSpy.calledWith(
+        sinon.match(/\[auth: SVN_PASSWORD environment variable\]/)
+      )
+    );
     assert(!logSpy.calledWith(sinon.match(/test_pass/)));
-    
+
     delete process.env.SVN_PASSWORD;
   });
-  
+
   it("shows credential file path without exposing contents", async () => {
     await svn.exec("/repo", ["update"], {
       username: "john",
       credentialFile: "~/.svn-credentials"
     });
-    
-    assert(logSpy.calledWith(sinon.match(/\[auth: credential file ~\/.svn-credentials\]/)));
+
+    assert(
+      logSpy.calledWith(
+        sinon.match(/\[auth: credential file ~\/.svn-credentials\]/)
+      )
+    );
   });
-  
+
   it("shows 'none' when no auth provided", async () => {
     await svn.exec("/repo", ["info"], {});
-    
-    assert(logSpy.calledWith(sinon.match(/\[auth: none - will prompt if needed\]/)));
+
+    assert(
+      logSpy.calledWith(sinon.match(/\[auth: none - will prompt if needed\]/))
+    );
   });
 });
 ```
@@ -349,23 +379,27 @@ describe("SVN Authentication Logging", () => {
 ## Rollout Plan
 
 ### Phase 1: Core Implementation (1 day)
+
 1. Implement auth method indicators
 2. Add debug mode warning
 3. Write unit tests
 4. Manual testing
 
 ### Phase 2: Enhanced Errors (1 day)
+
 1. Implement auth error context
 2. Test all error scenarios
 3. Verify messages are helpful
 
 ### Phase 3: Documentation (1 day)
+
 1. Update CHANGELOG.md
 2. Add to LESSONS_LEARNED.md
 3. Update package.json descriptions
 4. Create user documentation
 
 ### Phase 4: Release
+
 1. Bump version (2.17.230 → 2.18.0)
 2. Create release notes highlighting debugging improvements
 3. Deploy
@@ -375,6 +409,7 @@ describe("SVN Authentication Logging", () => {
 ## Success Criteria
 
 ### Must Have (for v2.18)
+
 - [x] Auth method visible in command logs
 - [x] Passwords never exposed (except debug mode)
 - [x] Debug mode shows warning
@@ -382,11 +417,13 @@ describe("SVN Authentication Logging", () => {
 - [x] Tests pass
 
 ### Should Have (for v2.18)
+
 - [ ] Enhanced auth error messages
 - [ ] Clear "wrong password" vs "no credentials" distinction
 - [ ] Documentation updated
 
 ### Nice to Have (for v2.19)
+
 - [ ] Verbose retry logging
 - [ ] Credential source tracking
 - [ ] Debug log export command
@@ -396,41 +433,47 @@ describe("SVN Authentication Logging", () => {
 ## Files to Modify
 
 ### Primary Changes
-1. **/home/user/positron-svn/src/svn.ts** (~30 lines)
+
+1. **/home/user/sven/src/svn.ts** (~30 lines)
    - Add `getAuthMethodLabel()` function
    - Modify `logOutput()` calls in `exec()` and `execBuffer()`
 
-2. **/home/user/positron-svn/src/extension.ts** (~20 lines)
+2. **/home/user/sven/src/extension.ts** (~20 lines)
    - Add debug mode warning check
    - Show warning in Output Channel and dialog
 
-3. **/home/user/positron-svn/src/services/authService.ts** (~40 lines)
+3. **/home/user/sven/src/services/authService.ts** (~40 lines)
    - Add `getAuthFailureContext()` helper
    - Use in error handlers
 
 ### Test Files
-4. **/home/user/positron-svn/test/unit/svn/auth-logging.test.ts** (new file)
+
+4. **/home/user/sven/test/unit/svn/auth-logging.test.ts** (new file)
    - Test auth method logging
    - Verify password sanitization
 
 ### Documentation
-5. **/home/user/positron-svn/CHANGELOG.md**
-6. **/home/user/positron-svn/docs/LESSONS_LEARNED.md**
+
+5. **/home/user/sven/CHANGELOG.md**
+6. **/home/user/sven/docs/LESSONS_LEARNED.md**
 
 ---
 
 ## Risk Assessment
 
 ### Low Risk
+
 - Auth method indicators (pure addition, no logic change)
 - Debug mode warning (pure UX addition)
 - Unit tests (no production impact)
 
 ### Medium Risk
+
 - Auth error messages (changes error handling flow)
   - Mitigation: Make context optional, preserve existing errors
 
 ### No Risk
+
 - Documentation updates
 
 ---
@@ -438,23 +481,29 @@ describe("SVN Authentication Logging", () => {
 ## Alternative Approaches Considered
 
 ### ❌ Show password length
+
 ```
 [auth: password provided (8 characters)]
 ```
+
 **Rejected:** Gives attackers information
 
 ### ❌ Show password hash
+
 ```
 [auth: password hash abc123...]
 ```
+
 **Rejected:** Unnecessary, confusing to users
 
 ### ✓ Show method + source (CHOSEN)
+
 ```
 [auth: password provided]
 [auth: credential file ~/.svn-credentials]
 [auth: SVN_PASSWORD environment variable]
 ```
+
 **Selected:** Clear, secure, actionable
 
 ---
@@ -464,6 +513,7 @@ describe("SVN Authentication Logging", () => {
 **Users debugging auth don't need to see passwords.**
 
 **They need to see:**
+
 1. ✓ What auth method is being used
 2. ✓ Whether credentials were provided
 3. ✓ What went wrong

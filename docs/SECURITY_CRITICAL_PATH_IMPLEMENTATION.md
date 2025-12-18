@@ -11,11 +11,11 @@
 
 **3 critical vulnerabilities require immediate remediation:**
 
-| ID | Vulnerability | Severity | CVSS | Fix | Time |
-|:---:|---|:---:|:---:|---|:---:|
-| V1 | Command Injection | CRITICAL | 9.8 | execFile | 30m |
-| V2 | Credential Exposure | HIGH | 7.5 | Env var + warn | 2h |
-| V3-4 | Dependency vulns | HIGH | 8.8 | npm update | 10m |
+|  ID  | Vulnerability       | Severity | CVSS | Fix            | Time |
+| :--: | ------------------- | :------: | :--: | -------------- | :--: |
+|  V1  | Command Injection   | CRITICAL | 9.8  | execFile       | 30m  |
+|  V2  | Credential Exposure |   HIGH   | 7.5  | Env var + warn |  2h  |
+| V3-4 | Dependency vulns    |   HIGH   | 8.8  | npm update     | 10m  |
 
 **Total effort: 4 hours** (include testing, docs, validation)
 
@@ -28,6 +28,7 @@
 **Goal:** Replace shell-spawning cp.exec() with safe cp.execFile()
 
 **Files to modify:**
+
 - `src/svnFinder.ts` (3 locations: lines 56, 65, 79)
 
 **Testing:** Existing unit tests should pass unchanged
@@ -41,6 +42,7 @@
 **Goal:** Support environment variable authentication + add warnings
 
 **Files to modify:**
+
 - `src/svn.ts` (support SVN_PASSWORD, add warnings)
 - `README.md` (authentication best practices)
 - Create: `SECURITY.md` (security policy)
@@ -56,6 +58,7 @@
 **Goal:** Patch critical vulnerabilities in dependencies
 
 **Commands:**
+
 ```bash
 npm install glob@^11.1.0 --save-dev
 npm install semantic-release@^24.2.9 --save-dev
@@ -71,6 +74,7 @@ npm audit fix
 **Goal:** Write security test cases + verify fixes
 
 **Files to create:**
+
 - `src/test/unit/security/commandInjection.test.ts`
 - `src/test/unit/security/credentialSafety.test.ts`
 - `src/test/unit/security/xmlParsingSecurity.test.ts`
@@ -82,6 +86,7 @@ npm audit fix
 ### Phase 5: Documentation & Release (30 minutes)
 
 **Files to create/update:**
+
 - `SECURITY.md` (new)
 - `CHANGELOG.md` (v2.17.231 entry)
 - `README.md` (auth section)
@@ -99,9 +104,10 @@ npm audit fix
 
 ### 1.1 Understand Current Code
 
-**File:** `/home/user/positron-svn/src/svnFinder.ts`
+**File:** `/home/user/sven/src/svnFinder.ts`
 
 **Location 1 (Line 56):** Find which svn
+
 ```typescript
 cp.exec("which svn", (err, svnPathBuffer) => {
   if (err) {
@@ -113,6 +119,7 @@ cp.exec("which svn", (err, svnPathBuffer) => {
 ```
 
 **Location 2 (Line 65):** Get SVN version
+
 ```typescript
 cp.exec("svn --version --quiet", (err, stdout) => {
   if (err) {
@@ -123,6 +130,7 @@ cp.exec("svn --version --quiet", (err, stdout) => {
 ```
 
 **Location 3 (Line 79):** Check XCode installation
+
 ```typescript
 cp.exec("xcode-select -p", (err: any) => {
   if (err && err.code === 2) {
@@ -137,16 +145,19 @@ cp.exec("xcode-select -p", (err: any) => {
 **Step 1: Replace cp.exec with cp.execFile for "which svn"**
 
 Find line 56:
+
 ```typescript
 cp.exec("which svn", (err, svnPathBuffer) => {
 ```
 
 Replace with:
+
 ```typescript
 cp.execFile("which", ["svn"], (err, svnPathBuffer) => {
 ```
 
 **Reasoning:**
+
 - `cp.exec()` spawns: `/bin/sh -c "which svn"` (vulnerable to injection)
 - `cp.execFile()` spawns: `/usr/bin/which svn` directly (safe)
 - Shell doesn't interpret arguments
@@ -155,11 +166,13 @@ cp.execFile("which", ["svn"], (err, svnPathBuffer) => {
 **Step 2: Replace cp.exec with cp.execFile for "svn --version --quiet"**
 
 Find line 65:
+
 ```typescript
 cp.exec("svn --version --quiet", (err, stdout) => {
 ```
 
 Replace with:
+
 ```typescript
 cp.execFile("svn", ["--version", "--quiet"], (err, stdout) => {
 ```
@@ -167,11 +180,13 @@ cp.execFile("svn", ["--version", "--quiet"], (err, stdout) => {
 **Step 3: Replace cp.exec with cp.execFile for "xcode-select -p"**
 
 Find line 79:
+
 ```typescript
 cp.exec("xcode-select -p", (err: any) => {
 ```
 
 Replace with:
+
 ```typescript
 cp.execFile("xcode-select", ["-p"], (err: any) => {
 ```
@@ -179,6 +194,7 @@ cp.execFile("xcode-select", ["-p"], (err: any) => {
 ### 1.3 Verification
 
 **Test execution:**
+
 ```bash
 npm test src/test/unit/svnFinder.test.ts
 ```
@@ -191,9 +207,10 @@ npm test src/test/unit/svnFinder.test.ts
 
 ### 2.1 Understand Current Code
 
-**File:** `/home/user/positron-svn/src/svn.ts`
+**File:** `/home/user/sven/src/svn.ts`
 
 **Current code (lines 110-114):**
+
 ```typescript
 if (options.password) {
   // SECURITY WARNING: Passing passwords via --password exposes them in process list
@@ -208,6 +225,7 @@ if (options.password) {
 **Location:** In `exec()` method, modify auth section
 
 **Current implementation:**
+
 ```typescript
 if (options.password) {
   args.push("--password", options.password);
@@ -215,6 +233,7 @@ if (options.password) {
 ```
 
 **New implementation:**
+
 ```typescript
 if (options.password) {
   // SECURITY: Using --password exposes credentials in process list
@@ -227,7 +246,7 @@ if (options.password) {
     if (options.log !== false) {
       this.logOutput(
         "WARNING: Using --password flag exposes credentials in process list.\n" +
-        "         Consider setting SVN_PASSWORD environment variable or using SSH keys.\n"
+          "         Consider setting SVN_PASSWORD environment variable or using SSH keys.\n"
       );
     }
     args.push("--password", options.password);
@@ -260,7 +279,7 @@ if (password) {
     if (options.log !== false) {
       this.logOutput(
         "WARNING: Password in CLI args exposes credentials in process list.\n" +
-        "         Use SVN_PASSWORD environment variable for better security.\n"
+          "         Use SVN_PASSWORD environment variable for better security.\n"
       );
     }
     args.push("--password", options.password);
@@ -282,7 +301,8 @@ if (password) {
 **Location:** After installation, before usage examples
 
 **Content:**
-```markdown
+
+````markdown
 ## Authentication
 
 SVN extension supports multiple authentication methods. Choose based on security requirements:
@@ -298,6 +318,7 @@ ssh = ssh -i ~/.ssh/id_rsa
 # Use SVN with SSH URLs
 svn checkout svn+ssh://user@host/repo
 ```
+````
 
 ### Method 2: Environment Variables (Secure)
 
@@ -337,7 +358,8 @@ svn checkout --username user --password pass https://repo.example.com/svn
 - **Don't:** Pass password as CLI argument in logs/scripts
 - **Don't:** Commit credentials to version control
 - **Don't:** Use same password for multiple systems
-```
+
+````
 
 **File:** Create `SECURITY.md`
 
@@ -387,7 +409,7 @@ Security fixes released as patch versions (semver PATCH).
 All users urged to update immediately.
 
 Check [releases](https://github.com/example/releases) for security notices.
-```
+````
 
 ### 2.4 Add Warning Logging
 
@@ -400,6 +422,7 @@ Check [releases](https://github.com/example/releases) for security notices.
 ### 3.1 Update glob Package
 
 **Command:**
+
 ```bash
 npm install glob@^11.1.0 --save-dev
 ```
@@ -407,6 +430,7 @@ npm install glob@^11.1.0 --save-dev
 **Why:** glob@11.0.3 has command injection vulnerability (GHSA-5j98-mcp5-4vw2)
 
 **Verification:**
+
 ```bash
 npm ls glob
 # Output should show: glob@11.1.0 or higher
@@ -415,6 +439,7 @@ npm ls glob
 ### 3.2 Update semantic-release Package
 
 **Command:**
+
 ```bash
 npm install semantic-release@^24.2.9 --save-dev
 ```
@@ -422,6 +447,7 @@ npm install semantic-release@^24.2.9 --save-dev
 **Why:** semantic-release@25.0.2 has HIGH vulnerabilities via @semantic-release/npm@13.x
 
 **Verification:**
+
 ```bash
 npm ls semantic-release
 # Output should show: semantic-release@24.2.9 or higher
@@ -430,11 +456,13 @@ npm ls semantic-release
 ### 3.3 Run Audit Fix
 
 **Command:**
+
 ```bash
 npm audit fix --only=dev
 ```
 
 **Verification:**
+
 ```bash
 npm audit
 # Output: "0 vulnerabilities" or only LOW severity advisories
@@ -446,7 +474,7 @@ npm audit
 
 ### 4.1 Command Injection Tests
 
-**File:** Create `/home/user/positron-svn/src/test/unit/security/commandInjection.test.ts`
+**File:** Create `/home/user/sven/src/test/unit/security/commandInjection.test.ts`
 
 ```typescript
 import * as assert from "assert";
@@ -481,7 +509,7 @@ describe("Security - Command Injection Prevention", () => {
 
     // Verify specific command
     const calls = execFileSpy.getCalls();
-    const whichCall = calls.find((c) => c.args[0] === "which");
+    const whichCall = calls.find(c => c.args[0] === "which");
     assert(whichCall, "which command should be executed with execFile");
     assert(
       Array.isArray(whichCall.args[1]),
@@ -500,7 +528,10 @@ describe("Security - Command Injection Prevention", () => {
     }
 
     // Verify exec was NEVER called
-    assert(!execSpy.called, "exec() should never be used (shell injection risk)");
+    assert(
+      !execSpy.called,
+      "exec() should never be used (shell injection risk)"
+    );
   });
 
   it("should pass command arguments as array elements", async () => {
@@ -514,7 +545,7 @@ describe("Security - Command Injection Prevention", () => {
     }
 
     // Verify all execFile calls have array arguments
-    execFileSpy.getCalls().forEach((call) => {
+    execFileSpy.getCalls().forEach(call => {
       const [command, args] = call.args;
       assert(typeof command === "string", "Command should be string");
       assert(Array.isArray(args), `Arguments should be array for ${command}`);
@@ -539,7 +570,7 @@ describe("Security - Command Injection Prevention", () => {
     // Look for svn --version call
     const svnCall = execFileSpy
       .getCalls()
-      .find((c) => c.args[0] === "svn" && c.args[1]?.[0] === "--version");
+      .find(c => c.args[0] === "svn" && c.args[1]?.[0] === "--version");
 
     assert(svnCall, "Should call execFile with svn --version");
 
@@ -559,7 +590,7 @@ describe("Security - Command Injection Prevention", () => {
 
 ### 4.2 Credential Safety Tests
 
-**File:** Create `/home/user/positron-svn/src/test/unit/security/credentialSafety.test.ts`
+**File:** Create `/home/user/sven/src/test/unit/security/credentialSafety.test.ts`
 
 ```typescript
 import * as assert from "assert";
@@ -631,14 +662,11 @@ describe("Security - Credential Safety", () => {
 
     // Verify warning logged
     const logCalls = logSpy.getCalls();
-    const warningCall = logCalls.find((c) =>
-      c.args[0]?.includes("WARNING") || c.args[0]?.includes("password")
+    const warningCall = logCalls.find(
+      c => c.args[0]?.includes("WARNING") || c.args[0]?.includes("password")
     );
 
-    assert(
-      warningCall,
-      "Should log warning about password in process list"
-    );
+    assert(warningCall, "Should log warning about password in process list");
   });
 
   it("should support SVN_PASSWORD environment variable", async () => {
@@ -706,7 +734,7 @@ describe("Security - Credential Safety", () => {
 
 ### 4.3 XML Security Tests
 
-**File:** Create `/home/user/positron-svn/src/test/unit/security/xmlSecurity.test.ts`
+**File:** Create `/home/user/sven/src/test/unit/security/xmlSecurity.test.ts`
 
 ```typescript
 import * as assert from "assert";
@@ -807,14 +835,8 @@ describe("Security - XML Parsing Safety", () => {
 
     // Verify control characters removed
     const content = JSON.stringify(result);
-    assert(
-      !content.includes("\x00"),
-      "Null bytes should be removed"
-    );
-    assert(
-      !content.includes("\x08"),
-      "Control characters should be removed"
-    );
+    assert(!content.includes("\x00"), "Null bytes should be removed");
+    assert(!content.includes("\x08"), "Control characters should be removed");
   });
 
   it("should accept valid XML without issue", () => {
@@ -840,6 +862,7 @@ describe("Security - XML Parsing Safety", () => {
 ### 4.4 Run Tests
 
 **Command:**
+
 ```bash
 npm test src/test/unit/security/*.test.ts
 ```
@@ -923,6 +946,7 @@ npm run build
 ## TESTING EXECUTION PLAN
 
 ### Test Run 1: Unit Tests
+
 ```bash
 npm test
 ```
@@ -930,6 +954,7 @@ npm test
 **Expected:** All existing tests pass, new security tests pass
 
 ### Test Run 2: Dependency Audit
+
 ```bash
 npm audit
 ```
@@ -939,18 +964,21 @@ npm audit
 ### Test Run 3: Manual Verification
 
 **Test SVN Discovery:**
+
 ```bash
 # Extension should find SVN without shell injection
 which svn  # Returns path like /usr/bin/svn
 ```
 
 **Test Credential Warning:**
+
 ```typescript
 // In test code, call exec with password
 // Should see warning logged: "WARNING: Using --password flag..."
 ```
 
 **Test SVN_PASSWORD Support:**
+
 ```bash
 export SVN_PASSWORD=testpass
 # Extension should use env var without adding to args
@@ -963,17 +991,20 @@ export SVN_PASSWORD=testpass
 ### If issues found during testing:
 
 **Option 1: Revert single commit**
+
 ```bash
 git revert <commit-hash>
 git push
 ```
 
 **Option 2: Revert all security changes**
+
 ```bash
 git reset --hard HEAD~5  # Adjust commit count
 ```
 
 **Option 3: Tag for emergency rollback**
+
 ```bash
 git tag v2.17.230-rollback
 ```
@@ -1000,15 +1031,18 @@ Before release approval:
 ## POST-RELEASE MONITORING
 
 **First 24 hours:**
+
 - Monitor for error reports
 - Check GitHub issues for security-related problems
 - Review extension marketplace feedback
 
 **Weekly:**
+
 - npm audit check
 - Security mailing list subscription
 
 **Monthly:**
+
 - Dependency vulnerability scan
 - Security code review
 
@@ -1021,4 +1055,3 @@ Before release approval:
 **Risk Level:** LOW
 
 ---
-

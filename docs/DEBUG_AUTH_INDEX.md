@@ -24,11 +24,13 @@
 ## Document Overview
 
 ### 1. DEBUG_FRIENDLY_AUTH_ANALYSIS.md (Comprehensive Analysis)
+
 **Size:** ~1,200 lines  
 **Purpose:** Complete debugging analysis and design recommendations  
 **Audience:** Developers, architects
 
 **Contents:**
+
 - Part 1: Debug Scenarios Analysis (5 scenarios)
 - Part 2: Current Debug Output Analysis
 - Part 3: Debug-Friendly Solution Design
@@ -43,6 +45,7 @@
 - Part 12: Migration Path
 
 **Key Sections:**
+
 - Design principle: "Show Intent, Not Content"
 - Authentication method indicators
 - Enhanced error messages
@@ -52,11 +55,13 @@
 ---
 
 ### 2. DEBUG_AUTH_QUICK_REFERENCE.md (Quick Guide)
+
 **Size:** ~400 lines  
 **Purpose:** Fast lookup for common scenarios and examples  
 **Audience:** All developers
 
 **Contents:**
+
 - Current vs Proposed comparison
 - Debug output examples (6 scenarios)
 - Security principles (safe vs unsafe)
@@ -68,6 +73,7 @@
 - Success metrics
 
 **Use when:**
+
 - Need quick example of proposed output
 - Looking up security principles
 - Checking implementation status
@@ -76,11 +82,13 @@
 ---
 
 ### 3. DEBUG_AUTH_IMPLEMENTATION_PLAN.md (Action Plan)
+
 **Size:** ~600 lines  
 **Purpose:** Step-by-step implementation guide  
 **Audience:** Implementing developers
 
 **Contents:**
+
 - 3 immediate recommendations (prioritized)
 - Complete code implementations (copy-paste ready)
 - Test cases with examples
@@ -90,6 +98,7 @@
 - Success criteria
 
 **Recommendations:**
+
 1. Auth Method Indicators (30 min) - CRITICAL
 2. Debug Mode Warning (30 min) - HIGH
 3. Enhanced Auth Errors (1 hour) - MEDIUM
@@ -99,11 +108,13 @@
 ---
 
 ### 4. DEBUG_AUTH_BEFORE_AFTER.md (Visual Comparison)
+
 **Size:** ~500 lines  
 **Purpose:** Show concrete examples of improvements  
 **Audience:** All stakeholders
 
 **Contents:**
+
 - 10 before/after scenarios with real output
 - Security comparison examples
 - Configuration examples
@@ -111,6 +122,7 @@
 - Summary of user experience impact
 
 **Scenarios:**
+
 1. Wrong password
 2. No credentials configured
 3. Environment variable authentication
@@ -125,11 +137,13 @@
 ---
 
 ### 5. DEBUG_AUTH_ANALYSIS_SUMMARY.md (Executive Summary)
+
 **Size:** ~400 lines  
 **Purpose:** High-level overview for decision makers  
 **Audience:** Tech leads, managers
 
 **Contents:**
+
 - Executive summary
 - Key recommendation
 - Three priority items
@@ -141,6 +155,7 @@
 - Conclusion
 
 **Key metrics:**
+
 - Current: 7/10 debuggability
 - Proposed: 9/10 debuggability
 - Effort: 2-3 hours
@@ -154,6 +169,7 @@
 ### Current State: SOLID ✓
 
 **Strengths:**
+
 - ✓ SVN commands logged before password added to args
 - ✓ Comprehensive error sanitization (paths, IPs, credentials)
 - ✓ `debug.disableSanitization` config exists
@@ -161,6 +177,7 @@
 - ✓ Output Channel visible to users
 
 **Gap:**
+
 - ⚠️ No visibility into authentication method being used
 - ⚠️ No runtime warning when debug mode exposes credentials
 
@@ -171,11 +188,13 @@
 ### Design Principle: Show INTENT, Not CONTENT
 
 **Good Examples:**
+
 - `[auth: password provided]` ✓
 - `[auth: credential file ~/.svn-credentials]` ✓
 - `[auth: SVN_PASSWORD environment variable]` ✓
 
 **Bad Examples:**
+
 - `[auth: password=hunter2]` ✗
 - `[auth: file contents=user:pass]` ✗
 - `[auth: $SVN_PASSWORD=secret]` ✗
@@ -185,18 +204,21 @@
 ## Three Priority Recommendations
 
 ### 1. Auth Method Indicators (30 minutes)
+
 **What:** Add `[auth: <method>]` to all command logs  
 **Why:** Users can see what auth is being used  
 **Risk:** None (pure addition)  
 **Impact:** Huge debugging improvement
 
 ### 2. Debug Mode Warning (30 minutes)
+
 **What:** Show warning when `debug.disableSanitization` enabled  
 **Why:** Prevent accidental credential exposure  
 **Risk:** None (UX enhancement)  
 **Impact:** Better security awareness
 
 ### 3. Enhanced Auth Errors (1 hour)
+
 **What:** Add context to authentication failures  
 **Why:** Distinguish "wrong password" from "no credentials"  
 **Risk:** Low (error message changes)  
@@ -211,6 +233,7 @@
 ## Implementation Checklist
 
 ### Phase 1: Core Implementation
+
 - [ ] Read implementation plan
 - [ ] Add `getAuthMethodLabel()` to svn.ts
 - [ ] Modify command logging to include auth method
@@ -222,6 +245,7 @@
 - [ ] Commit changes
 
 ### Phase 2: Testing
+
 - [ ] Test password auth → shows `[auth: password provided]`
 - [ ] Test password never appears in logs
 - [ ] Test env var auth → shows `[auth: SVN_PASSWORD...]`
@@ -231,6 +255,7 @@
 - [ ] Test auth error context messages
 
 ### Phase 3: Documentation
+
 - [ ] Update CHANGELOG.md with improvements
 - [ ] Add to LESSONS_LEARNED.md
 - [ ] Update package.json descriptions if needed
@@ -243,29 +268,28 @@
 ### Files to Modify
 
 **Primary:**
-1. `/home/user/positron-svn/src/svn.ts` (~30 lines)
+
+1. `/home/user/sven/src/svn.ts` (~30 lines)
    - Add `getAuthMethodLabel()` function
    - Modify logging in `exec()` (line ~111)
    - Modify logging in `execBuffer()` (line ~294)
 
-2. `/home/user/positron-svn/src/extension.ts` (~20 lines)
+2. `/home/user/sven/src/extension.ts` (~20 lines)
    - Add debug warning check (after line ~115)
 
-3. `/home/user/positron-svn/src/services/authService.ts` (~40 lines)
+3. `/home/user/sven/src/services/authService.ts` (~40 lines)
    - Add `getAuthFailureContext()` helper
 
-**Tests:**
-4. `/home/user/positron-svn/test/unit/svn/auth-logging.test.ts` (new file)
+**Tests:** 4. `/home/user/sven/test/unit/svn/auth-logging.test.ts` (new file)
 
-**Documentation:**
-5. `/home/user/positron-svn/CHANGELOG.md`
-6. `/home/user/positron-svn/docs/LESSONS_LEARNED.md`
+**Documentation:** 5. `/home/user/sven/CHANGELOG.md` 6. `/home/user/sven/docs/LESSONS_LEARNED.md`
 
 ---
 
 ## Code Examples
 
 ### Example 1: Auth Method Label Function
+
 ```typescript
 // File: src/svn.ts
 function getAuthMethodLabel(options: ICpOptions): string {
@@ -286,6 +310,7 @@ function getAuthMethodLabel(options: ICpOptions): string {
 ```
 
 ### Example 2: Enhanced Logging
+
 ```typescript
 // File: src/svn.ts, line ~111
 if (options.log !== false) {
@@ -298,6 +323,7 @@ if (options.log !== false) {
 ```
 
 ### Example 3: Debug Warning
+
 ```typescript
 // File: src/extension.ts, after line ~115
 if (configuration.get<boolean>("debug.disableSanitization", false)) {
@@ -307,15 +333,18 @@ if (configuration.get<boolean>("debug.disableSanitization", false)) {
   outputChannel.appendLine("Disable: svn.debug.disableSanitization = false");
   outputChannel.appendLine("⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n");
   outputChannel.show();
-  
-  window.showWarningMessage(
-    "⚠️ SVN: Error sanitization disabled. Credentials visible in logs. Disable after debugging.",
-    "Disable Now", "OK"
-  ).then(choice => {
-    if (choice === "Disable Now") {
-      configuration.update("debug.disableSanitization", false, true);
-    }
-  });
+
+  window
+    .showWarningMessage(
+      "⚠️ SVN: Error sanitization disabled. Credentials visible in logs. Disable after debugging.",
+      "Disable Now",
+      "OK"
+    )
+    .then(choice => {
+      if (choice === "Disable Now") {
+        configuration.update("debug.disableSanitization", false, true);
+      }
+    });
 }
 ```
 
@@ -324,34 +353,38 @@ if (configuration.get<boolean>("debug.disableSanitization", false)) {
 ## Testing Examples
 
 ### Test 1: Auth Method Logging
+
 ```typescript
 it("should log auth method without exposing password", async () => {
   const svn = new Svn({ svnPath: "/usr/bin/svn", version: "1.14.0" });
   const spy = sinon.spy(svn, "logOutput");
-  
+
   await svn.exec("/repo", ["update"], {
     username: "john",
     password: "secret123"
   });
-  
+
   assert(spy.calledWith(sinon.match(/\[auth: password provided\]/)));
   assert(!spy.calledWith(sinon.match(/secret123/)));
 });
 ```
 
 ### Test 2: Environment Variable
+
 ```typescript
 it("should log SVN_PASSWORD usage without value", async () => {
   process.env.SVN_PASSWORD = "test_pass";
-  
+
   const svn = new Svn({ svnPath: "/usr/bin/svn", version: "1.14.0" });
   const spy = sinon.spy(svn, "logOutput");
-  
+
   await svn.exec("/repo", ["update"], { username: "john" });
-  
-  assert(spy.calledWith(sinon.match(/\[auth: SVN_PASSWORD environment variable\]/)));
+
+  assert(
+    spy.calledWith(sinon.match(/\[auth: SVN_PASSWORD environment variable\]/))
+  );
   assert(!spy.calledWith(sinon.match(/test_pass/)));
-  
+
   delete process.env.SVN_PASSWORD;
 });
 ```
@@ -361,18 +394,21 @@ it("should log SVN_PASSWORD usage without value", async () => {
 ## Security Guarantees
 
 ### What's Protected ✓
+
 - Passwords never in logs (added to args AFTER logging)
 - Comprehensive sanitization (paths, IPs, credentials, tokens)
 - Debug mode requires explicit opt-in
 - Runtime warnings when credentials may be exposed
 
 ### What's Enhanced ✓
+
 - Users see auth method (helps choose secure options)
 - Clear error guidance (reduces credential reuse)
 - Visible auth status (detect when credentials aren't used)
 - Debug warnings (prevent accidental exposure)
 
 ### What's Maintained ✓
+
 - All existing sanitization rules
 - All existing debug capabilities
 - All existing error handling
@@ -383,17 +419,21 @@ it("should log SVN_PASSWORD usage without value", async () => {
 ## Migration Impact
 
 ### Breaking Changes
+
 **NONE** - All changes are pure additions
 
 ### Configuration Changes
+
 **NONE required** - All existing configs work as before
 
 ### Behavior Changes
+
 - More verbose logging (auth method shown)
 - Warning when debug mode enabled
 - Enhanced error messages
 
 ### User Impact
+
 - Positive: Easier debugging, clearer errors
 - Neutral: Slightly more log output
 - None: No workflow changes
@@ -403,18 +443,22 @@ it("should log SVN_PASSWORD usage without value", async () => {
 ## Success Metrics
 
 ### Debugging Clarity
+
 - Before: 3/10 (users confused)
 - After: 9/10 (clear indicators)
 
 ### Security Posture
+
 - Before: 8/10 (good sanitization)
 - After: 9/10 (sanitization + warnings + awareness)
 
 ### User Satisfaction
+
 - Before: Frequent auth confusion
 - After: Clear understanding of auth status
 
 ### Support Burden
+
 - Before: Many "why is auth failing?" questions
 - After: Users can self-diagnose
 
@@ -423,19 +467,22 @@ it("should log SVN_PASSWORD usage without value", async () => {
 ## Related Documentation
 
 ### Security Analysis (Existing)
-- `/home/user/positron-svn/docs/SECURITY_THREAT_MODEL.md`
-- `/home/user/positron-svn/docs/SECURITY_CRITICAL_PATH_IMPLEMENTATION.md`
-- `/home/user/positron-svn/SECURITY_ANALYSIS_DELIVERABLES.md`
+
+- `/home/user/sven/docs/SECURITY_THREAT_MODEL.md`
+- `/home/user/sven/docs/SECURITY_CRITICAL_PATH_IMPLEMENTATION.md`
+- `/home/user/sven/SECURITY_ANALYSIS_DELIVERABLES.md`
 
 ### Architecture (Existing)
-- `/home/user/positron-svn/docs/ARCHITECTURE_ANALYSIS.md`
-- `/home/user/positron-svn/docs/LESSONS_LEARNED.md`
+
+- `/home/user/sven/docs/ARCHITECTURE_ANALYSIS.md`
+- `/home/user/sven/docs/LESSONS_LEARNED.md`
 
 ### Implementation (Existing)
-- `/home/user/positron-svn/src/svn.ts` (command execution)
-- `/home/user/positron-svn/src/security/errorSanitizer.ts` (sanitization)
-- `/home/user/positron-svn/src/util/errorLogger.ts` (safe logging)
-- `/home/user/positron-svn/src/services/authService.ts` (auth logic)
+
+- `/home/user/sven/src/svn.ts` (command execution)
+- `/home/user/sven/src/security/errorSanitizer.ts` (sanitization)
+- `/home/user/sven/src/util/errorLogger.ts` (safe logging)
+- `/home/user/sven/src/services/authService.ts` (auth logic)
 
 ---
 
@@ -459,24 +506,31 @@ it("should log SVN_PASSWORD usage without value", async () => {
 ## Questions & Answers
 
 ### "Will this expose passwords?"
+
 **No.** Auth method indicators show WHAT method is used, not the actual credentials.
 
 ### "Does this require configuration changes?"
+
 **No.** All improvements work automatically. No user config needed.
 
 ### "What if users want the old behavior?"
+
 **They get it by default.** Auth method logging could be made optional with a config setting.
 
 ### "How do we test this?"
+
 **Unit tests + manual tests.** Test file provided in implementation plan.
 
 ### "What's the security impact?"
+
 **Neutral or positive.** Existing protections maintained, warnings added.
 
 ### "How long to implement?"
+
 **2-3 hours** for all three recommendations.
 
 ### "What's the risk?"
+
 **Minimal.** All changes are pure additions with no breaking changes.
 
 ---
@@ -485,11 +539,12 @@ it("should log SVN_PASSWORD usage without value", async () => {
 
 **Created:** 2025-11-20  
 **Analyst:** Debugging Specialist  
-**Codebase:** positron-svn v2.17.230  
+**Codebase:** sven v2.17.230  
 **Task:** "As long as it doesn't hinder debugging"  
 **Status:** ✓ Analysis complete, ready for implementation
 
 **Documentation package:**
+
 - 5 markdown files
 - ~3,000 lines of analysis
 - Complete code examples
@@ -499,6 +554,7 @@ it("should log SVN_PASSWORD usage without value", async () => {
 - Migration strategy
 
 **Deliverables:**
+
 1. Comprehensive analysis (12 parts)
 2. Quick reference guide
 3. Implementation plan (action items)
@@ -507,8 +563,9 @@ it("should log SVN_PASSWORD usage without value", async () => {
 6. This index
 
 **All documentation located in:**
-- `/home/user/positron-svn/docs/DEBUG_AUTH*.md`
-- `/home/user/positron-svn/DEBUG_AUTH_ANALYSIS_SUMMARY.md`
+
+- `/home/user/sven/docs/DEBUG_AUTH*.md`
+- `/home/user/sven/DEBUG_AUTH_ANALYSIS_SUMMARY.md`
 
 ---
 

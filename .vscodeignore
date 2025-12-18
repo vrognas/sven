@@ -15,7 +15,7 @@ package-lock.json
 package.json.bak
 scss/**
 src/**
-positron-svn*.vsix
+sven*.vsix
 **/*.vsix
 test-reports
 test/**

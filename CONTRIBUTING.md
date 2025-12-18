@@ -15,8 +15,8 @@ Welcome! Positron-SVN is a VS Code extension providing Subversion source control
 
 ```bash
 # Clone repository
-git clone https://github.com/vrognas/positron-svn.git
-cd positron-svn
+git clone https://github.com/vrognas/sven.git
+cd sven
 
 # Install dependencies
 npm install
@@ -81,24 +81,25 @@ See `.vscode/launch.json` for configurations.
 **Example test structure:**
 
 ```typescript
-describe('Feature Name', () => {
-  it('should handle happy path', async () => {
+describe("Feature Name", () => {
+  it("should handle happy path", async () => {
     // Arrange: setup real SVN repo, files
     // Act: execute command
     // Assert: verify behavior
   });
 
-  it('should handle edge case 1', async () => {
+  it("should handle edge case 1", async () => {
     // Real SVN operations, no mocks
   });
 
-  it('should handle edge case 2', async () => {
+  it("should handle edge case 2", async () => {
     // Test error conditions
   });
 });
 ```
 
 **Testing principles:**
+
 - ✅ Test behavior, not implementation
 - ✅ Use real SVN/file system (no mocks)
 - ✅ 3 tests per feature sufficient
@@ -109,6 +110,7 @@ describe('Feature Name', () => {
 ### Commit Conventions
 
 **Format:**
+
 ```
 <type>: <concise description>
 
@@ -116,6 +118,7 @@ describe('Feature Name', () => {
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `test`: Add/update tests
@@ -125,6 +128,7 @@ describe('Feature Name', () => {
 - `chore`: Build, deps, tooling
 
 **Rules:**
+
 - Small, focused commits (one concern per commit)
 - Version bump per commit (semantic versioning)
 - 10-50 lines ideal
@@ -132,6 +136,7 @@ describe('Feature Name', () => {
 - Example: `fix: sanitize error in parseInfoXml`
 
 **Version bumping:**
+
 - Major (x.0.0): Breaking changes
 - Minor (0.x.0): New features (backward compatible)
 - Patch (0.0.x): Bug fixes, refactors
@@ -139,6 +144,7 @@ describe('Feature Name', () => {
 ### Code Quality Standards
 
 **TypeScript:**
+
 - ✅ Strict mode enabled (no bypasses)
 - ✅ No `any` types without justification
 - ✅ Descriptive error messages
@@ -147,6 +153,7 @@ describe('Feature Name', () => {
 - ❌ No unsafe casts
 
 **Error handling:**
+
 ```typescript
 // ❌ Bad: Silent errors
 catch (err) { reject(); }
@@ -159,12 +166,14 @@ catch (err) {
 ```
 
 **Security:**
+
 - All error paths must sanitize credentials/paths
 - Use `logError()` utility from `util/errorLogger.ts`
 - Never expose passwords in logs or error messages
 - CI validates 100% sanitization coverage
 
 **Performance:**
+
 - Profile before optimizing
 - Fix P0 bottlenecks first
 - Debounce/throttle UI-triggered operations
@@ -174,17 +183,20 @@ catch (err) {
 ### Architecture Patterns
 
 **Services:**
+
 - Stateless with parameter objects
 - Extract from god classes incrementally
 - Move decorators to caller
 - 3 TDD tests before extraction
 
 **Dependency migration:**
+
 - Adapter pattern for old API compatibility
 - Incremental rollout (simplest first)
 - Comprehensive compatibility tests
 
 **Critical paths:**
+
 - Map failure cascades before refactoring
 - Add diagnostic logging
 - Test extensively
@@ -207,14 +219,17 @@ See [LESSONS_LEARNED.md](./docs/LESSONS_LEARNED.md) for detailed patterns.
 
 ```markdown
 ## Summary
+
 Brief description of changes
 
 ## Testing
+
 - 3 e2e tests added: [test names]
 - All 930+ tests passing
 - Coverage: [before]% → [after]%
 
 ## Checklist
+
 - [ ] Tests written first (TDD)
 - [ ] Lint passing
 - [ ] Version bumped
@@ -223,12 +238,14 @@ Brief description of changes
 - [ ] No security/credential exposure
 
 ## Related Issues
+
 Fixes #123
 ```
 
 ### Review Criteria
 
 Reviewers check:
+
 - Type safety (no unsafe casts)
 - Encapsulation (no internal leaks)
 - Test coverage (critical paths)
@@ -245,7 +262,7 @@ Reviewers check:
 ## Project Structure
 
 ```
-positron-svn/
+sven/
 ├── src/
 │   ├── extension.ts          # Entry point
 │   ├── commands/              # 54 command implementations
@@ -286,12 +303,14 @@ npx vscode-test --files=out/test/specific.test.js
 ### Test Types
 
 **E2E Tests** (primary):
+
 - Real SVN repositories
 - Real file system operations
 - Integration with VS Code API
 - Examples: `add.test.ts`, `commit.test.ts`
 
 **Unit Tests** (secondary):
+
 - Parsers (statusParser, logParser)
 - Utilities (glob matching, encoding)
 - Examples: `statusParser.test.ts`
@@ -309,6 +328,7 @@ npx vscode-test --files=out/test/specific.test.js
 ### Essential Reading
 
 Before contributing, review:
+
 1. [CLAUDE.md](./CLAUDE.md) - Development workflow
 2. [LESSONS_LEARNED.md](./docs/LESSONS_LEARNED.md) - Patterns & anti-patterns
 3. [ARCHITECTURE_ANALYSIS.md](./docs/ARCHITECTURE_ANALYSIS.md) - Technical details
@@ -323,9 +343,9 @@ Before contributing, review:
 
 ### Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/vrognas/positron-svn/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/vrognas/positron-svn/discussions)
-- **Security**: [Security Advisories](https://github.com/vrognas/positron-svn/security/advisories) (vulnerabilities only)
+- **Issues**: [GitHub Issues](https://github.com/vrognas/sven/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vrognas/sven/discussions)
+- **Security**: [Security Advisories](https://github.com/vrognas/sven/security/advisories) (vulnerabilities only)
 
 ## Common Tasks
 
@@ -373,6 +393,7 @@ Before contributing, review:
 We follow the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
 **Expected behavior:**
+
 - Professional and respectful communication
 - Constructive feedback
 - Focus on code/ideas, not individuals
@@ -380,12 +401,13 @@ We follow the [Contributor Covenant Code of Conduct](https://www.contributor-cov
 - Help newcomers
 
 **Unacceptable behavior:**
+
 - Harassment, discrimination, trolling
 - Personal attacks or insults
 - Publishing private information
 - Disruptive behavior
 
-**Reporting:** Contact project maintainers at [security advisories](https://github.com/vrognas/positron-svn/security/advisories).
+**Reporting:** Contact project maintainers at [security advisories](https://github.com/vrognas/sven/security/advisories).
 
 ## License
 
@@ -393,7 +415,7 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 ---
 
-**Questions?** Open an [issue](https://github.com/vrognas/positron-svn/issues) or [discussion](https://github.com/vrognas/positron-svn/discussions).
+**Questions?** Open an [issue](https://github.com/vrognas/sven/issues) or [discussion](https://github.com/vrognas/sven/discussions).
 
 **Ready to contribute?** Start with issues labeled `good-first-issue` or `help-wanted`.
 

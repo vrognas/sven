@@ -12,7 +12,7 @@ suite("Extension Tests", () => {
   });
 
   test("should be present", () => {
-    assert.ok(vscode.extensions.getExtension("vrognas.positron-svn"));
+    assert.ok(vscode.extensions.getExtension("vrognas.sven"));
   });
 
   test("should have extensionKind set to workspace for remote development", () => {
@@ -43,7 +43,7 @@ suite("Extension Tests", () => {
   test("should be able to activate the extension", function (done) {
     this.timeout(60 * 1000);
     const extension = vscode.extensions.getExtension(
-      "vrognas.positron-svn"
+      "vrognas.sven"
     ) as vscode.Extension<any>;
 
     if (!extension) {

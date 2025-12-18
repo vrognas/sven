@@ -185,7 +185,7 @@ export function destroyAllTempPaths() {
 
 export function activeExtension() {
   return new Promise<void>((resolve, reject) => {
-    const extension = extensions.getExtension("vrognas.positron-svn");
+    const extension = extensions.getExtension("vrognas.sven");
     if (!extension) {
       reject();
       return;

@@ -9,6 +9,7 @@
 ## The Problem
 
 npm audit shows **4 HIGH severity vulnerabilities**:
+
 - glob@11.0.3: Command injection (GHSA-5j98-mcp5-4vw2)
 - semantic-release@25.0.2: Vulnerable npm dependency chain
 
@@ -25,6 +26,7 @@ npm install semantic-release@^24.2.9 --save-dev && npm audit
 ```
 
 This:
+
 1. Downgrades semantic-release to stable v24.2.9
 2. Automatically downgrades to @semantic-release/npm@^12.x
 3. Fixes the npm/glob vulnerability chain
@@ -68,12 +70,12 @@ git commit -m "Fix: Downgrade semantic-release to v24 to patch glob CVE (GHSA-5j
 
 ## What Changed
 
-| Package | Before | After | Reason |
-|---------|--------|-------|--------|
-| semantic-release | 25.0.2 | 24.2.9 | Vulnerability fix |
-| @semantic-release/npm | 13.x | 12.x | Automatic (v24 uses v12) |
-| npm | 11.6.1+ | 10.x | Automatic (no glob vuln) |
-| glob | 11.0.3 | 10.x | Automatic (no command injection) |
+| Package               | Before  | After  | Reason                           |
+| --------------------- | ------- | ------ | -------------------------------- |
+| semantic-release      | 25.0.2  | 24.2.9 | Vulnerability fix                |
+| @semantic-release/npm | 13.x    | 12.x   | Automatic (v24 uses v12)         |
+| npm                   | 11.6.1+ | 10.x   | Automatic (no glob vuln)         |
+| glob                  | 11.0.3  | 10.x   | Automatic (no command injection) |
 
 ---
 
@@ -104,7 +106,7 @@ Result: All 4 HIGH vulnerabilities eliminated
 
 ## Still Have Questions?
 
-See detailed plan: `/home/user/positron-svn/docs/DEPENDENCY_UPGRADE_PLAN.md`
+See detailed plan: `/home/user/sven/docs/DEPENDENCY_UPGRADE_PLAN.md`
 
 ---
 

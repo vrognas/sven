@@ -248,7 +248,7 @@ All data is stored locally on your machine:
 rm -rf ~/.subversion/auth/
 
 # Uninstall extension
-code --uninstall-extension vrognas.positron-svn
+code --uninstall-extension vrognas.sven
 ```
 
 ### Export Your Data
@@ -301,9 +301,9 @@ This extension is open source. Verify privacy claims by reviewing:
 
 ### Repository
 
-- **GitHub**: https://github.com/vrognas/positron-svn
+- **GitHub**: https://github.com/vrognas/sven
 - **License**: MIT (open source)
-- **Issues**: https://github.com/vrognas/positron-svn/issues
+- **Issues**: https://github.com/vrognas/sven/issues
 
 ---
 
@@ -323,7 +323,7 @@ We will update this policy if privacy practices change.
 
 ## Questions or Concerns?
 
-**Privacy questions**: File an issue at https://github.com/vrognas/positron-svn/issues
+**Privacy questions**: File an issue at https://github.com/vrognas/sven/issues
 **Security vulnerabilities**: See [SECURITY.md](./SECURITY.md) for reporting procedures
 
 ---

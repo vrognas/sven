@@ -116,10 +116,10 @@ jobs:
         run: npm run build
 
       - name: Package extension
-        run: npx @vscode/vsce package -o positron-svn.vsix
+        run: npx @vscode/vsce package -o sven.vsix
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
-          name: "positron-svn-${{ github.sha }}.vsix"
-          path: "positron-svn.vsix"
+          name: "sven-${{ github.sha }}.vsix"
+          path: "sven.vsix"

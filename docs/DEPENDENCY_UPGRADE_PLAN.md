@@ -1,4 +1,4 @@
-# Dependency Upgrade Plan - positron-svn v2.17.230
+# Dependency Upgrade Plan - sven v2.17.230
 
 **Generated:** 2025-11-20
 **Status:** Ready for Implementation
@@ -12,10 +12,12 @@ npm audit identified **4 HIGH severity vulnerabilities** affecting release pipel
 
 **Vulnerability Count:** 4 HIGH (0 CRITICAL, 0 MODERATE, 0 LOW)
 **Affected Components:** 2 direct dependencies
+
 - semantic-release@25.0.2 (HIGH via @semantic-release/npm)
 - glob@11.0.3 (HIGH command injection - GHSA-5j98-mcp5-4vw2)
 
 **Affected Dependency Chain:**
+
 ```
 semantic-release@25.0.2 (DIRECT)
 ├─ @semantic-release/npm@13.x (HIGH vuln)
@@ -53,12 +55,14 @@ npm install semantic-release@^24.2.9 --save-dev
 ```
 
 **What it fixes:**
+
 - Removes vulnerability in @semantic-release/npm@13.x
 - Pins to last stable v24 release
 - Eliminates npm/glob cascade vulnerabilities
 - Restores release reliability
 
 **Verification:**
+
 ```bash
 npm audit | grep semantic-release
 # Should show NO vulnerabilities after fix
@@ -73,6 +77,7 @@ npm audit | grep semantic-release
 **Impact:** Test pipeline command injection mitigation
 
 **Technical Details:**
+
 - GHSA-5j98-mcp5-4vw2: Glob CLI command injection
 - CVE: CWE-78 (OS Command Injection)
 - Vulnerable range: `>=11.0.0 <11.1.0`
@@ -81,11 +86,13 @@ npm audit | grep semantic-release
 
 **When Fixed:** Automatic when npm@11.6.0+ is resolved
 **What it fixes:**
+
 - Eliminates shell-based glob pattern matching in test runner
 - Prevents command injection through glob patterns
 - Secures test discovery and execution pipeline
 
 **Verification:**
+
 ```bash
 npm audit | grep glob
 # Should show: "No high severity vulnerabilities found"
@@ -102,6 +109,7 @@ npm install fast-xml-parser@^5.3.2 # (^5.3.1 current)
 ```
 
 **Rationale:**
+
 - semver@7.7.3: Latest patch with minor improvements
 - fast-xml-parser@5.3.2: Latest patch with XML parsing refinements
 - No breaking changes, pure improvements
@@ -122,12 +130,14 @@ npm update  # This will safely update all to latest ^ ranges
 ```
 
 **Safe updates (no breaking changes expected):**
+
 - @types/node: 24.10.0 → 24.11.x+ (patch updates)
 - typescript: 5.9.3 → 5.9.x+ (patch updates only)
 - mocha: 11.7.5 → 11.7.x+ (patch updates)
 - eslint: 9.39.1 → 9.39.x+ (patch updates)
 
 **Avoid updates (potential breaking changes):**
+
 - @types/vscode: 1.74.0 (pinned to specific range)
 - @posit-dev/positron: 0.1.8 (Positron-specific)
 
@@ -141,12 +151,12 @@ Non-critical improvements for future consideration.
 
 These are dependency-adjacent code quality improvements:
 
-| Task | File | Effort | Risk | Impact |
-|------|------|--------|------|--------|
-| Extract exec/execBuffer duplication | src/svn.ts | 60 min | Medium | High |
-| Extract show/showBuffer duplication | src/svnRepository.ts | 45 min | Low | High |
-| Extract regex patterns | src/svn.ts | 15 min | Very Low | Medium |
-| Pre-compile regex for performance | src/svn.ts | 30 min | Very Low | Medium |
+| Task                                | File                 | Effort | Risk     | Impact |
+| ----------------------------------- | -------------------- | ------ | -------- | ------ |
+| Extract exec/execBuffer duplication | src/svn.ts           | 60 min | Medium   | High   |
+| Extract show/showBuffer duplication | src/svnRepository.ts | 45 min | Low      | High   |
+| Extract regex patterns              | src/svn.ts           | 15 min | Very Low | Medium |
+| Pre-compile regex for performance   | src/svn.ts           | 30 min | Very Low | Medium |
 
 ### 3.2 Dependency updates (minor)
 
@@ -162,24 +172,26 @@ npm install @types/mocha@^10.0.11  # Minor bump
 
 ## Test Coverage Matrix
 
-| Dependency | Change Type | Tests Required | Risk Level | Verification |
-|------------|-------------|-----------------|-----------|--------------|
-| semantic-release | Downgrade v25→v24 | Release pipeline | LOW | Dry-run release |
-| glob | Indirect patch | Test discovery | LOW | npm test suite |
-| npm | Indirect upgrade | Build tools | LOW | npm audit + npm test |
-| @semantic-release/npm | Indirect downgrade | Publishing | LOW | Dry-run semantic-release |
+| Dependency            | Change Type        | Tests Required   | Risk Level | Verification             |
+| --------------------- | ------------------ | ---------------- | ---------- | ------------------------ |
+| semantic-release      | Downgrade v25→v24  | Release pipeline | LOW        | Dry-run release          |
+| glob                  | Indirect patch     | Test discovery   | LOW        | npm test suite           |
+| npm                   | Indirect upgrade   | Build tools      | LOW        | npm audit + npm test     |
+| @semantic-release/npm | Indirect downgrade | Publishing       | LOW        | Dry-run semantic-release |
 
 ## Breaking Changes Analysis
 
 ### semantic-release: v25 → v24.2.9
 
 **Breaking changes in v25:** None affecting this codebase
+
 - v25.0.0 introduced `@semantic-release/npm@13.x` which has vulnerabilities
 - v24.2.9 is stable with `@semantic-release/npm@12.x` (no vulnerabilities)
 - CI/CD workflow unchanged
 - Release configuration compatible
 
 **Verification steps:**
+
 ```bash
 # 1. Check release config compatibility
 cat package.json | grep -A 5 config.commitizen
@@ -196,12 +208,14 @@ npm list @semantic-release/changelog @semantic-release/git
 ### glob: v11.0.3 → v11.1.0+ (via npm)
 
 **Breaking changes:** None
+
 - Pure security patch
 - No API changes to glob CLI
 - No behavior changes (only fixes unsafe command execution)
 - Test suite runs identically
 
 **Verification steps:**
+
 ```bash
 # 1. Verify glob version
 npm list glob
@@ -218,6 +232,7 @@ npx glob --help
 ## Test Execution Plan
 
 ### Phase 1: Quick Smoke Tests (5 minutes)
+
 ```bash
 # Install updates
 npm install semantic-release@^24.2.9 --save-dev
@@ -236,6 +251,7 @@ npm test
 ```
 
 ### Phase 2: Build Validation (3 minutes)
+
 ```bash
 # Production build
 npm run build
@@ -248,6 +264,7 @@ npm run size
 ```
 
 ### Phase 3: Release Pipeline Dry-run (2 minutes)
+
 ```bash
 # Dry-run semantic-release
 npx semantic-release --dry-run --no-ci
@@ -259,6 +276,7 @@ npm list @semantic-release/changelog @semantic-release/git semantic-release-vsce
 ### Phase 4: Manual Smoke Tests (5 minutes)
 
 **In VSCode/Positron:**
+
 1. Open the extension
 2. Verify no console errors
 3. Test SVN operations (status, log, commit simulation)
@@ -296,21 +314,23 @@ npm list @semantic-release/changelog @semantic-release/git semantic-release-vsce
 ### Production Dependencies (Conservative)
 
 Keep caret ranges for stability:
+
 ```json
 {
   "dependencies": {
     "@vscode/iconv-lite-umd": "^0.7.1",
     "chardet": "^2.1.1",
     "dayjs": "^1.11.19",
-    "fast-xml-parser": "^5.3.2",  // UPDATE to latest patch
+    "fast-xml-parser": "^5.3.2", // UPDATE to latest patch
     "picomatch": "^4.0.3",
-    "semver": "^7.7.3",            // UPDATE to latest patch
+    "semver": "^7.7.3", // UPDATE to latest patch
     "tmp": "^0.2.5"
   }
 }
 ```
 
 **Rationale:**
+
 - Production deps should allow patch/minor updates
 - Caret (^) is appropriate for stable packages
 - Both packages are widely used and stable
@@ -318,6 +338,7 @@ Keep caret ranges for stability:
 ### Dev Dependencies (Stricter for CI/CD)
 
 Keep pinning for deterministic builds:
+
 ```json
 {
   "devDependencies": {
@@ -335,6 +356,7 @@ Keep pinning for deterministic builds:
 ```
 
 **Rationale:**
+
 - CI/CD tools need predictability
 - Caret allows critical security patches to auto-install
 - VSCode/Positron APIs should remain pinned to prevent compatibility issues
@@ -358,6 +380,7 @@ git commit -m "Update: Dependency patches"
 ```
 
 **Benefits:**
+
 1. Reproducible builds in CI/CD
 2. Auto-patches for critical CVEs
 3. Manual control over major updates
@@ -376,6 +399,7 @@ git commit -m "Update: Dependency patches"
 **CVSS Score:** 7.5
 
 **Technical Description:**
+
 ```
 Glob CLI executes with shell=true when using -c/--cmd flag,
 allowing shell metacharacter injection through glob patterns.
@@ -389,17 +413,20 @@ Injection vector:
 ```
 
 **Affected Versions:**
+
 - glob@>=11.0.0 <11.1.0
 - Indirectly via npm@11.6.1+ (depends on glob@11.0.3+)
 - Indirectly via semantic-release@25.0.0+ (depends on npm)
 
 **Current Exposure:** DEVELOPMENT/TEST ONLY
+
 - glob is devDependency
 - Only used in test discovery pipeline
 - Not in production bundle
 - Risk: Malicious test files could exploit during testing
 
 **Remediation:**
+
 ```bash
 # Primary fix: Downgrade semantic-release
 npm install semantic-release@^24.2.9 --save-dev
@@ -409,6 +436,7 @@ npm install semantic-release@^24.2.9 --save-dev
 ```
 
 **Verification:**
+
 ```bash
 npm audit
 # Expected: "No vulnerabilities found"
@@ -426,6 +454,7 @@ npm list glob
 **Impact:** Release automation pipeline
 
 **Vulnerability Chain:**
+
 ```
 semantic-release@25.0.2
 └─ @semantic-release/npm@13.x (added in v25)
@@ -437,11 +466,13 @@ semantic-release@25.0.2
 **Root Cause:** v25.0.0 upgraded to @semantic-release/npm@13.x which pulls in vulnerable npm version
 
 **Why not upgrade @semantic-release/npm?**
+
 - v14.x+ requires npm@>=11.6.0 (has glob vuln)
 - v13.x is the last version using npm@8.x or npm@10.x
 - Simpler to downgrade semantic-release v25 → v24
 
 **Remediation:**
+
 ```bash
 npm install semantic-release@^24.2.9 --save-dev
 # Automatically downgrades to @semantic-release/npm@^12.x
@@ -449,6 +480,7 @@ npm install semantic-release@^24.2.9 --save-dev
 ```
 
 **Verification:**
+
 ```bash
 npm list @semantic-release/npm
 # Expected: @semantic-release/npm@^12.x
@@ -466,11 +498,13 @@ npm audit
 **Severity:** HIGH for CI/CD pipeline
 **Likelihood:** MEDIUM (requires malicious test files or patterns)
 **Impact:**
+
 - Test suite could be compromised
 - Release process could execute arbitrary commands
 - Affects all developers running tests
 
 **Exposure Scope:**
+
 - Developers running `npm test`
 - CI/CD pipeline running releases
 - Anyone with write access to test files
@@ -500,6 +534,7 @@ npm audit
 ### Option B: Use npm@8.x compatible semantic-release
 
 Would require:
+
 1. Manually managing @semantic-release/npm versions
 2. Ensuring compatibility matrix
 3. More complex lock file management
@@ -634,6 +669,7 @@ npm test
 ```
 
 **For Minor Issues:**
+
 ```bash
 # If semantic-release issue:
 npm install semantic-release@^25.0.2 --save-dev
@@ -712,6 +748,7 @@ up to date in 12.345s
 ```
 
 Or if using audit fix:
+
 ```bash
 $ npm audit --fix
 added X packages, removed Y packages, audited 1249 packages
@@ -767,6 +804,7 @@ npm audit summary:
 ## Performance Impact
 
 **Expected:** No performance impact
+
 - semantic-release v24 vs v25: Release speed identical
 - glob@11.1.0+: Test discovery identical (security patch only)
 - Build time: No change
@@ -775,6 +813,7 @@ npm audit summary:
 ## Code Quality Impact
 
 **Expected:** No negative impact
+
 - No code changes required
 - No API changes
 - All tests pass
@@ -811,12 +850,12 @@ git commit -m "Fix: Upgrade semantic-release to v24 to patch glob CVE (GHSA-5j98
 
 ## File Locations
 
-| Item | Path |
-|------|------|
-| Package manifest | `/home/user/positron-svn/package.json` |
-| Lock file | `/home/user/positron-svn/package-lock.json` |
-| This plan | `/home/user/positron-svn/docs/DEPENDENCY_UPGRADE_PLAN.md` |
-| Analysis source | `/home/user/positron-svn/docs/SAFE_QUICK_WINS.md` |
+| Item             | Path                                              |
+| ---------------- | ------------------------------------------------- |
+| Package manifest | `/home/user/sven/package.json`                    |
+| Lock file        | `/home/user/sven/package-lock.json`               |
+| This plan        | `/home/user/sven/docs/DEPENDENCY_UPGRADE_PLAN.md` |
+| Analysis source  | `/home/user/sven/docs/SAFE_QUICK_WINS.md`         |
 
 ## CVE Information
 

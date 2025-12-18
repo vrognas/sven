@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-| Version | Supported          | Security Features |
-| ------- | ------------------ | ----------------- |
-| 2.17.230+ | :white_check_mark: | Credential cache, error sanitization |
-| 2.17.0 - 2.17.229 | :x: | **PASSWORD EXPOSURE RISK** |
-| < 2.17.0 | :x: | Not supported |
+| Version           | Supported          | Security Features                    |
+| ----------------- | ------------------ | ------------------------------------ |
+| 2.17.230+         | :white_check_mark: | Credential cache, error sanitization |
+| 2.17.0 - 2.17.229 | :x:                | **PASSWORD EXPOSURE RISK**           |
+| < 2.17.0          | :x:                | Not supported                        |
 
 **Critical:** Versions prior to 2.17.230 expose passwords in process listings. Upgrade immediately.
 
@@ -19,7 +19,7 @@
 Report security vulnerabilities privately via:
 
 1. **GitHub Security Advisories** (preferred)
-   - Go to: https://github.com/vrognas/positron-svn/security/advisories
+   - Go to: https://github.com/vrognas/sven/security/advisories
    - Click "Report a vulnerability"
    - Provide detailed information
 
@@ -54,17 +54,20 @@ Report security vulnerabilities privately via:
 **v2.17.230+** implements multiple layers of credential security:
 
 #### 1. SVN Credential Cache (Default)
+
 - Credentials written to `~/.subversion/auth/` (mode 600)
 - Never passed via command-line arguments
 - Not visible in process listings (`ps`, `top`, etc.)
 - Automatically managed by SVN
 
 #### 2. Error Sanitization
+
 - All error messages sanitized before logging
 - Removes: passwords, tokens, file paths, URLs, IP addresses
 - Configurable debug mode for troubleshooting
 
 #### 3. SecretStorage Integration
+
 - Passwords stored in OS keychain (encrypted)
   - **macOS:** Keychain Access
   - **Windows:** Credential Manager
@@ -72,6 +75,7 @@ Report security vulnerabilities privately via:
 - Never stored in plaintext in extension settings
 
 #### 4. Authentication Method Indicators
+
 - Visible confirmation of auth method in use
 - Examples:
   - `[auth: SSH key]` - Most secure (svn+ssh://)
@@ -81,17 +85,20 @@ Report security vulnerabilities privately via:
 ### Known Security Limitations
 
 #### 1. Credential Cache Files (mode 600)
+
 - **Risk:** Local file system access
 - **Mitigation:** File permissions restrict to user only
 - **Residual risk:** LOW - requires local shell access
 - **CVSS 3.1:** 3.2 (Low)
 
 #### 2. SVN Client Security
+
 - Extension relies on system SVN client
 - Vulnerabilities in SVN client affect extension
 - **Mitigation:** Keep SVN updated (`svn --version`)
 
 #### 3. Repository Access
+
 - Extension cannot prevent:
   - Weak repository passwords
   - Compromised SVN server
@@ -99,6 +106,7 @@ Report security vulnerabilities privately via:
 - **Mitigation:** Use HTTPS or svn+ssh:// URLs
 
 #### 4. Debug Mode Credential Exposure
+
 - Setting `svn.debug.disableSanitization: true` exposes credentials in logs
 - **Mitigation:**
   - Prominent warning shown
@@ -112,6 +120,7 @@ Report security vulnerabilities privately via:
 **Priority order (most secure first):**
 
 1. **SSH Key Authentication** ⭐ BEST
+
    ```
    Repository URL: svn+ssh://user@svn.example.com/repo
    Setup: ssh-keygen, ssh-copy-id
@@ -119,6 +128,7 @@ Report security vulnerabilities privately via:
    ```
 
 2. **HTTPS with Credential Cache** ⭐ RECOMMENDED
+
    ```
    Repository URL: https://svn.example.com/repo
    Setup: Extension prompts for password, saves to cache
@@ -169,6 +179,7 @@ Report security vulnerabilities privately via:
 ### Development Workstation Security
 
 1. **Use SSH keys for all repositories**
+
    ```bash
    ssh-keygen -t ed25519 -C "your_email@example.com"
    ssh-copy-id user@svn.example.com
@@ -179,6 +190,7 @@ Report security vulnerabilities privately via:
    - Update SVN client regularly: `brew upgrade subversion` (macOS) or package manager
 
 3. **Protect credential cache**
+
    ```bash
    # Verify permissions
    ls -la ~/.subversion/auth/svn.simple/
@@ -194,12 +206,14 @@ Report security vulnerabilities privately via:
 ### v2.17.230 (2025-11-20) - Critical Security Update
 
 **SECURITY:**
+
 - **FIXED:** Password exposure in process list (CVSS 7.5 → 3.2)
   - Credentials no longer passed via `--password` command-line flag
   - Implemented SVN native credential cache
   - Credentials written to `~/.subversion/auth/` with mode 600
 
 **ADDED:**
+
 - Error sanitization system
   - Automatic redaction of passwords, tokens, paths, URLs
   - Debug mode with prominent security warnings
@@ -212,12 +226,14 @@ Report security vulnerabilities privately via:
   - Encrypted password storage
 
 **IMPROVED:**
+
 - Enhanced auth error messages with troubleshooting guidance
 - Debug mode warnings prevent accidental credential exposure
 
 ### Previous Versions (< 2.17.230)
 
 **VULNERABILITY:**
+
 - Passwords visible in process listings
 - Credentials exposed in:
   - `ps aux` output (Linux/macOS)
@@ -266,11 +282,13 @@ Report security vulnerabilities privately via:
 ### Audit Trail
 
 All authentication operations logged (credentials redacted):
+
 ```
 [repo]$ svn update --username alice [auth: password via credential cache]
 ```
 
 Logs never contain:
+
 - Actual passwords or tokens
 - Full file system paths
 - Repository URLs with embedded credentials
@@ -288,10 +306,12 @@ Extension security validated via:
 ## Contact
 
 For security-related questions (non-vulnerabilities):
-- GitHub Discussions: https://github.com/vrognas/positron-svn/discussions
+
+- GitHub Discussions: https://github.com/vrognas/sven/discussions
 - Email: [repository maintainer email]
 
 For security vulnerabilities:
+
 - **Use GitHub Security Advisories ONLY** (see "Reporting a Vulnerability" above)
 
 ---

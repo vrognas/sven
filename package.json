@@ -9,13 +9,13 @@
     "positron": "^2025.11.0"
   },
   "icon": "images/sven.png",
-  "homepage": "https://github.com/vrognas/positron-svn#readme",
+  "homepage": "https://github.com/vrognas/sven#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vrognas/positron-svn.git"
+    "url": "https://github.com/vrognas/sven.git"
   },
   "bugs": {
-    "url": "https://github.com/vrognas/positron-svn/issues"
+    "url": "https://github.com/vrognas/sven/issues"
   },
   "license": "MIT",
   "categories": [
@@ -2264,7 +2264,7 @@
             "Use VS Code SecretStorage (isolated, works in all environments)",
             "Always prompt - no credential storage"
           ],
-          "markdownDescription": "How SVN credentials are stored. See [credentials documentation](https://github.com/vrognas/positron-svn#credentials) for details.",
+          "markdownDescription": "How SVN credentials are stored. See [credentials documentation](https://github.com/vrognas/sven#credentials) for details.",
           "default": "auto",
           "order": 90,
           "tags": [

@@ -5,6 +5,6 @@
 /node_modules
 /out
 /test-reports
-positron-svn*.vsix
+sven*.vsix
 *.tsbuildinfo
 .claude/settings.local.json

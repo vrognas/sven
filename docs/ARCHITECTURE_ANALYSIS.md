@@ -392,7 +392,7 @@ See IMPLEMENTATION_PLAN.md for details.
 
 **Original concerns debunked**:
 
-- Positron integration is CORE (extension name is "positron-svn")
+- Positron integration is CORE (extension name is "sven")
 - Blame subsystem adds value for data science workflows
 - File locking essential for binary assets (CSVs, models)
 - Sparse checkout critical for large data repos

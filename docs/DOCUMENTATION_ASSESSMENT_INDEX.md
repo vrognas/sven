@@ -8,7 +8,8 @@
 
 ## Overview
 
-Comprehensive assessment of documentation for positron-svn identifies 5 critical documentation gaps affecting:
+Comprehensive assessment of documentation for sven identifies 5 critical documentation gaps affecting:
+
 - External contributions (blocked by missing CONTRIBUTING.md)
 - Developer onboarding (3-hour setup, 30-40% failure rate)
 - Support burden (40+ preventable support tickets/month)
@@ -22,10 +23,12 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ## Assessment Documents
 
 ### 1. DOCUMENTATION_EXECUTIVE_SUMMARY.md
+
 **Length:** ~2,000 words | **Time to Read:** 10 minutes
 **Audience:** Stakeholders, product managers, decision makers
 
 **Contains:**
+
 - Problem statement (documentation blocks adoption)
 - Solution overview (top 5 docs, 18 hours, 8.5× ROI)
 - Impact by audience (contributors, developers, end-users)
@@ -35,6 +38,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 - Decision matrix (all 5 docs address critical metrics)
 
 **Use When:**
+
 - Presenting to management/stakeholders
 - Getting approval for documentation work
 - Justifying investment in documentation
@@ -43,10 +47,12 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ---
 
 ### 2. DOCUMENTATION_PRIORITY_MATRIX.md
+
 **Length:** ~4,500 words | **Time to Read:** 25-30 minutes
 **Audience:** Team leads, documentation owners, architects
 
 **Contains:**
+
 - Executive summary (gaps, impact metrics, ROI)
 - Critical documentation gaps analysis (5 docs in detail)
   - Current state of each document
@@ -67,6 +73,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 - Risk mitigation strategies
 
 **Use When:**
+
 - Planning documentation implementation
 - Understanding maintenance burden
 - Creating detailed implementation specifications
@@ -74,6 +81,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 - Deep-dive team discussions
 
 **Sections Most Referenced:**
+
 - Documentation Priority Matrix - Top 5 Recommendations
 - Implementation Roadmap
 - Maintenance Cost Summary
@@ -81,10 +89,12 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ---
 
 ### 3. DOCUMENTATION_QUICK_MATRIX.md
+
 **Length:** ~1,500 words | **Time to Read:** 8-10 minutes
 **Audience:** Developers, team members, busy stakeholders
 
 **Contains:**
+
 - Top 5 docs quick overview
   - Priority ranking
   - What's missing
@@ -100,6 +110,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 - Success metrics to track
 
 **Use When:**
+
 - Onboarding new team members to the project
 - Quick reference during development
 - Status updates to non-technical stakeholders
@@ -110,10 +121,12 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ---
 
 ### 4. DOCUMENTATION_MATRIX_VISUAL.txt
+
 **Length:** ~1,200 lines | **Time to Read:** 15 minutes (skim) | 30 minutes (full)
 **Audience:** Visual learners, presenters, managers
 
 **Contains:**
+
 - ASCII visual formatting (suitable for printing/screenshots)
 - Priority matrix with visual impact ratings
 - Detailed boxes for each of 5 documents
@@ -126,6 +139,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 - Next steps checklist
 
 **Use When:**
+
 - Creating slides/presentations
 - Printing for physical review/whiteboarding
 - Sharing status in slack/chat (text format)
@@ -137,10 +151,12 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ---
 
 ### 5. DOCUMENTATION_ASSESSMENT_INDEX.md (THIS FILE)
+
 **Length:** This index
 **Audience:** Anyone navigating the documentation assessment
 
 **Use When:**
+
 - First entry point to the documentation assessment
 - Finding the right document for your use case
 - Understanding what each assessment covers
@@ -153,21 +169,25 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ### By Role
 
 **Product Manager / Stakeholder:**
+
 1. Start: DOCUMENTATION_EXECUTIVE_SUMMARY.md (10 min)
 2. Then: DOCUMENTATION_QUICK_MATRIX.md (10 min)
 3. Reference: DOCUMENTATION_MATRIX_VISUAL.txt for presentations
 
 **Team Lead / Manager:**
+
 1. Start: DOCUMENTATION_PRIORITY_MATRIX.md (30 min) - "Top 5 Recommendations" section
 2. Reference: DOCUMENTATION_QUICK_MATRIX.md for team briefings
 3. Track: Success metrics section for progress tracking
 
 **Developer / Technical Lead:**
+
 1. Start: DOCUMENTATION_QUICK_MATRIX.md (10 min)
 2. Then: DOCUMENTATION_PRIORITY_MATRIX.md (30 min) - Implementation steps section
 3. Reference: Individual doc specs in file structure
 
 **Documentation Owner / Writer:**
+
 1. Start: DOCUMENTATION_PRIORITY_MATRIX.md (30 min) - "Top 5 Recommendations" section
 2. Deep dive: File structure templates & implementation steps
 3. Reference: Maintenance cost summary for planning
@@ -175,26 +195,31 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ### By Use Case
 
 **Getting Approval for Documentation Work:**
+
 - Read: DOCUMENTATION_EXECUTIVE_SUMMARY.md
 - Show: DOCUMENTATION_MATRIX_VISUAL.txt (business case)
 - Share: ROI table
 
 **Planning Implementation:**
+
 - Read: DOCUMENTATION_QUICK_MATRIX.md (timeline)
 - Deep dive: DOCUMENTATION_PRIORITY_MATRIX.md (implementation steps)
 - Reference: File locations & templates
 
 **Understanding Documentation Gaps:**
+
 - Read: DOCUMENTATION_PRIORITY_MATRIX.md (critical gaps section)
 - Quick ref: DOCUMENTATION_QUICK_MATRIX.md (what's missing section)
 - Visualize: DOCUMENTATION_MATRIX_VISUAL.txt
 
 **Presenting to Stakeholders:**
+
 - Use: DOCUMENTATION_MATRIX_VISUAL.txt (slides/printouts)
 - Reference: DOCUMENTATION_EXECUTIVE_SUMMARY.md (talking points)
 - Highlight: ROI table and business case
 
 **Tracking Progress:**
+
 - Use: DOCUMENTATION_QUICK_MATRIX.md (implementation timeline)
 - Reference: Success metrics in both priority matrix documents
 - Update: Status against each of 5 documents
@@ -204,11 +229,13 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 ## Key Metrics At a Glance
 
 ### Investment Required
+
 - **Initial effort:** 18 hours
 - **Annual maintenance:** 35 hours (1h per release)
 - **Year 1 total:** 53 hours
 
 ### Expected Benefits
+
 - **Support reduction:** 200+ hours/year (-30 to -40 tickets/month)
 - **Onboarding improvement:** 15+ hours/year (5 contributors × 3h saved)
 - **Feature adoption:** Unmeasured but significant (+40% awareness)
@@ -216,6 +243,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 - **Year 1 total:** 220+ hours saved
 
 ### ROI
+
 - **Year 1:** 4.15× (220h benefit ÷ 53h cost)
 - **Year 2+:** 6.3× (220h benefit ÷ 35h cost)
 - **Payoff period:** 3-4 weeks
@@ -225,13 +253,13 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 
 ## The 5 Documents in Priority Order
 
-| Rank | Document | Effort | ROI | Payoff | Why |
-|------|----------|--------|-----|--------|-----|
-| 1 | CONTRIBUTING.md | 3h | 6.25× | 1-2m | Unblocks PRs |
-| 2 | Developer Setup | 2h | 5× | 2-3w | Fixes onboarding |
-| 3 | Config Guide | 3h | 27-31× | <1w | Slashes support |
-| 4 | Commands Ref | 3h | 7× | 1m | Discovers features |
-| 5 | JSDoc APIs | 7h | 1.5-1.7× | 2-3m | IDE integration |
+| Rank | Document        | Effort | ROI      | Payoff | Why                |
+| ---- | --------------- | ------ | -------- | ------ | ------------------ |
+| 1    | CONTRIBUTING.md | 3h     | 6.25×    | 1-2m   | Unblocks PRs       |
+| 2    | Developer Setup | 2h     | 5×       | 2-3w   | Fixes onboarding   |
+| 3    | Config Guide    | 3h     | 27-31×   | <1w    | Slashes support    |
+| 4    | Commands Ref    | 3h     | 7×       | 1m     | Discovers features |
+| 5    | JSDoc APIs      | 7h     | 1.5-1.7× | 2-3m   | IDE integration    |
 
 ---
 
@@ -240,7 +268,7 @@ Comprehensive assessment of documentation for positron-svn identifies 5 critical
 When created, these files will be in:
 
 ```
-/home/user/positron-svn/
+/home/user/sven/
 ├── CONTRIBUTING.md                              (Week 1)
 ├── README.md                                    (updated with links)
 └── docs/
@@ -259,18 +287,21 @@ When created, these files will be in:
 ## Implementation Timeline
 
 ### WEEK 1-2: Critical Blockers (5 hours)
+
 - Create CONTRIBUTING.md (3h)
 - Create DEVELOPER_SETUP.md (2h)
 - Update README with links
 - **Expected:** External PR interest increases, setup time -75%
 
 ### WEEK 3: Support Relief (3 hours)
+
 - Expand CONFIGURATION_GUIDE.md (3h)
 - Add performance impact section
 - Add use-case recommendations
 - **Expected:** -15 config-related support tickets/month
 
 ### WEEK 4-5: Complete Vision (7 hours)
+
 - Create COMMAND_REFERENCE.md (3h)
 - Add JSDoc to Repository classes (4h)
 - Set up ESLint enforcement
@@ -281,24 +312,28 @@ When created, these files will be in:
 ## How to Use These Assessment Documents
 
 ### If You're Just Starting (10 minutes)
+
 1. Read: DOCUMENTATION_QUICK_MATRIX.md
 2. Glance: DOCUMENTATION_MATRIX_VISUAL.txt
 3. Decide: Approve or adjust priorities
 4. Next: Start with CONTRIBUTING.md (Week 1)
 
 ### If You're Implementing (30 minutes)
+
 1. Read: DOCUMENTATION_PRIORITY_MATRIX.md - "Top 5 Recommendations" section
 2. Reference: Implementation steps for each document
 3. Follow: File structure templates
 4. Track: Success metrics against actual implementation
 
 ### If You're Presenting (20 minutes)
+
 1. Prepare: Slides from DOCUMENTATION_MATRIX_VISUAL.txt
 2. Talking points: DOCUMENTATION_EXECUTIVE_SUMMARY.md sections
 3. Backup: ROI table and risk assessment details
 4. Share: Specific recommendations and timeline
 
 ### If You're Explaining Gaps (15 minutes)
+
 1. Show: Audience impact section (QUICK_MATRIX.md)
 2. Explain: Critical gaps (PRIORITY_MATRIX.md)
 3. Visualize: Charts (MATRIX_VISUAL.txt)
@@ -309,6 +344,7 @@ When created, these files will be in:
 ## Key Findings Summary
 
 ### Critical Gaps Identified
+
 1. **CONTRIBUTING.md** - BLOCKS external contributions (0 external PRs)
 2. **Developer Setup** - 3-hour onboarding, 30-40% failure rate
 3. **Configuration Guide** - 15-20 support tickets/month preventable
@@ -316,6 +352,7 @@ When created, these files will be in:
 5. **JSDoc APIs** - IDE autocomplete disabled, 20% coverage
 
 ### Root Causes
+
 - Internal documentation excellent (90%+)
 - External documentation weak (15-30%)
 - Scattered across multiple files
@@ -323,6 +360,7 @@ When created, these files will be in:
 - Self-documenting code missing (sparse JSDoc)
 
 ### Impact on Business
+
 - **Contribution:** Zero external PRs (gates growth)
 - **Support:** 40+ preventable tickets/month (cost driver)
 - **Onboarding:** 3+ hours wasted per new developer
@@ -334,12 +372,14 @@ When created, these files will be in:
 ## Next Steps
 
 ### For Approval
+
 - [ ] Read DOCUMENTATION_EXECUTIVE_SUMMARY.md (10 min)
 - [ ] Review ROI analysis (3-4 minute section)
 - [ ] Approve 18-hour investment for 220+ hour/year benefit
 - [ ] Allocate resources (Week 1-2 critical, Weeks 3-5 phased)
 
 ### For Implementation
+
 - [ ] Assign owner(s) for documentation
 - [ ] Create CONTRIBUTING.md (Week 1, 3 hours)
 - [ ] Create DEVELOPER_SETUP.md (Week 1, 2 hours)
@@ -347,6 +387,7 @@ When created, these files will be in:
 - [ ] Configure ESLint JSDoc enforcement
 
 ### For Tracking
+
 - [ ] Set baseline metrics (current support tickets, PR rate, etc.)
 - [ ] Weekly standup on documentation progress
 - [ ] Monthly review against success metrics
@@ -357,6 +398,7 @@ When created, these files will be in:
 ## Questions About This Assessment?
 
 ### "What's the difference between these documents?"
+
 - **EXECUTIVE_SUMMARY:** Business case (10 min read)
 - **PRIORITY_MATRIX:** Detailed specs (30 min read)
 - **QUICK_MATRIX:** Quick reference (10 min read)
@@ -364,14 +406,18 @@ When created, these files will be in:
 - **This INDEX:** Navigation guide (5 min read)
 
 ### "Which document should I read first?"
+
 **Depends on your role:**
+
 - Manager: EXECUTIVE_SUMMARY
 - Team lead: PRIORITY_MATRIX
 - Developer: QUICK_MATRIX
 - Presenter: MATRIX_VISUAL
 
 ### "How long will this take to implement?"
+
 **18 hours total across 4 weeks:**
+
 - Week 1-2: 5 hours (critical blockers)
 - Week 3: 3 hours (support relief)
 - Week 4-5: 7 hours (feature discovery + API quality)
@@ -379,13 +425,17 @@ When created, these files will be in:
 Can be done sequentially or in parallel depending on team size.
 
 ### "What's the ROI?"
+
 **8.5× in Year 1, 6.3× in Year 2+**
+
 - Cost: 53 hours Year 1 (18h initial + 35h maintenance)
 - Benefit: 220+ hours/year (support + onboarding savings)
 - Payoff: 3-4 weeks
 
 ### "Which document should I create first?"
+
 **CONTRIBUTING.md (Week 1, 3 hours)**
+
 - Unblocks all external contributions
 - Fast to write (link to CLAUDE.md)
 - Immediate impact on PR submissions
@@ -400,12 +450,14 @@ Can be done sequentially or in parallel depending on team size.
 **Status:** Complete - Ready for implementation
 
 **These assessment documents are meta-documentation:**
+
 - They describe what documentation is needed
 - They don't replace the actual documentation (CONTRIBUTING.md, etc.)
 - Update this index when actual docs are created
 - Reference specific files once they exist
 
 **Future Maintenance:**
+
 - Update this index quarterly as docs are created
 - Track success metrics in METRICS section
 - Adjust priorities based on actual experience

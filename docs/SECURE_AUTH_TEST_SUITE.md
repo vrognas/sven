@@ -11,6 +11,7 @@
 Comprehensive test suite for SVN credential cache implementation that eliminates password exposure in process list. Tests written BEFORE implementation following TDD principles.
 
 **Test Coverage:**
+
 - Unit tests: 24 tests (SvnAuthCache service)
 - Integration tests: 10 tests (Svn.exec() modifications)
 - Security tests: 8 tests (credential protection)
@@ -21,11 +22,12 @@ Comprehensive test suite for SVN credential cache implementation that eliminates
 
 ## Test Files Created
 
-### 1. `/home/user/positron-svn/src/test/unit/services/svnAuthCache.test.ts` (24 tests)
+### 1. `/home/user/sven/src/test/unit/services/svnAuthCache.test.ts` (24 tests)
 
 **Purpose:** Unit tests for new SvnAuthCache service
 
 **Test Suites:**
+
 1. Credential File Writing (8 tests)
    - SVN format correctness
    - File permissions (mode 600)
@@ -65,12 +67,21 @@ Comprehensive test suite for SVN credential cache implementation that eliminates
    - Path separator normalization
 
 **Mock Data:**
+
 ```typescript
 // Test credentials
 const testCreds = [
-  { username: "alice", password: "secret123", realm: "https://svn.example.com:443" },
+  {
+    username: "alice",
+    password: "secret123",
+    realm: "https://svn.example.com:443"
+  },
   { username: "bob", password: "pass456", realm: "https://svn.test.com:443" },
-  { username: "user@example.com", password: "p@$$w0rd!#%", realm: "svn://svn.local" }
+  {
+    username: "user@example.com",
+    password: "p@$$w0rd!#%",
+    realm: "svn://svn.local"
+  }
 ];
 
 // Expected SVN format
@@ -93,11 +104,12 @@ END
 
 ---
 
-### 2. `/home/user/positron-svn/src/test/unit/svn/svn-exec-auth.test.ts` (10 tests)
+### 2. `/home/user/sven/src/test/unit/svn/svn-exec-auth.test.ts` (10 tests)
 
 **Purpose:** Integration tests for Svn.exec() using credential cache
 
 **Test Suites:**
+
 1. Command Execution WITHOUT --password Flag (3 tests)
    - Verify --password not in args
    - Config options for password store removed
@@ -131,6 +143,7 @@ END
    - Legacy mode support
 
 **Mock Setup:**
+
 ```typescript
 // Mock process
 mockProcess = {
@@ -145,19 +158,20 @@ mockProcess.once.withArgs("exit").callsArgWith(1, 0);
 mockProcess.stdout.once.withArgs("close").callsArgWith(1);
 
 // Auth failure
-mockProcess.stderr.on.withArgs("data").callsArgWith(1,
-  Buffer.from("svn: E170001: Authentication failed")
-);
+mockProcess.stderr.on
+  .withArgs("data")
+  .callsArgWith(1, Buffer.from("svn: E170001: Authentication failed"));
 mockProcess.once.withArgs("exit").callsArgWith(1, 1);
 ```
 
 ---
 
-### 3. `/home/user/positron-svn/src/test/unit/security/credentialProtection.test.ts` (8 tests)
+### 3. `/home/user/sven/src/test/unit/security/credentialProtection.test.ts` (8 tests)
 
 **Purpose:** Security verification that passwords are NOT exposed
 
 **Test Suites:**
+
 1. Process List Protection (4 tests)
    - Password not in command args
    - Special characters not leaked
@@ -195,6 +209,7 @@ mockProcess.once.withArgs("exit").callsArgWith(1, 1);
    - Warning shown when debug enabled
 
 **Verification:**
+
 ```typescript
 // Check args for password
 const spawnArgs = spawnStub.firstCall.args[1] as string[];
@@ -210,11 +225,12 @@ for (const call of logOutputSpy.getCalls()) {
 
 ---
 
-### 4. `/home/user/positron-svn/src/test/unit/svn/authLogging.test.ts` (5 tests)
+### 4. `/home/user/sven/src/test/unit/svn/authLogging.test.ts` (5 tests)
 
 **Purpose:** Debug-friendly auth logging without exposing credentials
 
 **Test Suites:**
+
 1. Auth Method Indicators (5 tests)
    - Shows "password provided"
    - Shows "SVN_PASSWORD environment variable"
@@ -244,6 +260,7 @@ for (const call of logOutputSpy.getCalls()) {
    - Tracks cache file
 
 **Expected Log Output:**
+
 ```
 [repo]$ svn update --username alice [auth: password provided]
 [repo]$ svn update --username bob [auth: SVN_PASSWORD environment variable]
@@ -253,11 +270,12 @@ for (const call of logOutputSpy.getCalls()) {
 
 ---
 
-### 5. `/home/user/positron-svn/src/test/unit/svn/authRegression.test.ts` (5 tests)
+### 5. `/home/user/sven/src/test/unit/svn/authRegression.test.ts` (5 tests)
 
 **Purpose:** Ensure existing auth scenarios still work
 
 **Test Suites:**
+
 1. Existing Auth Scenarios (5 tests)
    - Anonymous checkout (no auth)
    - Username-only auth
@@ -285,6 +303,7 @@ for (const call of logOutputSpy.getCalls()) {
    - Dual storage (SecretStorage + cache)
 
 **Test Scenarios:**
+
 ```typescript
 // Anonymous access
 svn.exec("/repo", ["checkout", "https://svn.example.com/public"]);
@@ -304,6 +323,7 @@ svn.exec("/repo", ["update"], { username: "alice", password: "secret" });
 ## Mock Data Reference
 
 ### Test Credentials
+
 ```typescript
 const testCredentials = [
   {
@@ -340,6 +360,7 @@ const testCredentials = [
 ```
 
 ### Repository URLs
+
 ```typescript
 const testRepositories = [
   "https://svn.example.com:443/repo",
@@ -351,6 +372,7 @@ const testRepositories = [
 ```
 
 ### Expected SVN Cache Format
+
 ```
 K 8
 username
@@ -368,6 +390,7 @@ END
 ```
 
 ### Error Codes
+
 ```typescript
 const svnErrorCodes = {
   AuthorizationFailed: "E170001",
@@ -382,11 +405,13 @@ const svnErrorCodes = {
 ## Running Tests
 
 ### Run All Auth Tests
+
 ```bash
 npm test -- --grep "Auth|Credential|Security"
 ```
 
 ### Run Individual Test Files
+
 ```bash
 # Unit tests
 npm test src/test/unit/services/svnAuthCache.test.ts
@@ -405,6 +430,7 @@ npm test src/test/unit/svn/authRegression.test.ts
 ```
 
 ### Run Specific Test Suite
+
 ```bash
 npm test -- --grep "Credential File Writing"
 npm test -- --grep "Process List Protection"
@@ -416,6 +442,7 @@ npm test -- --grep "Auth Method Indicators"
 ## Expected vs Actual Behavior
 
 ### Before Implementation (Current)
+
 ```
 Command: svn update --username alice --password secret123
 Process list: svn update --username alice --password secret123  ❌ EXPOSED
@@ -424,6 +451,7 @@ Security: CVSS 7.5 HIGH
 ```
 
 ### After Implementation (Target)
+
 ```
 Command: svn update --username alice
 Process list: svn update --username alice  ✅ PROTECTED
@@ -437,6 +465,7 @@ Security: CVSS 3.2 LOW
 ## Edge Cases Covered
 
 ### Special Characters
+
 - `@` in username (email addresses)
 - `!@#$%^&*()` in passwords
 - `<script>` tags (XSS attempts)
@@ -444,16 +473,19 @@ Security: CVSS 3.2 LOW
 - Whitespace in passwords
 
 ### Long Values
+
 - 256+ character passwords
 - Very long usernames
 - Deep directory paths
 
 ### Concurrent Access
+
 - Multiple realm writes
 - Same realm overwrites
 - Read during write
 
 ### Error Conditions
+
 - Permission denied (EACCES)
 - Disk full (ENOSPC)
 - Corrupt cache files
@@ -461,6 +493,7 @@ Security: CVSS 3.2 LOW
 - Missing directories
 
 ### Platform Differences
+
 - Unix: ~/.subversion/auth/svn.simple/
 - macOS: ~/.subversion/auth/svn.simple/
 - Windows: %APPDATA%\Subversion\auth\svn.simple\
@@ -471,6 +504,7 @@ Security: CVSS 3.2 LOW
 ## Test Utilities
 
 ### Helper Functions
+
 ```typescript
 // Mock successful process
 function mockSuccessfulProcess(stdout: string = "") {
@@ -490,7 +524,11 @@ function mockAuthFailure(errorCode: string = "E170001") {
 }
 
 // Verify password not leaked
-function assertPasswordNotLeaked(password: string, spawnStub: sinon.SinonStub, logSpy: sinon.SinonSpy) {
+function assertPasswordNotLeaked(
+  password: string,
+  spawnStub: sinon.SinonStub,
+  logSpy: sinon.SinonSpy
+) {
   const args = spawnStub.firstCall.args[1] as string[];
   assert.ok(!args.join(" ").includes(password), "Password not in args");
 
@@ -505,6 +543,7 @@ function assertPasswordNotLeaked(password: string, spawnStub: sinon.SinonStub, l
 ## Implementation Checklist
 
 Before starting implementation:
+
 - [x] All test files created
 - [x] Mock data prepared
 - [x] Edge cases identified
@@ -512,6 +551,7 @@ Before starting implementation:
 - [x] Security requirements defined
 
 During implementation:
+
 - [ ] Create SvnAuthCache service
 - [ ] Modify Svn.exec() to use cache
 - [ ] Add auth method logging
@@ -519,6 +559,7 @@ During implementation:
 - [ ] Handle cross-platform paths
 
 After implementation:
+
 - [ ] Run all 48 tests
 - [ ] Verify 100% pass rate
 - [ ] Manual security testing (ps check)
@@ -530,6 +571,7 @@ After implementation:
 ## Success Criteria
 
 ### Must Pass (100% Required)
+
 - ✅ All 48 tests pass
 - ✅ Password NOT in process args
 - ✅ Password NOT in logs
@@ -538,11 +580,13 @@ After implementation:
 - ✅ All regression tests pass
 
 ### Performance Targets
+
 - Cache write: < 10ms
 - No measurable impact on SVN command execution
 - Memory usage stable (no leaks)
 
 ### Security Verification
+
 ```bash
 # Terminal 1: Run SVN command
 svn update
@@ -562,12 +606,14 @@ ls -la ~/.subversion/auth/svn.simple/
 ## Known Limitations
 
 ### Out of Scope (Not Tested)
+
 - SVN 1.5 and older (no credential cache support)
 - Network file systems (NFS) with no permission support
 - Containers with read-only file systems
 - SVN credential encryption (Tier 3 enhancement)
 
 ### Future Enhancements (Not Required)
+
 - Credential cache expiration
 - Multiple credential profiles
 - Credential migration tool
@@ -578,6 +624,7 @@ ls -la ~/.subversion/auth/svn.simple/
 ## Documentation Updates Required
 
 After tests pass:
+
 1. Update CHANGELOG.md with security improvement
 2. Add security note to README.md
 3. Update LESSONS_LEARNED.md with TDD approach
@@ -589,22 +636,26 @@ After tests pass:
 ## Related Files
 
 **Test Files:**
-- `/home/user/positron-svn/src/test/unit/services/svnAuthCache.test.ts`
-- `/home/user/positron-svn/src/test/unit/svn/svn-exec-auth.test.ts`
-- `/home/user/positron-svn/src/test/unit/security/credentialProtection.test.ts`
-- `/home/user/positron-svn/src/test/unit/svn/authLogging.test.ts`
-- `/home/user/positron-svn/src/test/unit/svn/authRegression.test.ts`
+
+- `/home/user/sven/src/test/unit/services/svnAuthCache.test.ts`
+- `/home/user/sven/src/test/unit/svn/svn-exec-auth.test.ts`
+- `/home/user/sven/src/test/unit/security/credentialProtection.test.ts`
+- `/home/user/sven/src/test/unit/svn/authLogging.test.ts`
+- `/home/user/sven/src/test/unit/svn/authRegression.test.ts`
 
 **Implementation Files (To Create):**
-- `/home/user/positron-svn/src/services/svnAuthCache.ts`
+
+- `/home/user/sven/src/services/svnAuthCache.ts`
 
 **Modification Required:**
-- `/home/user/positron-svn/src/svn.ts` (Svn.exec() and execBuffer())
-- `/home/user/positron-svn/src/extension.ts` (Debug warning)
+
+- `/home/user/sven/src/svn.ts` (Svn.exec() and execBuffer())
+- `/home/user/sven/src/extension.ts` (Debug warning)
 
 **Documentation:**
-- `/home/user/positron-svn/docs/SECURITY_CREDENTIAL_EXPOSURE_SUMMARY.md`
-- `/home/user/positron-svn/docs/DEBUG_AUTH_IMPLEMENTATION_PLAN.md`
+
+- `/home/user/sven/docs/SECURITY_CREDENTIAL_EXPOSURE_SUMMARY.md`
+- `/home/user/sven/docs/DEBUG_AUTH_IMPLEMENTATION_PLAN.md`
 
 ---
 

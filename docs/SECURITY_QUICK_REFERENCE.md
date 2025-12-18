@@ -8,11 +8,11 @@
 
 ## One-Minute Summary
 
-| Issue | Severity | Root Cause | Fix | Files | Time |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| Command Injection | CRITICAL | cp.exec() | → execFile() | svnFinder.ts | 30m |
-| Credential Exposure | HIGH | --password arg | + env var | svn.ts | 2h |
-| Dependency Vulns | HIGH | glob, semver | npm update | package.json | 10m |
+|        Issue        | Severity |   Root Cause   |     Fix      |    Files     | Time |
+| :-----------------: | :------: | :------------: | :----------: | :----------: | :--: |
+|  Command Injection  | CRITICAL |   cp.exec()    | → execFile() | svnFinder.ts | 30m  |
+| Credential Exposure |   HIGH   | --password arg |  + env var   |    svn.ts    |  2h  |
+|  Dependency Vulns   |   HIGH   |  glob, semver  |  npm update  | package.json | 10m  |
 
 **Total Effort:** 4 hours | **Risk:** LOW | **Impact:** CRITICAL fixes
 
@@ -21,32 +21,37 @@
 ## CRITICAL FIX #1: Command Injection (30 minutes)
 
 ### What's Wrong
+
 ```typescript
 // VULNERABLE - shell interprets command string
 cp.exec("which svn", (err, stdout) => { ... });
 ```
 
 Shell can execute injection payloads:
+
 ```bash
 cp.exec("which svn; rm -rf /tmp/*")  # Malicious command executes
 ```
 
 ### What to Fix
+
 ```typescript
 // SAFE - no shell, args as array
 cp.execFile("which", ["svn"], (err, stdout) => { ... });
 ```
 
 No shell interpretation:
+
 ```bash
 cp.execFile("which", ["svn; rm -rf /tmp/*"])  # Treated as literal string
 ```
 
 ### Where to Fix
 
-**File:** `/home/user/positron-svn/src/svnFinder.ts`
+**File:** `/home/user/sven/src/svnFinder.ts`
 
 **Location 1 (Line 56):** Find which svn
+
 ```typescript
 // BEFORE:
 cp.exec("which svn", (err, svnPathBuffer) => {
@@ -56,6 +61,7 @@ cp.execFile("which", ["svn"], (err, svnPathBuffer) => {
 ```
 
 **Location 2 (Line 65):** Get SVN version
+
 ```typescript
 // BEFORE:
 cp.exec("svn --version --quiet", (err, stdout) => {
@@ -65,6 +71,7 @@ cp.execFile("svn", ["--version", "--quiet"], (err, stdout) => {
 ```
 
 **Location 3 (Line 79):** Check XCode
+
 ```typescript
 // BEFORE:
 cp.exec("xcode-select -p", (err: any) => {
@@ -100,11 +107,12 @@ npm test
 ```typescript
 // VULNERABLE - password visible in process list
 if (options.password) {
-  args.push("--password", options.password);  // ps aux shows this!
+  args.push("--password", options.password); // ps aux shows this!
 }
 ```
 
 Attacker sees:
+
 ```bash
 $ ps aux | grep svn
 user 12345 ... svn update --password MySecretPass123
@@ -124,7 +132,7 @@ if (password) {
     if (options.log !== false) {
       this.logOutput(
         "WARNING: Password in CLI args visible in process list.\n" +
-        "         Use SVN_PASSWORD environment variable for better security.\n"
+          "         Use SVN_PASSWORD environment variable for better security.\n"
       );
     }
     args.push("--password", options.password);
@@ -142,23 +150,26 @@ if (password) {
 
 ### Where to Fix
 
-**File:** `/home/user/positron-svn/src/svn.ts` (around line 110-114)
+**File:** `/home/user/sven/src/svn.ts` (around line 110-114)
 
 ### Additional Changes
 
 **Update README.md** - Add authentication section:
 
-```markdown
+````markdown
 ## Authentication
 
 ### Best Practice: SSH Keys (Recommended)
+
 ```bash
 # SSH keys never exposed in process list
 export SVN_SSH="ssh -i ~/.ssh/id_rsa"
 svn checkout svn+ssh://server/repo
 ```
+````
 
 ### Secure: Environment Variables
+
 ```bash
 # Credentials passed via environment, not CLI args
 export SVN_USERNAME=myuser
@@ -166,6 +177,7 @@ export SVN_PASSWORD=mypass
 ```
 
 ### Legacy: SVN Auth Cache
+
 ```bash
 # SVN stores credentials securely on first use
 svn checkout https://server/repo
@@ -173,11 +185,13 @@ svn checkout https://server/repo
 ```
 
 ### Not Recommended: CLI Arguments
+
 ```bash
 # WARNING: Password visible in ps output
 svn checkout --username u --password p https://server/repo
 ```
-```
+
+````
 
 **Create SECURITY.md:**
 ```markdown
@@ -203,7 +217,7 @@ XXE and entity expansion attacks are mitigated:
 - Size limits
 
 See SAFE_QUICK_WINS.md for other security improvements.
-```
+````
 
 ### Verification
 
@@ -222,7 +236,7 @@ npm test src/test/unit/security/credentialSafety.test.ts
 ```json
 {
   "devDependencies": {
-    "glob": "11.0.3",           // ← HIGH vuln (command injection)
+    "glob": "11.0.3", // ← HIGH vuln (command injection)
     "semantic-release": "25.0.2" // ← HIGH vulns (transitive)
   }
 }
@@ -263,7 +277,7 @@ semantic-release@24.2.9
 
 ### Test File 1: Command Injection Prevention
 
-**Create:** `/home/user/positron-svn/src/test/unit/security/commandInjection.test.ts`
+**Create:** `/home/user/sven/src/test/unit/security/commandInjection.test.ts`
 
 ```typescript
 import * as assert from "assert";
@@ -294,7 +308,10 @@ describe("Security - Command Injection Prevention", () => {
     }
 
     // CRITICAL: exec() must NEVER be called
-    assert(!execSpy.called, "exec() should never be used - shell injection risk");
+    assert(
+      !execSpy.called,
+      "exec() should never be used - shell injection risk"
+    );
 
     // execFile should be used for safe execution
     assert(execFileSpy.called, "execFile() must be used");
@@ -311,13 +328,16 @@ describe("Security - Command Injection Prevention", () => {
     }
 
     // Verify all execFile calls have array arguments
-    execFileSpy.getCalls().forEach((call) => {
+    execFileSpy.getCalls().forEach(call => {
       const [cmd, args] = call.args;
       assert(Array.isArray(args), `Args should be array for ${cmd}`);
 
       // No dangerous characters in args
       args.forEach((arg: string) => {
-        assert(!arg.includes(";"), `Args should not contain shell metacharacters`);
+        assert(
+          !arg.includes(";"),
+          `Args should not contain shell metacharacters`
+        );
         assert(!arg.includes("|"), `Args should not contain pipe operators`);
       });
     });
@@ -327,7 +347,7 @@ describe("Security - Command Injection Prevention", () => {
 
 ### Test File 2: Credential Safety
 
-**Create:** `/home/user/positron-svn/src/test/unit/security/credentialSafety.test.ts`
+**Create:** `/home/user/sven/src/test/unit/security/credentialSafety.test.ts`
 
 ```typescript
 import * as assert from "assert";
@@ -462,8 +482,8 @@ npm test src/test/unit/security/*.test.ts
 cp.execFile(cmd, args); // args could be undefined
 
 // RIGHT - always provide args array
-cp.execFile(cmd, [], callback);  // Even if empty
-cp.execFile(cmd, ["arg1"], callback);  // With args
+cp.execFile(cmd, [], callback); // Even if empty
+cp.execFile(cmd, ["arg1"], callback); // With args
 ```
 
 ### ❌ Pitfall 2: Mixing exec and execFile
@@ -498,7 +518,7 @@ if (password && options.password) {
 ```typescript
 // WRONG - no warning for users
 if (options.password) {
-  args.push("--password", options.password);  // Silent risk
+  args.push("--password", options.password); // Silent risk
 }
 
 // RIGHT - document and warn
@@ -563,15 +583,15 @@ git tag v2.17.230-rollback-emergency
 
 ## TIME BREAKDOWN
 
-| Task | Time | Owner |
-|:---:|:---:|:---:|
-| Code changes (svnFinder.ts) | 30m | Dev |
-| Code changes (svn.ts + deps) | 1h 10m | Dev |
-| Create security tests | 45m | QA/Dev |
-| Run full test suite | 20m | QA |
-| Documentation updates | 30m | Tech Lead |
-| Review and sign-off | 15m | Lead |
-| **TOTAL** | **4h** | |
+|             Task             |  Time  |   Owner   |
+| :--------------------------: | :----: | :-------: |
+| Code changes (svnFinder.ts)  |  30m   |    Dev    |
+| Code changes (svn.ts + deps) | 1h 10m |    Dev    |
+|    Create security tests     |  45m   |  QA/Dev   |
+|     Run full test suite      |  20m   |    QA     |
+|    Documentation updates     |  30m   | Tech Lead |
+|     Review and sign-off      |  15m   |   Lead    |
+|          **TOTAL**           | **4h** |           |
 
 ---
 
@@ -620,4 +640,3 @@ A: Security advisory in release notes. Encourage all users to update.
 **Last Updated:** 2025-11-20
 **Version:** 1.0
 **Status:** Ready for Implementation
-

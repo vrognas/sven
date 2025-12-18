@@ -21,6 +21,7 @@ This extension provides Positron-specific features while maintaining full compat
 **Positron** is a next-generation IDE for data science developed by Posit PBC.
 
 ### Overview
+
 - **Platform**: Fork of Visual Studio Code
 - **Purpose**: IDE optimized for data science workflows (R, Python, Julia)
 - **Developer**: Posit PBC (creators of RStudio)
@@ -29,6 +30,7 @@ This extension provides Positron-specific features while maintaining full compat
 - **Target Users**: Data scientists, researchers, analysts
 
 ### Key Features
+
 - **Data Explorer**: Spreadsheet-style data viewing with filtering/sorting
 - **Positron Assistant**: Native GenAI client with session context awareness
 - **Integrated Data Apps**: Launch Shiny, Streamlit, Dash, FastAPI directly
@@ -36,11 +38,13 @@ This extension provides Positron-specific features while maintaining full compat
 - **Enhanced R/Python**: First-class language support with specialized tooling
 
 ### Relationship to VS Code
+
 - Positron is built on VS Code's codebase (fork)
 - VS Code extensions work in Positron (with some limitations)
 - This extension detects the environment and enables Positron features when available
 
 ### Relationship to RStudio
+
 - Positron does **not** replace RStudio
 - Both products maintained by Posit
 - Positron adds Python/Julia support alongside R
@@ -53,6 +57,7 @@ This extension provides Positron-specific features while maintaining full compat
 ## Integration Architecture
 
 ### Detection Mechanism
+
 ```typescript
 // src/positron/runtime.ts
 export function isPositron(): boolean {
@@ -65,17 +70,20 @@ export function getPositronApi(): PositronApi | undefined {
 ```
 
 **How it works**:
+
 1. Extension attempts to import `@posit-dev/positron` module (dynamic require)
 2. If module exists → Running in Positron
 3. If module missing → Running in VS Code
 4. Positron features activate conditionally (no impact on VS Code)
 
 ### Activation Flow
+
 ```typescript
 // src/extension.ts (lines 113-120)
 if (isPositron()) {
   console.log("SVN Extension: Registering Positron connections provider");
-  const connectionsDisposable = registerSvnConnectionsProvider(sourceControlManager);
+  const connectionsDisposable =
+    registerSvnConnectionsProvider(sourceControlManager);
   if (connectionsDisposable) {
     disposables.push(connectionsDisposable);
     outputChannel.appendLine("Positron: SVN Connections provider registered");
@@ -84,6 +92,7 @@ if (isPositron()) {
 ```
 
 **Behavior**:
+
 - **In Positron**: Connections provider registered, visible in Connections pane
 - **In VS Code**: Provider not registered, zero overhead
 
@@ -92,17 +101,22 @@ if (isPositron()) {
 ## Connections Pane Integration
 
 ### Purpose
+
 Allows users to manage SVN repositories through Positron's Connections pane alongside database connections and other data sources.
 
 ### User-Facing Features
+
 Users can:
+
 - **View SVN repositories** in Connections pane
 - **Quick checkout** via connection wizard
 - **See repository metadata**: branch, revision, remote URL, status
 - **Quick actions**: Update, Switch Branch, Show Changes (future)
 
 ### Connection Wizard
+
 When user clicks "New Connection" → "Subversion Repository":
+
 1. **Input fields**:
    - Repository URL (required): `https://svn.example.com/repo`
    - Local Directory (optional): `/path/to/checkout`
@@ -110,6 +124,7 @@ When user clicks "New Connection" → "Subversion Repository":
 3. **Execution**: Command displayed in output channel
 
 ### Technical Implementation
+
 ```typescript
 // src/positron/connectionsProvider.ts
 export class SvnConnectionsProvider implements ConnectionsDriver {
@@ -135,6 +150,7 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
 ```
 
 **Registration**:
+
 ```typescript
 export function registerSvnConnectionsProvider(
   sourceControlManager: SourceControlManager
@@ -152,11 +168,13 @@ export function registerSvnConnectionsProvider(
 ## Privacy & Data Handling
 
 ### Zero Telemetry Policy
+
 **This extension collects ZERO user data, in both VS Code and Positron.**
 
 ### Data Flow Analysis
 
 #### Local-Only Operations
+
 - **Runtime detection**: `isPositron()` returns true/false (local check only)
 - **Environment logging**: `getEnvironmentName()` returns "Positron" or "VS Code"
   - Used in console logs: `console.log(Running in ${getEnvironmentName()})`
@@ -164,12 +182,14 @@ export function registerSvnConnectionsProvider(
   - **Never transmitted** anywhere
 
 #### Connections Provider
+
 - **Registration**: Local API call to Positron's connections manager
 - **User inputs**: Stored locally in Positron's connection registry
 - **Code generation**: Happens client-side (no network calls)
 - **Execution**: Runs SVN commands locally via system SVN client
 
 #### No External Requests
+
 - **No telemetry** sent to Posit, Positron, or any third party
 - **No analytics** (no PostHog, Segment, Amplitude, Mixpanel, etc.)
 - **No tracking** pixels or beacons
@@ -178,7 +198,9 @@ export function registerSvnConnectionsProvider(
 ### Optional External Requests
 
 #### Gravatar (User-Configurable)
+
 **Only external request in entire extension**:
+
 - **Purpose**: Display commit author avatars in log viewers
 - **URL**: `https://www.gravatar.com/avatar/<MD5>.jpg`
 - **Default**: Enabled
@@ -187,6 +209,7 @@ export function registerSvnConnectionsProvider(
 - **Privacy note**: Gravatar can track IP addresses (standard HTTP request)
 
 **Disable gravatars**:
+
 ```json
 {
   "svn.gravatars.enabled": false
@@ -196,6 +219,7 @@ export function registerSvnConnectionsProvider(
 ### What Data Stays Local
 
 #### Repository Data
+
 - SVN repository URLs
 - Working copy paths
 - Commit messages
@@ -203,12 +227,14 @@ export function registerSvnConnectionsProvider(
 - Authentication credentials (see Security section)
 
 #### Extension State
+
 - Configuration settings
 - Blame cache
 - Log cache
 - Connection metadata (Positron)
 
 #### Logs & Diagnostics
+
 - Output channel logs (local only)
 - Console logs (developer tools, local only)
 - Error messages (sanitized, see Security section)
@@ -218,7 +244,9 @@ export function registerSvnConnectionsProvider(
 ## Security Considerations
 
 ### Credential Protection
+
 Positron integration does **not** change credential handling:
+
 - **SSH keys**: Managed by SSH agent (most secure)
 - **Passwords**: Stored in SVN credential cache (`~/.subversion/auth/`, mode 600)
 - **Error sanitization**: All logs sanitized (credentials redacted)
@@ -226,14 +254,18 @@ Positron integration does **not** change credential handling:
 See [README.md Authentication & Security](../README.md#authentication--security) for details.
 
 ### Positron-Specific Risks
+
 **None identified**. The integration:
+
 - Uses only public Positron API (`@posit-dev/positron`)
 - No privileged access to file system or network
 - Same security model as VS Code extensions
 - Runs in extension host sandbox
 
 ### Audit Trail
+
 All Positron interactions logged locally:
+
 ```
 SVN Extension: Registering Positron connections provider
 Positron: SVN Connections provider registered
@@ -247,9 +279,11 @@ No network traffic generated by Positron features.
 ## Known Limitations
 
 ### Positron SCM Incompatibilities
+
 Positron has incomplete support for non-Git SCM providers. See [POSITRON_SCM_LIMITATIONS.md](./POSITRON_SCM_LIMITATIONS.md) for details.
 
 **Not working in Positron**:
+
 1. `acceptInputCommand` button (big yellow commit button)
    - **Workaround**: Use `scm/title` menu commit button instead
 2. Generate commit message (AI-assisted)
@@ -257,6 +291,7 @@ Positron has incomplete support for non-Git SCM providers. See [POSITRON_SCM_LIM
    - **Workaround**: None - feature unavailable for SVN
 
 **Working in Positron**:
+
 - ✅ Source Control view
 - ✅ SCM resource groups
 - ✅ Quick diffs
@@ -271,16 +306,19 @@ Positron has incomplete support for non-Git SCM providers. See [POSITRON_SCM_LIM
 ### Where to Document
 
 #### 1. README.md - Main Features Section
+
 **Priority**: HIGH
 **Location**: After "Blame Annotations" section
 
 **Recommended content**:
+
 ```markdown
 ## Positron Integration
 
 This extension provides enhanced integration with Posit's Positron IDE.
 
 **Connections Pane**:
+
 - View SVN repositories alongside database connections
 - Quick checkout wizard with URL and directory inputs
 - Repository metadata display (branch, revision, remote URL)
@@ -293,10 +331,12 @@ This extension provides enhanced integration with Posit's Positron IDE.
 ```
 
 #### 2. PRIVACY.md (New File)
+
 **Priority**: HIGH
 **Purpose**: Dedicated privacy policy documentation
 
 **Recommended content**:
+
 ```markdown
 # Privacy Policy
 
@@ -312,6 +352,7 @@ This extension provides enhanced integration with Posit's Positron IDE.
 ## Local-Only Operations
 
 All extension operations are local:
+
 - SVN commands executed via system SVN client
 - Repository data stored in workspace
 - Configuration in VS Code/Positron settings
@@ -320,12 +361,14 @@ All extension operations are local:
 ## Optional External Requests
 
 ### Gravatar (Default: Enabled)
+
 - **Purpose**: Display commit author avatars
 - **URL**: `https://www.gravatar.com/avatar/<MD5>.jpg`
 - **Data sent**: MD5 hash of commit author email
 - **Disable**: Set `svn.gravatars.enabled: false`
 
 ### SVN Repository Access
+
 - **Purpose**: Fetch commits, push changes
 - **URL**: Your configured SVN repository URL
 - **Data sent**: SVN commands (update, commit, etc.)
@@ -334,6 +377,7 @@ All extension operations are local:
 ## Positron Integration
 
 When running in Positron IDE:
+
 - Connections provider registered locally
 - No data sent to Posit PBC
 - Same privacy guarantees as VS Code
@@ -344,14 +388,16 @@ See [README.md Authentication & Security](./README.md#authentication--security)
 
 ## Questions?
 
-File issue: https://github.com/vrognas/positron-svn/issues
+File issue: https://github.com/vrognas/sven/issues
 ```
 
 #### 3. package.json - Extension Description
+
 **Priority**: MEDIUM
 **Current**: "Integrated Subversion source control - Positron fork with enhanced features"
 
 **Recommended update**:
+
 ```json
 {
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
@@ -367,27 +413,29 @@ File issue: https://github.com/vrognas/positron-svn/issues
 ```
 
 #### 4. CHANGELOG.md - v2.17.236 Entry
+
 **Priority**: MEDIUM
 **Add section**:
+
 ```markdown
 ### Documentation: Positron Integration (Phase 23.P2)
 
-* **POSITRON_INTEGRATION.md**: Comprehensive integration documentation (300+ lines)
+- **POSITRON_INTEGRATION.md**: Comprehensive integration documentation (300+ lines)
   - What Positron is (Posit's data science IDE)
   - Connections pane integration architecture
   - Privacy & data handling (zero telemetry)
   - Security considerations
   - Known limitations (SCM incompatibilities)
-* **PRIVACY.md**: Dedicated privacy policy
+- **PRIVACY.md**: Dedicated privacy policy
   - Zero data collection guarantee
   - Optional Gravatar requests (configurable)
   - Positron integration privacy
   - Credential storage reference
-* **README.md**: Positron Integration section
+- **README.md**: Positron Integration section
   - User-facing feature summary
   - Privacy guarantee
   - Setup instructions (auto-detect)
-* **package.json**: Enhanced description with privacy commitment
+- **package.json**: Enhanced description with privacy commitment
 ```
 
 ---
@@ -397,6 +445,7 @@ File issue: https://github.com/vrognas/positron-svn/issues
 ### Testing Positron Features
 
 **Manual testing**:
+
 1. Install Positron from https://posit.co/products/ide/positron/
 2. Install this extension in Positron
 3. Verify Output channel shows: "Positron: SVN Connections provider registered"
@@ -405,6 +454,7 @@ File issue: https://github.com/vrognas/positron-svn/issues
 6. Test checkout wizard
 
 **Automated testing**:
+
 ```typescript
 // test/unit/positron/connectionsProvider.test.ts
 describe("Positron Connections Provider", () => {
@@ -425,6 +475,7 @@ describe("Positron Connections Provider", () => {
 ### Debugging
 
 **Enable verbose logging**:
+
 ```typescript
 // Check console for:
 console.log("SVN Extension: Registering Positron connections provider");
@@ -432,6 +483,7 @@ console.log("Positron: SVN Connections provider registered");
 ```
 
 **Verify registration**:
+
 ```typescript
 const api = getPositronApi();
 if (!api) {
@@ -442,6 +494,7 @@ if (!api) {
 ### Future Enhancements
 
 **Planned** (not yet implemented):
+
 - Repository metadata display in Connections pane
 - Quick actions (Update, Switch Branch, Show Changes)
 - Data science file decorations (R, Python, Jupyter notebooks)
@@ -454,13 +507,17 @@ See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) Phase 23.P2-P3 for roadma
 ## FAQs
 
 ### Q: Does this extension only work in Positron?
+
 **A**: No. This extension works in **both VS Code and Positron**. Positron-specific features activate automatically when running in Positron.
 
 ### Q: Does Posit collect my data when I use this extension?
+
 **A**: No. The extension has **zero telemetry**. No data is sent to Posit, Positron, or any third party.
 
 ### Q: What's the difference between this and the original svn-scm extension?
+
 **A**: This fork adds:
+
 - Positron IDE integration (Connections pane)
 - Enhanced security (credential sanitization)
 - Blame system with GitLens-style annotations
@@ -468,16 +525,21 @@ See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) Phase 23.P2-P3 for roadma
 - Privacy-first design (zero telemetry)
 
 ### Q: Can I disable Positron features?
+
 **A**: Not necessary. Positron features only activate when running in Positron. In VS Code, they have zero overhead.
 
 ### Q: Is my SVN password sent to Posit?
+
 **A**: No. Credentials are stored locally in SVN credential cache (`~/.subversion/auth/`) with mode 600. Never transmitted to external services.
 
 ### Q: What data does Gravatar receive?
+
 **A**: Only the MD5 hash of the commit author's email address (irreversible). Your IP address is also visible (standard HTTP request). Disable with `svn.gravatars.enabled: false`.
 
 ### Q: How do I verify no telemetry?
+
 **A**: Audit the source code:
+
 1. Search for `fetch|http.get|axios|request`: Only Gravatar requests found
 2. Search for `telemetry|analytics`: Only planning docs (not implemented)
 3. Check `package.json` dependencies: No analytics libraries
@@ -488,11 +550,13 @@ See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) Phase 23.P2-P3 for roadma
 ## References
 
 **External**:
+
 - Positron IDE: https://posit.co/products/ide/positron/
 - Positron GitHub: https://github.com/posit-dev/positron
 - Posit PBC: https://posit.co/
 
 **Internal**:
+
 - [POSITRON_SCM_LIMITATIONS.md](./POSITRON_SCM_LIMITATIONS.md) - Known incompatibilities
 - [ARCHITECTURE_ANALYSIS.md](./ARCHITECTURE_ANALYSIS.md) - Extension architecture
 - [LESSONS_LEARNED.md](./LESSONS_LEARNED.md) - Development insights

@@ -18,9 +18,9 @@ If you use [TortoiseSVN](https://tortoisesvn.net/), make sure the option
 ## Feedback & Contributing
 
 * Please report any bugs, suggestions or documentation requests via the
-  [Issues](https://github.com/vrognas/positron-svn/issues)
+  [Issues](https://github.com/vrognas/sven/issues)
 * Feel free to submit
-  [pull requests](https://github.com/vrognas/positron-svn/pulls)
+  [pull requests](https://github.com/vrognas/sven/pulls)
 
 ## Contributing as a Developer
 
@@ -493,9 +493,9 @@ svn info <your-repo-url>
 
 - [SECURITY.md](./SECURITY.md) - Security policy and vulnerability reporting
 - [SVN Security Best Practices](https://subversion.apache.org/docs/community-guide/conventions.html#security)
-- [Issue Tracker](https://github.com/vrognas/positron-svn/issues) - Report bugs (not security vulnerabilities)
+- [Issue Tracker](https://github.com/vrognas/sven/issues) - Report bugs (not security vulnerabilities)
 
-For security vulnerabilities, use [GitHub Security Advisories](https://github.com/vrognas/positron-svn/security/advisories).
+For security vulnerabilities, use [GitHub Security Advisories](https://github.com/vrognas/sven/security/advisories).
 
 ### Credential Storage
 

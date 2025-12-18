@@ -1,7 +1,7 @@
 # Safe Quick Wins - Codebase Analysis
 
 **Generated:** 2025-11-20
-**Repository:** positron-svn v2.17.230
+**Repository:** sven v2.17.230
 **Analysis Coverage:** 8 dimensions (Code Quality, Performance, Security, Type Safety, Dependencies, Testing, Documentation, Error Handling)
 
 ---
@@ -11,6 +11,7 @@
 Comprehensive analysis of the SVN extension codebase identified **85+ improvement opportunities** across 8 dimensions. This document prioritizes **safe, high-impact quick wins** that can be implemented with minimal risk.
 
 **Key Metrics:**
+
 - Critical security issues: 2 (command injection, credential exposure)
 - High-impact code quality issues: 10
 - Performance optimization opportunities: 10
@@ -23,16 +24,16 @@ Comprehensive analysis of the SVN extension codebase identified **85+ improvemen
 
 ## Priority Matrix
 
-| Priority | Category | Count | Effort | Risk | Impact |
-|----------|----------|-------|--------|------|--------|
-| P0 - Critical | Security | 2 | Low-Med | Low | Critical |
-| P0 - Critical | Dependencies | 2 | Very Low | Low | High |
-| P1 - High | Code Quality | 5 | Low | Low | High |
-| P1 - High | Performance | 5 | Low | Low | Medium |
-| P1 - High | Type Safety | 5 | Low | Low | Medium |
-| P2 - Medium | Testing | 6 | Medium | Low | High |
-| P2 - Medium | Documentation | 5 | Medium | Low | Medium |
-| P2 - Medium | Error Handling | 10 | Low | Low | Medium |
+| Priority      | Category       | Count | Effort   | Risk | Impact   |
+| ------------- | -------------- | ----- | -------- | ---- | -------- |
+| P0 - Critical | Security       | 2     | Low-Med  | Low  | Critical |
+| P0 - Critical | Dependencies   | 2     | Very Low | Low  | High     |
+| P1 - High     | Code Quality   | 5     | Low      | Low  | High     |
+| P1 - High     | Performance    | 5     | Low      | Low  | Medium   |
+| P1 - High     | Type Safety    | 5     | Low      | Low  | Medium   |
+| P2 - Medium   | Testing        | 6     | Medium   | Low  | High     |
+| P2 - Medium   | Documentation  | 5     | Medium   | Low  | Medium   |
+| P2 - Medium   | Error Handling | 10    | Low      | Low  | Medium   |
 
 ---
 
@@ -48,6 +49,7 @@ Comprehensive analysis of the SVN extension codebase identified **85+ improvemen
 **Risk:** Low (well-tested pattern)
 
 **Issue:**
+
 ```typescript
 // VULNERABLE - shell command injection
 cp.exec("which svn", (err, svnPathBuffer) => { ... });
@@ -56,6 +58,7 @@ cp.exec("xcode-select -p", (err: any) => { ... });
 ```
 
 **Fix:**
+
 ```typescript
 // SAFE - no shell interpretation
 cp.execFile("which", ["svn"], (err, svnPathBuffer) => { ... });
@@ -75,6 +78,7 @@ cp.execFile("xcode-select", ["-p"], (err: any) => { ... });
 **Risk:** Medium (requires auth flow changes)
 
 **Issue:**
+
 ```typescript
 if (options.password) {
   args.push("--password", options.password); // Visible in ps/top
@@ -82,6 +86,7 @@ if (options.password) {
 ```
 
 **Fix Options:**
+
 1. **Quick win (Low risk):** Add documentation warning about `--password` exposure
 2. **Better solution (Medium effort):** Use SVN auth cache or stdin password input
 3. **Best solution (Higher effort):** Implement SSH key-based authentication
@@ -102,6 +107,7 @@ if (options.password) {
 **Issue:** glob@11.0.3 has command injection vulnerability (GHSA-5j98-mcp5-4vw2)
 
 **Fix:**
+
 ```bash
 npm install glob@^11.1.0 --save-dev
 ```
@@ -120,6 +126,7 @@ npm install glob@^11.1.0 --save-dev
 **Issue:** semantic-release@25.0.2 has HIGH vulnerabilities via @semantic-release/npm@13.x
 
 **Fix:**
+
 ```bash
 npm install semantic-release@^24.2.9 --save-dev
 ```
@@ -142,6 +149,7 @@ npm install semantic-release@^24.2.9 --save-dev
 **Issue:** ~160 lines duplicated between `exec()` and `execBuffer()` methods.
 
 **Fix:** Extract shared logic to `_executeSpawnedProcess()` helper:
+
 ```typescript
 private _executeSpawnedProcess(
   process: cp.ChildProcess,
@@ -179,6 +187,7 @@ private _executeSpawnedProcess(
 **Issue:** Path separator regex `/[\\\/]+/` repeated 4+ times.
 
 **Fix:**
+
 ```typescript
 const SEPARATOR_PATTERN = /[\\\/]+/;
 // Use everywhere: SEPARATOR_PATTERN
@@ -209,6 +218,7 @@ const SEPARATOR_PATTERN = /[\\\/]+/;
 **Issue:** Hardcoded `30000` timeout and locale strings.
 
 **Fix:**
+
 ```typescript
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_LOCALE_ENV = { LC_ALL: "en_US.UTF-8", LANG: "en_US.UTF-8" };
@@ -227,6 +237,7 @@ const DEFAULT_LOCALE_ENV = { LC_ALL: "en_US.UTF-8", LANG: "en_US.UTF-8" };
 **Issue:** Creates new RegExp for each error code on every command.
 
 **Fix:**
+
 ```typescript
 const SVN_ERROR_REGEXES = Object.entries(svnErrorCodes).map(([name, code]) => ({
   name,
@@ -253,6 +264,7 @@ function getSvnErrorCode(stderr: string): string | undefined {
 **Issue:** Creates new RegExp for every `getBranchName()` call.
 
 **Fix:** Add regex cache keyed by layout string:
+
 ```typescript
 const branchRegexCache = new Map<string, RegExp>();
 ```
@@ -268,6 +280,7 @@ const branchRegexCache = new Map<string, RegExp>();
 **Risk:** Very Low
 
 **Fix:**
+
 ```typescript
 const TMP_PATTERN = /[\\\/](\.svn|_svn)[\\\/]tmp/;
 const SVN_PATTERN = /[\\\/](\.svn|_svn)[\\\/]/;
@@ -286,9 +299,10 @@ const SVN_PATTERN = /[\\\/](\.svn|_svn)[\\\/]/;
 **Issue:** Uses regex for simple space detection.
 
 **Fix:**
+
 ```typescript
 // Instead of: / |^$/.test(arg)
-const needsQuote = arg.includes(' ') || arg === '';
+const needsQuote = arg.includes(" ") || arg === "";
 ```
 
 **Impact:** 2-3% command logging overhead reduction.
@@ -304,9 +318,10 @@ const needsQuote = arg.includes(' ') || arg === '';
 **Issue:** Applies regex to all XML, even if clean.
 
 **Fix:**
+
 ```typescript
 const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
-return CONTROL_CHARS.test(xml) ? xml.replace(CONTROL_CHARS, '') : xml;
+return CONTROL_CHARS.test(xml) ? xml.replace(CONTROL_CHARS, "") : xml;
 ```
 
 **Impact:** 3-5% XML parse time on large repos.
@@ -324,6 +339,7 @@ return CONTROL_CHARS.test(xml) ? xml.replace(CONTROL_CHARS, '') : xml;
 **Issue:** Event listeners typed as `any`.
 
 **Fix:**
+
 ```typescript
 export function anyEvent<T>(...events: Array<Event<T>>): Event<T> {
   return (
@@ -345,10 +361,15 @@ export function anyEvent<T>(...events: Array<Event<T>>): Event<T> {
 **Issue:** Unsafe `as any` cast on error objects.
 
 **Fix:**
+
 ```typescript
 function isErrorWithStderr(err: unknown): err is { stderr: string } {
-  return typeof err === 'object' && err !== null &&
-    'stderr' in err && typeof (err as any).stderr === 'string';
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "stderr" in err &&
+    typeof (err as any).stderr === "string"
+  );
 }
 ```
 
@@ -361,6 +382,7 @@ function isErrorWithStderr(err: unknown): err is { stderr: string } {
 **Risk:** Very Low
 
 **Fix:**
+
 ```typescript
 private static readonly icons: Record<'light' | 'dark', Record<string, Uri>> = {
   light: { ... },
@@ -377,6 +399,7 @@ private static readonly icons: Record<'light' | 'dark', Record<string, Uri>> = {
 **Risk:** Very Low
 
 **Fix:**
+
 ```typescript
 export function dispose(disposables: IDisposable[]): IDisposable[] {
   disposables.forEach(d => d.dispose());
@@ -409,6 +432,7 @@ export function dispose(disposables: IDisposable[]): IDisposable[] {
 **Issue:** Manual global restoration, brittle teardown.
 
 **Fix:** Use Sinon sandboxes for automatic cleanup:
+
 ```typescript
 let sandbox: sinon.SinonSandbox;
 
@@ -432,6 +456,7 @@ afterEach(() => {
 **Issue:** 6 parsers tested with valid XML only.
 
 **Fix:** Add 5-7 error tests per parser:
+
 - Malformed XML
 - Null/undefined inputs
 - Encoding issues
@@ -449,6 +474,7 @@ afterEach(() => {
 **Issue:** 200+ assertions use `assert.ok(true)` pattern.
 
 **Fix:** Replace with specific assertions:
+
 ```typescript
 // Before: assert.ok(config.get("autorefresh"));
 // After: assert.strictEqual(config.get("autorefresh"), true);
@@ -465,6 +491,7 @@ afterEach(() => {
 **Issue:** 0 tests for parallel operations.
 
 **Fix:** Create `src/test/unit/concurrency/operations.test.ts`:
+
 - Status refresh during commands
 - Blame cancellation
 - Multiple simultaneous commits
@@ -480,6 +507,7 @@ afterEach(() => {
 **Issue:** Only 5% of workflows tested end-to-end.
 
 **Fix:** Add 15-20 integration tests for:
+
 - Commit workflow
 - Branch switching
 - Conflict resolution
@@ -496,6 +524,7 @@ afterEach(() => {
 **Issue:** 27/47 commands untested (43% coverage).
 
 **Priority commands to test:**
+
 - merge
 - switch
 - resolve
@@ -514,6 +543,7 @@ afterEach(() => {
 **Risk:** Very Low
 
 **Contents:**
+
 - Dev environment setup
 - Testing/linting workflow (per CLAUDE.md TDD)
 - Code style expectations
@@ -529,6 +559,7 @@ afterEach(() => {
 **Risk:** Very Low
 
 **Contents:**
+
 - Node/npm/SVN versions
 - Build process
 - Debug configuration
@@ -544,6 +575,7 @@ afterEach(() => {
 **Risk:** Very Low
 
 **Scope:**
+
 - `src/repository.ts` (~50 public methods)
 - `src/svnRepository.ts` (~40 public methods)
 - `src/source_control_manager.ts` (~15 public methods)
@@ -558,6 +590,7 @@ afterEach(() => {
 **Risk:** Very Low
 
 **Contents:** Document all 54 commands with:
+
 - Purpose
 - Arguments
 - Return values
@@ -573,6 +606,7 @@ afterEach(() => {
 **Risk:** Very Low
 
 **Contents:** For each of 30 settings:
+
 - Functional description
 - Default behavior
 - Performance impact
@@ -589,6 +623,7 @@ afterEach(() => {
 **Risk:** Very Low
 
 **Fix:**
+
 ```typescript
 this.onPoll().catch(err => logError("Remote polling failed", err));
 ```
@@ -602,6 +637,7 @@ this.onPoll().catch(err => logError("Remote polling failed", err));
 **Risk:** Very Low
 
 **Fix:**
+
 ```typescript
 .catch(error => {
   logError(`External info for ${s.path} failed`, error);
@@ -617,6 +653,7 @@ this.onPoll().catch(err => logError("Remote polling failed", err));
 **Risk:** Very Low
 
 **Fix:** Complete the TODO:
+
 ```typescript
 catch (err) {
   logError(`Failed to cleanup temp file ${tempFile}`, err);
@@ -642,6 +679,7 @@ catch (err) {
 **Risk:** Very Low
 
 **Fix:**
+
 ```typescript
 if (!right) {
   logError("Unable to open resource - missing right side of diff");
@@ -656,40 +694,36 @@ if (!right) {
 ## Week 1 (P0 Critical - 4 hours)
 
 **Day 1:**
+
 1. Fix glob vulnerability (5 min) ✓
 2. Downgrade semantic-release (10 min) ✓
 3. Fix command injection in svnFinder.ts (30 min)
 4. Document password exposure issue (30 min)
 
-**Day 2:**
-5. Extract regex pattern constants (15 min)
-6. Remove dead code (5 min)
-7. Extract magic numbers (15 min)
-8. Pre-compile error detection regex (15 min)
+**Day 2:** 5. Extract regex pattern constants (15 min) 6. Remove dead code (5 min) 7. Extract magic numbers (15 min) 8. Pre-compile error detection regex (15 min)
 
-**Day 3:**
-9. Cache branch pattern regex (20 min)
-10. Pre-compile file watcher regex (5 min)
-11. Replace regex with string methods (5 min)
-12. Optimize XML sanitization (15 min)
+**Day 3:** 9. Cache branch pattern regex (20 min) 10. Pre-compile file watcher regex (5 min) 11. Replace regex with string methods (5 min) 12. Optimize XML sanitization (15 min)
 
 ---
 
 ## Week 2 (P1 High Priority - 10 hours)
 
 **Day 1-2: Code Quality**
+
 - Extract exec/execBuffer duplication (1 hour)
 - Extract show/showBuffer duplication (45 min)
 - Type event handlers (30 min)
 - Add type guards (20 min)
 
 **Day 3-4: Error Handling**
+
 - Fix fire-and-forget promises (30 min)
 - Add error context (1 hour)
 - Replace console.error (30 min)
 - Fix placeholder messages (15 min)
 
 **Day 5: Testing Setup**
+
 - Adopt Sinon pattern (2 hours)
 - Add parser error tests (2 hours)
 
@@ -698,6 +732,7 @@ if (!right) {
 ## Week 3-4 (P2 Medium Priority - 20 hours)
 
 **Documentation:**
+
 - CONTRIBUTING.md (2-3 hours)
 - Developer Setup Guide (1-2 hours)
 - JSDoc on public APIs (4-6 hours)
@@ -705,6 +740,7 @@ if (!right) {
 - Configuration Guide (2-3 hours)
 
 **Testing:**
+
 - Strengthen weak assertions (2 hours)
 - Add concurrency tests (3 hours)
 - Add integration tests (3 hours)
@@ -716,19 +752,20 @@ if (!right) {
 
 ## Safety Levels
 
-| Change Type | Risk Level | Mitigation |
-|-------------|------------|------------|
-| Const extraction | Very Low | Already tested code paths |
-| Regex optimization | Low | Maintain exact matching behavior |
-| Type annotations | Very Low | TypeScript validates |
-| Error handling | Low | Add logging, don't change logic |
-| Test additions | Very Low | No production code changes |
-| Documentation | Very Low | No code changes |
-| Refactoring (exec/show) | Medium | Extensive testing required |
+| Change Type             | Risk Level | Mitigation                       |
+| ----------------------- | ---------- | -------------------------------- |
+| Const extraction        | Very Low   | Already tested code paths        |
+| Regex optimization      | Low        | Maintain exact matching behavior |
+| Type annotations        | Very Low   | TypeScript validates             |
+| Error handling          | Low        | Add logging, don't change logic  |
+| Test additions          | Very Low   | No production code changes       |
+| Documentation           | Very Low   | No code changes                  |
+| Refactoring (exec/show) | Medium     | Extensive testing required       |
 
 ## Rollback Plan
 
 For each change:
+
 1. Commit small, focused changes
 2. Run full test suite (`npm test`)
 3. Manual testing of affected features
@@ -740,26 +777,31 @@ For each change:
 # Success Metrics
 
 ## Code Quality
+
 - **Before:** 160 lines duplicated in core execution
 - **After:** Single implementation, DRY principle
 - **Metric:** Lines of code reduced by ~100
 
 ## Performance
+
 - **Before:** Regex compiled per call (100+ times/minute)
 - **After:** Pre-compiled constants
 - **Metric:** 5-15% command latency reduction
 
 ## Security
+
 - **Before:** 2 CRITICAL, 4 HIGH vulnerabilities
 - **After:** 0 CRITICAL, 0 HIGH vulnerabilities
 - **Metric:** 100% critical vulnerability elimination
 
 ## Testing
+
 - **Before:** 43% command coverage, 10% error path coverage
 - **After:** 70% command coverage, 25% error path coverage
 - **Metric:** +27% command coverage, +15% error coverage
 
 ## Documentation
+
 - **Before:** 30% API documentation, no CONTRIBUTING.md
 - **After:** 100% API documentation, complete guides
 - **Metric:** Complete public API documentation
@@ -769,6 +811,7 @@ For each change:
 # Appendix: Quick Reference Commands
 
 ## Dependency Fixes
+
 ```bash
 # Critical security fixes
 npm install glob@^11.1.0 --save-dev
@@ -785,6 +828,7 @@ npm test
 ```
 
 ## Testing Commands
+
 ```bash
 # Full test suite
 npm test
@@ -800,6 +844,7 @@ npm run compile  # Auto-rebuild on changes
 ```
 
 ## Build Commands
+
 ```bash
 # Production build
 npm run build

@@ -2,7 +2,7 @@
 
 ### Rebrand: Sven
 
-- **New identity**: Extension rebranded from "positron-svn" to "Sven"
+- **New identity**: Extension rebranded from "sven" to "Sven"
 - **New icon**: Updated extension icon
 - **Command prefix**: Changed from `svn.*` to `sven.*`
 - **Settings prefix**: Changed from `svn.*` to `sven.*`
