@@ -14,7 +14,7 @@ import { blameStateManager } from "../../blame/blameStateManager";
  */
 export class EnableBlame extends Command {
   constructor() {
-    super("svn.blame.enableBlame");
+    super("sven.blame.enableBlame");
   }
 
   async execute(uri?: Uri): Promise<void> {

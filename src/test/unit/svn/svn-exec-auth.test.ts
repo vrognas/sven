@@ -63,11 +63,20 @@ suite("Svn.exec() - Auth Integration Tests", () => {
       const spawnArgs = spawnStub.firstCall.args[1] as string[];
 
       // Password should NOT be in args
-      assert.ok(!spawnArgs.includes("--password"), "Should NOT include --password flag");
-      assert.ok(!spawnArgs.includes("secret123"), "Should NOT include password value");
+      assert.ok(
+        !spawnArgs.includes("--password"),
+        "Should NOT include --password flag"
+      );
+      assert.ok(
+        !spawnArgs.includes("secret123"),
+        "Should NOT include password value"
+      );
 
       // Username should still be present
-      assert.ok(spawnArgs.includes("--username"), "Should include --username flag");
+      assert.ok(
+        spawnArgs.includes("--username"),
+        "Should include --username flag"
+      );
       assert.ok(spawnArgs.includes("alice"), "Should include username value");
     });
 
@@ -82,8 +91,14 @@ suite("Svn.exec() - Auth Integration Tests", () => {
       const spawnArgs = spawnStub.firstCall.args[1] as string[];
       const argsString = spawnArgs.join(" ");
 
-      assert.ok(!argsString.includes("MyP@ssw0rd!#$"), "Password should not appear anywhere in args");
-      assert.ok(!argsString.includes("--password"), "--password flag should not appear");
+      assert.ok(
+        !argsString.includes("MyP@ssw0rd!#$"),
+        "Password should not appear anywhere in args"
+      );
+      assert.ok(
+        !argsString.includes("--password"),
+        "--password flag should not appear"
+      );
     });
 
     test("1.3: config options to disable password store are removed", async () => {
@@ -130,7 +145,10 @@ suite("Svn.exec() - Auth Integration Tests", () => {
 
       assert.ok(cacheWriteTime, "Cache should be written");
       assert.ok(spawnTime, "Process should be spawned");
-      assert.ok(cacheWriteTime <= spawnTime, "Cache should be written BEFORE spawn");
+      assert.ok(
+        cacheWriteTime <= spawnTime,
+        "Cache should be written BEFORE spawn"
+      );
     });
 
     test("2.2: cache receives correct username and password", async () => {
@@ -141,11 +159,18 @@ suite("Svn.exec() - Auth Integration Tests", () => {
         password: "secret123"
       });
 
-      assert.ok(authCacheStub.writeCredential.calledOnce, "writeCredential should be called once");
+      assert.ok(
+        authCacheStub.writeCredential.calledOnce,
+        "writeCredential should be called once"
+      );
 
       const call = authCacheStub.writeCredential.firstCall;
       assert.strictEqual(call.args[0], "alice", "Should pass correct username");
-      assert.strictEqual(call.args[1], "secret123", "Should pass correct password");
+      assert.strictEqual(
+        call.args[1],
+        "secret123",
+        "Should pass correct password"
+      );
     });
 
     test("2.3: cache receives repository URL for realm generation", async () => {
@@ -162,7 +187,7 @@ suite("Svn.exec() - Auth Integration Tests", () => {
       const call = authCacheStub.writeCredential.firstCall;
       assert.ok(call.args[2], "Should pass realm URL");
       assert.ok(
-        call.args[2].includes("svn.example.com") || call.args[2] === "/repo",
+        call.args[2].includes("sven.example.com") || call.args[2] === "/repo",
         "Realm should be related to repository"
       );
     });
@@ -182,7 +207,10 @@ suite("Svn.exec() - Auth Integration Tests", () => {
     test("2.5: cache NOT written when no credentials provided", async () => {
       await svn.exec("/repo", ["info"], {});
 
-      assert.ok(authCacheStub.writeCredential.notCalled, "Should NOT write cache when no auth");
+      assert.ok(
+        authCacheStub.writeCredential.notCalled,
+        "Should NOT write cache when no auth"
+      );
     });
   });
 
@@ -214,7 +242,10 @@ suite("Svn.exec() - Auth Integration Tests", () => {
         password: "secret123"
       });
 
-      assert.ok(result.stdout.includes("revision 42"), "Should return command output");
+      assert.ok(
+        result.stdout.includes("revision 42"),
+        "Should return command output"
+      );
     });
 
     test("3.3: handles commands that don't need authentication", async () => {
@@ -242,13 +273,18 @@ suite("Svn.exec() - Auth Integration Tests", () => {
         });
         assert.fail("Should throw error on auth failure");
       } catch (err: any) {
-        assert.ok(err.svnErrorCode === "E170001" || err.message.includes("Authentication"));
+        assert.ok(
+          err.svnErrorCode === "E170001" ||
+            err.message.includes("Authentication")
+        );
       }
     });
 
     test("4.2: cache write failure does not prevent retry", async () => {
       // First attempt: cache write fails
-      authCacheStub.writeCredential.onFirstCall().rejects(new Error("Disk full"));
+      authCacheStub.writeCredential
+        .onFirstCall()
+        .rejects(new Error("Disk full"));
 
       // Second attempt: cache write succeeds
       authCacheStub.writeCredential.onSecondCall().resolves();
@@ -315,7 +351,10 @@ suite("Svn.exec() - Auth Integration Tests", () => {
       (svn as any).dispose();
 
       // Cache should be disposed
-      assert.ok((authCacheStub.dispose as sinon.SinonStub).called, "Cache should be disposed");
+      assert.ok(
+        (authCacheStub.dispose as sinon.SinonStub).called,
+        "Cache should be disposed"
+      );
     });
   });
 
@@ -381,7 +420,11 @@ suite("Svn.exec() - Auth Integration Tests", () => {
       // Should use environment variable for cache
       if (authCacheStub.writeCredential.called) {
         const call = authCacheStub.writeCredential.firstCall;
-        assert.strictEqual(call.args[1], "env_password", "Should use env var password");
+        assert.strictEqual(
+          call.args[1],
+          "env_password",
+          "Should use env var password"
+        );
       }
 
       delete process.env.SVN_PASSWORD;
@@ -420,7 +463,10 @@ suite("Svn.exec() - Auth Integration Tests", () => {
 
       await svn.exec("/repo", ["update"], options);
 
-      assert.ok(authCacheStub.writeCredential.called, "Should handle password in options");
+      assert.ok(
+        authCacheStub.writeCredential.called,
+        "Should handle password in options"
+      );
     });
 
     test("8.2: execBuffer() also uses auth cache", async () => {
@@ -431,10 +477,16 @@ suite("Svn.exec() - Auth Integration Tests", () => {
         password: "secret123"
       });
 
-      assert.ok(authCacheStub.writeCredential.called, "execBuffer should also use cache");
+      assert.ok(
+        authCacheStub.writeCredential.called,
+        "execBuffer should also use cache"
+      );
 
       const spawnArgs = spawnStub.firstCall.args[1] as string[];
-      assert.ok(!spawnArgs.includes("--password"), "execBuffer should not use --password");
+      assert.ok(
+        !spawnArgs.includes("--password"),
+        "execBuffer should not use --password"
+      );
     });
 
     test("8.3: legacy mode config flag disables cache (if implemented)", async () => {
@@ -454,7 +506,8 @@ suite("Svn.exec() - Auth Integration Tests", () => {
 
       if ((svn as any).useLegacyAuth) {
         assert.ok(
-          spawnArgs.includes("--password") || authCacheStub.writeCredential.notCalled,
+          spawnArgs.includes("--password") ||
+            authCacheStub.writeCredential.notCalled,
           "Legacy mode should use old behavior"
         );
       }

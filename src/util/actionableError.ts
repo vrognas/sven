@@ -19,9 +19,9 @@ export async function showLockedError(
   const action = await window.showErrorMessage(message, "Run Cleanup");
   if (action === "Run Cleanup") {
     if (repositoryRoot) {
-      commands.executeCommand("svn.cleanup", repositoryRoot);
+      commands.executeCommand("sven.cleanup", repositoryRoot);
     } else {
-      commands.executeCommand("svn.cleanup");
+      commands.executeCommand("sven.cleanup");
     }
   }
 }
@@ -33,7 +33,7 @@ export async function showLockedError(
 export async function showAuthError(message: string): Promise<void> {
   const action = await window.showErrorMessage(message, "Clear Credentials");
   if (action === "Clear Credentials") {
-    commands.executeCommand("svn.clearCredentials");
+    commands.executeCommand("sven.clearCredentials");
   }
 }
 
@@ -48,9 +48,9 @@ export async function showOutOfDateError(
   const action = await window.showErrorMessage(message, "Update");
   if (action === "Update") {
     if (repositoryRoot) {
-      commands.executeCommand("svn.update", repositoryRoot);
+      commands.executeCommand("sven.update", repositoryRoot);
     } else {
-      commands.executeCommand("svn.update");
+      commands.executeCommand("sven.update");
     }
   }
 }
@@ -62,6 +62,6 @@ export async function showOutOfDateError(
 export async function showErrorWithOutput(message: string): Promise<void> {
   const action = await window.showErrorMessage(message, "Show Output");
   if (action === "Show Output") {
-    commands.executeCommand("svn.showOutput");
+    commands.executeCommand("sven.showOutput");
   }
 }

@@ -38,7 +38,7 @@ export async function showSystemKeyringAuthNotification(): Promise<void> {
   if (result === useExtStorage) {
     await commands.executeCommand(
       "workbench.action.openSettings",
-      "svn.auth.credentialMode"
+      "sven.auth.credentialMode"
     );
   } else if (result === openTerminal) {
     await commands.executeCommand("workbench.action.terminal.new");

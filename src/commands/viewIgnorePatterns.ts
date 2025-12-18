@@ -28,13 +28,13 @@ interface PatternItem {
 
 export class ViewIgnorePatterns extends Command {
   constructor() {
-    super("svn.viewIgnorePatterns");
+    super("sven.viewIgnorePatterns");
   }
 
   public async execute() {
     // Get the source control manager
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as SourceControlManager;
 

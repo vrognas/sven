@@ -12,7 +12,7 @@ import { Command } from "./command";
 
 export class RevealInExplorerView extends Command {
   constructor() {
-    super("svn.revealInExplorerView");
+    super("sven.revealInExplorerView");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

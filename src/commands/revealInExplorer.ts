@@ -14,7 +14,7 @@ import { revealFileInOS } from "../util/fileOperations";
 
 export class RevealInExplorer extends Command {
   constructor() {
-    super("svn.revealInExplorer");
+    super("sven.revealInExplorer");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

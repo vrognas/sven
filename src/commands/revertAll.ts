@@ -10,7 +10,7 @@ import { Command } from "./command";
 
 export class RevertAll extends Command {
   constructor() {
-    super("svn.revertAll");
+    super("sven.revertAll");
   }
 
   public async execute(resourceGroup: SourceControlResourceGroup) {

@@ -99,7 +99,7 @@ export abstract class Command implements Disposable {
       const sourceControlManager =
         Command._sourceControlManager ||
         ((await commands.executeCommand(
-          "svn.getSourceControlManager",
+          "sven.getSourceControlManager",
           ""
         )) as SourceControlManager);
       const repository = sourceControlManager.getRepository(args[0]);
@@ -181,7 +181,7 @@ export abstract class Command implements Disposable {
     const sourceControlManager =
       Command._sourceControlManager ||
       ((await commands.executeCommand(
-        "svn.getSourceControlManager",
+        "sven.getSourceControlManager",
         ""
       )) as SourceControlManager);
 
@@ -238,7 +238,7 @@ export abstract class Command implements Disposable {
       const sourceControlManager =
         Command._sourceControlManager ||
         ((await commands.executeCommand(
-          "svn.getSourceControlManager",
+          "sven.getSourceControlManager",
           ""
         )) as SourceControlManager);
       const repository = sourceControlManager.getRepository(uri);
@@ -490,7 +490,7 @@ export abstract class Command implements Disposable {
         repository.root,
         getSvnDir(),
         "tmp",
-        "svn.patch"
+        "sven.patch"
       );
 
       if (await exists(tempFile)) {
@@ -620,7 +620,7 @@ export abstract class Command implements Disposable {
           const runCleanup = "Run Cleanup";
           const choice = await window.showErrorMessage(userMessage, runCleanup);
           if (choice === runCleanup) {
-            await commands.executeCommand("svn.cleanup");
+            await commands.executeCommand("sven.cleanup");
           }
         } else {
           window.showErrorMessage(userMessage);
@@ -893,7 +893,7 @@ export abstract class Command implements Disposable {
         const runCleanup = "Run Cleanup";
         const choice = await window.showErrorMessage(userMessage, runCleanup);
         if (choice === runCleanup) {
-          await commands.executeCommand("svn.cleanup");
+          await commands.executeCommand("sven.cleanup");
         }
       }
       // Offer update button for out-of-date errors
@@ -901,7 +901,7 @@ export abstract class Command implements Disposable {
         const runUpdate = "Update";
         const choice = await window.showErrorMessage(userMessage, runUpdate);
         if (choice === runUpdate) {
-          await commands.executeCommand("svn.update");
+          await commands.executeCommand("sven.update");
         }
       }
       // Offer resolve conflicts button for conflict errors
@@ -912,7 +912,7 @@ export abstract class Command implements Disposable {
           resolveConflicts
         );
         if (choice === resolveConflicts) {
-          await commands.executeCommand("svn.resolveAll");
+          await commands.executeCommand("sven.resolveAll");
         }
       } else {
         window.showErrorMessage(userMessage);

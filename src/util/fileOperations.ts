@@ -59,7 +59,10 @@ export async function diffWithExternalTool(
       "Open Settings"
     );
     if (action === "Open Settings") {
-      commands.executeCommand("workbench.action.openSettings", "svn.diff.tool");
+      commands.executeCommand(
+        "workbench.action.openSettings",
+        "sven.diff.tool"
+      );
     }
     throw error;
   }
@@ -93,7 +96,10 @@ export async function diffWithExternalTool(
       "Open Settings"
     );
     if (action === "Open Settings") {
-      commands.executeCommand("workbench.action.openSettings", "svn.diff.tool");
+      commands.executeCommand(
+        "workbench.action.openSettings",
+        "sven.diff.tool"
+      );
     }
     throw error;
   }

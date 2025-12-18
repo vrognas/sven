@@ -1,6 +1,6 @@
-# Subversion source control for Positron
+# Sven - Subversion for Positron
 
-Positron-optimized fork of the SVN extension with enhanced features for data science workflows.
+Positron-optimized SVN extension with enhanced features for data science workflows.
 
 **Original extension:** [JohnstonCode/svn-scm](https://github.com/JohnstonCode/svn-scm)
 

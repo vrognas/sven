@@ -16,7 +16,7 @@ import { logError } from "../util/errorLogger";
  */
 export class DiffWithExternalTool extends Command {
   constructor() {
-    super("svn.diffWithExternalTool");
+    super("sven.diffWithExternalTool");
   }
 
   public async execute(
@@ -48,7 +48,7 @@ export class DiffWithExternalTool extends Command {
         (Command as unknown as { _sourceControlManager?: SourceControlManager })
           ._sourceControlManager ||
         ((await commands.executeCommand(
-          "svn.getSourceControlManager",
+          "sven.getSourceControlManager",
           ""
         )) as SourceControlManager);
 

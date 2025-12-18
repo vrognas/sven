@@ -12,7 +12,7 @@ import { Command } from "./command";
 
 export class Revert extends Command {
   constructor() {
-    super("svn.revert");
+    super("sven.revert");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

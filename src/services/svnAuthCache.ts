@@ -34,7 +34,7 @@ export class SvnAuthCache {
   constructor(svnConfigDir?: string) {
     const homeDir = os.homedir();
     const baseDir = svnConfigDir || path.join(homeDir, ".subversion");
-    this.cacheDir = path.join(baseDir, "auth", "svn.simple");
+    this.cacheDir = path.join(baseDir, "auth", "sven.simple");
   }
 
   /**

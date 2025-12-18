@@ -99,7 +99,7 @@ export class SvnFinder {
 
     for (const base of envBases) {
       if (base) {
-        potentialPaths.push(path.join(base, "TortoiseSVN", "bin", "svn.exe"));
+        potentialPaths.push(path.join(base, "TortoiseSVN", "bin", "sven.exe"));
       }
     }
 
@@ -127,7 +127,7 @@ export class SvnFinder {
     }
 
     return this.findSpecificSvn(
-      path.join(base, "TortoiseSVN", "bin", "svn.exe")
+      path.join(base, "TortoiseSVN", "bin", "sven.exe")
     );
   }
 

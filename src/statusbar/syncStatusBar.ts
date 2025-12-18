@@ -100,22 +100,22 @@ export class SyncStatusBar {
       text = "Running";
       tooltip = "Running...";
     } else if (this.state.needCleanUp) {
-      command = "svn.cleanup";
+      command = "sven.cleanup";
       icon = "$(alert)";
       text = "Need cleanup";
       tooltip = "Run cleanup command";
     } else if (this.state.isIncomplete) {
-      command = "svn.finishCheckout";
+      command = "sven.finishCheckout";
       icon = "$(issue-reopened)";
       text = "Incomplete (Need finish checkout)";
       tooltip = "Run update to complete";
     } else if (this.state.remoteChangedFiles > 0) {
       icon = "$(cloud-download)";
-      command = "svn.update";
+      command = "sven.update";
       tooltip = "Update Revision";
       text = `${this.state.remoteChangedFiles}↓`;
     } else {
-      command = "svn.update";
+      command = "sven.update";
       tooltip = "Update Revision";
     }
 

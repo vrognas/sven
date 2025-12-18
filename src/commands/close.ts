@@ -9,12 +9,12 @@ import { Command } from "./command";
 
 export class Close extends Command {
   constructor() {
-    super("svn.close", { repository: true });
+    super("sven.close", { repository: true });
   }
 
   public async execute(repository: Repository) {
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as SourceControlManager;
 

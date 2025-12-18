@@ -7,7 +7,7 @@ import { Command } from "./command";
 
 export class GetSourceControlManager extends Command {
   constructor(protected sourceControlManager: SourceControlManager) {
-    super("svn.getSourceControlManager");
+    super("sven.getSourceControlManager");
   }
 
   public async execute() {

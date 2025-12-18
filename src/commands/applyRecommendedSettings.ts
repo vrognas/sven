@@ -13,41 +13,41 @@ const PROFILES = {
     name: "Data Science (Recommended)",
     description: "Optimized for large repos with binary files",
     settings: {
-      "svn.autorefresh": true,
-      "svn.blame.enabled": true,
-      "svn.blame.autoBlame": false, // Don't auto-blame (slow on large files)
-      "svn.blame.largeFileLimit": 1000, // Warn earlier for large files
-      "svn.remoteChanges.checkFrequency": 600, // 10 min (less frequent)
-      "svn.update.ignoreExternals": true,
-      "svn.sourceControl.countUnversioned": false, // Faster status
-      "svn.diff.withHead": false, // Use BASE (faster, no network)
-      "svn.performance.maxXmlTags": 500000
+      "sven.autorefresh": true,
+      "sven.blame.enabled": true,
+      "sven.blame.autoBlame": false, // Don't auto-blame (slow on large files)
+      "sven.blame.largeFileLimit": 1000, // Warn earlier for large files
+      "sven.remoteChanges.checkFrequency": 600, // 10 min (less frequent)
+      "sven.update.ignoreExternals": true,
+      "sven.sourceControl.countUnversioned": false, // Faster status
+      "sven.diff.withHead": false, // Use BASE (faster, no network)
+      "sven.performance.maxXmlTags": 500000
     }
   },
   minimal: {
     name: "Minimal",
     description: "Essential features only, maximum performance",
     settings: {
-      "svn.autorefresh": true,
-      "svn.blame.enabled": false,
-      "svn.remoteChanges.checkFrequency": 0, // Disabled
-      "svn.update.ignoreExternals": true,
-      "svn.sourceControl.countUnversioned": false,
-      "svn.sourceControl.hideUnversioned": true,
-      "svn.diff.withHead": false
+      "sven.autorefresh": true,
+      "sven.blame.enabled": false,
+      "sven.remoteChanges.checkFrequency": 0, // Disabled
+      "sven.update.ignoreExternals": true,
+      "sven.sourceControl.countUnversioned": false,
+      "sven.sourceControl.hideUnversioned": true,
+      "sven.diff.withHead": false
     }
   },
   full: {
     name: "Full Features",
     description: "All features enabled (may be slower)",
     settings: {
-      "svn.autorefresh": true,
-      "svn.blame.enabled": true,
-      "svn.blame.autoBlame": true,
-      "svn.remoteChanges.checkFrequency": 300, // 5 min
-      "svn.update.ignoreExternals": false,
-      "svn.sourceControl.countUnversioned": true,
-      "svn.diff.withHead": true
+      "sven.autorefresh": true,
+      "sven.blame.enabled": true,
+      "sven.blame.autoBlame": true,
+      "sven.remoteChanges.checkFrequency": 300, // 5 min
+      "sven.update.ignoreExternals": false,
+      "sven.sourceControl.countUnversioned": true,
+      "sven.diff.withHead": true
     }
   }
 };
@@ -56,7 +56,7 @@ type ProfileKey = keyof typeof PROFILES;
 
 export class ApplyRecommendedSettings extends Command {
   constructor() {
-    super("svn.applyRecommendedSettings");
+    super("sven.applyRecommendedSettings");
   }
 
   public async execute(): Promise<void> {

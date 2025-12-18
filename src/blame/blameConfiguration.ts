@@ -13,7 +13,7 @@ import {
   WorkspaceConfiguration
 } from "vscode";
 
-const SVN_BLAME = "svn.blame";
+const SVN_BLAME = "sven.blame";
 
 export interface BlameConfig {
   enabled: boolean;

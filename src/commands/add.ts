@@ -7,7 +7,7 @@ import { Command } from "./command";
 
 export class Add extends Command {
   constructor() {
-    super("svn.add");
+    super("sven.add");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

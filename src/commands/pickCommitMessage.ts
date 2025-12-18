@@ -11,7 +11,7 @@ import { ISvnLogEntry } from "../common/types";
 
 export class PickCommitMessage extends Command {
   constructor(private svnVersion: string) {
-    super("svn.pickCommitMessage", { repository: true });
+    super("sven.pickCommitMessage", { repository: true });
   }
 
   public async execute(repository: Repository) {

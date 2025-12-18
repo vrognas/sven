@@ -15,7 +15,7 @@ import { Command } from "./command";
 
 export class Checkout extends Command {
   constructor() {
-    super("svn.checkout");
+    super("sven.checkout");
   }
 
   public async execute(url?: string) {
@@ -104,7 +104,7 @@ export class Checkout extends Command {
       try {
         await window.withProgress(progressOptions, async () => {
           const sourceControlManager = (await commands.executeCommand(
-            "svn.getSourceControlManager",
+            "sven.getSourceControlManager",
             ""
           )) as SourceControlManager;
           const args = ["checkout", url, repositoryPath];
@@ -118,7 +118,7 @@ export class Checkout extends Command {
           attempt <= 3
         ) {
           const auth = (await commands.executeCommand(
-            "svn.promptAuth",
+            "sven.promptAuth",
             opt.username,
             undefined,
             url

@@ -31,8 +31,11 @@ suite("AuthService Tests", () => {
     // Mock promptAuth command responses
     promptResults = [];
     const origExecuteCommand = commands.executeCommand;
-    (commands as any).executeCommand = async (command: string, ...args: any[]) => {
-      if (command === "svn.promptAuth") {
+    (commands as any).executeCommand = async (
+      command: string,
+      ...args: any[]
+    ) => {
+      if (command === "sven.promptAuth") {
         return promptResults.shift();
       }
       return origExecuteCommand(command, ...args);
@@ -41,14 +44,11 @@ suite("AuthService Tests", () => {
     // Mock storage
     storedCreds = [];
 
-    authService = new AuthService(
-      mockSvnRepo as SvnRepository,
-      {
-        workspaceRoot: "/test/workspace",
-        canSaveAuth: true,
-        storage: new MockStorage()
-      }
-    );
+    authService = new AuthService(mockSvnRepo as SvnRepository, {
+      workspaceRoot: "/test/workspace",
+      canSaveAuth: true,
+      storage: new MockStorage()
+    });
   });
 
   test("isAuthError - detects authorization failed error", () => {

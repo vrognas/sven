@@ -20,7 +20,7 @@ export class CommitFromInputBox extends Command {
   private commitFlowService: CommitFlowService;
 
   constructor() {
-    super("svn.commitFromInputBox", { repository: true });
+    super("sven.commitFromInputBox", { repository: true });
     this.commitFlowService = new CommitFlowService();
   }
 

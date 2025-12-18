@@ -7,7 +7,7 @@ import { Command } from "./command";
 
 export class AddToIgnoreExplorer extends Command {
   constructor() {
-    super("svn.addToIgnoreExplorer");
+    super("sven.addToIgnoreExplorer");
   }
 
   public async execute(_mainUri?: Uri, allUris?: Uri[]) {

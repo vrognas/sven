@@ -34,15 +34,19 @@ suite("PullIncomingChange E2E Tests", () => {
     );
 
     sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       checkoutDir1
     )) as SourceControlManager;
 
     await sourceControlManager.tryOpenRepository(checkoutDir1.fsPath);
     await sourceControlManager.tryOpenRepository(checkoutDir2.fsPath);
 
-    repository1 = sourceControlManager.getRepository(checkoutDir1) as Repository;
-    repository2 = sourceControlManager.getRepository(checkoutDir2) as Repository;
+    repository1 = sourceControlManager.getRepository(
+      checkoutDir1
+    ) as Repository;
+    repository2 = sourceControlManager.getRepository(
+      checkoutDir2
+    ) as Repository;
 
     pullCommand = new PullIncommingChange();
   });
@@ -127,7 +131,10 @@ suite("PullIncomingChange E2E Tests", () => {
     this.timeout(60000);
 
     // Attempt to pull non-existent file
-    const nonExistentFile = path.join(checkoutDir1.fsPath, "does_not_exist.txt");
+    const nonExistentFile = path.join(
+      checkoutDir1.fsPath,
+      "does_not_exist.txt"
+    );
     const fileUri = Uri.file(nonExistentFile);
 
     const incomingChange = new IncomingChangeNode(

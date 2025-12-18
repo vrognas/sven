@@ -10,7 +10,7 @@ import { tempSvnFs } from "../temp_svn_fs";
 
 export class SearchLogByText extends Command {
   constructor() {
-    super("svn.searchLogByText", { repository: true });
+    super("sven.searchLogByText", { repository: true });
   }
 
   public async execute(repository: Repository) {
@@ -21,7 +21,9 @@ export class SearchLogByText extends Command {
 
     // Validate search pattern to prevent command injection
     if (!validateSearchPattern(input)) {
-      window.showErrorMessage("Invalid search pattern: contains forbidden characters");
+      window.showErrorMessage(
+        "Invalid search pattern: contains forbidden characters"
+      );
       return;
     }
 

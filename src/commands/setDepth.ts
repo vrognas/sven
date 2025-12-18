@@ -165,7 +165,7 @@ export const depthPickerOptions: DepthQuickPickItem[] = [
 
 export class SetDepth extends Command {
   constructor() {
-    super("svn.setDepth");
+    super("sven.setDepth");
   }
 
   public async execute(arg?: Uri | { fullPath: string }): Promise<void> {
@@ -185,7 +185,7 @@ export class SetDepth extends Command {
 
     // Get repository for this path
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as SourceControlManager;
 
@@ -239,7 +239,7 @@ export class SetDepth extends Command {
 
     // Get configurable timeout
     const timeoutMinutes = workspace
-      .getConfiguration("svn.sparse")
+      .getConfiguration("sven.sparse")
       .get<number>("downloadTimeoutMinutes", DEFAULT_DOWNLOAD_TIMEOUT_MINUTES);
     const downloadTimeoutMs = timeoutMinutes * 60 * 1000;
 
@@ -490,7 +490,7 @@ export class SetDepth extends Command {
           successMessages[selected.depth] || `Checkout depth changed`
         );
         // Refresh sparse checkout tree to reflect changes
-        commands.executeCommand("svn.sparse.refresh");
+        commands.executeCommand("sven.sparse.refresh");
       } else {
         window.showErrorMessage(
           `Failed to change checkout: ${result.stderr || "Unknown error"}`

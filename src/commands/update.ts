@@ -9,7 +9,7 @@ import { Command } from "./command";
 
 export class Update extends Command {
   constructor() {
-    super("svn.update", { repository: true });
+    super("sven.update", { repository: true });
   }
 
   public async execute(repository: Repository) {
@@ -49,7 +49,7 @@ export class Update extends Command {
           "View SCM"
         );
         if (choice === "Resolve Conflicts") {
-          await commands.executeCommand("svn.resolveAll");
+          await commands.executeCommand("sven.resolveAll");
         } else if (choice === "View SCM") {
           await commands.executeCommand("workbench.view.scm");
         }

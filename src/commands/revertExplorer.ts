@@ -8,7 +8,7 @@ import { Command } from "./command";
 
 export class RevertExplorer extends Command {
   constructor() {
-    super("svn.revertExplorer");
+    super("sven.revertExplorer");
   }
 
   public async execute(_mainUri?: Uri, allUris?: Uri[]) {

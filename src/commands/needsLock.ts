@@ -14,7 +14,7 @@ export class ToggleNeedsLock extends Command {
   private inProgress = new Set<string>();
 
   constructor() {
-    super("svn.toggleNeedsLock");
+    super("sven.toggleNeedsLock");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {

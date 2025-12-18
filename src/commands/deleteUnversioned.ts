@@ -9,7 +9,7 @@ import { Command } from "./command";
 
 export class DeleteUnversioned extends Command {
   constructor() {
-    super("svn.deleteUnversioned");
+    super("sven.deleteUnversioned");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

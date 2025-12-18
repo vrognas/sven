@@ -34,8 +34,8 @@ export class SvnFileDecorationProvider
     this.disposables.push(
       configuration.onDidChange(e => {
         if (
-          e.affectsConfiguration("svn.decorator.baseColor") ||
-          e.affectsConfiguration("svn.decorator.serverColor")
+          e.affectsConfiguration("sven.decorator.baseColor") ||
+          e.affectsConfiguration("sven.decorator.serverColor")
         ) {
           this._onDidChangeFileDecorations.fire(undefined);
         }

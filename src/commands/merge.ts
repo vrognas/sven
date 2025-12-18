@@ -11,7 +11,7 @@ import { logError } from "../util/errorLogger";
 
 export class Merge extends Command {
   constructor() {
-    super("svn.merge", { repository: true });
+    super("sven.merge", { repository: true });
   }
 
   public async execute(repository: Repository) {
@@ -43,7 +43,7 @@ export class Merge extends Command {
             "No"
           );
           if (answer === "Yes") {
-            await commands.executeCommand("svn.update");
+            await commands.executeCommand("sven.update");
             await this.merge(repository, branch);
           }
         } else {

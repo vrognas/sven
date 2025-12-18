@@ -60,36 +60,36 @@ export class ItemLogProvider
       sourceControlManager.onDidOpenRepository(() => this.refresh()),
       sourceControlManager.onDidCloseRepository(() => this.refresh()),
       commands.registerCommand(
-        "svn.itemlog.copymsg",
+        "sven.itemlog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
       ),
       commands.registerCommand(
-        "svn.itemlog.copyrevision",
+        "sven.itemlog.copyrevision",
         async (item: ILogTreeItem) => copyCommitToClipboard("revision", item)
       ),
       commands.registerCommand(
-        "svn.itemlog.openFileRemote",
+        "sven.itemlog.openFileRemote",
         this.openFileRemoteCmd,
         this
       ),
-      commands.registerCommand("svn.itemlog.openDiff", this.openDiffCmd, this),
+      commands.registerCommand("sven.itemlog.openDiff", this.openDiffCmd, this),
       commands.registerCommand(
-        "svn.itemlog.openDiffBase",
+        "sven.itemlog.openDiffBase",
         this.openDiffBaseCmd,
         this
       ),
       commands.registerCommand(
-        "svn.itemlog.refresh",
+        "sven.itemlog.refresh",
         () => this.refresh(undefined, undefined, false, true),
         this
       ),
       commands.registerCommand(
-        "svn.itemlog.gotoRepolog",
+        "sven.itemlog.gotoRepolog",
         this.gotoRepologCmd,
         this
       ),
       commands.registerCommand(
-        "svn.itemlog.rollbackToRevision",
+        "sven.itemlog.rollbackToRevision",
         this.rollbackToRevisionCmd,
         this
       )
@@ -104,7 +104,7 @@ export class ItemLogProvider
     }
     const commit = element.data as ISvnLogEntry;
     const revision = parseInt(commit.revision, 10);
-    await commands.executeCommand("svn.repolog.goToRevision", revision);
+    await commands.executeCommand("sven.repolog.goToRevision", revision);
   }
 
   // Rollback file to selected revision using reverse merge
@@ -357,7 +357,7 @@ export class ItemLogProvider
       ti.tooltip = getCommitToolTip(commit);
       ti.contextValue = "diffable";
       ti.command = {
-        command: "svn.itemlog.openDiff",
+        command: "sven.itemlog.openDiff",
         title: "Open diff",
         arguments: [element]
       };
@@ -407,7 +407,7 @@ export class ItemLogProvider
         };
         ti.tooltip = "Paging size may be adjusted using log.length setting";
         ti.command = {
-          command: "svn.itemlog.refresh",
+          command: "sven.itemlog.refresh",
           arguments: [element, undefined, true],
           title: "refresh element"
         };

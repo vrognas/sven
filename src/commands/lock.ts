@@ -8,7 +8,7 @@ import { makeWritable } from "../fs";
 
 export class Lock extends Command {
   constructor() {
-    super("svn.lock");
+    super("sven.lock");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
@@ -95,7 +95,7 @@ export class Lock extends Command {
  */
 export class StealLock extends Command {
   constructor() {
-    super("svn.stealLock");
+    super("sven.stealLock");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {

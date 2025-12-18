@@ -10,7 +10,7 @@ import { Command } from "./command";
 
 export class Upgrade extends Command {
   constructor() {
-    super("svn.upgrade");
+    super("sven.upgrade");
   }
 
   public async execute(folderPath: string) {
@@ -34,14 +34,13 @@ export class Upgrade extends Command {
       neverShowAgain
     );
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as SourceControlManager;
 
     if (choice === yes) {
-      const upgraded = await sourceControlManager.upgradeWorkingCopy(
-        folderPath
-      );
+      const upgraded =
+        await sourceControlManager.upgradeWorkingCopy(folderPath);
 
       if (upgraded) {
         window.showInformationMessage(`Working copy "${folderPath}" upgraded`);

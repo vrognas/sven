@@ -8,7 +8,7 @@ import { window } from "vscode";
 
 export class RemoveUnversioned extends Command {
   constructor() {
-    super("svn.removeUnversioned", { repository: true });
+    super("sven.removeUnversioned", { repository: true });
   }
 
   public async execute(repository: Repository) {

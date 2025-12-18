@@ -13,7 +13,7 @@ import { Command } from "./command";
 
 export class CommitWithMessage extends Command {
   constructor() {
-    super("svn.commitWithMessage", { repository: true });
+    super("sven.commitWithMessage", { repository: true });
   }
 
   public async execute(repository: Repository) {

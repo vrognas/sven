@@ -7,7 +7,7 @@ import { makeReadOnly } from "../fs";
 
 export class Unlock extends Command {
   constructor() {
-    super("svn.unlock");
+    super("sven.unlock");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
@@ -78,7 +78,7 @@ export class Unlock extends Command {
 
 export class BreakLock extends Command {
   constructor() {
-    super("svn.breakLock");
+    super("sven.breakLock");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {

@@ -8,7 +8,7 @@ import { Command } from "./command";
 
 export class PatchChangeList extends Command {
   constructor() {
-    super("svn.patchChangeList", { repository: true });
+    super("sven.patchChangeList", { repository: true });
   }
 
   public async execute(repository: Repository) {

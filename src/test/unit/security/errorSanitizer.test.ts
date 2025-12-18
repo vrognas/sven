@@ -1,5 +1,8 @@
 import * as assert from "assert";
-import { sanitizeError, sanitizeString } from "../../../security/errorSanitizer";
+import {
+  sanitizeError,
+  sanitizeString
+} from "../../../security/errorSanitizer";
 
 suite("Error Sanitizer - Security Tests", () => {
   suite("sanitizeString", () => {
@@ -18,11 +21,12 @@ suite("Error Sanitizer - Security Tests", () => {
     });
 
     test("strips URLs with credentials", () => {
-      const input = "Connection to https://user:pass@svn.example.com/repo failed";
+      const input =
+        "Connection to https://user:pass@svn.example.com/repo failed";
       const output = sanitizeString(input);
       assert.ok(output.includes("[DOMAIN]"));
       assert.ok(!output.includes("user:pass"));
-      assert.ok(!output.includes("svn.example.com"));
+      assert.ok(!output.includes("sven.example.com"));
     });
 
     test("strips IPv4 addresses", () => {

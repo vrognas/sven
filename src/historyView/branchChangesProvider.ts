@@ -27,12 +27,12 @@ export class BranchChangesProvider
     this._dispose.push(
       window.registerTreeDataProvider("branchchanges", this),
       commands.registerCommand(
-        "svn.branchchanges.openDiff",
+        "sven.branchchanges.openDiff",
         this.openDiffCmd,
         this
       ),
       commands.registerCommand(
-        "svn.branchchanges.refresh",
+        "sven.branchchanges.refresh",
         () => this._onDidChangeTreeData.fire(undefined),
         this
       ),
@@ -61,7 +61,7 @@ export class BranchChangesProvider
     return {
       label: element.localPath.fsPath,
       command: {
-        command: "svn.branchchanges.openDiff",
+        command: "sven.branchchanges.openDiff",
         title: "Open diff",
         arguments: [element]
       },

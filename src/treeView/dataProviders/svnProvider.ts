@@ -31,7 +31,7 @@ export default class SvnProvider
   constructor(private sourceControlManager: SourceControlManager) {
     this._dispose.push(
       window.registerTreeDataProvider("svn", this),
-      commands.registerCommand("svn.treeview.refreshProvider", () =>
+      commands.registerCommand("sven.treeview.refreshProvider", () =>
         this.refresh()
       ),
       // Refresh when repositories open/close

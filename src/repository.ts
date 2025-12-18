@@ -355,7 +355,7 @@ export class Repository implements IRemoteRepository {
     this.sourceControl.inputBox.validateInput = (text: string) =>
       this.validateCommitInput(text);
     this.sourceControl.acceptInputCommand = {
-      command: "svn.commitFromInputBox",
+      command: "sven.commitFromInputBox",
       title: "Commit",
       arguments: [this]
     };
@@ -433,23 +433,23 @@ export class Repository implements IRemoteRepository {
       // Invalidate config cache only when cached settings change (v2.32.14 fix)
       // Previously invalidated on ANY config change which was too aggressive
       if (
-        e.affectsConfiguration("svn.delete.actionForDeletedFiles") ||
-        e.affectsConfiguration("svn.delete.ignoredRulesForDeletedFiles") ||
-        e.affectsConfiguration("svn.sourceControl.countBadge") ||
-        e.affectsConfiguration("svn.autorefresh") ||
-        e.affectsConfiguration("svn.remoteChanges.checkFrequency")
+        e.affectsConfiguration("sven.delete.actionForDeletedFiles") ||
+        e.affectsConfiguration("sven.delete.ignoredRulesForDeletedFiles") ||
+        e.affectsConfiguration("sven.sourceControl.countBadge") ||
+        e.affectsConfiguration("sven.autorefresh") ||
+        e.affectsConfiguration("sven.remoteChanges.checkFrequency")
       ) {
         this._configCache = undefined;
       }
 
-      if (e.affectsConfiguration("svn.remoteChanges.checkFrequency")) {
+      if (e.affectsConfiguration("sven.remoteChanges.checkFrequency")) {
         this.remoteChangeService.restart();
         this.updateRemoteChangedFiles();
       }
 
       // Clear runtime credentials and caches when auth mode changes
       // Forces re-authentication with new storage mode
-      if (e.affectsConfiguration("svn.auth.credentialMode")) {
+      if (e.affectsConfiguration("sven.auth.credentialMode")) {
         // Chain credential clearing to saveAuthLock to serialize properly
         // This ensures any concurrent operation waits for clearing to complete
         this.saveAuthLock = this.saveAuthLock.then(() => {
@@ -595,7 +595,7 @@ export class Repository implements IRemoteRepository {
         false
       );
     } else if (actionForDeletedFiles === "prompt") {
-      return commands.executeCommand("svn.promptRemove", ...uris);
+      return commands.executeCommand("sven.promptRemove", ...uris);
     }
 
     // Unknown action - do nothing (config enum exhausted above)
@@ -882,7 +882,7 @@ export class Repository implements IRemoteRepository {
 
     // Update context keys for conditional UI
     const hasConflicts = this.groupManager.conflicts.resourceStates.length > 0;
-    commands.executeCommand("setContext", "svn.hasConflicts", hasConflicts);
+    commands.executeCommand("setContext", "sven.hasConflicts", hasConflicts);
 
     // Set repository reference on remote changes group
     if (this.groupManager.remoteChanges) {
@@ -902,7 +902,7 @@ export class Repository implements IRemoteRepository {
     const hasRemoteChanges = this.remoteChangedFiles > 0;
     commands.executeCommand(
       "setContext",
-      "svn.updateAvailable",
+      "sven.updateAvailable",
       hasRemoteChanges
     );
 
@@ -957,19 +957,19 @@ export class Repository implements IRemoteRepository {
     const secondaryCommands = [
       [
         {
-          command: "svn.commitStaged",
+          command: "sven.commitStaged",
           title: "Commit Staged...",
           tooltip: "Commit only staged files",
           arguments: [this]
         },
         {
-          command: "svn.commitAll",
+          command: "sven.commitAll",
           title: "Commit All...",
           tooltip: "Commit all changed files",
           arguments: [this]
         },
         {
-          command: "svn.commitQuick",
+          command: "sven.commitQuick",
           title: "Commit (Quick)",
           tooltip: "Commit staged files without message prompt",
           arguments: [this]
@@ -980,7 +980,7 @@ export class Repository implements IRemoteRepository {
     // @ts-expect-error - actionButton exists at runtime but not in types
     this.sourceControl.actionButton = {
       command: {
-        command: "svn.commitFromInputBox",
+        command: "sven.commitFromInputBox",
         title: label,
         tooltip,
         arguments: [this]
@@ -1344,8 +1344,8 @@ export class Repository implements IRemoteRepository {
       return updateResult;
     });
     // Fetch history views to show new commits from update
-    await commands.executeCommand("svn.repolog.fetch");
-    await commands.executeCommand("svn.itemlog.refresh");
+    await commands.executeCommand("sven.repolog.fetch");
+    await commands.executeCommand("sven.itemlog.refresh");
     return result;
   }
 
@@ -1453,8 +1453,8 @@ export class Repository implements IRemoteRepository {
     // Refresh repo info (will use cache if revision unchanged)
     await this.repository.updateInfo(true);
     // Fetch history views to show new commit
-    await commands.executeCommand("svn.repolog.fetch");
-    await commands.executeCommand("svn.itemlog.refresh");
+    await commands.executeCommand("sven.repolog.fetch");
+    await commands.executeCommand("sven.itemlog.refresh");
     return result;
   }
 
@@ -1843,7 +1843,7 @@ export class Repository implements IRemoteRepository {
 
     const repoUrl = this.repository.info?.url;
     this.lastPromptAuth = commands.executeCommand(
-      "svn.promptAuth",
+      "sven.promptAuth",
       undefined,
       undefined,
       repoUrl
@@ -1889,7 +1889,7 @@ export class Repository implements IRemoteRepository {
 
     // Check for lines begin with "<<<<<<", "=======", ">>>>>>>"
     if (!/^<{7}[^]+^={7}[^]+^>{7}/m.test(text)) {
-      commands.executeCommand("svn.resolved", conflict.resourceUri);
+      commands.executeCommand("sven.resolved", conflict.resourceUri);
     }
   }
 
@@ -1961,7 +1961,7 @@ export class Repository implements IRemoteRepository {
 
         const rootExists = await exists(this.workspaceRoot);
         if (!rootExists) {
-          await commands.executeCommand("svn.close", this);
+          await commands.executeCommand("sven.close", this);
         }
 
         throw err;
@@ -2312,7 +2312,7 @@ export class Repository implements IRemoteRepository {
     );
 
     if (choice === "Lock File") {
-      await commands.executeCommand("svn.lock", uri);
+      await commands.executeCommand("sven.lock", uri);
     }
   }
 

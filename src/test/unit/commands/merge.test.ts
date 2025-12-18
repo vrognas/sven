@@ -240,7 +240,7 @@ suite("Merge Command Tests", () => {
       assert.strictEqual(mockState.executeCommandCalls.length, 1);
       assert.strictEqual(
         mockState.executeCommandCalls[0]!.command,
-        "svn.update"
+        "sven.update"
       );
     });
 

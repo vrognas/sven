@@ -365,16 +365,16 @@ export default class SparseCheckoutProvider
     this._disposables.push(
       this.treeView,
       new SparseFileDecorationProvider(),
-      commands.registerCommand("svn.sparse.refresh", () => this.refresh()),
+      commands.registerCommand("sven.sparse.refresh", () => this.refresh()),
       commands.registerCommand(
-        "svn.sparse.checkout",
+        "sven.sparse.checkout",
         (node: SparseItemNode, selected?: SparseItemNode[]) =>
           this.checkoutItems(
             selected && selected.length > 0 ? selected : [node]
           )
       ),
       commands.registerCommand(
-        "svn.sparse.exclude",
+        "sven.sparse.exclude",
         (node: SparseItemNode, selected?: SparseItemNode[]) =>
           this.excludeItems(selected && selected.length > 0 ? selected : [node])
       ),
@@ -875,13 +875,13 @@ export default class SparseCheckoutProvider
 
     // Get configurable threshold for large file warning
     const thresholdMb = workspace
-      .getConfiguration("svn.sparse")
+      .getConfiguration("sven.sparse")
       .get<number>("largeFileWarningMb", DEFAULT_LARGE_FILE_WARNING_MB);
     const thresholdBytes = thresholdMb * 1024 * 1024;
 
     // Get configurable timeout for downloads (in minutes, convert to ms)
     const timeoutMinutes = workspace
-      .getConfiguration("svn.sparse")
+      .getConfiguration("sven.sparse")
       .get<number>("downloadTimeoutMinutes", DEFAULT_DOWNLOAD_TIMEOUT_MINUTES);
     const downloadTimeoutMs = timeoutMinutes * 60 * 1000;
 
@@ -1069,7 +1069,7 @@ export default class SparseCheckoutProvider
 
               // Get configurable pre-scan timeout
               const preScanTimeoutSeconds = workspace
-                .getConfiguration("svn.sparse")
+                .getConfiguration("sven.sparse")
                 .get<number>(
                   "preScanTimeoutSeconds",
                   DEFAULT_PRESCAN_TIMEOUT_SECONDS
@@ -1237,7 +1237,7 @@ export default class SparseCheckoutProvider
           )
           .then(choice => {
             if (choice === "Show Output") {
-              commands.executeCommand("svn.showOutputChannel");
+              commands.executeCommand("sven.showOutputChannel");
             }
           });
       } else if (result.success > 0) {
@@ -1253,7 +1253,7 @@ export default class SparseCheckoutProvider
         .showErrorMessage(`Download failed: ${err}`, "Show Output")
         .then(choice => {
           if (choice === "Show Output") {
-            commands.executeCommand("svn.showOutputChannel");
+            commands.executeCommand("sven.showOutputChannel");
           }
         });
     } finally {
@@ -1322,7 +1322,7 @@ export default class SparseCheckoutProvider
 
     // Check if confirmation is enabled
     const confirmEnabled = workspace
-      .getConfiguration("svn.sparse")
+      .getConfiguration("sven.sparse")
       .get<boolean>("confirmExclude", true);
 
     if (confirmEnabled) {
@@ -1338,7 +1338,7 @@ export default class SparseCheckoutProvider
       // If user chose "Don't Ask Again", disable the setting
       if (confirm === "Don't Ask Again") {
         await workspace
-          .getConfiguration("svn.sparse")
+          .getConfiguration("sven.sparse")
           .update("confirmExclude", false, true);
       }
     }
@@ -1420,7 +1420,7 @@ export default class SparseCheckoutProvider
         .showErrorMessage(`Exclude failed: ${err}`, "Show Output")
         .then(choice => {
           if (choice === "Show Output") {
-            commands.executeCommand("svn.showOutputChannel");
+            commands.executeCommand("sven.showOutputChannel");
           }
         });
     } finally {

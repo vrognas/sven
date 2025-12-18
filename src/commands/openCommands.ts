@@ -16,7 +16,10 @@ import { Command } from "./command";
  * Factory function to create OpenChange* commands (BASE, HEAD, PREV)
  * These commands open diffs with specified ref
  */
-function createOpenChangeCommand(commandName: string, ref: "BASE" | "HEAD" | "PREV") {
+function createOpenChangeCommand(
+  commandName: string,
+  ref: "BASE" | "HEAD" | "PREV"
+) {
   return class extends Command {
     constructor() {
       super(commandName, {});
@@ -48,8 +51,23 @@ function createOpenResourceCommand(commandName: string, ref: "BASE" | "HEAD") {
 }
 
 // Export command classes with proper command names
-export const OpenChangeBase = createOpenChangeCommand("svn.openChangeBase", "BASE");
-export const OpenChangeHead = createOpenChangeCommand("svn.openChangeHead", "HEAD");
-export const OpenChangePrev = createOpenChangeCommand("svn.openChangePrev", "PREV");
-export const OpenResourceBase = createOpenResourceCommand("svn.openResourceBase", "BASE");
-export const OpenResourceHead = createOpenResourceCommand("svn.openResourceHead", "HEAD");
+export const OpenChangeBase = createOpenChangeCommand(
+  "sven.openChangeBase",
+  "BASE"
+);
+export const OpenChangeHead = createOpenChangeCommand(
+  "sven.openChangeHead",
+  "HEAD"
+);
+export const OpenChangePrev = createOpenChangeCommand(
+  "sven.openChangePrev",
+  "PREV"
+);
+export const OpenResourceBase = createOpenResourceCommand(
+  "sven.openResourceBase",
+  "BASE"
+);
+export const OpenResourceHead = createOpenResourceCommand(
+  "sven.openResourceHead",
+  "HEAD"
+);

@@ -9,7 +9,7 @@ import { Command } from "./command";
 
 export class Resolved extends Command {
   constructor() {
-    super("svn.resolved");
+    super("sven.resolved");
   }
 
   public async execute(uri: Uri) {

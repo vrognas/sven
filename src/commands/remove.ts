@@ -7,7 +7,7 @@ import { Command } from "./command";
 
 export class Remove extends Command {
   constructor() {
-    super("svn.remove");
+    super("sven.remove");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

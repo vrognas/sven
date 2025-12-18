@@ -112,7 +112,7 @@ suite("SvnAuthCache - Unit Tests", () => {
         testCacheDir,
         ".subversion",
         "auth",
-        "svn.simple"
+        "sven.simple"
       );
       if (fs.existsSync(cacheDir)) {
         fs.rmSync(cacheDir, { recursive: true });
@@ -391,7 +391,7 @@ suite("SvnAuthCache - Unit Tests", () => {
         testCacheDir,
         ".subversion",
         "auth",
-        "svn.simple"
+        "sven.simple"
       );
       fs.mkdirSync(cacheDir, { recursive: true });
       fs.chmodSync(cacheDir, 0o444); // Read-only

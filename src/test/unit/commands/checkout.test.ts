@@ -128,7 +128,7 @@ suite("Checkout Commands Tests", () => {
     ) => {
       executeCommandCalls.push({ command, args });
 
-      if (command === "svn.getSourceControlManager") {
+      if (command === "sven.getSourceControlManager") {
         return {
           svn: {
             exec: async () => {
@@ -138,7 +138,7 @@ suite("Checkout Commands Tests", () => {
         };
       }
 
-      if (command === "svn.promptAuth") {
+      if (command === "sven.promptAuth") {
         return { username: "testuser", password: "testpass" };
       }
 
@@ -376,7 +376,7 @@ suite("Checkout Commands Tests", () => {
       ) => {
         executeCommandCalls.push({ command, args });
 
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return {
             svn: {
               exec: async (_path: string, _args: string[], _opt?: any) => {
@@ -394,7 +394,7 @@ suite("Checkout Commands Tests", () => {
           };
         }
 
-        if (command === "svn.promptAuth") {
+        if (command === "sven.promptAuth") {
           return { username: "testuser", password: "testpass" };
         }
 
@@ -418,7 +418,7 @@ suite("Checkout Commands Tests", () => {
       ) => {
         executeCommandCalls.push({ command, args });
 
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return {
             svn: {
               exec: async () => {
@@ -433,7 +433,7 @@ suite("Checkout Commands Tests", () => {
           };
         }
 
-        if (command === "svn.promptAuth") {
+        if (command === "sven.promptAuth") {
           return { username: "testuser", password: "testpass" };
         }
 
@@ -459,7 +459,7 @@ suite("Checkout Commands Tests", () => {
       ) => {
         executeCommandCalls.push({ command, args });
 
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return {
             svn: {
               exec: async () => {
@@ -490,10 +490,7 @@ suite("Checkout Commands Tests", () => {
       await checkout.execute(url);
 
       assert.ok(configGetCalls.length > 0);
-      assert.strictEqual(
-        configGetCalls[0].key,
-        "defaultCheckoutDirectory"
-      );
+      assert.strictEqual(configGetCalls[0].key, "defaultCheckoutDirectory");
     });
 
     test("1.20: Tilde expansion in checkout directory", async () => {
@@ -521,7 +518,7 @@ suite("Checkout Commands Tests", () => {
       ) => {
         executeCommandCalls.push({ command, args });
 
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return {
             svn: {
               exec: async () => ({
@@ -553,9 +550,7 @@ suite("Checkout Commands Tests", () => {
 
       // Mock workspace
       const origWorkspaceFolders = workspace.workspaceFolders;
-      (workspace as any).workspaceFolders = [
-        { uri: Uri.file("/existing") }
-      ];
+      (workspace as any).workspaceFolders = [{ uri: Uri.file("/existing") }];
       (workspace as any).updateWorkspaceFolders = () => {};
 
       await checkout.execute(url);
@@ -591,9 +586,7 @@ suite("Checkout Commands Tests", () => {
 
       assert.ok(withProgressCalls.length > 0);
       const progressCall = withProgressCalls[0];
-      assert.ok(
-        progressCall.options.title.includes("Checkout svn repository")
-      );
+      assert.ok(progressCall.options.title.includes("Checkout svn repository"));
     });
 
     test("1.25: Checkout with special characters in folder name", async () => {
@@ -814,7 +807,7 @@ suite("Checkout Commands Tests", () => {
       ) => {
         executeCommandCalls.push({ command, args });
 
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return {
             svn: {
               exec: async () => {
@@ -828,7 +821,7 @@ suite("Checkout Commands Tests", () => {
           };
         }
 
-        if (command === "svn.promptAuth") {
+        if (command === "sven.promptAuth") {
           return null; // User cancelled auth
         }
 

@@ -9,7 +9,7 @@ import { Command } from "./command";
 
 export class ResolveAll extends Command {
   constructor() {
-    super("svn.resolveAll", { repository: true });
+    super("sven.resolveAll", { repository: true });
   }
 
   public async execute(repository: Repository) {

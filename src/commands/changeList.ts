@@ -12,7 +12,7 @@ import { Command } from "./command";
 
 export class ChangeList extends Command {
   constructor() {
-    super("svn.changelist");
+    super("sven.changelist");
   }
 
   public async execute(...args: (Resource | Uri | Uri[])[]) {
@@ -33,7 +33,7 @@ export class ChangeList extends Command {
     }
 
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as SourceControlManager;
 

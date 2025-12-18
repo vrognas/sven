@@ -93,7 +93,7 @@ export class AuthService {
     repoUrl?: string
   ): Promise<IAuth | null> {
     const result = await commands.executeCommand<IAuth | undefined>(
-      "svn.promptAuth",
+      "sven.promptAuth",
       prevUsername,
       prevPassword,
       repoUrl

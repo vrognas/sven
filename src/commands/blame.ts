@@ -21,7 +21,7 @@ import { logError } from "../util/errorLogger";
  */
 export class Blame extends Command {
   constructor() {
-    super("svn.blameFile", { repository: true });
+    super("sven.blameFile", { repository: true });
   }
 
   /**

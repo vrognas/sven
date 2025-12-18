@@ -68,7 +68,7 @@ export class SvnConnectionsProvider implements ConnectionsDriver {
   async connect(code: string): Promise<void> {
     // Execute the generated SVN command
     // For now, show the command to user
-    await commands.executeCommand("svn.showOutput");
+    await commands.executeCommand("sven.showOutput");
     console.log(`SVN Connection: Would execute: ${code}`);
   }
 

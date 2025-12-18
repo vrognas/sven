@@ -14,7 +14,7 @@ import { Command } from "./command";
  */
 export class CommitQuick extends Command {
   constructor() {
-    super("svn.commitQuick", { repository: true });
+    super("sven.commitQuick", { repository: true });
   }
 
   public async execute(repository: Repository) {

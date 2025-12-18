@@ -13,7 +13,7 @@ import { Command } from "../command";
  */
 export class UntrackedInfo extends Command {
   constructor() {
-    super("svn.blame.untrackedInfo");
+    super("sven.blame.untrackedInfo");
   }
 
   async execute(_uri?: Uri): Promise<void> {

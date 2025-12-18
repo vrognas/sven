@@ -8,12 +8,12 @@ import { Command } from "./command";
 export class ClearCredentials extends Command {
   constructor() {
     // No repository required - clears all stored credentials
-    super("svn.clearCredentials", { repository: false });
+    super("sven.clearCredentials", { repository: false });
   }
 
   public async execute() {
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as SourceControlManager;
 

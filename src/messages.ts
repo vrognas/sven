@@ -15,7 +15,7 @@ let panel: WebviewPanel;
 
 // for tests only
 let callback: (message: string) => void;
-commands.registerCommand("svn.forceCommitMessageTest", (message: string) => {
+commands.registerCommand("sven.forceCommitMessageTest", (message: string) => {
   if (callback) {
     return callback(message);
   }
@@ -86,8 +86,8 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${
     panel.webview.cspSource
   } https:; script-src ${panel.webview.cspSource} 'unsafe-inline'; style-src ${
-      panel.webview.cspSource
-    };">
+    panel.webview.cspSource
+  };">
 
   <title>Commit Message</title>
   <link rel="stylesheet" href="${styleUri}">
@@ -184,7 +184,7 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
 
       if (filePaths && filePaths[0]) {
         const sourceControlManager = (await commands.executeCommand(
-          "svn.getSourceControlManager",
+          "sven.getSourceControlManager",
           ""
         )) as SourceControlManager;
         repository = await sourceControlManager.getRepositoryFromUri(
@@ -193,7 +193,7 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
       }
 
       const message = await commands.executeCommand(
-        "svn.pickCommitMessage",
+        "sven.pickCommitMessage",
         repository
       );
       if (message !== undefined) {

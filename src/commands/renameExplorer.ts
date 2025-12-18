@@ -10,7 +10,7 @@ import { Command } from "./command";
 
 export class RenameExplorer extends Command {
   constructor() {
-    super("svn.renameExplorer", { repository: true });
+    super("sven.renameExplorer", { repository: true });
   }
 
   public async execute(

@@ -12,7 +12,7 @@ import { validateRevision } from "../validation";
 
 export class SearchLogByRevision extends Command {
   constructor() {
-    super("svn.searchLogByRevision", { repository: true });
+    super("sven.searchLogByRevision", { repository: true });
   }
 
   public async execute(repository: Repository) {
@@ -23,7 +23,9 @@ export class SearchLogByRevision extends Command {
 
     // Use centralized validation to prevent injection attacks
     if (!validateRevision(input)) {
-      window.showErrorMessage("Invalid revision. Enter number (max 1B) or keyword (HEAD, BASE, PREV, COMMITTED)");
+      window.showErrorMessage(
+        "Invalid revision. Enter number (max 1B) or keyword (HEAD, BASE, PREV, COMMITTED)"
+      );
       return;
     }
 
@@ -36,7 +38,7 @@ export class SearchLogByRevision extends Command {
         { revision }
       );
       const uri = resource.with({
-        path: path.join(resource.path, "svn.log")
+        path: path.join(resource.path, "sven.log")
       });
 
       await commands.executeCommand<void>("vscode.open", uri);

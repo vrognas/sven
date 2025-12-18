@@ -10,7 +10,7 @@ import { formatSvnError, logError } from "../util/errorLogger";
 
 export class RemoveFromIgnore extends Command {
   constructor() {
-    super("svn.removeFromIgnore");
+    super("sven.removeFromIgnore");
   }
 
   public async execute(_mainUri?: Uri, allUris?: Uri[]) {

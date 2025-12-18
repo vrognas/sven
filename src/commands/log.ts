@@ -11,7 +11,7 @@ import { Command } from "./command";
 
 export class Log extends Command {
   constructor() {
-    super("svn.log", { repository: true });
+    super("sven.log", { repository: true });
   }
 
   public async execute(repository: Repository) {
@@ -21,7 +21,7 @@ export class Log extends Command {
         SvnUriAction.LOG
       );
       const uri = resource.with({
-        path: path.join(resource.path, "svn.log") // change document title
+        path: path.join(resource.path, "sven.log") // change document title
       });
 
       await commands.executeCommand<void>("vscode.open", uri);

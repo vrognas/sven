@@ -7,7 +7,7 @@ import { Command } from "./command";
 
 export class RefreshRemoteChanges extends Command {
   constructor() {
-    super("svn.refreshRemoteChanges", { repository: true });
+    super("sven.refreshRemoteChanges", { repository: true });
   }
 
   public async execute(repository: Repository) {

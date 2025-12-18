@@ -56,7 +56,7 @@ async function warnAboutChangelists(changelists: string[]): Promise<boolean> {
 
 export class Stage extends Command {
   constructor() {
-    super("svn.stage");
+    super("sven.stage");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
@@ -98,7 +98,7 @@ export class Stage extends Command {
  */
 export class StageWithChildren extends Command {
   constructor() {
-    super("svn.stageWithChildren");
+    super("sven.stageWithChildren");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
@@ -136,7 +136,7 @@ export class StageWithChildren extends Command {
 
 export class StageAll extends Command {
   constructor() {
-    super("svn.stageAll");
+    super("sven.stageAll");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
@@ -195,7 +195,7 @@ export class StageAll extends Command {
     const { commands } = await import("vscode");
 
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as { repositories: Repository[] };
 

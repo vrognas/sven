@@ -10,7 +10,7 @@ import { Command } from "./command";
 
 export class OpenHeadFile extends Command {
   constructor() {
-    super("svn.openHEADFile");
+    super("sven.openHEADFile");
   }
 
   public async execute(arg?: Resource | Uri | IncomingChangeNode) {

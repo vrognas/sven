@@ -104,7 +104,7 @@ function getAuthConfig(): {
 
 // Invalidate cache when config changes
 configuration.onDidChange(e => {
-  if (e.affectsConfiguration("svn.auth.credentialMode")) {
+  if (e.affectsConfiguration("sven.auth.credentialMode")) {
     authConfigCache = null;
   }
 });

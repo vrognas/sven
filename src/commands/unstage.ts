@@ -44,7 +44,7 @@ async function unstageWithRestoreOptimistic(
 
 export class Unstage extends Command {
   constructor() {
-    super("svn.unstage");
+    super("sven.unstage");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
@@ -65,7 +65,7 @@ export class Unstage extends Command {
 
 export class UnstageAll extends Command {
   constructor() {
-    super("svn.unstageAll");
+    super("sven.unstageAll");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
@@ -107,7 +107,7 @@ export class UnstageAll extends Command {
     const { commands } = await import("vscode");
 
     const sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       ""
     )) as { repositories: Repository[] };
 

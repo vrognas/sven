@@ -1,3 +1,14 @@
+## [0.1.0] (2025-12-18)
+
+### Rebrand: Sven
+
+- **New identity**: Extension rebranded from "positron-svn" to "Sven"
+- **New icon**: Updated extension icon
+- **Command prefix**: Changed from `svn.*` to `sven.*`
+- **Settings prefix**: Changed from `svn.*` to `sven.*`
+
+---
+
 ## [2.36.3] (2025-12-17)
 
 ### Fix: Ignored File Badges & UX Improvements

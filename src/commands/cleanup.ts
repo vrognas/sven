@@ -70,7 +70,7 @@ const cleanupOptions: CleanupQuickPickItem[] = [
  */
 export class Cleanup extends Command {
   constructor() {
-    super("svn.cleanup", { repository: true });
+    super("sven.cleanup", { repository: true });
   }
 
   public async execute(repository: Repository) {

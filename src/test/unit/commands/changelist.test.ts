@@ -64,7 +64,7 @@ suite("ChangeList Command Tests", () => {
     origExecuteCommand = commands.executeCommand;
     (commands as any).executeCommand = async (cmd: string) => {
       executeCommandCalls.push({ cmd });
-      if (cmd === "svn.getSourceControlManager") {
+      if (cmd === "sven.getSourceControlManager") {
         return mockSourceControlManager;
       }
       return undefined;

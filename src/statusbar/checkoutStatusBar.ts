@@ -41,7 +41,7 @@ export class CheckoutStatusBar {
     }`;
 
     return {
-      command: "svn.switchBranch",
+      command: "sven.switchBranch",
       tooltip: "Switch Branch...",
       title,
       arguments: [this.repository.sourceControl]

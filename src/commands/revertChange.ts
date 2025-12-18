@@ -8,7 +8,7 @@ import { LineChange } from "../common/types";
 
 export class RevertChange extends Command {
   constructor() {
-    super("svn.revertChange");
+    super("sven.revertChange");
   }
 
   public async execute(uri: Uri, changes: LineChange[], index: number) {

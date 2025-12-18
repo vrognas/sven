@@ -48,7 +48,7 @@ export default class IncomingChangeNode implements BaseNode {
     switch (this.type) {
       case "modified":
         return {
-          command: "svn.openChangeHead",
+          command: "sven.openChangeHead",
           title: "Open Changes with HEAD",
           arguments: [
             new Resource(this.uri, this.type, undefined, "none", true)
@@ -56,13 +56,13 @@ export default class IncomingChangeNode implements BaseNode {
         };
       case "deleted":
         return {
-          command: "svn.openFile",
+          command: "sven.openFile",
           title: "Open File",
           arguments: [this.uri]
         };
       case "added":
         return {
-          command: "svn.openHEADFile",
+          command: "sven.openHEADFile",
           title: "Open File (HEAD)",
           arguments: [
             new Resource(this.uri, this.type, undefined, "none", true)

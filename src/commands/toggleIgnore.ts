@@ -16,7 +16,7 @@ import { formatSvnError, logError } from "../util/errorLogger";
  */
 export class ToggleIgnore extends Command {
   constructor() {
-    super("svn.toggleIgnore");
+    super("sven.toggleIgnore");
   }
 
   public async execute(_mainUri?: Uri, allUris?: Uri[]) {

@@ -8,7 +8,7 @@ import { Command } from "./command";
 
 export class Resolve extends Command {
   constructor() {
-    super("svn.resolve");
+    super("sven.resolve");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {

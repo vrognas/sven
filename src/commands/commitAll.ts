@@ -20,7 +20,7 @@ export class CommitAll extends Command {
   private commitFlowService: CommitFlowService;
 
   constructor() {
-    super("svn.commitAll", { repository: true });
+    super("sven.commitAll", { repository: true });
     this.commitFlowService = new CommitFlowService();
   }
 

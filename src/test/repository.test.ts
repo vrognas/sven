@@ -21,7 +21,7 @@ suite("Repository Tests", () => {
     );
 
     sourceControlManager = (await commands.executeCommand(
-      "svn.getSourceControlManager",
+      "sven.getSourceControlManager",
       checkoutDir
     )) as SourceControlManager;
   });

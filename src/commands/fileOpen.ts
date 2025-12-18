@@ -7,7 +7,7 @@ import { Command } from "./command";
 
 export class FileOpen extends Command {
   constructor() {
-    super("svn.fileOpen");
+    super("sven.fileOpen");
   }
 
   public async execute(resourceUri: Uri) {

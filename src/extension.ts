@@ -120,7 +120,7 @@ async function init(
 
   // Register blame commands
   disposables.push(
-    commands.registerCommand("svn.showBlameCommit", () => {
+    commands.registerCommand("sven.showBlameCommit", () => {
       blameStatusBar.showCommitDetails();
     })
   );
@@ -148,7 +148,7 @@ async function init(
 
 async function _activate(context: ExtensionContext, disposables: Disposable[]) {
   const outputChannel = window.createOutputChannel("Svn");
-  commands.registerCommand("svn.showOutput", () => outputChannel.show());
+  commands.registerCommand("sven.showOutput", () => outputChannel.show());
   disposables.push(outputChannel);
 
   const showOutput = configuration.get<boolean>("showOutput");
@@ -181,7 +181,7 @@ async function _activate(context: ExtensionContext, disposables: Disposable[]) {
       const download = "Download SVN";
       const neverShowAgain = "Don't Show Again";
       const choice = await window.showWarningMessage(
-        "SVN not found. Install it or configure it using the 'svn.path' setting.",
+        "SVN not found. Install it or configure it using the 'sven.path' setting.",
         findSvnExecutable,
         download,
         neverShowAgain
@@ -207,7 +207,7 @@ async function _activate(context: ExtensionContext, disposables: Disposable[]) {
         if (executable && executable[0]) {
           const file = executable[0].fsPath;
 
-          outputChannel.appendLine(`Updated "svn.path" with "${file}"`);
+          outputChannel.appendLine(`Updated "sven.path" with "${file}"`);
 
           await configuration.update("path", file);
 

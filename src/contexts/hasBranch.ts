@@ -42,7 +42,7 @@ export class HasBranch implements IDisposable {
     const hasBranch = this.sourceControlManager.repositories.some(
       repo => repo.currentBranch && !isTrunk(repo.currentBranch)
     );
-    setVscodeContext("svn.hasBranch", hasBranch);
+    setVscodeContext("sven.hasBranch", hasBranch);
   }
 
   public dispose(): void {

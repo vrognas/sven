@@ -56,11 +56,15 @@ suite("Authentication Logging - Debug Tests", () => {
         const logText = call.args[0] as string;
         if (
           logText.includes("[auth:") &&
-          (logText.includes("password provided") || logText.includes("credential"))
+          (logText.includes("password provided") ||
+            logText.includes("credential"))
         ) {
           foundIndicator = true;
           // Verify password value NOT in log
-          assert.ok(!logText.includes("secret123"), "Password value should not be in log");
+          assert.ok(
+            !logText.includes("secret123"),
+            "Password value should not be in log"
+          );
         }
       }
 
@@ -78,10 +82,16 @@ suite("Authentication Logging - Debug Tests", () => {
       let foundEnvIndicator = false;
       for (const call of logOutputSpy.getCalls()) {
         const logText = call.args[0] as string;
-        if (logText.includes("SVN_PASSWORD") && logText.includes("environment")) {
+        if (
+          logText.includes("SVN_PASSWORD") &&
+          logText.includes("environment")
+        ) {
           foundEnvIndicator = true;
           // Verify env var value NOT in log
-          assert.ok(!logText.includes("env_pass_123"), "Env var value should not be in log");
+          assert.ok(
+            !logText.includes("env_pass_123"),
+            "Env var value should not be in log"
+          );
         }
       }
 
@@ -143,7 +153,9 @@ suite("Authentication Logging - Debug Tests", () => {
         // Verify no-auth indicators
         if (
           logText.includes("[auth:") &&
-          (logText.includes("none") || logText.includes("no auth") || logText.includes("will prompt"))
+          (logText.includes("none") ||
+            logText.includes("no auth") ||
+            logText.includes("will prompt"))
         ) {
           // Found no-auth indicator
         }
@@ -166,7 +178,10 @@ suite("Authentication Logging - Debug Tests", () => {
 
       for (const call of logOutputSpy.getCalls()) {
         const logText = call.args[0] as string;
-        assert.ok(!logText.includes(password), `Log should not contain password: ${logText}`);
+        assert.ok(
+          !logText.includes(password),
+          `Log should not contain password: ${logText}`
+        );
       }
     });
 
@@ -185,7 +200,10 @@ suite("Authentication Logging - Debug Tests", () => {
         }
       }
 
-      assert.ok(foundUsername, "Username should be visible in logs (not sensitive)");
+      assert.ok(
+        foundUsername,
+        "Username should be visible in logs (not sensitive)"
+      );
     });
 
     test("2.3: auth method shown but values hidden", async () => {
@@ -200,7 +218,10 @@ suite("Authentication Logging - Debug Tests", () => {
 
       for (const call of logOutputSpy.getCalls()) {
         const logText = call.args[0] as string;
-        if (logText.includes("[auth:") || logText.includes("password provided")) {
+        if (
+          logText.includes("[auth:") ||
+          logText.includes("password provided")
+        ) {
           foundMethod = true;
         }
         if (logText.includes("MyPassword123")) {
@@ -223,7 +244,10 @@ suite("Authentication Logging - Debug Tests", () => {
 
       for (const call of logOutputSpy.getCalls()) {
         const logText = call.args[0] as string;
-        assert.ok(!logText.includes(password), "Special char password should not leak");
+        assert.ok(
+          !logText.includes(password),
+          "Special char password should not leak"
+        );
         assert.ok(!logText.includes("<script>"), "XSS attempt should not leak");
       }
     });
@@ -234,10 +258,13 @@ suite("Authentication Logging - Debug Tests", () => {
       // This test verifies warning is shown at extension activation
       // The actual warning is in extension.ts
 
-      const origGet = require("../../../helpers/configuration").configuration.get;
+      const origGet = require("../../../helpers/configuration").configuration
+        .get;
       let sanitizationDisabled = false;
 
-      require("../../../helpers/configuration").configuration.get = (key: string) => {
+      require("../../../helpers/configuration").configuration.get = (
+        key: string
+      ) => {
         if (key === "debug.disableSanitization") {
           sanitizationDisabled = true;
           return true;
@@ -260,7 +287,7 @@ suite("Authentication Logging - Debug Tests", () => {
 
     test("3.2: warning includes disable instructions", () => {
       // Warning message verification
-      const expectedWarning = "svn.debug.disableSanitization";
+      const expectedWarning = "sven.debug.disableSanitization";
 
       // The actual warning text should include config key to disable
       assert.ok(
@@ -408,7 +435,10 @@ suite("Authentication Logging - Debug Tests", () => {
       } catch (err: any) {
         // Error should have helpful message
         // Verify error has message or formatted stderr
-        assert.ok(err.message || err.stderrFormated, "Error should have context");
+        assert.ok(
+          err.message || err.stderrFormated,
+          "Error should have context"
+        );
       }
     });
   });

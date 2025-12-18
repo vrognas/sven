@@ -20,7 +20,7 @@ function pathToUriKey(fsPath: string): string {
 
 export class Commit extends Command {
   constructor() {
-    super("svn.commit");
+    super("sven.commit");
   }
 
   public async execute(...resources: SourceControlResourceState[]) {

@@ -8,7 +8,7 @@ import { Command } from "./command";
 
 export class PromptAuth extends Command {
   constructor() {
-    super("svn.promptAuth");
+    super("sven.promptAuth");
   }
 
   public async execute(

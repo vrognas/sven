@@ -10,7 +10,7 @@ import { blameStateManager } from "../../blame/blameStateManager";
 
 export class ShowBlame extends Command {
   constructor() {
-    super("svn.blame.showBlame");
+    super("sven.blame.showBlame");
   }
 
   async execute(uri?: Uri): Promise<void> {

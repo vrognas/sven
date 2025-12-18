@@ -12,7 +12,7 @@ import { Command } from "./command";
 
 export class SwitchBranch extends Command {
   constructor() {
-    super("svn.switchBranch", { repository: true });
+    super("sven.switchBranch", { repository: true });
   }
 
   public async execute(repository: Repository) {

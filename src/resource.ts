@@ -98,7 +98,7 @@ export class Resource implements SourceControlResourceState {
 
     if (!this.remote && changesLeftClick === "open") {
       return {
-        command: "svn.openFile",
+        command: "sven.openFile",
         title: "Open file",
         arguments: [this]
       };
@@ -106,14 +106,14 @@ export class Resource implements SourceControlResourceState {
 
     if (this.remote || diffHead) {
       return {
-        command: "svn.openResourceHead",
+        command: "sven.openResourceHead",
         title: "Open Diff With Head",
         arguments: [this]
       };
     }
 
     return {
-      command: "svn.openResourceBase",
+      command: "sven.openResourceBase",
       title: "Open Diff With Base",
       arguments: [this]
     };

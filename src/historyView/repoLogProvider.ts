@@ -155,48 +155,48 @@ export class RepoLogProvider
     this._dispose.push(
       this.treeView,
       commands.registerCommand(
-        "svn.repolog.copymsg",
+        "sven.repolog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
       ),
       commands.registerCommand(
-        "svn.repolog.copyrevision",
+        "sven.repolog.copyrevision",
         async (item: ILogTreeItem) => copyCommitToClipboard("revision", item)
       ),
-      commands.registerCommand("svn.repolog.remove", this.removeRepo, this),
+      commands.registerCommand("sven.repolog.remove", this.removeRepo, this),
       commands.registerCommand(
-        "svn.repolog.openFileRemote",
+        "sven.repolog.openFileRemote",
         this.openFileRemoteCmd,
         this
       ),
-      commands.registerCommand("svn.repolog.openDiff", this.openDiffCmd, this),
+      commands.registerCommand("sven.repolog.openDiff", this.openDiffCmd, this),
       commands.registerCommand(
-        "svn.repolog.openFileLocal",
+        "sven.repolog.openFileLocal",
         this.openFileLocal,
         this
       ),
       commands.registerCommand(
-        "svn.repolog.refresh",
+        "sven.repolog.refresh",
         () => this._onDidChangeTreeData.fire(undefined),
         this
       ),
-      commands.registerCommand("svn.repolog.goToBase", this.goToBase, this),
+      commands.registerCommand("sven.repolog.goToBase", this.goToBase, this),
       commands.registerCommand(
-        "svn.repolog.goToRevision",
+        "sven.repolog.goToRevision",
         this.goToRevision,
         this
       ),
       commands.registerCommand(
-        "svn.repolog.fetch",
+        "sven.repolog.fetch",
         this.explicitRefreshCmd,
         this
       ),
       commands.registerCommand(
-        "svn.repolog.revealInExplorer",
+        "sven.repolog.revealInExplorer",
         this.revealInExplorerCmd,
         this
       ),
       commands.registerCommand(
-        "svn.repolog.diffWithExternalTool",
+        "sven.repolog.diffWithExternalTool",
         this.diffWithExternalToolCmd,
         this
       ),
@@ -228,12 +228,12 @@ export class RepoLogProvider
       }),
       // Filter commands - unified entry point
       commands.registerCommand(
-        "svn.repolog.filterHistory",
+        "sven.repolog.filterHistory",
         this.filterHistory,
         this
       ),
       commands.registerCommand(
-        "svn.repolog.clearFilter",
+        "sven.repolog.clearFilter",
         this.clearFilter,
         this
       ),
@@ -781,7 +781,11 @@ export class RepoLogProvider
     const hasFilter = this.filterService.hasActiveFilter();
 
     // Set context variable for dynamic icon (filter vs filter-filled)
-    commands.executeCommand("setContext", "svn.historyFilterActive", hasFilter);
+    commands.executeCommand(
+      "setContext",
+      "sven.historyFilterActive",
+      hasFilter
+    );
 
     if (!this.treeView) return;
 
@@ -993,7 +997,7 @@ export class RepoLogProvider
 
       ti.contextValue = "diffable";
       ti.command = {
-        command: "svn.repolog.openDiff",
+        command: "sven.repolog.openDiff",
         title: "Open diff",
         arguments: [element]
       };
@@ -1066,7 +1070,7 @@ export class RepoLogProvider
         const ti = new TreeItem(`Load another ${limit} revisions`);
         ti.tooltip = "Paging size may be adjusted using log.length setting";
         ti.command = {
-          command: "svn.repolog.fetch",
+          command: "sven.repolog.fetch",
           arguments: [undefined, true],
           title: "fetch more"
         };

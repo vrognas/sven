@@ -9,7 +9,7 @@ import { Command } from "./command";
 
 export class PromptRemove extends Command {
   constructor() {
-    super("svn.promptRemove", { repository: true });
+    super("sven.promptRemove", { repository: true });
   }
 
   public async execute(repository: Repository, ...uris: Uri[]) {

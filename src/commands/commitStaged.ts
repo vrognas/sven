@@ -19,7 +19,7 @@ export class CommitStaged extends Command {
   private commitFlowService: CommitFlowService;
 
   constructor() {
-    super("svn.commitStaged", { repository: true });
+    super("sven.commitStaged", { repository: true });
     this.commitFlowService = new CommitFlowService();
   }
 

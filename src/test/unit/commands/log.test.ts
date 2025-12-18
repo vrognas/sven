@@ -59,14 +59,14 @@ suite("Log Command Tests", () => {
       await log.execute(mockRepository as Repository);
 
       const uri = executeCommandCalls[0].args[0] as Uri;
-      assert.ok(uri.path.includes("svn.log"));
+      assert.ok(uri.path.includes("sven.log"));
     });
 
     test("should set document title to svn.log", async () => {
       await log.execute(mockRepository as Repository);
 
       const uri = executeCommandCalls[0].args[0] as Uri;
-      assert.ok(uri.path.endsWith("svn.log"));
+      assert.ok(uri.path.endsWith("sven.log"));
     });
 
     test("should call executeCommand with correct arguments", async () => {
@@ -196,11 +196,13 @@ suite("Log Command Tests", () => {
       await log.execute(mockRepository as Repository);
 
       const uri = executeCommandCalls[0].args[0] as Uri;
-      assert.ok(uri.path.endsWith("svn.log"));
+      assert.ok(uri.path.endsWith("sven.log"));
     });
 
     test("should handle windows-style paths", async () => {
-      const windowsRepo = { workspaceRoot: "C:\\test\\workspace" } as Repository;
+      const windowsRepo = {
+        workspaceRoot: "C:\\test\\workspace"
+      } as Repository;
 
       await log.execute(windowsRepo);
 
@@ -349,7 +351,9 @@ suite("Log Command Tests", () => {
     });
 
     test("should handle workspace root with backslashes", async () => {
-      const backslashRepo = { workspaceRoot: "\\test\\workspace" } as Repository;
+      const backslashRepo = {
+        workspaceRoot: "\\test\\workspace"
+      } as Repository;
 
       await log.execute(backslashRepo);
 
@@ -357,7 +361,9 @@ suite("Log Command Tests", () => {
     });
 
     test("should handle unicode in workspace path", async () => {
-      const unicodeRepo = { workspaceRoot: "/test/ワークスペース" } as Repository;
+      const unicodeRepo = {
+        workspaceRoot: "/test/ワークスペース"
+      } as Repository;
 
       await log.execute(unicodeRepo);
 

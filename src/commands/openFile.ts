@@ -18,7 +18,7 @@ import { Command } from "./command";
 
 export class OpenFile extends Command {
   constructor() {
-    super("svn.openFile");
+    super("sven.openFile");
   }
 
   public async execute(

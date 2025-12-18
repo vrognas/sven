@@ -9,7 +9,7 @@ import { Command } from "./command";
 
 export class PullIncommingChange extends Command {
   constructor() {
-    super("svn.treeview.pullIncomingChange");
+    super("sven.treeview.pullIncomingChange");
   }
 
   public async execute(

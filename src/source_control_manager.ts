@@ -313,7 +313,7 @@ export class SourceControlManager implements IDisposable {
       } catch (err) {
         if (err instanceof SvnError) {
           if (err.svnErrorCode === svnErrorCodes.WorkingCopyIsTooOld) {
-            await commands.executeCommand("svn.upgrade", path);
+            await commands.executeCommand("sven.upgrade", path);
             return;
           }
         }

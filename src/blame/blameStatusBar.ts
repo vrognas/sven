@@ -38,13 +38,13 @@ export class BlameStatusBar implements Disposable {
   constructor(private sourceControlManager: SourceControlManager) {
     // Create status bar item (right-aligned, priority 100)
     this.statusBarItem = window.createStatusBarItem(
-      "svn.blame.statusBar",
+      "sven.blame.statusBar",
       StatusBarAlignment.Right,
       100
     );
 
     // Command for click action
-    this.statusBarItem.command = "svn.showBlameCommit";
+    this.statusBarItem.command = "sven.showBlameCommit";
 
     // Register event listeners
     this.registerListeners();

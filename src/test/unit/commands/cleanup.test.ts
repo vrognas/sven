@@ -199,7 +199,7 @@ suite("Cleanup and Upgrade Commands Tests", () => {
       // Mock commands.executeCommand to return mock manager
       (commands as any).executeCommand = (command: string, ...args: any[]) => {
         commandsExecuteCalls.push({ command, args });
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return Promise.resolve(mockSourceControlManager);
         }
         return Promise.resolve(undefined);
@@ -377,7 +377,7 @@ suite("Cleanup and Upgrade Commands Tests", () => {
       await upgrade.execute("/test/path");
 
       const getManagerCall = commandsExecuteCalls.find(
-        c => c.command === "svn.getSourceControlManager"
+        c => c.command === "sven.getSourceControlManager"
       );
       assert.ok(getManagerCall);
       assert.deepStrictEqual(getManagerCall.args, [""]);
@@ -455,7 +455,7 @@ suite("Cleanup and Upgrade Commands Tests", () => {
       };
 
       (commands as any).executeCommand = async (command: string) => {
-        if (command === "svn.getSourceControlManager") {
+        if (command === "sven.getSourceControlManager") {
           return mockSourceControlManager;
         }
         return undefined;
