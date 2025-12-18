@@ -15,6 +15,7 @@ import { normalizePath, toDisposable } from "../util";
 export type ResourceGroupConfig = {
   readonly ignoreOnStatusCountList: readonly string[];
   readonly countUnversioned: boolean;
+  readonly hideUnversioned: boolean;
 };
 
 /**
@@ -103,6 +104,7 @@ export class ResourceGroupManager implements IResourceGroupManager {
   private _resourceHash = ""; // Phase 16 perf fix - conditional rebuild
   private _staging: StagingService;
   private _stagedDirectories = new Set<string>(); // Track staged dirs (changelists can't hold them)
+  private _allUnversioned: Resource[] = []; // All unversioned (including hidden) for index lookup
 
   get staged(): ISvnResourceGroup {
     return this._staged;
@@ -336,9 +338,12 @@ export class ResourceGroupManager implements IResourceGroupManager {
       this._unversioned.hideWhenEmpty = true;
     }
 
-    this._unversioned.resourceStates = mergePreservedLockStatus(
-      result.unversioned
-    );
+    // Store all unversioned for index lookup (including hidden)
+    this._allUnversioned = mergePreservedLockStatus(result.unversioned);
+    // Filter for UI display only when hideUnversioned is enabled
+    this._unversioned.resourceStates = config.hideUnversioned
+      ? []
+      : this._allUnversioned;
 
     // Ignored files (for file explorer badges, not shown in SCM panel)
     this._ignored.resourceStates = result.ignored;
@@ -420,11 +425,12 @@ export class ResourceGroupManager implements IResourceGroupManager {
     this._resourceIndex.clear();
 
     // Add local resources first (these have lock status and real file status)
+    // Use _allUnversioned for index (includes hidden unversioned files)
     const localResources = [
       ...this._staged.resourceStates,
       ...this._changes.resourceStates,
       ...this._conflicts.resourceStates,
-      ...this._unversioned.resourceStates,
+      ...this._allUnversioned,
       ...this._ignored.resourceStates
     ];
 

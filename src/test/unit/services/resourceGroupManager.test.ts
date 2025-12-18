@@ -98,7 +98,12 @@ suite("ResourceGroupManager Tests", () => {
     };
 
     // Act
-    manager.updateGroups(statusResult);
+    const config = {
+      ignoreOnStatusCountList: [],
+      countUnversioned: false,
+      hideUnversioned: false
+    };
+    manager.updateGroups({ result: statusResult, config });
 
     // Assert - verify groups updated with correct resources
     const changesGroup = mockGroups.get("changes");
@@ -163,7 +168,12 @@ suite("ResourceGroupManager Tests", () => {
       lockStatuses: new Map()
     };
 
-    manager.updateGroups(result1);
+    const testConfig = {
+      ignoreOnStatusCountList: [],
+      countUnversioned: false,
+      hideUnversioned: false
+    };
+    manager.updateGroups({ result: result1, config: testConfig });
 
     // Assert 1 - verify changelist groups created
     assert.ok(
@@ -207,7 +217,7 @@ suite("ResourceGroupManager Tests", () => {
       lockStatuses: new Map()
     };
 
-    manager.updateGroups(result2);
+    manager.updateGroups({ result: result2, config: testConfig });
 
     // Assert 2 - verify bugfix-y disposed, feature-x updated
     assert.ok(mockGroups.has("changelist-feature-x"), "feature-x still exists");
@@ -241,7 +251,11 @@ suite("ResourceGroupManager Tests", () => {
       lockStatuses: new Map()
     };
 
-    const config = { ignoreOnStatusCountList: [], countUnversioned: false };
+    const config = {
+      ignoreOnStatusCountList: [],
+      countUnversioned: false,
+      hideUnversioned: false
+    };
 
     // Act - first call should rebuild
     manager.updateGroups({ result: statusResult, config });
@@ -295,7 +309,11 @@ suite("ResourceGroupManager Tests", () => {
       lockStatuses: new Map()
     };
 
-    const config = { ignoreOnStatusCountList: [], countUnversioned: false };
+    const config = {
+      ignoreOnStatusCountList: [],
+      countUnversioned: false,
+      hideUnversioned: false
+    };
 
     // Act
     manager.updateGroups({ result: result1, config });
@@ -361,7 +379,11 @@ suite("ResourceGroupManager Tests", () => {
       lockStatuses: new Map()
     };
 
-    const config = { ignoreOnStatusCountList: [], countUnversioned: false };
+    const config = {
+      ignoreOnStatusCountList: [],
+      countUnversioned: false,
+      hideUnversioned: false
+    };
 
     // Act
     manager.updateGroups({ result: result1, config });

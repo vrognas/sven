@@ -865,6 +865,10 @@ export class Repository implements IRemoteRepository {
         countUnversioned: configuration.get<boolean>(
           "sourceControl.countUnversioned",
           false
+        ),
+        hideUnversioned: configuration.get<boolean>(
+          "sourceControl.hideUnversioned",
+          false
         )
       },
       // Lock status is authoritative when fetched with --show-updates

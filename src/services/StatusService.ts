@@ -424,10 +424,6 @@ export class StatusService implements IStatusService {
       } else if (status.status === Status.CONFLICTED) {
         conflicts.push(resource);
       } else if (status.status === Status.UNVERSIONED) {
-        if (config.hideUnversioned) {
-          continue;
-        }
-
         // Skip conflict-related files (*.mine, *.r123, etc) - Phase 13 perf fix
         const matches = status.path.match(
           /(.+?)\.(mine|working|merge-\w+\.r\d+|r\d+)$/
