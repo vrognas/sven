@@ -122,6 +122,9 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       let mtime = new Date().getTime();
 
       if (repository) {
+        // Wait for initial status to load before checking file version
+        await repository.statusReady;
+
         // Skip SVN calls for files we know are unversioned/ignored
         const resource = repository.getResourceFromFile(fsPath);
         if (
@@ -212,6 +215,9 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       const cacheValue: CacheRow = { uri: uri, timestamp };
 
       this.cache.set(cacheKey, cacheValue);
+
+      // Wait for initial status to load before checking file version
+      await repository.statusReady;
 
       if (action === SvnUriAction.SHOW) {
         // Skip SVN calls for files we know are unversioned/ignored
