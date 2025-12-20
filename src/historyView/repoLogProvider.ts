@@ -432,7 +432,8 @@ export class RepoLogProvider
         remotePath.toString(),
         scm.svn.exec.bind(scm.svn),
         prevRev.revision,
-        parent.revision
+        parent.revision,
+        scm.context
       );
     } catch (error) {
       logError("Failed to open external diff", error);

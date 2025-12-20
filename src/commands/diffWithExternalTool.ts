@@ -64,7 +64,10 @@ export class DiffWithExternalTool extends Command {
       await diffWithExternalTool(
         repository.workspaceRoot,
         filePath,
-        sourceControlManager.svn.exec.bind(sourceControlManager.svn)
+        sourceControlManager.svn.exec.bind(sourceControlManager.svn),
+        undefined, // oldRevision
+        undefined, // newRevision
+        sourceControlManager.context
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

@@ -101,6 +101,10 @@ export class SourceControlManager implements IDisposable {
     return this._svn;
   }
 
+  get context(): ExtensionContext {
+    return this.extensionContext;
+  }
+
   constructor(
     private _svn: Svn,
     policy: ConstructorPolicy,

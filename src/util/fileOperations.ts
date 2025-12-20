@@ -8,11 +8,15 @@
  */
 
 import * as path from "path";
-import { commands, Uri, window, workspace } from "vscode";
+import { commands, ExtensionContext, Uri, window, workspace } from "vscode";
 import { logError } from "./errorLogger";
 import { exists } from "../fs";
 import { fixPegRevision } from "../util";
 import { IExecutionResult } from "../common/types";
+import {
+  getOrCreateBcsvnScript,
+  isBeyondCompareValue
+} from "./diffScriptGenerator";
 
 /**
  * Reveal file in OS file explorer
@@ -35,6 +39,7 @@ export async function revealFileInOS(fsPath: string | Uri): Promise<void> {
  * @param svnExec SVN exec function (sourceControlManager.svn.exec)
  * @param oldRevision Optional: old revision for historical diff (e.g., "123")
  * @param newRevision Optional: new revision for historical diff (e.g., "124")
+ * @param extensionContext Optional: extension context for auto-generating diff scripts
  * @throws Error if configuration invalid, tool not found, or execution fails
  */
 export async function diffWithExternalTool(
@@ -42,16 +47,17 @@ export async function diffWithExternalTool(
   filePath: string,
   svnExec: (cwd: string, args: string[]) => Promise<IExecutionResult>,
   oldRevision?: string,
-  newRevision?: string
+  newRevision?: string,
+  extensionContext?: ExtensionContext
 ): Promise<void> {
   // Read external diff tool configuration
   const config = workspace.getConfiguration("sven");
-  const diffToolPath = config.get<string>("diff.tool");
+  let diffToolPath = config.get<string>("diff.tool");
 
   // Validate configuration exists
   if (!diffToolPath) {
     const error = new Error(
-      "External diff tool not configured. Set sven.diff.tool to path of bcsvn.bat"
+      'External diff tool not configured. Set sven.diff.tool to "beyondcompare" or path to diff tool'
     );
     logError("Diff tool not configured", error);
     const action = await window.showErrorMessage(
@@ -67,41 +73,66 @@ export async function diffWithExternalTool(
     throw error;
   }
 
-  // Security: Validate path is absolute to prevent relative path exploits
-  if (!path.isAbsolute(diffToolPath)) {
-    const error = new Error(
-      `External diff tool must be an absolute path: ${diffToolPath}`
-    );
-    logError("Diff tool path not absolute", error);
-    window.showErrorMessage(error.message);
-    throw error;
-  }
-
-  // Security: Reject UNC paths on Windows to prevent remote code execution
-  if (process.platform === "win32" && diffToolPath.startsWith("\\\\")) {
-    const error = new Error(
-      `UNC paths not allowed for security: ${diffToolPath}`
-    );
-    logError("UNC path rejected", error);
-    window.showErrorMessage(error.message);
-    throw error;
-  }
-
-  // Validate tool exists
-  if (!(await exists(diffToolPath))) {
-    const error = new Error(`External diff tool not found at: ${diffToolPath}`);
-    logError("Diff tool not found", error);
-    const action = await window.showErrorMessage(
-      error.message,
-      "Open Settings"
-    );
-    if (action === "Open Settings") {
-      commands.executeCommand(
-        "workbench.action.openSettings",
-        "sven.diff.tool"
+  // Check if using Beyond Compare integration
+  if (isBeyondCompareValue(diffToolPath)) {
+    if (!extensionContext) {
+      const error = new Error(
+        "Extension context required for Beyond Compare integration"
       );
+      logError("Missing extension context", error);
+      throw error;
     }
-    throw error;
+
+    const generatedScript = await getOrCreateBcsvnScript(extensionContext);
+    if (!generatedScript) {
+      const error = new Error(
+        "Beyond Compare not found. Install it or set sven.diff.tool to full path"
+      );
+      logError("Beyond Compare not found", error);
+      window.showErrorMessage(error.message);
+      throw error;
+    }
+
+    diffToolPath = generatedScript;
+  } else {
+    // Security: Validate path is absolute to prevent relative path exploits
+    if (!path.isAbsolute(diffToolPath)) {
+      const error = new Error(
+        `External diff tool must be an absolute path: ${diffToolPath}`
+      );
+      logError("Diff tool path not absolute", error);
+      window.showErrorMessage(error.message);
+      throw error;
+    }
+
+    // Security: Reject UNC paths on Windows to prevent remote code execution
+    if (process.platform === "win32" && diffToolPath.startsWith("\\\\")) {
+      const error = new Error(
+        `UNC paths not allowed for security: ${diffToolPath}`
+      );
+      logError("UNC path rejected", error);
+      window.showErrorMessage(error.message);
+      throw error;
+    }
+
+    // Validate tool exists
+    if (!(await exists(diffToolPath))) {
+      const error = new Error(
+        `External diff tool not found at: ${diffToolPath}`
+      );
+      logError("Diff tool not found", error);
+      const action = await window.showErrorMessage(
+        error.message,
+        "Open Settings"
+      );
+      if (action === "Open Settings") {
+        commands.executeCommand(
+          "workbench.action.openSettings",
+          "sven.diff.tool"
+        );
+      }
+      throw error;
+    }
   }
 
   // Security: Validate revision format (must be numeric)
