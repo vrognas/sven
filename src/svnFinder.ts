@@ -16,7 +16,7 @@ export interface ISvn {
 }
 
 // Cache key for storing full ISvn object in globalState
-const SVN_CACHE_KEY = "svnCache";
+export const SVN_CACHE_KEY = "svnCache";
 
 export class SvnFinder {
   /**
@@ -47,7 +47,7 @@ export class SvnFinder {
           // Quick file existence check - no process spawn needed
           await fs.access(cached.path, fs.constants.X_OK);
           console.log(
-            `SVN Extension: Using cached SVN: ${cached.path} v${cached.version}`
+            `Sven: Using cached SVN: ${cached.path} v${cached.version}`
           );
           return cached;
         } catch {

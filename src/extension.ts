@@ -23,7 +23,7 @@ import { RepoLogProvider } from "./historyView/repoLogProvider";
 import * as messages from "./messages";
 import { SourceControlManager } from "./source_control_manager";
 import { Svn } from "./svn";
-import { SvnFinder } from "./svnFinder";
+import { SvnFinder, SVN_CACHE_KEY } from "./svnFinder";
 import SvnProvider from "./treeView/dataProviders/svnProvider";
 import SparseCheckoutProvider from "./treeView/dataProviders/sparseCheckoutProvider";
 import { toDisposable } from "./util";
@@ -42,20 +42,20 @@ async function init(
   outputChannel: OutputChannel,
   disposables: Disposable[]
 ) {
-  console.log("SVN Extension: init() started");
+  console.log("Sven: init() started");
   const pathHint = configuration.get<string>("path");
   const svnFinder = new SvnFinder();
 
-  console.log("SVN Extension: Finding SVN executable...");
+  console.log("Sven: Finding SVN executable...");
   // Pass context for caching - startup optimization saves ~1-2s on subsequent launches
   const info = await svnFinder.findSvn(pathHint, extensionContext);
-  console.log(`SVN Extension: Found SVN ${info.version} at ${info.path}`);
+  console.log(`Sven: Found SVN ${info.version} at ${info.path}`);
 
   const svn = new Svn({ svnPath: info.path, version: info.version });
 
   // Register process exit handlers for credential cleanup
   const cleanup = () => {
-    console.log("SVN Extension: Cleaning up credentials on process exit");
+    console.log("Sven: Cleaning up credentials on process exit");
     svn.getAuthCache().dispose();
   };
 
@@ -88,10 +88,16 @@ async function init(
     extensionContext
   );
 
-  console.log("SVN Extension: Registering commands...");
+  console.log("Sven: Registering commands...");
   registerCommands(sourceControlManager, disposables);
 
-  console.log("SVN Extension: Creating providers...");
+  console.log("Sven: Creating providers...");
+  try {
+    tempSvnFs.activate();
+  } catch (err) {
+    // Handle dev reload / double activation race condition
+    logWarning("TempSvnFs already registered", (err as Error).message);
+  }
   disposables.push(
     sourceControlManager,
     tempSvnFs,
@@ -111,10 +117,10 @@ async function init(
 
   outputChannel.appendLine(`Using svn "${info.version}" from "${info.path}"`);
   outputChannel.appendLine(`Running in ${getEnvironmentName()}`);
-  console.log("SVN Extension: Providers created successfully");
+  console.log("Sven: Providers created successfully");
 
   // Initialize blame status bar (singleton)
-  console.log("SVN Extension: Creating BlameStatusBar...");
+  console.log("Sven: Creating BlameStatusBar...");
   const blameStatusBar = new BlameStatusBar(sourceControlManager);
   disposables.push(blameStatusBar);
 
@@ -124,11 +130,21 @@ async function init(
       blameStatusBar.showCommitDetails();
     })
   );
-  console.log("SVN Extension: BlameStatusBar created");
+  console.log("Sven: BlameStatusBar created");
+
+  // Register cache management command
+  disposables.push(
+    commands.registerCommand("sven.clearCache", async () => {
+      await extensionContext.globalState.update(SVN_CACHE_KEY, undefined);
+      window.showInformationMessage(
+        "SVN path cache cleared. Restart to re-detect."
+      );
+    })
+  );
 
   // Register Positron-specific providers
   if (isPositron()) {
-    console.log("SVN Extension: Registering Positron connections provider");
+    console.log("Sven: Registering Positron connections provider");
     const connectionsDisposable =
       registerSvnConnectionsProvider(sourceControlManager);
     if (connectionsDisposable) {
@@ -143,7 +159,7 @@ async function init(
     toDisposable(() => svn.onOutput.removeListener("log", onOutput))
   );
   disposables.push(toDisposable(messages.dispose));
-  console.log("SVN Extension: init() complete");
+  console.log("Sven: init() complete");
 }
 
 async function _activate(context: ExtensionContext, disposables: Disposable[]) {
@@ -230,11 +246,10 @@ async function _activate(context: ExtensionContext, disposables: Disposable[]) {
 
 export async function activate(context: ExtensionContext) {
   const env = getEnvironmentName();
-  const inPositron = isPositron();
+  console.log(`Sven: activate() called in ${env}`);
 
-  console.log(`SVN Extension: activate() called in ${env}`);
-  if (inPositron) {
-    console.log("SVN Extension: Positron-specific features available");
+  if (isPositron()) {
+    console.log("Sven: Positron-specific features available");
   }
 
   const disposables: Disposable[] = [];
@@ -243,14 +258,13 @@ export async function activate(context: ExtensionContext) {
   );
 
   await _activate(context, disposables).catch(err => {
-    logError("SVN Extension: Activation failed", err);
-    window.showErrorMessage(
-      `SVN Extension activation failed: ${err.message || err}`
-    );
+    logError("Sven: Activation failed", err);
+    window.showErrorMessage(`Sven activation failed: ${err.message || err}`);
   });
-  console.log("SVN Extension: activation complete");
+
+  console.log("Sven: activation complete");
 }
 
-// this method is called when your extension is deactivated
-
-export function deactivate() {}
+export function deactivate() {
+  // Cleanup handled by context.subscriptions
+}

@@ -2,7 +2,7 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -152,35 +152,35 @@
     "views": {
       "scm": [
         {
-          "id": "svn",
+          "id": "sven.svn",
           "name": "Server Changes",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "visible",
           "order": 1
         },
         {
-          "id": "branchchanges",
+          "id": "sven.branchchanges",
           "name": "Branch Changes",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0 && svn.hasBranch",
           "visibility": "visible",
           "order": 2
         },
         {
-          "id": "repolog",
+          "id": "sven.repolog",
           "name": "Repo History",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "collapsed",
           "order": 3
         },
         {
-          "id": "itemlog",
+          "id": "sven.itemlog",
           "name": "File History",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "collapsed",
           "order": 4
         },
         {
-          "id": "sparseCheckout",
+          "id": "sven.sparseCheckout",
           "name": "Selective Download",
           "when": "config.svn.enabled && svnOpenRepositoryCount != 0",
           "visibility": "collapsed",
@@ -190,17 +190,17 @@
     },
     "viewsWelcome": [
       {
-        "view": "svn",
+        "view": "sven.svn",
         "contents": "Check for updates from the server .\n\n[Check for Updates](command:svn.update)\n\nTip: Enable `svn.sourceControl.checkForIncomingChanges` for automatic checks.",
         "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
       },
       {
-        "view": "repolog",
+        "view": "sven.repolog",
         "contents": "View the commit history of your repository.\n\n[Show Log](command:svn.log)\n\nTip: Use the log to browse commits, view changes, and understand project history.",
         "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
       },
       {
-        "view": "itemlog",
+        "view": "sven.itemlog",
         "contents": "Select a file in the explorer to view its revision history.\n\nRight-click any file and choose **SVN: Show Log** to see its history here.",
         "when": "config.svn.enabled && svnOpenRepositoryCount != 0"
       },
@@ -423,6 +423,11 @@
       }
     ],
     "commands": [
+      {
+        "command": "sven.clearCache",
+        "title": "Clear SVN Path Cache",
+        "category": "SVN"
+      },
       {
         "command": "sven.add",
         "title": "Add",
@@ -1284,43 +1289,43 @@
         },
         {
           "command": "sven.repolog.goToBase",
-          "when": "view == repolog",
+          "when": "view == sven.repolog",
           "group": "navigation@0"
         },
         {
           "command": "sven.repolog.fetch",
-          "when": "view == repolog",
+          "when": "view == sven.repolog",
           "group": "navigation@1"
         },
         {
           "command": "sven.update",
-          "when": "view == repolog",
+          "when": "view == sven.repolog",
           "group": "navigation@2"
         },
         {
           "command": "sven.repolog.refresh",
-          "when": "view == repolog",
+          "when": "view == sven.repolog",
           "group": "navigation@3"
         },
         {
           "command": "sven.repolog.filterHistory",
-          "when": "view == repolog && !svn.historyFilterActive",
+          "when": "view == sven.repolog && !svn.historyFilterActive",
           "group": "navigation@4"
         },
         {
           "command": "sven.repolog.filterHistory",
-          "when": "view == repolog && svn.historyFilterActive",
+          "when": "view == sven.repolog && svn.historyFilterActive",
           "group": "navigation@4",
           "alt": "sven.repolog.clearFilter"
         },
         {
           "command": "sven.repolog.clearFilter",
-          "when": "view == repolog && svn.historyFilterActive",
+          "when": "view == sven.repolog && svn.historyFilterActive",
           "group": "navigation@5"
         },
         {
           "command": "sven.itemlog.refresh",
-          "when": "view == itemlog",
+          "when": "view == sven.itemlog",
           "group": "navigation"
         },
         {
@@ -1378,73 +1383,73 @@
         },
         {
           "command": "sven.repolog.remove",
-          "when": "view == repolog && viewItem == userrepo"
+          "when": "view == sven.repolog && viewItem == userrepo"
         },
         {
           "command": "sven.itemlog.openFileRemote",
-          "when": "view == itemlog && viewItem == diffable"
+          "when": "view == sven.itemlog && viewItem == diffable"
         },
         {
           "command": "sven.itemlog.openDiff",
-          "when": "view == itemlog && viewItem == diffable",
+          "when": "view == sven.itemlog && viewItem == diffable",
           "group": "1_diff"
         },
         {
           "command": "sven.itemlog.openDiffBase",
-          "when": "view == itemlog && viewItem == diffable",
+          "when": "view == sven.itemlog && viewItem == diffable",
           "group": "1_diff"
         },
         {
           "command": "sven.itemlog.copymsg",
-          "when": "view == itemlog && viewItem == diffable"
+          "when": "view == sven.itemlog && viewItem == diffable"
         },
         {
           "command": "sven.itemlog.copyrevision",
-          "when": "view == itemlog && viewItem == diffable"
+          "when": "view == sven.itemlog && viewItem == diffable"
         },
         {
           "command": "sven.itemlog.gotoRepolog",
-          "when": "view == itemlog && viewItem == diffable",
+          "when": "view == sven.itemlog && viewItem == diffable",
           "group": "navigation"
         },
         {
           "command": "sven.itemlog.rollbackToRevision",
-          "when": "view == itemlog && viewItem == diffable",
+          "when": "view == sven.itemlog && viewItem == diffable",
           "group": "2_rollback"
         },
         {
           "command": "sven.repolog.openDiff",
-          "when": "view == repolog && viewItem == diffable"
+          "when": "view == sven.repolog && viewItem == diffable"
         },
         {
           "command": "sven.repolog.openFileRemote",
-          "when": "view == repolog && viewItem == diffable"
+          "when": "view == sven.repolog && viewItem == diffable"
         },
         {
           "command": "sven.repolog.openFileLocal",
-          "when": "view == repolog && viewItem == diffable"
+          "when": "view == sven.repolog && viewItem == diffable"
         },
         {
           "command": "sven.repolog.revealInExplorer",
-          "when": "view == repolog && viewItem == diffable",
+          "when": "view == sven.repolog && viewItem == diffable",
           "group": "navigation"
         },
         {
           "command": "sven.repolog.diffWithExternalTool",
-          "when": "view == repolog && viewItem == diffable",
+          "when": "view == sven.repolog && viewItem == diffable",
           "group": "navigation"
         },
         {
           "command": "sven.repolog.fetch",
-          "when": "view == repolog && viewItem =~ /.*repo/"
+          "when": "view == sven.repolog && viewItem =~ /.*repo/"
         },
         {
           "command": "sven.repolog.copymsg",
-          "when": "view == repolog && viewItem == commit"
+          "when": "view == sven.repolog && viewItem == commit"
         },
         {
           "command": "sven.repolog.copyrevision",
-          "when": "view == repolog && viewItem == commit"
+          "when": "view == sven.repolog && viewItem == commit"
         }
       ],
       "scm/title": [
