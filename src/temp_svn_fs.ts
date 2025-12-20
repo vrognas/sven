@@ -64,10 +64,19 @@ class TempSvnFs implements FileSystemProvider, Disposable {
   private _fireSoonHandler?: NodeJS.Timeout;
   private _root = new Directory("");
   private _disposables: Disposable[] = [];
+  private _registered = false;
 
   readonly onDidChangeFile: Event<FileChangeEvent[]> = this._emitter.event;
 
   constructor() {
+    // Don't register here - call activate() explicitly
+  }
+
+  activate(): void {
+    if (this._registered) {
+      return;
+    }
+    this._registered = true;
     this._disposables.push(
       workspace.registerFileSystemProvider("tempsvnfs", this, {
         isCaseSensitive: true
@@ -234,6 +243,7 @@ class TempSvnFs implements FileSystemProvider, Disposable {
 
     this._disposables.forEach(disposable => disposable.dispose());
     this._disposables = [];
+    this._registered = false;
 
     for (const [name] of this.readDirectory(Uri.parse("tempsvnfs:/"))) {
       this.delete(Uri.parse(`tempsvnfs:/${name}`));

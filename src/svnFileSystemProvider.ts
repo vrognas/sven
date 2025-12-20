@@ -27,7 +27,7 @@ import {
   pathEquals,
   EmptyDisposable
 } from "./util";
-import { logError } from "./util/errorLogger";
+import { logError, logWarning } from "./util/errorLogger";
 
 const THREE_MINUTES = 1000 * 60 * 3;
 const FIVE_MINUTES = 1000 * 60 * 5;
@@ -53,12 +53,23 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
       sourceControlManager.onDidChangeRepository(
         this.onDidChangeRepository,
         this
-      ),
-      workspace.registerFileSystemProvider("svn", this, {
-        isReadonly: true,
-        isCaseSensitive: true
-      })
+      )
     );
+
+    try {
+      this.disposables.push(
+        workspace.registerFileSystemProvider("svn", this, {
+          isReadonly: true,
+          isCaseSensitive: true
+        })
+      );
+    } catch (err) {
+      // Handle Positron double activation - first registration wins, second is no-op
+      logWarning(
+        "SvnFileSystemProvider already registered",
+        (err as Error).message
+      );
+    }
 
     this.cleanupInterval = setInterval(() => this.cleanup(), FIVE_MINUTES);
   }
