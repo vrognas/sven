@@ -45,13 +45,13 @@ export async function diffWithExternalTool(
   newRevision?: string
 ): Promise<void> {
   // Read external diff tool configuration
-  const config = workspace.getConfiguration("svn");
+  const config = workspace.getConfiguration("sven");
   const diffToolPath = config.get<string>("diff.tool");
 
   // Validate configuration exists
   if (!diffToolPath) {
     const error = new Error(
-      "External diff tool not configured. Set svn.diff.tool to path of bcsvn.bat"
+      "External diff tool not configured. Set sven.diff.tool to path of bcsvn.bat"
     );
     logError("Diff tool not configured", error);
     const action = await window.showErrorMessage(

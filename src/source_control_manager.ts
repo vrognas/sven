@@ -63,7 +63,6 @@ export class SourceControlManager implements IDisposable {
 
   public openRepositories: IOpenRepository[] = [];
   private disposables: Disposable[] = [];
-  private enabled = false;
   private possibleSvnRepositoryPaths = new Set<string>();
   private ignoreList: string[] = [];
   private maxDepth: number = 0;
@@ -110,7 +109,6 @@ export class SourceControlManager implements IDisposable {
     if (policy !== ConstructorPolicy.Async) {
       throw new Error("Unsupported policy");
     }
-    this.enabled = configuration.get<boolean>("enabled") === true;
 
     this.configurationChangeDisposable = workspace.onDidChangeConfiguration(
       this.onDidChangeConfiguration,
@@ -118,9 +116,7 @@ export class SourceControlManager implements IDisposable {
     );
 
     return (async (): Promise<SourceControlManager> => {
-      if (this.enabled) {
-        await this.enable();
-      }
+      await this.enable();
       return this;
     })() as unknown as SourceControlManager;
   }
@@ -134,21 +130,7 @@ export class SourceControlManager implements IDisposable {
   }
 
   private onDidChangeConfiguration(): void {
-    const enabled = configuration.get<boolean>("enabled") === true;
-
     this.maxDepth = configuration.get<number>("multipleFolders.depth", 0);
-
-    if (enabled === this.enabled) {
-      return;
-    }
-
-    this.enabled = enabled;
-
-    if (enabled) {
-      this.enable();
-    } else {
-      this.disable();
-    }
   }
 
   private async enable() {

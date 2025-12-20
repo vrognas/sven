@@ -46,7 +46,10 @@
       "Bash(svn log:*)",
       "WebFetch(domain:tortoisesvn.net)",
       "WebFetch(domain:cwiki.apache.org)",
-      "Bash(svn status:*)"
+      "Bash(svn status:*)",
+      "WebFetch(domain:vscode-docs.readthedocs.io)",
+      "WebFetch(domain:www.scootersoftware.com)",
+      "WebFetch(domain:forum.scootersoftware.com)"
     ],
     "deny": [],
     "ask": []

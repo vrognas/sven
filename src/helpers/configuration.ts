@@ -13,7 +13,7 @@ import {
   WorkspaceConfiguration
 } from "vscode";
 
-const SVN = "sven";
+const SVEN = "sven";
 
 class Configuration {
   private configuration: WorkspaceConfiguration;
@@ -24,16 +24,16 @@ class Configuration {
   }
 
   constructor() {
-    this.configuration = workspace.getConfiguration(SVN);
+    this.configuration = workspace.getConfiguration(SVEN);
     workspace.onDidChangeConfiguration(this.onConfigurationChanged, this);
   }
 
   private onConfigurationChanged(event: ConfigurationChangeEvent) {
-    if (!event.affectsConfiguration(SVN)) {
+    if (!event.affectsConfiguration(SVEN)) {
       return;
     }
 
-    this.configuration = workspace.getConfiguration(SVN);
+    this.configuration = workspace.getConfiguration(SVEN);
 
     this._onDidChange.fire(event);
   }

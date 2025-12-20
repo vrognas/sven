@@ -163,7 +163,7 @@ async function init(
 }
 
 async function _activate(context: ExtensionContext, disposables: Disposable[]) {
-  const outputChannel = window.createOutputChannel("Svn");
+  const outputChannel = window.createOutputChannel("Sven");
   commands.registerCommand("sven.showOutput", () => outputChannel.show());
   disposables.push(outputChannel);
 

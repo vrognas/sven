@@ -28,6 +28,7 @@
         "--disable-extension",
         "etiennebacher.jarl-vscode",
         "--extensionDevelopmentPath=${workspaceRoot}",
+        "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/redmyne",
         "C:/Projects/test/Test-Viktor"
       ],
       "sourceMaps": true,
