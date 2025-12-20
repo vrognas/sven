@@ -25,7 +25,7 @@ export class BranchChangesProvider
 
   constructor(private model: SourceControlManager) {
     this._dispose.push(
-      window.registerTreeDataProvider("branchchanges", this),
+      window.registerTreeDataProvider("sven.branchchanges", this),
       commands.registerCommand(
         "sven.branchchanges.openDiff",
         this.openDiffCmd,

@@ -38,6 +38,7 @@ import {
   transform,
   getCommitDescription
 } from "./common";
+import { logError } from "../util/errorLogger";
 
 export class ItemLogProvider
   implements TreeDataProvider<ILogTreeItem>, Disposable
@@ -53,9 +54,18 @@ export class ItemLogProvider
   private refreshDebounceTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private sourceControlManager: SourceControlManager) {
+    try {
+      this._dispose.push(window.registerTreeDataProvider("sven.itemlog", this));
+    } catch (err) {
+      // Handle dev reload race condition where previous provider wasn't yet disposed
+      logError(
+        "Failed to register itemlog TreeDataProvider (may be dev reload)",
+        err
+      );
+    }
+
     this._dispose.push(
       window.onDidChangeActiveTextEditor(this.editorChanged, this),
-      window.registerTreeDataProvider("itemlog", this),
       // Refresh when repositories open/close (handles startup timing)
       sourceControlManager.onDidOpenRepository(() => this.refresh()),
       sourceControlManager.onDidCloseRepository(() => this.refresh()),

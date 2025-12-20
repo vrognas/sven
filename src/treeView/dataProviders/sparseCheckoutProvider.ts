@@ -357,7 +357,7 @@ export default class SparseCheckoutProvider
 
   constructor(private sourceControlManager: SourceControlManager) {
     // Use createTreeView for multi-select support
-    this.treeView = window.createTreeView("sparseCheckout", {
+    this.treeView = window.createTreeView("sven.sparseCheckout", {
       treeDataProvider: this,
       canSelectMany: true
     });

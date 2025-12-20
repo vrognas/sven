@@ -30,7 +30,7 @@ export default class SvnProvider
 
   constructor(private sourceControlManager: SourceControlManager) {
     this._dispose.push(
-      window.registerTreeDataProvider("svn", this),
+      window.registerTreeDataProvider("sven.svn", this),
       commands.registerCommand("sven.treeview.refreshProvider", () =>
         this.refresh()
       ),

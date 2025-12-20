@@ -148,12 +148,17 @@ export class RepoLogProvider
     this.refresh();
 
     // Create TreeView for visibility tracking
-    this.treeView = window.createTreeView("repolog", {
-      treeDataProvider: this
-    });
+    try {
+      this.treeView = window.createTreeView("sven.repolog", {
+        treeDataProvider: this
+      });
+      this._dispose.push(this.treeView);
+    } catch (err) {
+      // Handle dev reload race condition where previous view wasn't yet disposed
+      logError("Failed to create repolog TreeView (may be dev reload)", err);
+    }
 
     this._dispose.push(
-      this.treeView,
       commands.registerCommand(
         "sven.repolog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
