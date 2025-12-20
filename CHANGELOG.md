@@ -1,3 +1,12 @@
+## [0.1.4] (2025-12-20)
+
+### Performance: Stat Cache
+
+- **Issue**: Repeated `svn list` calls when viewing file history (5-6x for same file)
+- **Fix**: Cache stat() results for 1 minute with request deduplication
+- **Invalidation**: Cache cleared on repository changes (commit/update)
+- **Impact**: Significantly reduces redundant SVN commands
+
 ## [0.1.3] (2025-12-20)
 
 ### Feature: Beyond Compare Auto-Integration
