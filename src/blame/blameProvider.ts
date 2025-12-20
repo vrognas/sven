@@ -30,6 +30,7 @@ import {
 } from "./templateCompiler";
 import { logError } from "../util/errorLogger";
 import { Status } from "../common/types";
+import { isDescendant } from "../util";
 
 /**
  * BlameProvider manages gutter decorations for SVN blame
@@ -142,6 +143,15 @@ export class BlameProvider implements Disposable {
     const target = editor || window.activeTextEditor;
 
     if (!target) {
+      return;
+    }
+
+    // CRITICAL: Skip files outside this repository to prevent disposing repo on external files
+    // (SVN commands on external files return NotASvnRepository which incorrectly disposes repo)
+    if (
+      !isDescendant(this.repository.workspaceRoot, target.document.uri.fsPath)
+    ) {
+      this.clearDecorations(target);
       return;
     }
 
@@ -463,6 +473,13 @@ export class BlameProvider implements Disposable {
     if (
       !blameConfiguration.isInlineEnabled() ||
       !blameConfiguration.isInlineCurrentLineOnly()
+    ) {
+      return;
+    }
+
+    // CRITICAL: Skip files outside this repository to prevent disposing repo
+    if (
+      !isDescendant(this.repository.workspaceRoot, editor.document.uri.fsPath)
     ) {
       return;
     }

@@ -2,7 +2,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { Disposable } from "vscode";
+import { Disposable, window } from "vscode";
 import { debounce } from "../decorators";
 import { SourceControlManager } from "../source_control_manager";
 import { IDisposable, setVscodeContext } from "../util";
@@ -23,6 +23,13 @@ export class OpenRepositoryCount implements IDisposable {
       this.disposables
     );
 
+    // Re-assert context when active editor changes (fixes SCM view after viewing external files)
+    window.onDidChangeActiveTextEditor(
+      this.onActiveEditorChanged,
+      this,
+      this.disposables
+    );
+
     this.checkOpened();
   }
 
@@ -32,6 +39,11 @@ export class OpenRepositoryCount implements IDisposable {
       "svnOpenRepositoryCount",
       this.sourceControlManager.repositories.length
     );
+  }
+
+  private onActiveEditorChanged() {
+    // Re-assert context when switching files (keeps SCM view visible)
+    this.checkOpened();
   }
 
   public dispose(): void {
