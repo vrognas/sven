@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: v2.35.0
-**Updated**: 2025-12-09
+**Version**: v0.1.1
+**Updated**: 2025-12-19
 
 ---
 
@@ -1038,5 +1038,27 @@ Initial implementation: 8 separate filter commands in toolbar menu. Overwhelming
 - Avoid webviews when native UI suffices
 
 **Rule**: Fewer toolbar buttons = better UX. Use multi-step QuickPick for complex operations.
+
+---
+
+### 49. Extension Rebrand: Uninstall Old Version
+
+**Context** (v0.1.1 - Duplicate Extensions):
+
+After rebranding extension (svn-scm → sven), having both old and new versions installed causes "already registered" errors for schemes/views.
+
+**Symptoms**:
+
+- "a provider for the scheme 'svn' is already registered"
+- "Cannot register multiple views with same id"
+- Double activation logs
+
+**Root cause**: Two different extensions trying to register same schemes/views.
+
+**Solution**: Uninstall old extension. That's it.
+
+**Anti-pattern avoided**: Over-engineering activation guards based on speculation. We initially implemented multi-layered guards (module flags + command checks) when the fix was simply uninstalling the duplicate.
+
+**Rule**: Diagnose root cause before implementing fixes. Trust VS Code's `context.subscriptions` pattern for cleanup.
 
 ---

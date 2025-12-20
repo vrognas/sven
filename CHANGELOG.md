@@ -1,3 +1,12 @@
+## [0.1.1] (2025-12-20)
+
+### Fix: Double-Activation Errors
+
+- **Root cause**: Having old extension (svn-scm) installed alongside new one (sven) causes duplicate registrations
+- **Solution**: Uninstall old extension
+- **Warnings**: Downgrade SvnFileSystemProvider registration errors to warnings (graceful handling)
+- **New command**: `SVN: Clear SVN Path Cache` - clears cached SVN executable location
+
 ## [0.1.0] (2025-12-18)
 
 ### Rebrand: Sven
