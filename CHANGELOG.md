@@ -1,3 +1,12 @@
+## [0.1.3] (2025-12-20)
+
+### Feature: Beyond Compare Auto-Integration
+
+- **New**: Set `sven.diff.tool` to `"beyondcompare"` for automatic CSV Table Compare
+- **How**: Extension auto-detects BC installation and generates wrapper script
+- **CSV**: CSV files open in Table Compare view automatically
+- **Location**: Script generated in extension's globalStorageUri
+
 ## [0.1.2] (2025-12-20)
 
 ### Fix: Repository Disposal on External Files
