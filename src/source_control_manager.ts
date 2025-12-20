@@ -289,7 +289,7 @@ export class SourceControlManager implements IDisposable {
 
     if (await isSvnFolder(path, checkParent)) {
       // Config based on folder path
-      const resourceConfig = workspace.getConfiguration("svn", Uri.file(path));
+      const resourceConfig = workspace.getConfiguration("sven", Uri.file(path));
 
       const ignoredRepos = new Set(
         (resourceConfig.get<string[]>("ignoreRepositories") || []).map(p =>

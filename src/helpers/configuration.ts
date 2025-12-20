@@ -13,7 +13,7 @@ import {
   WorkspaceConfiguration
 } from "vscode";
 
-const SVN = "svn";
+const SVN = "sven";
 
 class Configuration {
   private configuration: WorkspaceConfiguration;
