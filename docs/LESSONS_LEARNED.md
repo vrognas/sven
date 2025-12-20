@@ -1,11 +1,28 @@
 # Lessons Learned
 
-**Version**: v0.1.1
-**Updated**: 2025-12-19
+**Version**: v0.1.2
+**Updated**: 2025-12-20
 
 ---
 
 ## Core Patterns
+
+### 0. Path Guards Before SVN Operations
+
+**Lesson**: Always check if file is inside repository before running SVN commands.
+
+**Bug** (v0.1.2):
+
+- Opening external files (outside workspace) caused repo to disappear
+- BlameProvider called `repository.getInfo()` on external file
+- SVN returned "NotASvnRepository" error
+- Error handler set `RepositoryState.Disposed` → repo gone
+
+**Fix**: Add `isDescendant(workspaceRoot, file.fsPath)` guard before any SVN operation.
+
+**Rule**: Guard all SVN operations with path membership check first.
+
+---
 
 ### 1. Build System: tsc over webpack
 

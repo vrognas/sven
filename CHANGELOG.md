@@ -1,3 +1,12 @@
+## [0.1.2] (2025-12-20)
+
+### Fix: Repository Disposal on External Files
+
+- **Bug**: Opening files outside workspace (e.g., Beyond Compare configs) caused SVN repo to disappear
+- **Root cause**: BlameProvider ran SVN commands on external files → NotASvnRepository error → repo disposed
+- **Fix**: Add `isDescendant` checks in BlameProvider before any SVN operations
+- **Bonus**: Re-assert context on editor switch (keeps SCM view visible)
+
 ## [0.1.1] (2025-12-20)
 
 ### Fix: Double-Activation Errors
