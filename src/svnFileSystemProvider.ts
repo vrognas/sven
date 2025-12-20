@@ -29,6 +29,7 @@ import {
 } from "./util";
 import { logError, logWarning } from "./util/errorLogger";
 
+const ONE_MINUTE = 1000 * 60;
 const THREE_MINUTES = 1000 * 60 * 3;
 const FIVE_MINUTES = 1000 * 60 * 5;
 
@@ -37,10 +38,21 @@ interface CacheRow {
   timestamp: number;
 }
 
+interface StatCacheRow {
+  result: FileStat;
+  timestamp: number;
+  fsPath: string; // For invalidation by repository root
+}
+
 export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
   private disposables: Disposable[] = [];
   private cache = new Map<string, CacheRow>();
   private cleanupInterval?: ReturnType<typeof setInterval>;
+
+  // Stat result cache - reduces redundant svn list calls
+  private statCache = new Map<string, StatCacheRow>();
+  // Pending stat requests - dedupes concurrent calls for same URI
+  private pendingStats = new Map<string, Promise<FileStat>>();
 
   private _onDidChangeFile = new EventEmitter<FileChangeEvent[]>();
   readonly onDidChangeFile: Event<FileChangeEvent[]> =
@@ -77,6 +89,13 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
   private onDidChangeRepository({ repository }: RepositoryChangeEvent): void {
     this.changedRepositoryRoots.add(repository.root);
     this.eventuallyFireChangeEvents();
+
+    // Invalidate stat cache for files in this repository
+    for (const [key, row] of this.statCache) {
+      if (isDescendant(repository.root, row.fsPath)) {
+        this.statCache.delete(key);
+      }
+    }
   }
 
   @debounce(1100)
@@ -119,6 +138,43 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
   }
 
   async stat(uri: Uri): Promise<FileStat> {
+    const cacheKey = uri.toString();
+    const now = Date.now();
+
+    // Check stat cache first (TTL: 1 minute)
+    const cached = this.statCache.get(cacheKey);
+    if (cached && now - cached.timestamp < ONE_MINUTE) {
+      return cached.result;
+    }
+
+    // Dedupe concurrent requests for same URI
+    const pending = this.pendingStats.get(cacheKey);
+    if (pending) {
+      return pending;
+    }
+
+    // Execute stat and cache result
+    const promise = this.doStat(uri).then(result => {
+      const { fsPath } = fromSvnUri(uri);
+      this.statCache.set(cacheKey, {
+        result,
+        timestamp: Date.now(),
+        fsPath
+      });
+      return result;
+    });
+
+    // Track pending request
+    this.pendingStats.set(cacheKey, promise);
+    promise.finally(() => this.pendingStats.delete(cacheKey));
+
+    return promise;
+  }
+
+  /**
+   * Core stat implementation - fetches file metadata from SVN
+   */
+  private async doStat(uri: Uri): Promise<FileStat> {
     try {
       await this.sourceControlManager.isInitialized;
 
@@ -357,6 +413,13 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
     }
 
     this.cache = cache;
+
+    // Cleanup stat cache - remove entries older than 3 minutes
+    for (const [key, row] of this.statCache) {
+      if (now - row.timestamp > THREE_MINUTES) {
+        this.statCache.delete(key);
+      }
+    }
   }
 
   dispose(): void {
