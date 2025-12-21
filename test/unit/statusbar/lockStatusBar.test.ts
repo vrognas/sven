@@ -1,0 +1,105 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Mock vscode
+vi.mock("vscode", () => ({
+  window: {
+    createStatusBarItem: vi.fn(() => ({
+      show: vi.fn(),
+      hide: vi.fn(),
+      dispose: vi.fn(),
+      text: "",
+      tooltip: "",
+      command: ""
+    }))
+  },
+  StatusBarAlignment: { Left: 1 }
+}));
+
+import { LockStatusBar } from "../../../src/statusbar/lockStatusBar";
+import { SourceControlManager } from "../../../src/source_control_manager";
+
+// Mock Repository
+function createMockRepository(lockedCount: number) {
+  return {
+    getLockedFileCount: vi.fn(() => lockedCount),
+    onDidChangeLockStatus: vi.fn(() => ({ dispose: vi.fn() }))
+  };
+}
+
+// Mock SourceControlManager
+function createMockSCM(
+  repositories: ReturnType<typeof createMockRepository>[]
+): SourceControlManager {
+  return {
+    repositories,
+    onDidOpenRepository: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidCloseRepository: vi.fn(() => ({ dispose: vi.fn() }))
+  } as unknown as SourceControlManager;
+}
+
+describe("LockStatusBar", () => {
+  let statusBar: LockStatusBar;
+  let mockSCM: SourceControlManager;
+
+  beforeEach(() => {
+    mockSCM = createMockSCM([createMockRepository(0)]);
+    statusBar = new LockStatusBar(mockSCM);
+  });
+
+  describe("display states", () => {
+    it("shows count when files are locked", () => {
+      mockSCM = createMockSCM([createMockRepository(3)]);
+      statusBar = new LockStatusBar(mockSCM);
+
+      statusBar.update();
+
+      expect(statusBar.getText()).toBe("$(lock) 3");
+    });
+
+    it("hides when no files are locked", () => {
+      mockSCM = createMockSCM([createMockRepository(0)]);
+      statusBar = new LockStatusBar(mockSCM);
+
+      statusBar.update();
+
+      expect(statusBar.isVisible()).toBe(false);
+    });
+
+    it("shows singular tooltip for 1 file", () => {
+      mockSCM = createMockSCM([createMockRepository(1)]);
+      statusBar = new LockStatusBar(mockSCM);
+
+      statusBar.update();
+
+      expect(statusBar.getTooltip()).toBe("1 locked file");
+    });
+
+    it("shows plural tooltip for multiple files", () => {
+      mockSCM = createMockSCM([createMockRepository(5)]);
+      statusBar = new LockStatusBar(mockSCM);
+
+      statusBar.update();
+
+      expect(statusBar.getTooltip()).toBe("5 locked files");
+    });
+
+    it("aggregates count from multiple repositories", () => {
+      mockSCM = createMockSCM([
+        createMockRepository(2),
+        createMockRepository(4)
+      ]);
+      statusBar = new LockStatusBar(mockSCM);
+
+      statusBar.update();
+
+      expect(statusBar.getText()).toBe("$(lock) 6");
+    });
+  });
+
+  describe("dispose", () => {
+    it("disposes status bar item", () => {
+      statusBar.dispose();
+      // Should not throw
+    });
+  });
+});

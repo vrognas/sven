@@ -237,6 +237,10 @@ export class Repository implements IRemoteRepository {
   public readonly onDidChangeNeedsLock: Event<void> =
     this._onDidChangeNeedsLock.event;
 
+  private _onDidChangeLockStatus = new EventEmitter<void>();
+  public readonly onDidChangeLockStatus: Event<void> =
+    this._onDidChangeLockStatus.event;
+
   private _onRunOperation = new EventEmitter<Operation>();
   public readonly onRunOperation: Event<Operation> = this._onRunOperation.event;
 
@@ -487,10 +491,12 @@ export class Repository implements IRemoteRepository {
         this.onDidSaveTextDocument(document);
       }),
       // Prompt to lock files with svn:needs-lock property when opened
+      // Also warn if file has pending remote updates
       workspace.onDidOpenTextDocument(document => {
         if (document.uri.scheme === "file") {
           // Fire async - don't block document open
           void this.promptLockIfNeeded(document.uri);
+          void this.promptUpdateIfRemoteChanges(document.uri);
         }
       })
     );
@@ -853,9 +859,14 @@ export class Repository implements IRemoteRepository {
 
     // Populate lock status cache from status results
     // Clear and replace to remove stale entries (unlocked files)
+    const prevLockCount = this.lockStatusCache.size;
     this.lockStatusCache.clear();
     for (const [relativePath, lockInfo] of result.lockStatuses) {
       this.lockStatusCache.set(relativePath, lockInfo);
+    }
+    // Fire event if lock count changed
+    if (this.lockStatusCache.size !== prevLockCount) {
+      this._onDidChangeLockStatus.fire();
     }
 
     // Delegate group management to ResourceGroupManager
@@ -2150,6 +2161,32 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
+   * Get count of locked files (by me or others).
+   */
+  public getLockedFileCount(): number {
+    return this.lockStatusCache.size;
+  }
+
+  /**
+   * Check if a specific file has pending remote changes.
+   */
+  public hasRemoteChangeForFile(filePath: string): boolean {
+    if (!this.groupManager.remoteChanges) {
+      return false;
+    }
+    const normalizedPath = filePath.replace(/\\/g, "/").toLowerCase();
+    for (const resource of this.groupManager.remoteChanges.resourceStates) {
+      const resourcePath = resource.resourceUri.fsPath
+        .replace(/\\/g, "/")
+        .toLowerCase();
+      if (resourcePath === normalizedPath) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Invalidate the needs-lock cache so it will be refreshed on next status.
    * Called after propset/propdel svn:needs-lock.
    */
@@ -2336,6 +2373,31 @@ export class Repository implements IRemoteRepository {
 
     if (choice === "Lock File") {
       await commands.executeCommand("sven.lock", uri);
+    }
+  }
+
+  /**
+   * Check if file has pending remote changes and prompt user to update.
+   * Called when opening a file.
+   */
+  private async promptUpdateIfRemoteChanges(uri: Uri): Promise<void> {
+    // Only check files in this repository's working copy
+    if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+      return;
+    }
+
+    if (!this.hasRemoteChangeForFile(uri.fsPath)) {
+      return;
+    }
+
+    const choice = await window.showWarningMessage(
+      "This file has pending remote updates. Update to get latest changes?",
+      "Update",
+      "Dismiss"
+    );
+
+    if (choice === "Update") {
+      await commands.executeCommand("sven.update");
     }
   }
 

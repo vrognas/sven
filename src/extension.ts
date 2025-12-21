@@ -39,6 +39,7 @@ import { WatchService } from "./services/WatchService";
 import { WatchStatusBar } from "./statusbar/watchStatusBar";
 import { WatchNotifier } from "./services/WatchNotifier";
 import { NeedsLockStatusBar } from "./statusbar/needsLockStatusBar";
+import { LockStatusBar } from "./statusbar/lockStatusBar";
 
 async function init(
   extensionContext: ExtensionContext,
@@ -160,6 +161,12 @@ async function init(
   const needsLockStatusBar = new NeedsLockStatusBar(sourceControlManager);
   disposables.push(needsLockStatusBar);
   console.log("Sven: NeedsLockStatusBar created");
+
+  // Initialize lock status bar
+  console.log("Sven: Creating LockStatusBar...");
+  const lockStatusBar = new LockStatusBar(sourceControlManager);
+  disposables.push(lockStatusBar);
+  console.log("Sven: LockStatusBar created");
 
   // Register cache management command
   disposables.push(
