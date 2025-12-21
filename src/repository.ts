@@ -233,6 +233,10 @@ export class Repository implements IRemoteRepository {
   public readonly onDidChangeRemoteChangedFile: Event<void> =
     this._onDidChangeRemoteChangedFiles.event;
 
+  private _onDidChangeNeedsLock = new EventEmitter<void>();
+  public readonly onDidChangeNeedsLock: Event<void> =
+    this._onDidChangeNeedsLock.event;
+
   private _onRunOperation = new EventEmitter<Operation>();
   public readonly onRunOperation: Event<Operation> = this._onRunOperation.event;
 
@@ -2119,11 +2123,30 @@ export class Repository implements IRemoteRepository {
    */
   public async refreshNeedsLockCache(): Promise<void> {
     try {
+      const oldCount = this.needsLockFilesSet.size;
       this.needsLockFilesSet = await this.repository.getAllNeedsLockFiles();
       this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+      // Fire event if count changed
+      if (this.needsLockFilesSet.size !== oldCount) {
+        this._onDidChangeNeedsLock.fire();
+      }
     } catch {
       // Keep existing cache on error
     }
+  }
+
+  /**
+   * Get count of files with svn:needs-lock property.
+   */
+  public getNeedsLockCount(): number {
+    return this.needsLockFilesSet.size;
+  }
+
+  /**
+   * Get all paths with svn:needs-lock property (relative paths).
+   */
+  public getNeedsLockPaths(): string[] {
+    return Array.from(this.needsLockFilesSet);
   }
 
   /**
@@ -2241,12 +2264,12 @@ export class Repository implements IRemoteRepository {
     const result = await this.run(Operation.PropertyChange, () =>
       this.repository.setNeedsLock(filePath)
     );
-    // Update cache directly for immediate L badge update
+    // Update cache and fire events
     if (result.exitCode === 0) {
       const relativePath = this.toRelativePath(filePath);
       this.needsLockFilesSet.add(relativePath);
-      // Fire decoration refresh for this file
       this.fileDecorationProvider?.refresh(Uri.file(filePath));
+      this._onDidChangeNeedsLock.fire();
     }
     return result;
   }
@@ -2258,12 +2281,12 @@ export class Repository implements IRemoteRepository {
     const result = await this.run(Operation.PropertyChange, () =>
       this.repository.removeNeedsLock(filePath)
     );
-    // Update cache directly for immediate L badge removal
+    // Update cache and fire events
     if (result.exitCode === 0) {
       const relativePath = this.toRelativePath(filePath);
       this.needsLockFilesSet.delete(relativePath);
-      // Fire decoration refresh for this file
       this.fileDecorationProvider?.refresh(Uri.file(filePath));
+      this._onDidChangeNeedsLock.fire();
     }
     return result;
   }

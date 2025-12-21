@@ -1,3 +1,47 @@
+## [0.1.8] (2025-12-21)
+
+### UX: Needs-Lock Status Bar
+
+- **Status bar**: Shows `$(unlock) N` when N files have svn:needs-lock property
+- **Click**: Opens "Manage Needs-Lock" QuickPick to view/remove needs-lock files
+- **Removed**: "L" badge from file decorations (moved to status bar for cleaner UI)
+- **New badge**: "PM" for files with both content and property changes (was just "M")
+
+## [0.1.7] (2025-12-21)
+
+### UX: Context Menu Harmonization
+
+- **Consistent naming**: Removed "with SVN" / "from SVN" suffixes (context is clear)
+- **Reorganized groups**: Explorer menu items now align with SCM menu structure
+- **Removed**: "Revert" from Explorer context (use SCM view - can't detect modified files in Explorer)
+
+### UX: Untracked vs Deleted Clarity
+
+- **Badge**: "U" for untracked (file kept), "D" for deleted (file removed)
+- **Strikethrough**: Only for truly deleted files
+- **Tooltip**: "Untracked: Removed from SVN (file kept locally)" vs "Deleted: File will be removed"
+
+## [0.1.6] (2025-12-21)
+
+### Feature: Untrack Command
+
+- **Renamed**: "Remove" → "Untrack" for clearer intent (always keeps local files)
+- **Explorer**: Right-click → "Untrack from SVN" in Explorer context menu
+- **Folders**: Confirmation prompt before untracking folders recursively
+- **Ignore prompt**: Offer to add to svn:ignore after untracking
+
+## [0.1.5] (2025-12-21)
+
+### Feature: Watch Files for Remote Changes
+
+- **New**: Watch files/folders for remote change notifications
+- **Commands**: "Toggle Watch" and "Manage Watches" in Command Palette and context menu
+- **Status bar**: Shows `$(eye) N` when watching N items
+- **Notifications**: Modal alert when watched files have remote changes
+- **Folder watch**: Watching a folder includes all descendants
+- **Persistence**: Watches stored in workspace state across restarts
+- **Auto-clear**: Pending state cleared after running Update command
+
 ## [0.1.4] (2025-12-20)
 
 ### Performance: Stat Cache

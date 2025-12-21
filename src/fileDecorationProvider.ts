@@ -122,22 +122,36 @@ export class SvnFileDecorationProvider
     }
 
     const isFolder = resource.kind === "dir";
-    let badge = this.getBadge(status, resource.renameResourceUri, isFolder);
+    let badge = this.getBadge(
+      status,
+      resource.renameResourceUri,
+      isFolder,
+      resource.localFileExists
+    );
     let color = this.getColor(status);
-    let tooltip = this.getTooltip(status, resource.renameResourceUri, isFolder);
+    let tooltip = this.getTooltip(
+      status,
+      resource.renameResourceUri,
+      isFolder,
+      resource.localFileExists
+    );
 
-    // Property-only changes (status=NORMAL, props=modified) get "P" badge
-    if (
-      status === Status.NORMAL &&
-      resource.props &&
-      resource.props !== PropStatus.NONE
-    ) {
-      badge = "P";
-      color = new ThemeColor("gitDecoration.modifiedResourceForeground");
-      tooltip = "Property modified";
+    // Property changes: P for property-only, PM for content+property
+    if (resource.props && resource.props !== PropStatus.NONE) {
+      if (status === Status.NORMAL) {
+        // Property-only change
+        badge = "P";
+        color = new ThemeColor("gitDecoration.modifiedResourceForeground");
+        tooltip = "Property modified";
+      } else if (status === Status.MODIFIED) {
+        // Content + property change
+        badge = "PM";
+        tooltip = "Modified (content and property)";
+      }
     }
 
     // Add lock info to tooltip, badge, and color (K/O/B/T per SVN convention)
+    // VS Code limits badges to 2 chars, so only append lock if badge is 1 char
     if (resource.lockStatus) {
       const lockInfo = this.getLockTooltip(
         resource.lockStatus,
@@ -146,7 +160,10 @@ export class SvnFileDecorationProvider
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
       // Use SVN lock letters: K=yours, O=others, B=broken, T=stolen
       const lockLetter = resource.lockStatus;
-      badge = badge ? `${badge}${lockLetter}` : lockLetter;
+      // Only combine if result is ≤2 chars (e.g., MK ok, PMK not ok)
+      if (!badge || badge.length === 1) {
+        badge = badge ? `${badge}${lockLetter}` : lockLetter;
+      }
       // Lock color: B/T always red, K/O if no status color
       if (
         resource.lockStatus === LockStatus.B ||
@@ -165,37 +182,32 @@ export class SvnFileDecorationProvider
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
       // K=yours, O=others
       const lockLetter = resource.hasLockToken ? LockStatus.K : LockStatus.O;
-      badge = badge ? `${badge}${lockLetter}` : lockLetter;
+      // Only combine if result is ≤2 chars
+      if (!badge || badge.length === 1) {
+        badge = badge ? `${badge}${lockLetter}` : lockLetter;
+      }
       // Use lock color if no status color
       if (!color) {
         color = this.getLockColor(lockLetter);
       }
     }
 
-    // Check if file has needs-lock property
-    // Note: VS Code limits badges to 2 chars, so L is only shown if no lock status
+    // Check if file has needs-lock property - add to tooltip only (no L badge)
     const hasNeedsLock = this.repository.hasNeedsLockCached(uri.fsPath);
-    const hasLockBadge = !!resource.lockStatus || resource.locked;
 
     if (!badge && !color) {
-      // No status decoration - show just L if needs-lock
+      // No status decoration - needs-lock shown in status bar, not badge
       if (hasNeedsLock) {
         return {
-          badge: "L",
           tooltip: "Needs lock - file is read-only until locked",
-          color: new ThemeColor("list.deemphasizedForeground"),
           propagate: false
         };
       }
       return undefined;
     }
 
-    // Add L prefix if needs-lock AND no lock badge (to stay within 2 char limit)
-    // If locked (K/O/B/T), L is implied and shown in tooltip only
+    // Add needs-lock to tooltip only (no L badge - shown in status bar instead)
     if (hasNeedsLock) {
-      if (!hasLockBadge && badge && badge.length === 1) {
-        badge = `L${badge}`; // e.g., LM, LA (2 chars max)
-      }
       tooltip = tooltip
         ? `${tooltip} (needs-lock)`
         : "Needs lock - file is read-only until locked";
@@ -257,15 +269,13 @@ export class SvnFileDecorationProvider
       };
     }
 
-    // Fall back to needs-lock check
+    // Fall back to needs-lock check - tooltip only (no L badge)
     if (!this.repository.hasNeedsLockCached(uri.fsPath)) {
       return undefined;
     }
 
     return {
-      badge: "L",
       tooltip: "Needs lock - file is read-only until locked",
-      color: new ThemeColor("list.deemphasizedForeground"),
       propagate: false
     };
   }
@@ -331,7 +341,8 @@ export class SvnFileDecorationProvider
   private getBadge(
     status: string,
     renameUri?: Uri,
-    isFolder: boolean = false
+    isFolder: boolean = false,
+    localFileExists?: boolean
   ): string | undefined {
     // Addition with history (rename/copy) - 2 char limit for badges
     if (status === Status.ADDED && renameUri) {
@@ -350,7 +361,8 @@ export class SvnFileDecorationProvider
         badge = "C";
         break;
       case Status.DELETED:
-        badge = "D";
+        // U for untracked (file kept), D for truly deleted
+        badge = localFileExists ? "U" : "D";
         break;
       case Status.MODIFIED:
         badge = "M";
@@ -430,7 +442,8 @@ export class SvnFileDecorationProvider
   private getTooltip(
     status: string,
     renameUri?: Uri,
-    isFolder: boolean = false
+    isFolder: boolean = false,
+    localFileExists?: boolean
   ): string | undefined {
     const prefix = isFolder ? "Folder " : "";
 
@@ -448,7 +461,10 @@ export class SvnFileDecorationProvider
       case Status.CONFLICTED:
         return `${prefix}Conflicted`;
       case Status.DELETED:
-        return `${prefix}Deleted`;
+        // Distinguish untracked (file kept) from truly deleted
+        return localFileExists
+          ? `${prefix}Untracked: Removed from SVN (file kept locally)`
+          : `${prefix}Deleted: File will be removed`;
       case Status.MODIFIED:
         return `${prefix}Modified`;
       case Status.REPLACED:

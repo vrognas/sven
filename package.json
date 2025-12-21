@@ -2,7 +2,7 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.1.4",
+  "version": "0.1.8",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -154,13 +154,6 @@
     "views": {
       "scm": [
         {
-          "id": "sven.svn",
-          "name": "Server Changes",
-          "when": "svnOpenRepositoryCount != 0",
-          "visibility": "visible",
-          "order": 1
-        },
-        {
           "id": "sven.branchchanges",
           "name": "Branch Changes",
           "when": "svnOpenRepositoryCount != 0 && svn.hasBranch",
@@ -191,11 +184,6 @@
       ]
     },
     "viewsWelcome": [
-      {
-        "view": "sven.svn",
-        "contents": "Check for updates from the server .\n\n[Check for Updates](command:svn.update)\n\nTip: Enable `svn.sourceControl.checkForIncomingChanges` for automatic checks.",
-        "when": "svnOpenRepositoryCount != 0"
-      },
       {
         "view": "sven.repolog",
         "contents": "View the commit history of your repository.\n\n[Show Log](command:svn.log)\n\nTip: Use the log to browse commits, view changes, and understand project history.",
@@ -463,6 +451,17 @@
         "category": "SVN"
       },
       {
+        "command": "sven.toggleWatch",
+        "title": "Toggle Watch for Remote Changes",
+        "category": "SVN",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "sven.manageWatches",
+        "title": "Manage Watches",
+        "category": "SVN"
+      },
+      {
         "command": "sven.blameFile",
         "title": "Blame File",
         "category": "SVN",
@@ -721,8 +720,13 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "sven.remove",
-        "title": "Remove Selected",
+        "command": "sven.untrack",
+        "title": "Untrack",
+        "category": "SVN"
+      },
+      {
+        "command": "sven.untrackExplorer",
+        "title": "Untrack",
         "category": "SVN"
       },
       {
@@ -920,7 +924,7 @@
       },
       {
         "command": "sven.revertExplorer",
-        "title": "Revert with SVN",
+        "title": "Revert",
         "category": "SVN",
         "icon": "$(discard)"
       },
@@ -944,12 +948,6 @@
         "title": "Update selected",
         "category": "SVN",
         "icon": "$(cloud-download)"
-      },
-      {
-        "command": "sven.treeview.refreshProvider",
-        "title": "Refresh",
-        "category": "SVN",
-        "icon": "$(refresh)"
       },
       {
         "command": "sven.update",
@@ -1005,6 +1003,14 @@
         {
           "command": "sven.addToIgnoreSCM",
           "when": "false"
+        },
+        {
+          "command": "sven.toggleWatch",
+          "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.manageWatches",
+          "when": "svnOpenRepositoryCount != 0"
         },
         {
           "command": "sven.blame.clearBlame",
@@ -1153,8 +1159,12 @@
           "when": "svnOpenRepositoryCount != 0"
         },
         {
-          "command": "sven.remove",
+          "command": "sven.untrack",
           "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.untrackExplorer",
+          "when": "false"
         },
         {
           "command": "sven.removeUnversioned",
@@ -1269,10 +1279,6 @@
           "when": "false"
         },
         {
-          "command": "sven.treeview.refreshProvider",
-          "when": "false"
-        },
-        {
           "command": "sven.update",
           "when": "svnOpenRepositoryCount != 0"
         },
@@ -1281,11 +1287,6 @@
         }
       ],
       "view/title": [
-        {
-          "command": "sven.treeview.refreshProvider",
-          "when": "view == svn",
-          "group": "navigation"
-        },
         {
           "command": "sven.repolog.goToBase",
           "when": "view == sven.repolog",
@@ -1329,12 +1330,12 @@
         },
         {
           "command": "sven.branchchanges.refresh",
-          "when": "view == branchchanges",
+          "when": "view == sven.branchchanges",
           "group": "navigation"
         },
         {
           "command": "sven.sparse.refresh",
-          "when": "view == sparseCheckout",
+          "when": "view == sven.sparseCheckout",
           "group": "navigation"
         }
       ],
@@ -1363,22 +1364,6 @@
           "command": "sven.setDepth",
           "when": "viewItem == sparseLocalDir",
           "group": "1_sparse@3"
-        },
-        {
-          "command": "sven.openHEADFile",
-          "when": "viewItem =~ /incomingChange:(added|modified)/"
-        },
-        {
-          "command": "sven.openFile",
-          "when": "viewItem =~ /incomingChange:(modified|deleted)/"
-        },
-        {
-          "command": "sven.treeview.pullIncomingChange",
-          "when": "viewItem =~ /incomingChange:*/"
-        },
-        {
-          "command": "sven.openChangeHead",
-          "when": "viewItem == incomingChange:modified"
         },
         {
           "command": "sven.repolog.remove",
@@ -1695,7 +1680,7 @@
           "group": "inline@1"
         },
         {
-          "command": "sven.remove",
+          "command": "sven.untrack",
           "when": "scmProvider == svn && scmResourceGroup != unversioned && scmResourceGroup != external && scmResourceGroup != conflicts && scmResourceGroup != remotechanges",
           "group": "2_modification"
         },
@@ -1761,33 +1746,38 @@
       "explorer/context": [
         {
           "submenu": "sven.propertiesSubmenu",
-          "group": "9_svn",
+          "group": "3_svn",
           "when": "svnOpenRepositoryCount != 0"
         },
         {
           "command": "sven.changelist",
-          "group": "9_svn",
+          "group": "3_svn",
           "when": "svnOpenRepositoryCount != 0"
         },
         {
-          "command": "sven.revertExplorer",
-          "group": "7_modification",
+          "command": "sven.untrackExplorer",
+          "group": "2_modification",
           "when": "svnOpenRepositoryCount != 0"
         },
         {
           "command": "sven.lock",
-          "group": "9_svn@2",
+          "group": "3_svn@2",
           "when": "svnOpenRepositoryCount != 0"
         },
         {
           "command": "sven.unlock",
-          "group": "9_svn@3",
+          "group": "3_svn@3",
           "when": "svnOpenRepositoryCount != 0"
         },
         {
           "command": "sven.setDepth",
-          "group": "9_svn@5",
+          "group": "3_svn@5",
           "when": "svnOpenRepositoryCount != 0 && explorerResourceIsFolder"
+        },
+        {
+          "command": "sven.toggleWatch",
+          "group": "3_svn@6",
+          "when": "svnOpenRepositoryCount != 0"
         }
       ]
     },
