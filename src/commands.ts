@@ -81,6 +81,7 @@ import { ApplyRecommendedSettings } from "./commands/applyRecommendedSettings";
 import { ToggleWatch } from "./commands/toggleWatch";
 import { ManageWatches } from "./commands/manageWatches";
 import { ManageNeedsLock } from "./commands/manageNeedsLock";
+import { ManageLocks } from "./commands/manageLocks";
 import { WatchService } from "./services/WatchService";
 
 export function registerCommands(
@@ -176,4 +177,7 @@ export function registerCommands(
 
   // Needs-lock commands
   disposables.push(new ManageNeedsLock());
+
+  // Lock management commands
+  disposables.push(new ManageLocks());
 }

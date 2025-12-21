@@ -2168,6 +2168,29 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
+   * Get all locked file paths with their lock info.
+   */
+  public getLockedFilePaths(): Array<{
+    relativePath: string;
+    lockStatus: LockStatus;
+    lockOwner?: string;
+  }> {
+    const result: Array<{
+      relativePath: string;
+      lockStatus: LockStatus;
+      lockOwner?: string;
+    }> = [];
+    for (const [relativePath, info] of this.lockStatusCache) {
+      result.push({
+        relativePath,
+        lockStatus: info.lockStatus,
+        lockOwner: info.lockOwner
+      });
+    }
+    return result;
+  }
+
+  /**
    * Check if a specific file has pending remote changes.
    */
   public hasRemoteChangeForFile(filePath: string): boolean {
