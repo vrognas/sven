@@ -22,7 +22,7 @@ export class NeedsLockStatusBar implements Disposable {
     this.statusBarItem = window.createStatusBarItem(
       "sven.needsLock.statusBar",
       StatusBarAlignment.Left,
-      49 // Left side, after watch status bar
+      49.1 // After watch (50), before other extensions at 49
     );
     this.statusBarItem.command = "sven.manageNeedsLock";
 

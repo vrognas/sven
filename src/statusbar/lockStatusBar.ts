@@ -21,7 +21,7 @@ export class LockStatusBar implements Disposable {
     this.statusBarItem = window.createStatusBarItem(
       "sven.lock.statusBar",
       StatusBarAlignment.Left,
-      48 // Left side, after needs-lock status bar
+      49.05 // Immediately after needs-lock (49.1)
     );
     this.statusBarItem.command = "sven.manageLocks";
 
