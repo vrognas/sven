@@ -2171,11 +2171,15 @@ export class Repository implements IRemoteRepository {
    * Check if a specific file has pending remote changes.
    */
   public hasRemoteChangeForFile(filePath: string): boolean {
-    if (!this.groupManager.remoteChanges) {
+    const remoteChanges = this.groupManager.remoteChanges;
+    if (!remoteChanges?.resourceStates) {
       return false;
     }
     const normalizedPath = filePath.replace(/\\/g, "/").toLowerCase();
-    for (const resource of this.groupManager.remoteChanges.resourceStates) {
+    for (const resource of remoteChanges.resourceStates) {
+      if (!resource.resourceUri) {
+        continue;
+      }
       const resourcePath = resource.resourceUri.fsPath
         .replace(/\\/g, "/")
         .toLowerCase();
@@ -2348,7 +2352,10 @@ export class Repository implements IRemoteRepository {
    */
   public async promptLockIfNeeded(uri: Uri): Promise<void> {
     // Only check files in this repository's working copy
-    if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+    // Use case-insensitive comparison for Windows (drive letter case)
+    const normalizedUri = uri.fsPath.toLowerCase();
+    const normalizedRoot = this.workspaceRoot.toLowerCase();
+    if (!normalizedUri.startsWith(normalizedRoot)) {
       return;
     }
 
@@ -2382,7 +2389,10 @@ export class Repository implements IRemoteRepository {
    */
   private async promptUpdateIfRemoteChanges(uri: Uri): Promise<void> {
     // Only check files in this repository's working copy
-    if (!uri.fsPath.startsWith(this.workspaceRoot)) {
+    // Use case-insensitive comparison for Windows (drive letter case)
+    const normalizedUri = uri.fsPath.toLowerCase();
+    const normalizedRoot = this.workspaceRoot.toLowerCase();
+    if (!normalizedUri.startsWith(normalizedRoot)) {
       return;
     }
 
