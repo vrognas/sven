@@ -11,7 +11,7 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { LockStatus, PropStatus, Status } from "./common/types";
+import { LockStatus, PropertyChange, PropStatus, Status } from "./common/types";
 import { configuration } from "./helpers/configuration";
 import { Repository } from "./repository";
 
@@ -137,16 +137,23 @@ export class SvnFileDecorationProvider
     );
 
     // Property changes: P for property-only, PM for content+property
-    if (resource.props && resource.props !== PropStatus.NONE) {
+    if (
+      resource.props &&
+      resource.props !== PropStatus.NONE &&
+      resource.props !== PropStatus.NORMAL
+    ) {
       if (status === Status.NORMAL) {
-        // Property-only change
+        // Property-only change - show details if available
         badge = "P";
         color = new ThemeColor("gitDecoration.modifiedResourceForeground");
-        tooltip = "Property modified";
+        tooltip = this.formatPropertyChangesTooltip(resource.propertyChanges);
       } else if (status === Status.MODIFIED) {
         // Content + property change
         badge = "PM";
-        tooltip = "Modified (content and property)";
+        const propDetails = this.formatPropertyChangesTooltip(
+          resource.propertyChanges
+        );
+        tooltip = `Modified + ${propDetails}`;
       }
     }
 
@@ -319,20 +326,23 @@ export class SvnFileDecorationProvider
 
   /**
    * Convert repository log action to Status constant
-   * Returns special marker "ADDED_WITH_HISTORY" for A+ (rename/copy)
+   * Actions: A=added, M=modified, D=deleted, R=renamed, !=replaced
    */
   private actionToStatus(action: string): string | undefined {
     switch (action) {
       case "A":
         return Status.ADDED;
-      case "A+":
-        return "ADDED_WITH_HISTORY"; // Special marker for rename/copy
+      case "R":
+        return "RENAMED"; // Rename/copy with history preserved
       case "M":
         return Status.MODIFIED;
       case "D":
         return Status.DELETED;
-      case "R":
-        return Status.REPLACED;
+      case "!":
+        return Status.REPLACED; // History broken
+      // Legacy support for old "A+" action
+      case "A+":
+        return "RENAMED";
       default:
         return undefined;
     }
@@ -344,12 +354,17 @@ export class SvnFileDecorationProvider
     isFolder: boolean = false,
     localFileExists?: boolean
   ): string | undefined {
-    // Addition with history (rename/copy) - 2 char limit for badges
+    // Renamed files (from working copy with renameUri)
     if (status === Status.ADDED && renameUri) {
-      return "A+";
+      return isFolder ? "📁R" : "R";
     }
-    if (status === "ADDED_WITH_HISTORY") {
-      return "A+";
+    // Renamed files (from history view)
+    if (status === "RENAMED") {
+      return isFolder ? "📁R" : "R";
+    }
+    // Replaced in chain rename (has renameUri)
+    if (status === Status.REPLACED && renameUri) {
+      return isFolder ? "📁R" : "R";
     }
 
     let badge: string | undefined;
@@ -368,7 +383,8 @@ export class SvnFileDecorationProvider
         badge = "M";
         break;
       case Status.REPLACED:
-        badge = "R";
+        // ! for replaced without rename (history broken)
+        badge = "!";
         break;
       case Status.UNVERSIONED:
         badge = "?";
@@ -390,14 +406,14 @@ export class SvnFileDecorationProvider
   private getColor(status: string): ThemeColor | undefined {
     switch (status) {
       case Status.MODIFIED:
-      case Status.REPLACED:
+      case "RENAMED": // Renamed gets modified color (orange)
         return new ThemeColor("gitDecoration.modifiedResourceForeground");
       case Status.DELETED:
       case Status.MISSING:
         return new ThemeColor("gitDecoration.deletedResourceForeground");
       case Status.ADDED:
       case Status.UNVERSIONED:
-      case "ADDED_WITH_HISTORY":
+      case Status.REPLACED: // Replaced gets untracked color (green)
         return new ThemeColor("gitDecoration.untrackedResourceForeground");
       case Status.IGNORED:
         return new ThemeColor("gitDecoration.ignoredResourceForeground");
@@ -439,6 +455,25 @@ export class SvnFileDecorationProvider
     }
   }
 
+  /**
+   * Format property changes for tooltip display.
+   * Shows: "svn:needs-lock added, svn:ignore modified"
+   */
+  private formatPropertyChangesTooltip(
+    propertyChanges?: PropertyChange[]
+  ): string {
+    if (!propertyChanges || propertyChanges.length === 0) {
+      return "Property modified";
+    }
+
+    // Format each property change
+    const parts = propertyChanges.map(
+      change => `${change.name} ${change.changeType}`
+    );
+
+    return parts.join(", ");
+  }
+
   private getTooltip(
     status: string,
     renameUri?: Uri,
@@ -447,12 +482,14 @@ export class SvnFileDecorationProvider
   ): string | undefined {
     const prefix = isFolder ? "Folder " : "";
 
-    // A+ badge - added with history (rename/copy)
-    if (status === Status.ADDED && renameUri) {
-      return `${prefix}Added with history: Rename/copy (history preserved) from ${renameUri.fsPath}`;
+    // Renamed from working copy (has renameUri) - show just filename
+    if ((status === Status.ADDED || status === Status.REPLACED) && renameUri) {
+      const oldName = path.basename(renameUri.fsPath);
+      return `${prefix}Renamed from ${oldName} (history preserved)`;
     }
-    if (status === "ADDED_WITH_HISTORY") {
-      return `${prefix}Added with history: Rename/copy (history preserved)`;
+    // Renamed from history view
+    if (status === "RENAMED") {
+      return `${prefix}Renamed (history preserved)`;
     }
 
     switch (status) {
@@ -463,8 +500,8 @@ export class SvnFileDecorationProvider
       case Status.DELETED:
         // Distinguish untracked (file kept) from truly deleted
         return localFileExists
-          ? `${prefix}Untracked: Removed from SVN (file kept locally)`
-          : `${prefix}Deleted: File will be removed`;
+          ? `${prefix}Untracked: Remove from server; keep local`
+          : `${prefix}Deleted: Remove from server and local`;
       case Status.MODIFIED:
         return `${prefix}Modified`;
       case Status.REPLACED:
