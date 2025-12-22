@@ -12,6 +12,7 @@ import { formatSvnError, logError } from "../util/errorLogger";
 /**
  * Toggle svn:ignore for a file/folder.
  * - If ignored: remove from svn:ignore
+ * - If versioned: untrack (svn delete --keep-local) + add to svn:ignore
  * - If unversioned: add to svn:ignore
  */
 export class ToggleIgnore extends Command {
@@ -34,18 +35,50 @@ export class ToggleIgnore extends Command {
     const dirUri = Uri.file(dirName);
 
     return this.runByRepository(dirUri, async (repository: Repository) => {
-      // Check if file is ignored
+      // Check file status
       const resource = repository.getResourceFromFile(uri);
       const isIgnored = resource?.type === Status.IGNORED;
+      const isUnversioned = resource?.type === Status.UNVERSIONED;
 
       if (isIgnored) {
         // Remove from ignore
         await this.removeFromIgnore(repository, dirName, fileName);
-      } else {
-        // Add to ignore
+      } else if (isUnversioned || !resource) {
+        // Unversioned file - add to ignore
         await this.addToIgnore([uri]);
+      } else {
+        // Versioned file - untrack first, then add to ignore
+        await this.untrackAndIgnore(repository, uri, dirName, fileName);
       }
     });
+  }
+
+  /**
+   * Untrack a versioned file and add to svn:ignore.
+   * Uses svn delete --keep-local to preserve the file locally.
+   */
+  private async untrackAndIgnore(
+    repository: Repository,
+    uri: Uri,
+    dirName: string,
+    fileName: string
+  ): Promise<void> {
+    try {
+      // Step 1: Untrack the file (svn delete --keep-local)
+      await repository.removeFiles([uri.fsPath], true);
+
+      // Step 2: Add to svn:ignore on parent folder
+      await repository.addToIgnore([fileName], dirName, false);
+
+      window.showInformationMessage(
+        `Untracked '${fileName}' and added to svn:ignore on parent folder`
+      );
+    } catch (error) {
+      logError("Failed to untrack and ignore file", error);
+      window.showErrorMessage(
+        formatSvnError(error, "Failed to untrack and ignore file")
+      );
+    }
   }
 
   private async removeFromIgnore(

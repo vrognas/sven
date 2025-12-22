@@ -31,10 +31,10 @@ import { applyLineChanges } from "../lineChanges";
 import { SourceControlManager } from "../source_control_manager";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
-import IncomingChangeNode from "../treeView/nodes/incomingChangeNode";
 import { fromSvnUri, toSvnUri } from "../uri";
 import { getSvnDir } from "../util";
 import { logError, logWarning } from "../util/errorLogger";
+import { WatchService } from "../services/WatchService";
 
 /**
  * Type-safe command argument patterns used across all commands.
@@ -50,8 +50,6 @@ export type CommandArgs =
   | [Uri, LineChange[], number] // revertChange
   // Resource/URI with optional states
   | [Resource | Uri | undefined, ...SourceControlResourceState[]]
-  // IncomingChangeNode commands
-  | [IncomingChangeNode, ...unknown[]]
   // Other variadic patterns
   | unknown[];
 
@@ -64,9 +62,18 @@ export type CommandResult = void | Promise<void> | Promise<unknown>;
 export abstract class Command implements Disposable {
   // Phase 10.2 perf fix - cache SourceControlManager to avoid IPC overhead
   private static _sourceControlManager?: SourceControlManager;
+  private static _watchService?: WatchService;
 
   static setSourceControlManager(scm: SourceControlManager) {
     Command._sourceControlManager = scm;
+  }
+
+  static setWatchService(ws: WatchService) {
+    Command._watchService = ws;
+  }
+
+  protected get watchService(): WatchService | undefined {
+    return Command._watchService;
   }
 
   private _disposable?: Disposable;
@@ -431,7 +438,7 @@ export abstract class Command implements Disposable {
   }
 
   protected async openChange(
-    arg?: Resource | Uri | IncomingChangeNode,
+    arg?: Resource | Uri,
     against?: string,
     resourceStates?: SourceControlResourceState[]
   ): Promise<void> {
@@ -444,16 +451,6 @@ export abstract class Command implements Disposable {
       if (resource !== undefined) {
         resources = [resource];
       }
-    } else if (arg instanceof IncomingChangeNode) {
-      const resource = new Resource(
-        arg.uri,
-        arg.type,
-        undefined,
-        arg.props,
-        true
-      );
-
-      resources = [resource];
     } else {
       let resource: Resource | undefined;
 
@@ -568,7 +565,9 @@ export abstract class Command implements Disposable {
         const ignored = await inputIgnoreList(repository, resources);
 
         if (ignored) {
-          window.showInformationMessage("File(s) added to ignore list");
+          window.showInformationMessage(
+            "svn:ignore set on parent folder - file(s) will be ignored"
+          );
         }
       } catch (error) {
         logError("Property ignore operation failed", error);

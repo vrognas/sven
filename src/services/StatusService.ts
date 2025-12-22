@@ -3,7 +3,13 @@
 // Licensed under MIT License
 
 import { Disposable, Uri, workspace } from "vscode";
-import { IFileStatus, LockStatus, Status } from "../common/types";
+import {
+  IFileStatus,
+  LockStatus,
+  PropertyChange,
+  PropStatus,
+  Status
+} from "../common/types";
 import { configuration } from "../helpers/configuration";
 import { stat } from "../fs";
 import { Resource } from "../resource";
@@ -306,6 +312,9 @@ export class StatusService implements IStatusService {
       }
     }
 
+    // Pre-fetch property changes for files with property modifications
+    const propertyChangesMap = await this.fetchPropertyChanges(statuses);
+
     for (const status of statuses) {
       // Check for incomplete/WC-admin-locked status on root
       if (status.path === ".") {
@@ -393,6 +402,21 @@ export class StatusService implements IStatusService {
         }
       }
 
+      // For DELETED items, check if local file still exists
+      // (distinguishes "untracked" from "truly deleted")
+      let localFileExists: boolean | undefined;
+      if (status.status === Status.DELETED) {
+        try {
+          await stat(uri.fsPath);
+          localFileExists = true;
+        } catch {
+          localFileExists = false;
+        }
+      }
+
+      // Get property changes from pre-fetched map
+      const propertyChanges = propertyChangesMap.get(status.path);
+
       const resource = new Resource(
         uri,
         status.status,
@@ -404,14 +428,17 @@ export class StatusService implements IStatusService {
         status.wcStatus.hasLockToken,
         lockStatus,
         status.changelist,
-        kind
+        kind,
+        localFileExists,
+        false, // renamedAndModified - keep existing behavior
+        propertyChanges
       );
 
       // Skip normal/unchanged items (locked-only files get decorator from cache)
       const isNormal =
         status.status === Status.NORMAL || status.status === Status.NONE;
       const propsNormal =
-        status.props === Status.NORMAL || status.props === Status.NONE;
+        status.props === PropStatus.NORMAL || status.props === PropStatus.NONE;
       const noChangelist = !status.changelist;
       // Skip locked-only files (no content changes) - lock is already on server
       // Lock badge is shown via lockStatusCache, not resource group
@@ -459,6 +486,54 @@ export class StatusService implements IStatusService {
       needCleanUp,
       lockStatuses
     };
+  }
+
+  /**
+   * Fetch property changes for files with property modifications.
+   * Returns a Map of path → PropertyChange[] for efficient lookup.
+   * Uses concurrent fetching with limit to avoid spawning too many SVN processes.
+   */
+  private async fetchPropertyChanges(
+    statuses: IFileStatus[]
+  ): Promise<Map<string, PropertyChange[]>> {
+    const result = new Map<string, PropertyChange[]>();
+
+    // Find files with property changes (not none/normal)
+    const filesWithPropChanges = statuses.filter(
+      s =>
+        s.props &&
+        s.props !== PropStatus.NONE &&
+        s.props !== PropStatus.NORMAL &&
+        s.status !== Status.UNVERSIONED // Unversioned files can't have prop changes
+    );
+
+    if (filesWithPropChanges.length === 0) {
+      return result;
+    }
+
+    // Fetch property changes concurrently (limit to 5 parallel)
+    const CONCURRENCY_LIMIT = 5;
+    const chunks: IFileStatus[][] = [];
+    for (let i = 0; i < filesWithPropChanges.length; i += CONCURRENCY_LIMIT) {
+      chunks.push(filesWithPropChanges.slice(i, i + CONCURRENCY_LIMIT));
+    }
+
+    for (const chunk of chunks) {
+      const promises = chunk.map(async status => {
+        const fullPath = path.join(this.workspaceRoot, status.path);
+        const changes = await this.repository.getPropertyChanges(fullPath);
+        return { path: status.path, changes };
+      });
+
+      const results = await Promise.all(promises);
+      for (const { path: filePath, changes } of results) {
+        if (changes.length > 0) {
+          result.set(filePath, changes);
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
