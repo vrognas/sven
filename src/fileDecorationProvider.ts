@@ -251,11 +251,15 @@ export class SvnFileDecorationProvider
     const lockInfo = this.repository.getLockStatusCached(uri.fsPath);
     if (lockInfo) {
       const lockLetter = lockInfo.lockStatus;
-      const tooltip = this.getLockTooltip(
+      let tooltip: string | undefined = this.getLockTooltip(
         lockInfo.lockStatus,
         lockInfo.lockOwner
       );
       const color = this.getLockColor(lockInfo.lockStatus);
+
+      // Append property info (eol-style, mime-type)
+      tooltip = this.appendPropertyTooltip(uri.fsPath, tooltip);
+
       return {
         badge: lockLetter,
         tooltip,
