@@ -71,7 +71,7 @@ describe("LockStatusBar", () => {
 
       statusBar.update();
 
-      expect(statusBar.getTooltip()).toBe("1 locked file");
+      expect(statusBar.getTooltip()).toBe("1 locked item");
     });
 
     it("shows plural tooltip for multiple files", () => {
@@ -80,7 +80,7 @@ describe("LockStatusBar", () => {
 
       statusBar.update();
 
-      expect(statusBar.getTooltip()).toBe("5 locked files");
+      expect(statusBar.getTooltip()).toBe("5 locked items");
     });
 
     it("aggregates count from multiple repositories", () => {

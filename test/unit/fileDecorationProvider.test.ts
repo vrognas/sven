@@ -39,6 +39,8 @@ function createMockRepository(): Repository {
     getResourceFromFile: vi.fn(),
     hasNeedsLockCached: vi.fn(() => false),
     getLockStatusCached: vi.fn(() => undefined),
+    getEolStyleCached: vi.fn(() => undefined),
+    getMimeTypeCached: vi.fn(() => undefined),
     unversioned: { resourceStates: [] },
     ignored: []
   } as unknown as Repository;

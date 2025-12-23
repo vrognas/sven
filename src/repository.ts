@@ -198,6 +198,11 @@ export class Repository implements IRemoteRepository {
   private needsLockCacheExpiry = 0;
   private static readonly NEEDS_LOCK_CACHE_TTL = 60000; // 60 seconds
 
+  // Property caches for decoration tooltips (eol-style, mime-type)
+  private eolStyleCache = new Map<string, string>();
+  private mimeTypeCache = new Map<string, string>();
+  private propertyCacheExpiry = 0;
+
   // Promise that resolves after initial status refresh completes
   private _statusReadyResolve!: () => void;
   public readonly statusReady: Promise<void> = new Promise(resolve => {
@@ -862,7 +867,9 @@ export class Repository implements IRemoteRepository {
     const prevLockCount = this.lockStatusCache.size;
     this.lockStatusCache.clear();
     for (const [relativePath, lockInfo] of result.lockStatuses) {
-      this.lockStatusCache.set(relativePath, lockInfo);
+      // Normalize key: forward slashes, lowercase on Windows
+      const cacheKey = this.normalizeRelativePath(relativePath);
+      this.lockStatusCache.set(cacheKey, lockInfo);
     }
     // Fire event if lock count changed
     if (this.lockStatusCache.size !== prevLockCount) {
@@ -927,6 +934,11 @@ export class Repository implements IRemoteRepository {
     // Avoids redundant propget calls on frequent status updates
     if (Date.now() >= this.needsLockCacheExpiry) {
       await this.refreshNeedsLockCache();
+    }
+
+    // Refresh eol-style/mime-type caches for decoration tooltips
+    if (Date.now() >= this.propertyCacheExpiry) {
+      await this.refreshPropertyCaches();
     }
 
     // Refresh file decorations in Explorer view
@@ -2264,6 +2276,79 @@ export class Repository implements IRemoteRepository {
     }
   }
 
+  // =========================================================================
+  // EOL-Style and MIME-Type Property Caching
+  // =========================================================================
+
+  /**
+   * Refresh eol-style and mime-type caches.
+   * Called during status updates for efficient decoration tooltips.
+   */
+  public async refreshPropertyCaches(): Promise<void> {
+    try {
+      const [eolStyles, mimeTypes] = await Promise.all([
+        this.repository.getAllEolStyleFiles(),
+        this.repository.getAllMimeTypeFiles()
+      ]);
+      // Normalize keys for case-insensitive lookup on Windows
+      this.eolStyleCache = this.normalizeMapKeys(eolStyles);
+      this.mimeTypeCache = this.normalizeMapKeys(mimeTypes);
+      this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+    } catch {
+      // Keep existing cache on error
+    }
+  }
+
+  /**
+   * Normalize map keys: forward slashes and lowercase on Windows.
+   */
+  private normalizeMapKeys(map: Map<string, string>): Map<string, string> {
+    const normalized = new Map<string, string>();
+    const isWindows = process.platform === "win32";
+    for (const [key, value] of map) {
+      // SVN uses forward slashes, but normalize anyway
+      let normalizedKey = key.replace(/\\/g, "/");
+      if (isWindows) {
+        normalizedKey = normalizedKey.toLowerCase();
+      }
+      normalized.set(normalizedKey, value);
+    }
+    return normalized;
+  }
+
+  /**
+   * Get cached eol-style for a file (sync, fast for decorations).
+   */
+  public getEolStyleCached(filePath: string): string | undefined {
+    const cacheKey = this.toCacheKey(filePath);
+    return this.eolStyleCache.get(cacheKey);
+  }
+
+  /**
+   * Get cached mime-type for a file (sync, fast for decorations).
+   */
+  public getMimeTypeCached(filePath: string): string | undefined {
+    const cacheKey = this.toCacheKey(filePath);
+    return this.mimeTypeCache.get(cacheKey);
+  }
+
+  /**
+   * Convert file path to cache key (lowercase on Windows for case-insensitive match).
+   */
+  private toCacheKey(filePath: string): string {
+    const relativePath = this.toRelativePath(filePath);
+    return this.normalizeRelativePath(relativePath);
+  }
+
+  /**
+   * Normalize a relative path for cache key use.
+   * Forward slashes, lowercase on Windows.
+   */
+  private normalizeRelativePath(relativePath: string): string {
+    const normalized = relativePath.replace(/\\/g, "/");
+    return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+  }
+
   /**
    * Update lock status cache with info from --show-updates status call.
    * Called when fetchLockStatus=true in updateModelState.
@@ -2302,16 +2387,9 @@ export class Repository implements IRemoteRepository {
   ):
     | { lockStatus: LockStatus; lockOwner?: string; hasLockToken: boolean }
     | undefined {
-    // Convert absolute path to relative
-    let relativePath = filePath;
-    if (filePath.startsWith(this.workspaceRoot)) {
-      relativePath = filePath.substring(this.workspaceRoot.length);
-      // Remove leading separator
-      if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-        relativePath = relativePath.substring(1);
-      }
-    }
-    return this.lockStatusCache.get(relativePath);
+    // Use same normalization as property caches for consistency
+    const cacheKey = this.toCacheKey(filePath);
+    return this.lockStatusCache.get(cacheKey);
   }
 
   /**
@@ -2356,17 +2434,33 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Convert absolute path to relative path.
+   * Convert absolute path to relative path, normalized for cache lookup.
+   * SVN uses forward slashes; Windows paths need normalization.
    */
   private toRelativePath(filePath: string): string {
-    let relativePath = filePath;
-    if (filePath.startsWith(this.workspaceRoot)) {
-      relativePath = filePath.substring(this.workspaceRoot.length);
-      if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-        relativePath = relativePath.substring(1);
-      }
+    // Normalize separators to forward slashes (SVN convention)
+    const normalized = filePath.replace(/\\/g, "/");
+    const normalizedRoot = this.workspaceRoot.replace(/\\/g, "/");
+
+    // Case-insensitive comparison on Windows
+    const isWindows = process.platform === "win32";
+    const comparePath = isWindows ? normalized.toLowerCase() : normalized;
+    const compareRoot = isWindows
+      ? normalizedRoot.toLowerCase()
+      : normalizedRoot;
+
+    // Check with trailing separator to avoid partial matches
+    if (comparePath.startsWith(compareRoot + "/")) {
+      // Use original normalized path (preserve case for display)
+      return normalized.substring(normalizedRoot.length + 1);
     }
-    return relativePath;
+    // Exact match (file is workspace root itself)
+    if (comparePath === compareRoot) {
+      return ".";
+    }
+
+    // Not under workspace - return normalized path
+    return normalized;
   }
 
   /**
@@ -2432,6 +2526,137 @@ export class Repository implements IRemoteRepository {
     if (choice === "Update") {
       await commands.executeCommand("sven.update");
     }
+  }
+
+  // =========================================================================
+  // EOL-Style Property Methods
+  // =========================================================================
+
+  /**
+   * Set svn:eol-style property on file/directory.
+   */
+  public async setEolStyle(
+    filePath: string,
+    value: "native" | "LF" | "CRLF" | "CR",
+    recursive = false
+  ) {
+    const result = await this.run(Operation.PropertyChange, () =>
+      this.repository.setEolStyle(filePath, value, recursive)
+    );
+    // Update cache and refresh decorations on success
+    if (result.exitCode === 0) {
+      if (recursive) {
+        // Recursive: invalidate entire cache, refresh all decorations
+        this.propertyCacheExpiry = 0;
+        this.fileDecorationProvider?.refresh(undefined);
+      } else {
+        const cacheKey = this.toCacheKey(filePath);
+        this.eolStyleCache.set(cacheKey, value);
+        this.fileDecorationProvider?.refresh(Uri.file(filePath));
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Remove svn:eol-style property from file/directory.
+   */
+  public async removeEolStyle(filePath: string, recursive = false) {
+    const result = await this.run(Operation.PropertyChange, () =>
+      this.repository.removeEolStyle(filePath, recursive)
+    );
+    // Update cache and refresh decorations on success
+    if (result.exitCode === 0) {
+      if (recursive) {
+        // Recursive: invalidate entire cache, refresh all decorations
+        this.propertyCacheExpiry = 0;
+        this.fileDecorationProvider?.refresh(undefined);
+      } else {
+        const cacheKey = this.toCacheKey(filePath);
+        this.eolStyleCache.delete(cacheKey);
+        this.fileDecorationProvider?.refresh(Uri.file(filePath));
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Get all files with svn:eol-style property.
+   */
+  public async getAllEolStyleFiles(): Promise<Map<string, string>> {
+    return this.repository.getAllEolStyleFiles();
+  }
+
+  // =========================================================================
+  // MIME-Type Property Methods
+  // =========================================================================
+
+  /**
+   * Set svn:mime-type property on file.
+   */
+  public async setMimeType(filePath: string, value: string) {
+    const result = await this.run(Operation.PropertyChange, () =>
+      this.repository.setMimeType(filePath, value)
+    );
+    // Update cache and refresh decorations on success
+    if (result.exitCode === 0) {
+      const cacheKey = this.toCacheKey(filePath);
+      this.mimeTypeCache.set(cacheKey, value);
+      this.fileDecorationProvider?.refresh(Uri.file(filePath));
+    }
+    return result;
+  }
+
+  /**
+   * Remove svn:mime-type property from file.
+   */
+  public async removeMimeType(filePath: string) {
+    const result = await this.run(Operation.PropertyChange, () =>
+      this.repository.removeMimeType(filePath)
+    );
+    // Update cache and refresh decorations on success
+    if (result.exitCode === 0) {
+      const cacheKey = this.toCacheKey(filePath);
+      this.mimeTypeCache.delete(cacheKey);
+      this.fileDecorationProvider?.refresh(Uri.file(filePath));
+    }
+    return result;
+  }
+
+  /**
+   * Get all files with svn:mime-type property.
+   */
+  public async getAllMimeTypeFiles(): Promise<Map<string, string>> {
+    return this.repository.getAllMimeTypeFiles();
+  }
+
+  // =========================================================================
+  // Auto-Props Property Methods
+  // =========================================================================
+
+  /**
+   * Get svn:auto-props configuration from repository root.
+   */
+  public async getAutoProps(): Promise<string | null> {
+    return this.repository.getAutoProps();
+  }
+
+  /**
+   * Set svn:auto-props configuration on repository root.
+   */
+  public async setAutoProps(value: string) {
+    return this.run(Operation.PropertyChange, () =>
+      this.repository.setAutoProps(value)
+    );
+  }
+
+  /**
+   * Remove svn:auto-props from repository root.
+   */
+  public async removeAutoProps() {
+    return this.run(Operation.PropertyChange, () =>
+      this.repository.removeAutoProps()
+    );
   }
 
   public dispose(): void {

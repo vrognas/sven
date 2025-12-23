@@ -1,3 +1,16 @@
+## [0.1.9] (2025-12-23)
+
+### Feature: SVN Property Management (eol-style, mime-type, auto-props)
+
+- **Set EOL Style**: Set svn:eol-style (native/LF/CRLF/CR) on files/folders with recursive option
+- **Remove EOL Style**: Remove svn:eol-style from files/folders
+- **Manage EOL Styles**: View all files with eol-style, bulk change or clear
+- **Set MIME Type**: Set svn:mime-type with auto-detection from file extension
+- **Remove MIME Type**: Remove svn:mime-type from files
+- **Manage Auto-Props**: Edit/view/remove svn:auto-props on repository root with default template
+- **Context menu**: "Properties" submenu in Explorer and SCM views
+- **Explorer tooltips**: Hover files to see eol-style and mime-type properties (e.g., "eol: native, mime: text/plain")
+
 ## [0.1.8] (2025-12-21)
 
 ### UX: Needs-Lock Status Bar

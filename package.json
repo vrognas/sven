@@ -2,7 +2,7 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -462,6 +462,45 @@
         "category": "SVN"
       },
       {
+        "command": "sven.showIgnoredFiles",
+        "title": "Show Ignored Files",
+        "category": "SVN",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "sven.setEolStyle",
+        "title": "Set EOL Style",
+        "category": "SVN",
+        "icon": "$(symbol-text)"
+      },
+      {
+        "command": "sven.removeEolStyle",
+        "title": "Remove EOL Style",
+        "category": "SVN"
+      },
+      {
+        "command": "sven.manageEolStyle",
+        "title": "Manage EOL Styles",
+        "category": "SVN"
+      },
+      {
+        "command": "sven.setMimeType",
+        "title": "Set MIME Type",
+        "category": "SVN",
+        "icon": "$(file-media)"
+      },
+      {
+        "command": "sven.removeMimeType",
+        "title": "Remove MIME Type",
+        "category": "SVN"
+      },
+      {
+        "command": "sven.manageAutoProps",
+        "title": "Manage Auto-Props",
+        "category": "SVN",
+        "icon": "$(gear)"
+      },
+      {
         "command": "sven.blameFile",
         "title": "Blame File",
         "category": "SVN",
@@ -673,6 +712,16 @@
       {
         "command": "sven.revealInExplorerView",
         "title": "Reveal in Explorer View",
+        "category": "SVN"
+      },
+      {
+        "command": "sven.copyRelativePath",
+        "title": "Copy Relative Path",
+        "category": "SVN"
+      },
+      {
+        "command": "sven.copyAbsolutePath",
+        "title": "Copy Path",
         "category": "SVN"
       },
       {
@@ -977,6 +1026,22 @@
         {
           "command": "sven.toggleNeedsLock",
           "when": "svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
+        },
+        {
+          "command": "sven.setEolStyle",
+          "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.removeEolStyle",
+          "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.setMimeType",
+          "when": "svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
+        },
+        {
+          "command": "sven.removeMimeType",
+          "when": "svnOpenRepositoryCount != 0 && !explorerResourceIsFolder"
         }
       ],
       "commandPalette": [
@@ -1010,6 +1075,34 @@
         },
         {
           "command": "sven.manageWatches",
+          "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.showIgnoredFiles",
+          "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.setEolStyle",
+          "when": "false"
+        },
+        {
+          "command": "sven.removeEolStyle",
+          "when": "false"
+        },
+        {
+          "command": "sven.manageEolStyle",
+          "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.setMimeType",
+          "when": "false"
+        },
+        {
+          "command": "sven.removeMimeType",
+          "when": "false"
+        },
+        {
+          "command": "sven.manageAutoProps",
           "when": "svnOpenRepositoryCount != 0"
         },
         {
@@ -1583,6 +1676,16 @@
           "command": "sven.revealInExplorerView",
           "when": "scmProvider == svn && scmResourceGroup != external",
           "group": "navigation"
+        },
+        {
+          "command": "sven.copyRelativePath",
+          "when": "scmProvider == svn",
+          "group": "6_copypath@1"
+        },
+        {
+          "command": "sven.copyAbsolutePath",
+          "when": "scmProvider == svn",
+          "group": "6_copypath@2"
         },
         {
           "command": "sven.openHEADFile",

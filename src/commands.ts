@@ -68,6 +68,7 @@ import { SearchLogByRevision } from "./commands/search_log_by_revision";
 import { SearchLogByText } from "./commands/search_log_by_text";
 import { RevealInExplorer } from "./commands/revealInExplorer";
 import { RevealInExplorerView } from "./commands/revealInExplorerView";
+import { CopyRelativePath, CopyAbsolutePath } from "./commands/copyPath";
 import { Merge } from "./commands/merge";
 import { DiffWithExternalTool } from "./commands/diffWithExternalTool";
 import { Blame } from "./commands/blame";
@@ -82,6 +83,11 @@ import { ToggleWatch } from "./commands/toggleWatch";
 import { ManageWatches } from "./commands/manageWatches";
 import { ManageNeedsLock } from "./commands/manageNeedsLock";
 import { ManageLocks } from "./commands/manageLocks";
+import { ShowIgnoredFiles } from "./commands/showIgnoredFiles";
+import { SetEolStyle, RemoveEolStyle } from "./commands/setEolStyle";
+import { ManageEolStyle } from "./commands/manageEolStyle";
+import { SetMimeType, RemoveMimeType } from "./commands/setMimeType";
+import { ManageAutoProps } from "./commands/manageAutoProps";
 import { WatchService } from "./services/WatchService";
 
 export function registerCommands(
@@ -98,6 +104,8 @@ export function registerCommands(
   disposables.push(new OpenFile());
   disposables.push(new RevealInExplorer());
   disposables.push(new RevealInExplorerView());
+  disposables.push(new CopyRelativePath());
+  disposables.push(new CopyAbsolutePath());
   disposables.push(new PromptAuth());
   disposables.push(new CommitWithMessage());
   disposables.push(new CommitAll());
@@ -180,4 +188,19 @@ export function registerCommands(
 
   // Lock management commands
   disposables.push(new ManageLocks());
+
+  // Ignored files commands
+  disposables.push(new ShowIgnoredFiles());
+
+  // EOL-style commands
+  disposables.push(new SetEolStyle());
+  disposables.push(new RemoveEolStyle());
+  disposables.push(new ManageEolStyle());
+
+  // MIME-type commands
+  disposables.push(new SetMimeType());
+  disposables.push(new RemoveMimeType());
+
+  // Auto-props commands
+  disposables.push(new ManageAutoProps());
 }

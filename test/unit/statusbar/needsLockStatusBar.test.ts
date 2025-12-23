@@ -71,7 +71,7 @@ describe("NeedsLockStatusBar", () => {
 
       statusBar.update();
 
-      expect(statusBar.getTooltip()).toBe("1 file needs lock");
+      expect(statusBar.getTooltip()).toBe("1 item needs lock");
     });
 
     it("shows plural tooltip for multiple files", () => {
@@ -80,7 +80,7 @@ describe("NeedsLockStatusBar", () => {
 
       statusBar.update();
 
-      expect(statusBar.getTooltip()).toBe("3 files need lock");
+      expect(statusBar.getTooltip()).toBe("3 items need lock");
     });
 
     it("aggregates count from multiple repositories", () => {

@@ -220,6 +220,9 @@ export class SvnFileDecorationProvider
         : "Needs lock - file is read-only until locked";
     }
 
+    // Add SVN property info to tooltip
+    tooltip = this.appendPropertyTooltip(uri.fsPath, tooltip);
+
     return {
       badge,
       tooltip,
@@ -239,8 +242,8 @@ export class SvnFileDecorationProvider
       return undefined;
     }
 
-    // Check if file is in working copy
-    if (!uri.fsPath.startsWith(this.repository.workspaceRoot)) {
+    // Check if file is in working copy (case-insensitive on Windows)
+    if (!this.isInWorkingCopy(uri.fsPath)) {
       return undefined;
     }
 
@@ -276,13 +279,27 @@ export class SvnFileDecorationProvider
       };
     }
 
-    // Fall back to needs-lock check - tooltip only (no L badge)
-    if (!this.repository.hasNeedsLockCached(uri.fsPath)) {
+    // Check for needs-lock property
+    const hasNeedsLock = this.repository.hasNeedsLockCached(uri.fsPath);
+
+    // Check for SVN property info (eol-style, mime-type)
+    const propertyTooltip = this.getPropertyTooltip(uri.fsPath);
+
+    // Build tooltip from available info
+    let tooltip: string | undefined;
+    if (hasNeedsLock) {
+      tooltip = "Needs lock - file is read-only until locked";
+    }
+    if (propertyTooltip) {
+      tooltip = tooltip ? `${tooltip} | ${propertyTooltip}` : propertyTooltip;
+    }
+
+    if (!tooltip) {
       return undefined;
     }
 
     return {
-      tooltip: "Needs lock - file is read-only until locked",
+      tooltip,
       propagate: false
     };
   }
@@ -515,5 +532,56 @@ export class SvnFileDecorationProvider
       default:
         return undefined;
     }
+  }
+
+  /**
+   * Get property tooltip for a file (eol-style, mime-type).
+   * Returns undefined if no properties set.
+   */
+  private getPropertyTooltip(filePath: string): string | undefined {
+    const parts: string[] = [];
+
+    const eolStyle = this.repository.getEolStyleCached(filePath);
+    if (eolStyle) {
+      parts.push(`eol: ${eolStyle}`);
+    }
+
+    const mimeType = this.repository.getMimeTypeCached(filePath);
+    if (mimeType) {
+      parts.push(`mime: ${mimeType}`);
+    }
+
+    return parts.length > 0 ? parts.join(", ") : undefined;
+  }
+
+  /**
+   * Append property info to existing tooltip.
+   */
+  private appendPropertyTooltip(
+    filePath: string,
+    tooltip: string | undefined
+  ): string | undefined {
+    const propertyTooltip = this.getPropertyTooltip(filePath);
+    if (!propertyTooltip) {
+      return tooltip;
+    }
+    return tooltip ? `${tooltip} | ${propertyTooltip}` : propertyTooltip;
+  }
+
+  /**
+   * Check if file is in working copy (case-insensitive on Windows).
+   */
+  private isInWorkingCopy(filePath: string): boolean {
+    const root = this.repository.workspaceRoot;
+    if (process.platform === "win32") {
+      // Case-insensitive comparison with trailing separator
+      return (
+        filePath.toLowerCase().startsWith(root.toLowerCase() + "\\") ||
+        filePath.toLowerCase().startsWith(root.toLowerCase() + "/") ||
+        filePath.toLowerCase() === root.toLowerCase()
+      );
+    }
+    // Unix: case-sensitive
+    return filePath.startsWith(root + "/") || filePath === root;
   }
 }
