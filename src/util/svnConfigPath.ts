@@ -6,28 +6,71 @@ import * as path from "path";
 import * as fs from "fs";
 
 /**
- * Get the SVN configuration directory path.
- * Checks in order:
- * 1. SVN_CONFIG_DIR environment variable
- * 2. Platform default: %APPDATA%\Subversion (Windows) or ~/.subversion (Unix)
+ * Get candidate SVN config directories in priority order.
+ * Returns all possible locations to check.
  */
-export function getSvnConfigDir(): string {
-  // Check environment variable first
+function getConfigDirCandidates(): string[] {
+  const candidates: string[] = [];
+
+  // 1. SVN_CONFIG_DIR environment variable (highest priority)
   const envConfigDir = process.env.SVN_CONFIG_DIR;
-  if (envConfigDir && fs.existsSync(envConfigDir)) {
-    return envConfigDir;
+  if (envConfigDir) {
+    candidates.push(envConfigDir);
   }
 
-  // Platform-specific defaults
+  // 2. Platform-specific locations
+  if (process.platform === "win32") {
+    // Windows: %APPDATA%\Subversion (TortoiseSVN, official Windows builds)
+    const appData = process.env.APPDATA;
+    if (appData) {
+      candidates.push(path.join(appData, "Subversion"));
+    }
+
+    // Windows fallback: ~/.subversion (Cygwin, MSYS2, some ports)
+    candidates.push(path.join(os.homedir(), ".subversion"));
+  } else {
+    // Unix/macOS: ~/.subversion
+    candidates.push(path.join(os.homedir(), ".subversion"));
+  }
+
+  return candidates;
+}
+
+/**
+ * Get the SVN configuration directory path.
+ * Checks in priority order:
+ * 1. SVN_CONFIG_DIR environment variable
+ * 2. %APPDATA%\Subversion (Windows only)
+ * 3. ~/.subversion (all platforms)
+ *
+ * Returns first existing directory, or platform default if none exist.
+ */
+export function getSvnConfigDir(): string {
+  const candidates = getConfigDirCandidates();
+
+  // Return first existing directory
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  // None exist - return platform default (will be created by SVN on first use)
   if (process.platform === "win32") {
     const appData = process.env.APPDATA;
     if (appData) {
       return path.join(appData, "Subversion");
     }
   }
-
-  // Unix default: ~/.subversion
   return path.join(os.homedir(), ".subversion");
+}
+
+/**
+ * Get all existing SVN config directories.
+ * Useful for debugging or showing user all config locations.
+ */
+export function getAllExistingConfigDirs(): string[] {
+  return getConfigDirCandidates().filter(dir => fs.existsSync(dir));
 }
 
 /**
