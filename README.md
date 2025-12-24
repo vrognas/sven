@@ -194,6 +194,63 @@ When you delete tracked files in the Explorer, the extension automatically runs 
 - `prompt` - Ask what to do each time
 - `none` - Do nothing (file shows as "missing" status)
 
+## SVN Properties
+
+Manage SVN properties that control file behavior across platforms.
+
+### EOL Style (`svn:eol-style`)
+
+Normalize line endings to prevent "every line changed" diffs in cross-platform teams.
+
+| Value | Behavior |
+|-------|----------|
+| `native` | Convert to platform EOL (CRLF on Windows, LF on Unix) |
+| `LF` | Force Unix line endings |
+| `CRLF` | Force Windows line endings |
+
+**Commands:**
+- `SVN: Set EOL Style` - Set property on selected file(s)
+- `SVN: Remove EOL Style` - Remove property
+- `SVN: Manage EOL Style` - View/modify all files with eol-style
+
+### MIME Type (`svn:mime-type`)
+
+Control how SVN handles merges and diffs for binary files.
+
+| Type | Behavior |
+|------|----------|
+| `text/*` | Normal text merge |
+| `application/octet-stream` | Binary - no merge, creates conflict files |
+| `image/*`, `application/pdf` | Binary treatment |
+
+**Commands:**
+- `SVN: Set MIME Type` - Set property (auto-suggests from extension)
+- `SVN: Remove MIME Type` - Remove property
+
+### Auto-Props
+
+Automatically apply properties when files are added via `svn add`.
+
+**Commands:**
+- `SVN: Manage Auto-Props` - Edit repository auto-props with options:
+  - **Edit/Create** - Open editor to modify rules
+  - **View** - See current configuration
+  - **Remove** - Delete auto-props
+  - **Use Default Template** - Apply recommended defaults
+  - **Import from Client Config** - Import rules from your SVN client config
+
+### Client Config
+
+Access your local SVN configuration file directly.
+
+**Command:** `SVN: Open SVN Client Config`
+
+Opens your SVN config file (auto-detected):
+- Windows: `%APPDATA%\Subversion\config`
+- Unix/macOS: `~/.subversion/config`
+
+**Tip:** Use "Import from Client Config" in Manage Auto-Props to copy your personal auto-props rules to the repository for team sharing.
+
 ## Repository History
 
 View commit history for your repository in the dedicated History pane.
