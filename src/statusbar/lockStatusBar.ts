@@ -78,7 +78,7 @@ export class LockStatusBar implements Disposable {
     }
 
     this._text = `$(lock) ${count}`;
-    this._tooltip = count === 1 ? "1 locked file" : `${count} locked files`;
+    this._tooltip = count === 1 ? "1 locked item" : `${count} locked items`;
 
     this.statusBarItem.text = this._text;
     this.statusBarItem.tooltip = this._tooltip;

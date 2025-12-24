@@ -83,7 +83,7 @@ export class NeedsLockStatusBar implements Disposable {
 
     this._text = `$(unlock) ${count}`;
     this._tooltip =
-      count === 1 ? "1 file needs lock" : `${count} files need lock`;
+      count === 1 ? "1 item needs lock" : `${count} items need lock`;
 
     this.statusBarItem.text = this._text;
     this.statusBarItem.tooltip = this._tooltip;
