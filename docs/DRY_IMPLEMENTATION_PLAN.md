@@ -1,8 +1,8 @@
 # DRY Refactoring Implementation Plan
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Created**: 2025-12-24
-**Status**: Draft
+**Status**: Phase 1 Complete
 
 ---
 
@@ -12,13 +12,21 @@ After thorough code analysis, I've identified 4 DRY opportunities with varying i
 
 **Revised scope** (based on actual code review):
 
-| Refactoring        | Lines Saved | Files Affected | Risk   | Priority |
-| ------------------ | ----------- | -------------- | ------ | -------- |
-| CommitHelper       | ~80         | 3              | Medium | P1       |
-| BaseStatusBar      | ~60         | 2              | Low    | P2       |
-| runForAllResources | ~20         | 2              | Low    | P3       |
-| FS Modernization   | ~50         | 13→1           | Low    | P4       |
-| **Total**          | **~210**    | **20**         |        |          |
+| Refactoring        | Lines Saved | Files Affected | Risk   | Priority | Status      |
+| ------------------ | ----------- | -------------- | ------ | -------- | ----------- |
+| CommitHelper       | 64          | 2              | Medium | P1       | ✅ Complete |
+| BaseStatusBar      | ~60         | 2              | Low    | P2       | Pending     |
+| runForAllResources | ~20         | 2              | Low    | P3       | Pending     |
+| FS Modernization   | ~50         | 13→1           | Low    | P4       | Pending     |
+| **Total**          | **~194**    | **19**         |        |          |             |
+
+**Phase 1 Actual Results**:
+
+- Created `src/helpers/commitHelper.ts` (77 lines)
+- Refactored `commitAll.ts`: -32 lines
+- Refactored `commitStaged.ts`: -32 lines
+- `commit.ts` skipped: uses `getResourceMap()` for O(1) perf (Phase 21.A optimization)
+- 9 unit tests added
 
 **Not worth extracting** (after code review):
 
