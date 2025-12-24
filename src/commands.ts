@@ -88,6 +88,7 @@ import { SetEolStyle, RemoveEolStyle } from "./commands/setEolStyle";
 import { ManageEolStyle } from "./commands/manageEolStyle";
 import { SetMimeType, RemoveMimeType } from "./commands/setMimeType";
 import { ManageAutoProps } from "./commands/manageAutoProps";
+import { OpenClientConfig } from "./commands/openClientConfig";
 import { WatchService } from "./services/WatchService";
 
 export function registerCommands(
@@ -203,4 +204,5 @@ export function registerCommands(
 
   // Auto-props commands
   disposables.push(new ManageAutoProps());
+  disposables.push(new OpenClientConfig());
 }

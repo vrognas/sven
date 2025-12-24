@@ -501,6 +501,12 @@
         "icon": "$(gear)"
       },
       {
+        "command": "sven.openClientConfig",
+        "title": "Open SVN Client Config",
+        "category": "SVN",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "sven.blameFile",
         "title": "Blame File",
         "category": "SVN",
@@ -1104,6 +1110,9 @@
         {
           "command": "sven.manageAutoProps",
           "when": "svnOpenRepositoryCount != 0"
+        },
+        {
+          "command": "sven.openClientConfig"
         },
         {
           "command": "sven.blame.clearBlame",

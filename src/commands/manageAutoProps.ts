@@ -7,6 +7,11 @@ import { Repository } from "../repository";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "../fs";
+import {
+  getSvnConfigPath,
+  svnConfigExists,
+  readClientAutoProps
+} from "../util/svnConfigPath";
 
 /**
  * Default auto-props template for new repositories.
@@ -100,6 +105,14 @@ export class ManageAutoProps extends Command {
         label: "$(file) Use Default Template",
         description: "Replace with a recommended default configuration",
         action: "template"
+      },
+      {
+        label: "$(cloud-download) Import from Client Config",
+        description: svnConfigExists()
+          ? `Import auto-props from ${getSvnConfigPath()}`
+          : "SVN client config not found",
+        action: "import",
+        enabled: svnConfigExists()
       }
     ].filter(item => item.enabled !== false);
 
@@ -122,6 +135,9 @@ export class ManageAutoProps extends Command {
         break;
       case "template":
         await this.applyTemplate(repository, !!currentAutoProps);
+        break;
+      case "import":
+        await this.importFromClientConfig(repository, !!currentAutoProps);
         break;
     }
   }
@@ -263,6 +279,62 @@ export class ManageAutoProps extends Command {
     } catch (error) {
       window.showErrorMessage(
         `Failed to apply template: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  private async importFromClientConfig(
+    repository: Repository,
+    hasExisting: boolean
+  ): Promise<void> {
+    const clientAutoProps = await readClientAutoProps();
+
+    if (!clientAutoProps) {
+      window.showWarningMessage(
+        "No auto-props found in SVN client config. Check the [auto-props] section."
+      );
+      return;
+    }
+
+    // Show preview of what will be imported
+    const lines = clientAutoProps
+      .split("\n")
+      .filter(l => l.trim() && !l.trim().startsWith("#"));
+    const ruleCount = lines.length;
+
+    // Warn about replacement if there are existing auto-props
+    const message = hasExisting
+      ? `Import ${ruleCount} rules from client config? This will replace existing auto-props.`
+      : `Import ${ruleCount} rules from client config?`;
+
+    const confirm = await window.showInformationMessage(
+      message,
+      {
+        modal: true,
+        detail: lines.slice(0, 5).join("\n") + (lines.length > 5 ? "\n..." : "")
+      },
+      "Import"
+    );
+
+    if (confirm !== "Import") return;
+
+    try {
+      // Add header comment to imported content
+      const importedContent = `# Imported from SVN client config\n# ${getSvnConfigPath()}\n\n${clientAutoProps}`;
+
+      const result = await repository.setAutoProps(importedContent);
+      if (result.exitCode === 0) {
+        window.showInformationMessage(
+          `Imported ${ruleCount} auto-props rules from client config`
+        );
+      } else {
+        window.showErrorMessage(
+          `Failed to import: ${result.stderr || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      window.showErrorMessage(
+        `Failed to import: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
   }
