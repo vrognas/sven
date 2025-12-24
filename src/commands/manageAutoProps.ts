@@ -82,18 +82,12 @@ export class ManageAutoProps extends Command {
     const items = [
       {
         label: currentAutoProps
-          ? "$(edit) Edit Auto-Props"
+          ? "$(edit) View/Edit Auto-Props"
           : "$(add) Create Auto-Props",
         description: currentAutoProps
-          ? "Modify the current auto-props configuration"
+          ? "View or modify the current configuration"
           : "Create a new auto-props configuration",
         action: "edit"
-      },
-      {
-        label: "$(eye) View Current Auto-Props",
-        description: "Show the current auto-props configuration",
-        action: "view",
-        enabled: !!currentAutoProps
       },
       {
         label: "$(trash) Remove Auto-Props",
@@ -126,9 +120,6 @@ export class ManageAutoProps extends Command {
     switch (selected.action) {
       case "edit":
         await this.editAutoProps(repository, currentAutoProps);
-        break;
-      case "view":
-        await this.viewAutoProps(currentAutoProps!);
         break;
       case "remove":
         await this.removeAutoProps(repository);
