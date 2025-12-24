@@ -1,8 +1,8 @@
 # DRY Refactoring Implementation Plan
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Created**: 2025-12-24
-**Status**: Phase 1 Complete
+**Status**: Phase 2 Complete
 
 ---
 
@@ -15,10 +15,10 @@ After thorough code analysis, I've identified 4 DRY opportunities with varying i
 | Refactoring        | Lines Saved | Files Affected | Risk   | Priority | Status      |
 | ------------------ | ----------- | -------------- | ------ | -------- | ----------- |
 | CommitHelper       | 64          | 2              | Medium | P1       | ✅ Complete |
-| BaseStatusBar      | ~60         | 2              | Low    | P2       | Pending     |
+| BaseStatusBar      | 80          | 2              | Low    | P2       | ✅ Complete |
 | runForAllResources | ~20         | 2              | Low    | P3       | Pending     |
 | FS Modernization   | ~50         | 13→1           | Low    | P4       | Pending     |
-| **Total**          | **~194**    | **19**         |        |          |             |
+| **Total**          | **~214**    | **19**         |        |          |             |
 
 **Phase 1 Actual Results**:
 
@@ -27,6 +27,13 @@ After thorough code analysis, I've identified 4 DRY opportunities with varying i
 - Refactored `commitStaged.ts`: -32 lines
 - `commit.ts` skipped: uses `getResourceMap()` for O(1) perf (Phase 21.A optimization)
 - 9 unit tests added
+
+**Phase 2 Actual Results**:
+
+- Created `src/statusbar/baseStatusBar.ts` (106 lines)
+- Refactored `needsLockStatusBar.ts`: -42 lines
+- Refactored `lockStatusBar.ts`: -38 lines
+- 7 unit tests added
 
 **Not worth extracting** (after code review):
 
