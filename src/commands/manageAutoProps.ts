@@ -324,9 +324,13 @@ export class ManageAutoProps extends Command {
 
       const result = await repository.setAutoProps(importedContent);
       if (result.exitCode === 0) {
-        window.showInformationMessage(
-          `Imported ${ruleCount} auto-props rules from client config`
+        const action = await window.showInformationMessage(
+          `Imported ${ruleCount} auto-props rules from client config`,
+          "Show Rules"
         );
+        if (action === "Show Rules") {
+          await this.viewAutoProps(importedContent);
+        }
       } else {
         window.showErrorMessage(
           `Failed to import: ${result.stderr || "Unknown error"}`
