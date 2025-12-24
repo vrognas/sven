@@ -112,9 +112,8 @@ export function parseClientAutoProps(configContent: string): string | null {
     }
 
     if (inAutoPropsSection) {
-      // Skip empty lines but include comments and rules
-      if (trimmed === "") continue;
-      // Include all non-empty lines (comments and rules)
+      // Skip empty lines and comments, only include actual rules
+      if (trimmed === "" || trimmed.startsWith("#")) continue;
       autoPropsLines.push(line);
     }
   }
