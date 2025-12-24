@@ -1,10 +1,9 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from "path";
 import { window } from "vscode";
-import { Status } from "../common/types";
 import { configuration } from "../helpers/configuration";
+import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
@@ -34,36 +33,11 @@ export class CommitStaged extends Command {
       return;
     }
 
-    // Use Set to avoid duplicates when multiple files share parent dirs
-    // Display paths: shown in picker (only new names for renames)
-    const displayPathSet = new Set(
-      stagedResources.map(state => state.resourceUri.fsPath)
+    // Build display paths and rename map using helper
+    const { displayPaths, renameMap } = buildCommitPaths(
+      stagedResources,
+      repository
     );
-
-    // Track renamed files: map new path -> old path (for SVN commit)
-    const renameMap = new Map<string, string>();
-
-    // Handle renamed files and parent directories
-    stagedResources.forEach(state => {
-      // Track old paths for renamed files (needed for SVN commit, not for display)
-      if (state.type === Status.ADDED && state.renameResourceUri) {
-        renameMap.set(state.resourceUri.fsPath, state.renameResourceUri.fsPath);
-      }
-
-      let dir = path.dirname(state.resourceUri.fsPath);
-      let parent = repository.getResourceFromFile(dir);
-
-      while (parent) {
-        if (parent.type === Status.ADDED) {
-          displayPathSet.add(dir);
-        }
-        dir = path.dirname(dir);
-        parent = repository.getResourceFromFile(dir);
-      }
-    });
-
-    // Display paths for file picker (excludes old paths of renamed files)
-    const displayPaths = Array.from(displayPathSet);
 
     // Get config options
     const useQuickPick = configuration.get<boolean>(
@@ -110,14 +84,8 @@ export class CommitStaged extends Command {
       return;
     }
 
-    // Add old paths for renamed files (required for SVN commit)
-    const commitPaths = [...selectedPaths];
-    for (const selectedPath of selectedPaths) {
-      const oldPath = renameMap.get(selectedPath);
-      if (oldPath) {
-        commitPaths.push(oldPath);
-      }
-    }
+    // Expand paths to include old rename paths for SVN commit
+    const commitPaths = expandCommitPaths(selectedPaths, renameMap);
 
     await this.handleRepositoryOperation(async () => {
       const result = await repository.commitFiles(message!, commitPaths);
