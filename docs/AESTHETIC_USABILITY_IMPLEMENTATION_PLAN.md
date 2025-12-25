@@ -259,38 +259,15 @@ await window.showInformationMessage(
 - Walkthroughs registered but only accessible via Help → Get Started
 - New users see blank SCM panel
 
+**Design Decision**: Prompt on first repository open (not first activation).
+
+- Context-appropriate: user has an SVN repo open
+- Less intrusive: doesn't bother users who installed but haven't opened SVN repo
+- Follows VS Code patterns: Git extension shows help when you open a Git repo
+
 **Implementation Steps**:
 
-1. **Track First-Run State**:
-
-```typescript
-// src/extension.ts - ADD onboarding check
-
-async function checkFirstRun(context: ExtensionContext): Promise<void> {
-  const hasSeenOnboarding = context.globalState.get<boolean>(
-    "sven.hasSeenOnboarding"
-  );
-
-  if (!hasSeenOnboarding) {
-    const action = await window.showInformationMessage(
-      "Welcome to Sven! Would you like a quick tour?",
-      "Start Tour",
-      "Later"
-    );
-
-    if (action === "Start Tour") {
-      await commands.executeCommand(
-        "workbench.action.openWalkthrough",
-        "vrognas.sven#gettingStarted"
-      );
-    }
-
-    await context.globalState.update("sven.hasSeenOnboarding", true);
-  }
-}
-```
-
-2. **Trigger on Repository Open**:
+1. **Trigger on First Repository Open** (not activation):
 
 ```typescript
 // src/source_control_manager.ts - ADD walkthrough prompt
@@ -327,15 +304,14 @@ private async promptWalkthrough(): Promise<void> {
 }
 ```
 
-3. **Files to Modify**:
-   - `src/extension.ts` - First-run check
-   - `src/source_control_manager.ts` - Repository open handler
+2. **Files to Modify**:
+   - `src/source_control_manager.ts` - Repository open handler + promptWalkthrough()
    - `package.json` - Ensure walkthrough IDs are stable
 
-4. **Tests** (3 E2E):
-   - Test first activation shows onboarding prompt
-   - Test "Start Tour" opens walkthrough
-   - Test subsequent activations skip onboarding
+3. **Tests** (3 E2E):
+   - Test first repo open shows onboarding prompt
+   - Test "Quick Tour" opens walkthrough
+   - Test subsequent repo opens skip onboarding
 
 ---
 
@@ -543,11 +519,17 @@ export async function showGlossary(): Promise<void> {
 
 ---
 
-### P1.3: Update Progress Titles Dynamically
+### P1.3: Update Progress Dynamically
 
-**Problem**: Progress titles show initial ETA but don't update.
+**Problem**: Progress shows initial ETA but doesn't update as download progresses.
 
 **Location**: `src/treeView/dataProviders/sparseCheckoutProvider.ts:985-993`
+
+**Design Decision**: Update message only (VS Code API limitation).
+
+- Title is static after `withProgress()` creation—cannot be changed
+- Message can be updated via `progress.report({ message })`
+- Pattern: Title = `"Downloading {name}"`, Message = `"5.2MB (52%) - 15s remaining"`
 
 **Implementation Steps**:
 
@@ -887,13 +869,16 @@ export async function manageProperties(uri: Uri): Promise<void> {
 2. **SVN jargon**: Keep in parentheses for documentation lookup
    - Pattern: `"User-friendly term (SVN_TERM)"`
    - Example: `"Open diff with your version (BASE)"`
-
-## Unresolved Questions
-
-1. Auto-onboarding: prompt on first activation or first repo open?
-2. Dynamic progress: update title or just message?
+3. **Auto-onboarding**: Prompt on first repository open (not first activation)
+   - Context-appropriate: user has an SVN repo, so they'll actually use extension
+   - Less intrusive: doesn't bother users who installed but haven't opened SVN repo
+   - Follows VS Code patterns: Git extension doesn't show help until you open a Git repo
+4. **Dynamic progress**: Update message only (VS Code API limitation)
+   - Title is static after `withProgress()` creation
+   - Message can be updated via `progress.report({ message })`
+   - Pattern: Title = `"Downloading {name}"`, Message = `"5.2MB (52%) - 15s remaining"`
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2025-12-25
