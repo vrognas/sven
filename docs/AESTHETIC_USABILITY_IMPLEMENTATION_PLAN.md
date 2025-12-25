@@ -632,7 +632,9 @@ await window.withProgress(
 
 ## P2: Improve Discoverability
 
-### P2.1: Single-Dialog Commit Flow
+### P2.1: Single-Dialog Commit Flow ✅ ALREADY COMPLETE
+
+**Status**: Already implemented in `CommitFlowService`. Settings `sven.commit.useQuickPick`, `sven.commit.conventionalCommits`, `sven.commit.autoUpdate` control the flow. Added step number polish "(1/2)", "(2/2)".
 
 **Problem**: 6 decision points for single commit.
 
@@ -856,7 +858,7 @@ export async function manageProperties(uri: Uri): Promise<void> {
 | 4     | P1.1 Command naming    | 8h     | None         | ✅ Done |
 | 5     | P1.2 Glossary command  | 2h     | P1.1         | ✅ Done |
 | 6     | P1.3 Dynamic progress  | 3h     | None         | ✅ Done |
-| 7     | P2.1 Commit dialog     | 12h    | P0.2         | Pending |
+| 7     | P2.1 Commit dialog     | 12h    | P0.2         | ✅ Done |
 | 8     | P2.2 Property mgmt     | 4h     | None         | ✅ Done |
 | 9     | P3.1 Design docs       | 4h     | All above    | Pending |
 

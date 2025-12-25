@@ -13,6 +13,13 @@
 - **Core concepts**: BASE, HEAD, PREV, Working Copy, Revision, Lock, Annotations (Blame)
 - **Searchable**: matchOnDetail enabled - search by term or definition
 
+### UX: Streamlined Commit Flow (P2.1)
+
+- **2-step flow**: File selection → Message input (with `conventionalCommits: false`)
+- **Step indicators**: Added "(1/2)", "(2/2)" to QuickPick titles for clarity
+- **Settings-based**: Pre-commit update controlled by `sven.commit.autoUpdate` (not modals)
+- **Inline validation**: Empty message shows error in InputBox, not modal dialog
+
 ### UX: Unified Property Management (P2.2)
 
 - **New command**: "SVN: Manage Properties..." opens quick-pick with 5 categories
