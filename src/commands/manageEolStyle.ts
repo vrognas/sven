@@ -4,6 +4,7 @@
 import { QuickPickItem, window, Uri, commands } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
+import { confirmDestructive } from "../ui";
 import * as path from "path";
 
 interface EolStyleFileItem extends QuickPickItem {
@@ -95,13 +96,11 @@ export class ManageEolStyle extends Command {
     repository: Repository,
     files: Map<string, string>
   ): Promise<void> {
-    const confirm = await window.showWarningMessage(
-      `Are you sure you want to remove svn:eol-style from ${files.size} file(s)?`,
-      { modal: true },
+    const confirmed = await confirmDestructive(
+      `Remove svn:eol-style from ${files.size} file(s)?`,
       "Remove All"
     );
-
-    if (confirm !== "Remove All") return;
+    if (!confirmed) return;
 
     let successCount = 0;
     for (const [filePath] of files) {

@@ -4,6 +4,7 @@
 import { window, workspace, Uri } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
+import { confirmDestructive } from "../ui";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "../fs";
@@ -218,13 +219,11 @@ export class ManageAutoProps extends Command {
   }
 
   private async removeAutoProps(repository: Repository): Promise<void> {
-    const confirm = await window.showWarningMessage(
-      "Are you sure you want to remove the auto-props configuration?",
-      { modal: true },
+    const confirmed = await confirmDestructive(
+      "Remove auto-props configuration?",
       "Remove"
     );
-
-    if (confirm !== "Remove") return;
+    if (!confirmed) return;
 
     try {
       const result = await repository.removeAutoProps();
@@ -248,12 +247,11 @@ export class ManageAutoProps extends Command {
   ): Promise<void> {
     // Only warn about replacement if there are existing auto-props
     if (hasExisting) {
-      const confirm = await window.showWarningMessage(
-        "This will replace the current auto-props with the default template. Continue?",
-        { modal: true },
+      const confirmed = await confirmDestructive(
+        "Replace current auto-props with default template?",
         "Apply Template"
       );
-      if (confirm !== "Apply Template") return;
+      if (!confirmed) return;
     }
 
     try {

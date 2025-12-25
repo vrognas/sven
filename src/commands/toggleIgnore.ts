@@ -7,6 +7,7 @@ import { Uri, window } from "vscode";
 import { Status } from "../common/types";
 import { Command } from "./command";
 import { Repository } from "../repository";
+import { confirm } from "../ui";
 import { formatSvnError, logError } from "../util/errorLogger";
 
 /**
@@ -51,12 +52,11 @@ export class ToggleIgnore extends Command {
         const isVersioned = await this.isFileVersioned(repository, uri.fsPath);
         if (isVersioned) {
           // Versioned file - prompt user before untracking
-          const choice = await window.showWarningMessage(
-            `'${fileName}' is tracked by SVN. Untrack it first to ignore?`,
-            { modal: true },
+          const confirmed = await confirm(
+            `'${fileName}' is tracked. Untrack to ignore?`,
             "Untrack & Ignore"
           );
-          if (choice === "Untrack & Ignore") {
+          if (confirmed) {
             await this.untrackAndIgnore(repository, uri, dirName, fileName);
           }
         } else {

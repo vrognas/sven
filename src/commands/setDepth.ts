@@ -14,6 +14,7 @@ import {
 } from "vscode";
 import { SvnDepth } from "../common/types";
 import { Command } from "./command";
+import { confirm } from "../ui";
 import { SourceControlManager } from "../source_control_manager";
 
 /** Default download timeout in minutes */
@@ -225,16 +226,12 @@ export class SetDepth extends Command {
           "Deeper contents can be restored later."
       };
 
-      const confirm = await window.showWarningMessage(
+      const confirmed = await confirm(
         warningMessages[selected.depth] ||
           "This operation may remove local files.",
-        { modal: true },
-        "Continue",
-        "Cancel"
+        "Continue"
       );
-      if (confirm !== "Continue") {
-        return;
-      }
+      if (!confirmed) return;
     }
 
     // Get configurable timeout

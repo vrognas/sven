@@ -5,6 +5,7 @@ import * as path from "path";
 import { QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
+import { confirm } from "../ui";
 import { LockStatus } from "../common/types";
 
 interface LockQuickPickItem extends QuickPickItem {
@@ -91,12 +92,8 @@ export class ManageLocks extends Command {
         window.showErrorMessage(`Failed to unlock: ${(err as Error).message}`);
       }
     } else if (selected.action === "unlockAll") {
-      const confirm = await window.showWarningMessage(
-        `Release all ${myLocks.length} lock(s)?`,
-        { modal: true },
-        "Yes"
-      );
-      if (confirm === "Yes") {
+      const confirmed = await confirm(`Release all ${myLocks.length} lock(s)?`);
+      if (confirmed) {
         const paths = myLocks.map(l =>
           path.join(workspaceRoot, l.relativePath)
         );

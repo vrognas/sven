@@ -5,6 +5,7 @@ import * as path from "path";
 import { QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
+import { confirm } from "../ui";
 
 interface NeedsLockQuickPickItem extends QuickPickItem {
   path?: string;
@@ -81,12 +82,8 @@ export class ManageNeedsLock extends Command {
         );
       }
     } else if (selected.action === "clear") {
-      const confirm = await window.showWarningMessage(
-        "Remove needs-lock from all files?",
-        { modal: true },
-        "Yes"
-      );
-      if (confirm === "Yes") {
+      const confirmed = await confirm("Remove needs-lock from all files?");
+      if (confirmed) {
         const errors: string[] = [];
         // Use Promise.allSettled for parallel execution with error collection
         const results = await Promise.allSettled(
