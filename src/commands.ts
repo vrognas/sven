@@ -86,6 +86,7 @@ import { ManageAutoProps } from "./commands/manageAutoProps";
 import { OpenClientConfig } from "./commands/openClientConfig";
 import { ShowGlossary } from "./commands/showGlossary";
 import { ManageProperties } from "./commands/manageProperties";
+import { CopyRelativePath, CopyAbsolutePath } from "./commands/copyPath";
 
 export function registerCommands(
   sourceControlManager: SourceControlManager,
@@ -194,4 +195,8 @@ export function registerCommands(
 
   // Help commands
   disposables.push(new ShowGlossary());
+
+  // Utility commands
+  disposables.push(new CopyRelativePath());
+  disposables.push(new CopyAbsolutePath());
 }
