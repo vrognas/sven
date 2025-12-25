@@ -181,6 +181,103 @@ export class Repository {
     return fixPegRevision(file);
   }
 
+  // ========== Property helper methods (DRY) ==========
+
+  /**
+   * Validate and normalize a file path for property operations.
+   * @throws Error if path is invalid
+   */
+  private validatePath(filePath: string): string {
+    const normalized = this.removeAbsolutePath(filePath);
+    if (!validateFilePath(normalized)) {
+      throw new Error(`Invalid file path: ${normalized}`);
+    }
+    return normalized;
+  }
+
+  /**
+   * Get a property value from a file.
+   * @returns Property value or null if not set
+   */
+  private async getProperty(
+    name: string,
+    filePath: string
+  ): Promise<string | null> {
+    const normalized = this.validatePath(filePath);
+    try {
+      const result = await this.exec(["propget", name, normalized]);
+      const value = result.stdout.trim();
+      return value || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Set a property on a file or directory.
+   */
+  private async setProperty(
+    name: string,
+    value: string,
+    filePath: string,
+    recursive = false
+  ): Promise<IExecutionResult> {
+    const normalized = this.validatePath(filePath);
+    const args = ["propset", name, value];
+    if (recursive) args.push("-R");
+    args.push(normalized);
+    return this.exec(args);
+  }
+
+  /**
+   * Delete a property from a file or directory.
+   */
+  private async deleteProperty(
+    name: string,
+    filePath: string,
+    recursive = false
+  ): Promise<IExecutionResult> {
+    const normalized = this.validatePath(filePath);
+    const args = ["propdel", name];
+    if (recursive) args.push("-R");
+    args.push(normalized);
+    return this.exec(args);
+  }
+
+  /**
+   * Get all files with a property recursively.
+   * @returns Map of path -> value
+   */
+  private async getAllPropertyValues(
+    name: string
+  ): Promise<Map<string, string>> {
+    try {
+      const result = await this.exec(["propget", name, "-R", "."]);
+      return this.parsePropertyListOutput(result.stdout);
+    } catch {
+      return new Map();
+    }
+  }
+
+  /**
+   * Parse "path - value" format from propget -R output.
+   */
+  private parsePropertyListOutput(stdout: string): Map<string, string> {
+    const files = new Map<string, string>();
+    for (const line of stdout.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed && trimmed.includes(" - ")) {
+        const lastDash = trimmed.lastIndexOf(" - ");
+        const path = trimmed.substring(0, lastDash).trim();
+        const value = trimmed.substring(lastDash + 3).trim();
+        if (path && value) {
+          files.set(path, value);
+        }
+      }
+    }
+    return files;
+  }
+
   /**
    * Check if there are new remote revisions without running full status.
    * Uses `svn log -r BASE:HEAD --limit 1` to detect if BASE < HEAD.
@@ -2149,18 +2246,8 @@ export class Repository {
    * Files with this property are read-only until locked.
    */
   public async hasNeedsLock(filePath: string): Promise<boolean> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    try {
-      const result = await this.exec(["propget", "svn:needs-lock", filePath]);
-      return result.stdout.trim() !== "";
-    } catch {
-      return false;
-    }
+    const value = await this.getProperty("svn:needs-lock", filePath);
+    return value !== null;
   }
 
   /**
@@ -2168,28 +2255,16 @@ export class Repository {
    * This makes the file read-only until locked.
    */
   public async setNeedsLock(filePath: string): Promise<IExecutionResult> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    // Note: Value doesn't matter - SVN just checks property presence
+    // Value doesn't matter - SVN just checks property presence
     // Using 'yes' instead of '*' to avoid glob expansion on Windows
-    return this.exec(["propset", "svn:needs-lock", "yes", filePath]);
+    return this.setProperty("svn:needs-lock", "yes", filePath);
   }
 
   /**
    * Remove the svn:needs-lock property from a file.
    */
   public async removeNeedsLock(filePath: string): Promise<IExecutionResult> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    return this.exec(["propdel", "svn:needs-lock", filePath]);
+    return this.deleteProperty("svn:needs-lock", filePath);
   }
 
   /**
@@ -2197,29 +2272,17 @@ export class Repository {
    * Returns array of property names (e.g., ["svn:needs-lock", "svn:executable"]).
    */
   public async getPropertyList(filePath: string): Promise<string[]> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
+    const normalized = this.validatePath(filePath);
     try {
-      const result = await this.exec(["proplist", filePath]);
-      const lines = result.stdout.split("\n");
+      const result = await this.exec(["proplist", normalized]);
       const props: string[] = [];
-
-      // Output format:
-      // Properties on 'file.txt':
-      //   svn:needs-lock
-      //   svn:executable
-      for (const line of lines) {
+      // Output format: "Properties on 'file.txt':" followed by property names
+      for (const line of result.stdout.split("\n")) {
         const trimmed = line.trim();
-        // Property names start with "svn:" or custom prefixes
         if (trimmed && !trimmed.startsWith("Properties on")) {
           props.push(trimmed);
         }
       }
-
       return props;
     } catch {
       return [];
@@ -2231,14 +2294,9 @@ export class Repository {
    * Uses `svn diff --properties-only` to detect added/deleted/modified properties.
    */
   public async getPropertyChanges(filePath: string): Promise<PropertyChange[]> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
+    const normalized = this.validatePath(filePath);
     try {
-      const result = await this.exec(["diff", "--properties-only", filePath]);
+      const result = await this.exec(["diff", "--properties-only", normalized]);
       return this.parsePropertyDiff(result.stdout);
     } catch {
       return [];
@@ -2285,28 +2343,8 @@ export class Repository {
    * Returns relative paths from working copy root.
    */
   public async getAllNeedsLockFiles(): Promise<Set<string>> {
-    try {
-      // svn propget -R lists all files with the property
-      const result = await this.exec(["propget", "svn:needs-lock", "-R", "."]);
-      const files = new Set<string>();
-
-      // Output format: "path - *" for each file with the property
-      for (const line of result.stdout.split("\n")) {
-        const trimmed = line.trim();
-        if (trimmed && trimmed.includes(" - ")) {
-          // Extract path before " - "
-          const path = trimmed.substring(0, trimmed.lastIndexOf(" - ")).trim();
-          if (path) {
-            files.add(path);
-          }
-        }
-      }
-
-      return files;
-    } catch {
-      // Property doesn't exist or other error - return empty set
-      return new Set<string>();
-    }
+    const map = await this.getAllPropertyValues("svn:needs-lock");
+    return new Set(map.keys());
   }
 
   // ========== svn:eol-style property methods ==========
@@ -2316,19 +2354,7 @@ export class Repository {
    * @returns "native" | "LF" | "CRLF" | "CR" | null (if not set)
    */
   public async getEolStyle(filePath: string): Promise<string | null> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    try {
-      const result = await this.exec(["propget", "svn:eol-style", filePath]);
-      const value = result.stdout.trim();
-      return value || null;
-    } catch {
-      return null;
-    }
+    return this.getProperty("svn:eol-style", filePath);
   }
 
   /**
@@ -2342,19 +2368,7 @@ export class Repository {
     value: "native" | "LF" | "CRLF" | "CR",
     recursive = false
   ): Promise<IExecutionResult> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    const args = ["propset", "svn:eol-style", value];
-    if (recursive) {
-      args.push("-R");
-    }
-    args.push(filePath);
-
-    return this.exec(args);
+    return this.setProperty("svn:eol-style", value, filePath, recursive);
   }
 
   /**
@@ -2364,19 +2378,7 @@ export class Repository {
     filePath: string,
     recursive = false
   ): Promise<IExecutionResult> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    const args = ["propdel", "svn:eol-style"];
-    if (recursive) {
-      args.push("-R");
-    }
-    args.push(filePath);
-
-    return this.exec(args);
+    return this.deleteProperty("svn:eol-style", filePath, recursive);
   }
 
   /**
@@ -2384,27 +2386,7 @@ export class Repository {
    * @returns Map of relative path -> eol-style value
    */
   public async getAllEolStyleFiles(): Promise<Map<string, string>> {
-    try {
-      const result = await this.exec(["propget", "svn:eol-style", "-R", "."]);
-      const files = new Map<string, string>();
-
-      // Output format: "path - value" for each file
-      for (const line of result.stdout.split("\n")) {
-        const trimmed = line.trim();
-        if (trimmed && trimmed.includes(" - ")) {
-          const lastDash = trimmed.lastIndexOf(" - ");
-          const path = trimmed.substring(0, lastDash).trim();
-          const value = trimmed.substring(lastDash + 3).trim();
-          if (path && value) {
-            files.set(path, value);
-          }
-        }
-      }
-
-      return files;
-    } catch {
-      return new Map<string, string>();
-    }
+    return this.getAllPropertyValues("svn:eol-style");
   }
 
   // ========== svn:mime-type property methods ==========
@@ -2414,19 +2396,7 @@ export class Repository {
    * @returns MIME type string or null if not set
    */
   public async getMimeType(filePath: string): Promise<string | null> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    try {
-      const result = await this.exec(["propget", "svn:mime-type", filePath]);
-      const value = result.stdout.trim();
-      return value || null;
-    } catch {
-      return null;
-    }
+    return this.getProperty("svn:mime-type", filePath);
   }
 
   /**
@@ -2438,26 +2408,14 @@ export class Repository {
     filePath: string,
     value: string
   ): Promise<IExecutionResult> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    return this.exec(["propset", "svn:mime-type", value, filePath]);
+    return this.setProperty("svn:mime-type", value, filePath);
   }
 
   /**
    * Remove svn:mime-type property from a file.
    */
   public async removeMimeType(filePath: string): Promise<IExecutionResult> {
-    filePath = this.removeAbsolutePath(filePath);
-
-    if (!validateFilePath(filePath)) {
-      throw new Error(`Invalid file path: ${filePath}`);
-    }
-
-    return this.exec(["propdel", "svn:mime-type", filePath]);
+    return this.deleteProperty("svn:mime-type", filePath);
   }
 
   /**
@@ -2465,27 +2423,7 @@ export class Repository {
    * @returns Map of relative path -> mime-type value
    */
   public async getAllMimeTypeFiles(): Promise<Map<string, string>> {
-    try {
-      const result = await this.exec(["propget", "svn:mime-type", "-R", "."]);
-      const files = new Map<string, string>();
-
-      // Output format: "path - value" for each file
-      for (const line of result.stdout.split("\n")) {
-        const trimmed = line.trim();
-        if (trimmed && trimmed.includes(" - ")) {
-          const lastDash = trimmed.lastIndexOf(" - ");
-          const path = trimmed.substring(0, lastDash).trim();
-          const value = trimmed.substring(lastDash + 3).trim();
-          if (path && value) {
-            files.set(path, value);
-          }
-        }
-      }
-
-      return files;
-    } catch {
-      return new Map<string, string>();
-    }
+    return this.getAllPropertyValues("svn:mime-type");
   }
 
   // ========== svn:auto-props property methods ==========
