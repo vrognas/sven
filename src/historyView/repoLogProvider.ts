@@ -719,8 +719,8 @@ export class RepoLogProvider
       },
       {
         label: "$(history) Renamed/Copied",
-        description: "Added with history (A+)",
-        value: "A+" as ActionType,
+        description: "History preserved (R)",
+        value: "R" as ActionType,
         picked: false
       },
       {
@@ -735,8 +735,8 @@ export class RepoLogProvider
       },
       {
         label: "$(replace) Replaced",
-        description: "Delete+add at same path (history broken)",
-        value: "R" as ActionType,
+        description: "Delete+add at same path, history broken (!)",
+        value: "!" as ActionType,
         picked: false
       }
     ];
@@ -980,15 +980,17 @@ export class RepoLogProvider
       ti.description = dirname;
       ti.tooltip = parsedPath.relativeFromBranch;
 
-      // Determine action for badge (A+ for rename/copy)
+      // Determine action for badge
+      // SVN "A" + copyfrom → R (renamed), SVN "R" → ! (replaced)
       let action = pathElem.action;
       if (action === "A" && pathElem.copyfromPath) {
-        action = "A+"; // Added with history (rename/copy)
+        action = "R"; // Renamed/copied with history
+      } else if (action === "R") {
+        action = "!"; // Replaced (history broken)
       }
 
       // Use resourceUri to show file type icon and trigger file decorations
       // For files without local path, use synthetic URI for badge only
-      // Note: encodeURIComponent needed because "+" in "A+" becomes space in URLs
       const encodedAction = encodeURIComponent(action);
       if (parsedPath.localFullPath) {
         ti.resourceUri = parsedPath.localFullPath.with({

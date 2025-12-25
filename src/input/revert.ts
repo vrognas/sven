@@ -5,7 +5,7 @@
 import { window } from "vscode";
 
 export async function confirmRevert() {
-  const yes = "⚠️ Yes, revert";
+  const yes = "Yes, revert";
   const answer = await window.showWarningMessage(
     "Are you sure? This will wipe all local changes.",
     { modal: true },

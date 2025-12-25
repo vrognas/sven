@@ -251,7 +251,8 @@ export class ResourceGroupManager implements IResourceGroupManager {
               preserved.hasLockToken,
               preserved.lockStatus,
               r.changelist,
-              r.kind
+              r.kind,
+              r.localFileExists
             );
           }
         }

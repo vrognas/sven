@@ -11,8 +11,6 @@ import {
 import { OpenHeadFile } from "../../../commands/openHeadFile";
 import { Status } from "../../../common/types";
 import { Resource } from "../../../resource";
-import IncomingChangeNode from "../../../treeView/nodes/incomingChangeNode";
-import { Repository } from "../../../repository";
 import * as fs from "../../../fs";
 
 interface MockState {
@@ -143,16 +141,6 @@ suite("Open Commands Tests", () => {
       const svnUri = Uri.parse("svn:/test/file.txt?p=123");
 
       await openFile.execute(svnUri);
-
-      assert.strictEqual(mockState.openTextDocumentCalls.length, 1);
-    });
-
-    test("1.4: Open IncomingChangeNode", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const mockRepo = {} as Repository;
-      const node = new IncomingChangeNode(fileUri, Status.MODIFIED, mockRepo);
-
-      await openFile.execute(node);
 
       assert.strictEqual(mockState.openTextDocumentCalls.length, 1);
     });
@@ -395,21 +383,6 @@ suite("Open Commands Tests", () => {
       );
     });
 
-    test("3.2: Open change with HEAD for IncomingChangeNode", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const mockRepo = {} as Repository;
-      const node = new IncomingChangeNode(fileUri, Status.MODIFIED, mockRepo);
-
-      (openChangeHead as any).getLeftResource = async () =>
-        Uri.parse("svn:/test/file.txt?rev=HEAD");
-      (openChangeHead as any).getRightResource = () => fileUri;
-      (openChangeHead as any).getTitle = () => "file.txt";
-
-      await openChangeHead.execute(node);
-
-      assert.ok(mockState.executeCommandCalls.length > 0);
-    });
-
     test("3.3: Open change for remote resource", async () => {
       const fileUri = Uri.file("/test/file.txt");
       const resource = new Resource(
@@ -493,21 +466,6 @@ suite("Open Commands Tests", () => {
       );
     });
 
-    test("4.2: Open change with PREV for IncomingChangeNode", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const mockRepo = {} as Repository;
-      const node = new IncomingChangeNode(fileUri, Status.MODIFIED, mockRepo);
-
-      (openChangePrev as any).getLeftResource = async () =>
-        Uri.parse("svn:/test/file.txt?rev=PREV");
-      (openChangePrev as any).getRightResource = () => fileUri;
-      (openChangePrev as any).getTitle = () => "file.txt";
-
-      await openChangePrev.execute(node);
-
-      assert.ok(mockState.executeCommandCalls.length > 0);
-    });
-
     test("4.3: Multiple resources with PREV", async () => {
       const file1 = new Resource(Uri.file("/test/file1.txt"), Status.MODIFIED);
       const file2 = new Resource(Uri.file("/test/file2.txt"), Status.MODIFIED);
@@ -589,21 +547,6 @@ suite("Open Commands Tests", () => {
       (openHeadFile as any).getLeftResource = async () => headUri;
 
       await openHeadFile.execute(fileUri);
-
-      assert.ok(
-        mockState.executeCommandCalls.some(c => c.command === "vscode.open")
-      );
-    });
-
-    test("5.4: Open HEAD file for IncomingChangeNode", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const mockRepo = {} as Repository;
-      const node = new IncomingChangeNode(fileUri, Status.MODIFIED, mockRepo);
-      const headUri = Uri.parse("svn:/test/file.txt?rev=HEAD");
-
-      (openHeadFile as any).getLeftResource = async () => headUri;
-
-      await openHeadFile.execute(node);
 
       assert.ok(
         mockState.executeCommandCalls.some(c => c.command === "vscode.open")

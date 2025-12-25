@@ -43,14 +43,44 @@ export class ToggleIgnore extends Command {
       if (isIgnored) {
         // Remove from ignore
         await this.removeFromIgnore(repository, dirName, fileName);
-      } else if (isUnversioned || !resource) {
+      } else if (isUnversioned) {
         // Unversioned file - add to ignore
         await this.addToIgnore([uri]);
       } else {
-        // Versioned file - untrack first, then add to ignore
-        await this.untrackAndIgnore(repository, uri, dirName, fileName);
+        // Check if file is versioned (svn info succeeds for tracked files)
+        const isVersioned = await this.isFileVersioned(repository, uri.fsPath);
+        if (isVersioned) {
+          // Versioned file - prompt user before untracking
+          const choice = await window.showWarningMessage(
+            `'${fileName}' is tracked by SVN. Untrack it first to ignore?`,
+            { modal: true },
+            "Untrack & Ignore"
+          );
+          if (choice === "Untrack & Ignore") {
+            await this.untrackAndIgnore(repository, uri, dirName, fileName);
+          }
+        } else {
+          // Not versioned - just add to ignore
+          await this.addToIgnore([uri]);
+        }
       }
     });
+  }
+
+  /**
+   * Check if file is versioned (tracked by SVN).
+   * Uses svn info - succeeds for tracked files, fails for unversioned.
+   */
+  private async isFileVersioned(
+    repository: Repository,
+    filePath: string
+  ): Promise<boolean> {
+    try {
+      await repository.getInfo(filePath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

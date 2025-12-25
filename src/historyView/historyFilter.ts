@@ -7,12 +7,12 @@ import { ISvnLogEntry } from "../common/types";
 /**
  * Action types for file changes in SVN commits
  * A = Added (new file, no history)
- * A+ = Added with history (rename/copy - has copyfromPath)
+ * R = Renamed/copied (has copyfromPath, history preserved)
  * M = Modified
  * D = Deleted
- * R = Replaced (delete+add at same path, history broken)
+ * ! = Replaced (delete+add at same path, history broken)
  */
-export type ActionType = "A" | "A+" | "M" | "D" | "R";
+export type ActionType = "A" | "R" | "M" | "D" | "!";
 
 /**
  * Filter criteria for SVN history
@@ -223,7 +223,11 @@ function formatSvnDate(date: Date): string {
 
 /**
  * Filter log entries by action type (client-side filtering)
- * Handles special case: A+ = Added with copyfromPath (rename/copy)
+ * Maps SVN actions to our ActionType:
+ * - SVN "A" + copyfromPath → "R" (renamed with history)
+ * - SVN "A" without copyfrom → "A" (added)
+ * - SVN "R" (replaced) → "↻" (history broken)
+ * - SVN "M", "D" → direct match
  */
 export function filterEntriesByAction(
   entries: ISvnLogEntry[],
@@ -234,26 +238,32 @@ export function filterEntriesByAction(
   }
 
   const actionSet = new Set(actions);
-  const wantAddedWithHistory = actionSet.has("A+");
+  const wantRenamed = actionSet.has("R");
   const wantAddedPlain = actionSet.has("A");
+  const wantReplaced = actionSet.has("!");
 
   return entries.filter(entry => {
     // Keep entry if any of its paths match the action filter
     return entry.paths?.some(p => {
-      const action = p.action;
+      const svnAction = p.action;
 
-      // Handle A vs A+ distinction
-      if (action === "A") {
+      // Handle A vs R (renamed) distinction
+      if (svnAction === "A") {
         const hasHistory = !!p.copyfromPath;
         if (hasHistory) {
-          return wantAddedWithHistory; // A+ filter
+          return wantRenamed; // R filter (renamed with history)
         } else {
-          return wantAddedPlain; // A filter
+          return wantAddedPlain; // A filter (plain add)
         }
       }
 
-      // Other actions (M, D, R) - direct match
-      return actionSet.has(action as ActionType);
+      // SVN "R" (replaced) → our "↻"
+      if (svnAction === "R") {
+        return wantReplaced;
+      }
+
+      // Other actions (M, D) - direct match
+      return actionSet.has(svnAction as ActionType);
     });
   });
 }

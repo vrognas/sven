@@ -9,7 +9,6 @@
 
 import { SourceControlResourceState, Uri } from "vscode";
 import { Resource } from "../resource";
-import IncomingChangeNode from "../treeView/nodes/incomingChangeNode";
 import { Command } from "./command";
 
 /**
@@ -26,7 +25,7 @@ function createOpenChangeCommand(
     }
 
     public async execute(
-      arg?: Resource | Uri | IncomingChangeNode,
+      arg?: Resource | Uri,
       ...resourceStates: SourceControlResourceState[]
     ) {
       return this.openChange(arg, ref, resourceStates);

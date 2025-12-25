@@ -190,6 +190,12 @@ export enum LockStatus {
   T = "T" // Stolen - our lock was stolen
 }
 
+/** Describes a property change: which property and how it changed */
+export interface PropertyChange {
+  name: string;
+  changeType: "added" | "deleted" | "modified";
+}
+
 export interface IFileStatus {
   status: string;
   props: string;
@@ -197,6 +203,10 @@ export interface IFileStatus {
   kind?: "file" | "dir";
   changelist?: string;
   rename?: string;
+  /** True if file was renamed AND has content modifications */
+  renamedAndModified?: boolean;
+  /** Property changes: which properties changed and how */
+  propertyChanges?: PropertyChange[];
   wcStatus: IWcStatus;
   commit?: {
     revision: string;

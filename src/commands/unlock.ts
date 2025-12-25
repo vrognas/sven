@@ -83,7 +83,7 @@ export class BreakLock extends Command {
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
     // Confirm breaking lock
-    const breakBtn = "⚠️ Break Lock";
+    const breakBtn = "Break Lock";
     const answer = await window.showWarningMessage(
       "Break lock owned by another user? This cannot be undone.",
       { modal: true },

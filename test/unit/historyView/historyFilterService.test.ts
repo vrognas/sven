@@ -169,17 +169,29 @@ describe("filterEntriesByAction", () => {
     createEntryWithPaths("4", "jane", "mixed changes", [
       { _: "/trunk/a.txt", action: "A", kind: "file" },
       { _: "/trunk/b.txt", action: "M", kind: "file" }
+    ]),
+    createEntryWithPaths("5", "john", "rename file", [
+      {
+        _: "/trunk/renamed.txt",
+        action: "A",
+        kind: "file",
+        copyfromPath: "/trunk/original.txt",
+        copyfromRev: "100"
+      }
+    ]),
+    createEntryWithPaths("6", "jane", "replace file", [
+      { _: "/trunk/replaced.txt", action: "R", kind: "file" }
     ])
   ];
 
   it("returns all entries when no action filter", () => {
     const result = filterEntriesByAction(entries, undefined);
-    expect(result).toHaveLength(4);
+    expect(result).toHaveLength(6);
   });
 
   it("filters by single action type", () => {
     const result = filterEntriesByAction(entries, ["A"]);
-    expect(result).toHaveLength(2); // entries 1 and 4 have "A" actions
+    expect(result).toHaveLength(2); // entries 1 and 4 have plain "A" actions
     expect(result.map(e => e.revision)).toEqual(["1", "4"]);
   });
 
@@ -188,9 +200,26 @@ describe("filterEntriesByAction", () => {
     expect(result).toHaveLength(3); // entries 1, 3, and 4
   });
 
-  it("returns empty array when no matches", () => {
+  it("filters renamed files (A with copyfromPath) with R action", () => {
     const result = filterEntriesByAction(entries, ["R"]);
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.revision).toBe("5");
+  });
+
+  it("filters replaced files (SVN R action) with ! action", () => {
+    const result = filterEntriesByAction(entries, ["!"]);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.revision).toBe("6");
+  });
+
+  it("returns empty array when no matches", () => {
+    // Only entry 6 has replaced action
+    expect(
+      filterEntriesByAction(
+        entries.filter(e => e.revision !== "6"),
+        ["!"]
+      )
+    ).toHaveLength(0);
   });
 });
 

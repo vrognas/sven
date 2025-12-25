@@ -12,7 +12,6 @@ import {
 } from "vscode";
 import { exists, stat } from "../fs";
 import { Resource } from "../resource";
-import IncomingChangeNode from "../treeView/nodes/incomingChangeNode";
 import { fromSvnUri } from "../uri";
 import { Command } from "./command";
 
@@ -22,7 +21,7 @@ export class OpenFile extends Command {
   }
 
   public async execute(
-    arg?: Resource | Uri | IncomingChangeNode,
+    arg?: Resource | Uri,
     ...resourceStates: SourceControlResourceState[]
   ) {
     const preserveFocus = arg instanceof Resource;
@@ -35,23 +34,11 @@ export class OpenFile extends Command {
       } else if (arg.scheme === "file") {
         uris = [arg];
       }
-    } else if (arg instanceof IncomingChangeNode) {
-      const resource = new Resource(
-        arg.uri,
-        arg.type,
-        undefined,
-        arg.props,
-        true
-      );
-
-      uris = [resource.resourceUri];
     } else {
-      const resource = arg;
+      let resource: Resource | undefined = arg;
 
       if (!(resource instanceof Resource)) {
-        // can happen when called from a keybinding
-        // TODO(@JohnstonCode) fix this
-        // resource = this.getSCMResource();
+        resource = await this.getSCMResource();
       }
 
       if (resource) {

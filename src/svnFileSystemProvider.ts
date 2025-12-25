@@ -192,11 +192,12 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
         // Wait for initial status to load before checking file version
         await repository.statusReady;
 
-        // Skip SVN calls for files we know are unversioned/ignored
+        // Skip SVN calls for files we know are unversioned/ignored/added
         const resource = repository.getResourceFromFile(fsPath);
         if (
           resource?.type === Status.UNVERSIONED ||
-          resource?.type === Status.IGNORED
+          resource?.type === Status.IGNORED ||
+          resource?.type === Status.ADDED
         ) {
           return { type: FileType.File, size: 0, mtime: 0, ctime: 0 };
         }
@@ -305,6 +306,10 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
           resource?.type === Status.UNVERSIONED ||
           resource?.type === Status.IGNORED
         ) {
+          throw FileSystemError.FileNotFound(uri);
+        }
+        // Newly added files have no BASE/pristine version until committed
+        if (resource?.type === Status.ADDED) {
           throw FileSystemError.FileNotFound(uri);
         }
         // Fallback: check if file is inside an unversioned/ignored folder

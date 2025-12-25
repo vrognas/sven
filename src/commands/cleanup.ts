@@ -92,7 +92,7 @@ export class Cleanup extends Command {
       const names = destructive
         .map(d => d.label.replace(/\$\([^)]+\)\s*/, ""))
         .join(", ");
-      const deleteBtn = "🗑️ Delete Files";
+      const deleteBtn = "Delete Files";
       const confirm = await window.showWarningMessage(
         `WARNING: "${names}" will permanently delete files. Continue?`,
         { modal: true },

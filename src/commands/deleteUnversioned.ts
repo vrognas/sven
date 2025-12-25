@@ -16,7 +16,7 @@ export class DeleteUnversioned extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
     const uris = selection.map(resource => resource.resourceUri);
-    const yes = "🗑️ Delete";
+    const yes = "Delete";
     const answer = await window.showWarningMessage(
       "Would you like to delete selected files?",
       { modal: true },

@@ -49,7 +49,12 @@
       "Bash(svn status:*)",
       "WebFetch(domain:vscode-docs.readthedocs.io)",
       "WebFetch(domain:www.scootersoftware.com)",
-      "WebFetch(domain:forum.scootersoftware.com)"
+      "WebFetch(domain:forum.scootersoftware.com)",
+      "Bash(git checkout:*)",
+      "Bash(svn diff:*)",
+      "WebFetch(domain:www.apache.org)",
+      "Bash(svn --version:*)",
+      "Bash(svn help:*)"
     ],
     "deny": [],
     "ask": []

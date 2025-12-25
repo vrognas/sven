@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { Uri, window } from "vscode";
 import { Add } from "../../../commands/add";
-import { Remove } from "../../../commands/remove";
+import { Untrack } from "../../../commands/untrack";
 import { Resource } from "../../../resource";
 import { Repository } from "../../../repository";
 import { Status, IExecutionResult } from "../../../common/types";
@@ -192,8 +192,8 @@ suite("Add Command Tests", () => {
   });
 });
 
-suite("Remove Command Tests", () => {
-  let removeCmd: Remove;
+suite("Untrack Command Tests", () => {
+  let untrackCmd: Untrack;
   let mockRepository: Partial<Repository>;
   let removeFilesCalls: Array<{ files: string[]; keepLocal: boolean }>;
   let windowWarningCalls: Array<{
@@ -202,13 +202,15 @@ suite("Remove Command Tests", () => {
     buttons: string[];
   }>;
   let warningResponses: (string | undefined)[];
+  let infoResponses: (string | undefined)[];
   let showErrorCalls: string[];
 
   setup(() => {
-    removeCmd = new Remove();
+    untrackCmd = new Untrack();
     removeFilesCalls = [];
     windowWarningCalls = [];
     warningResponses = [];
+    infoResponses = [];
     showErrorCalls = [];
 
     // Mock Repository.removeFiles()
@@ -222,7 +224,7 @@ suite("Remove Command Tests", () => {
       }
     };
 
-    // Mock window.showWarningMessage
+    // Mock window.showWarningMessage (for folder confirmation)
     (window as any).showWarningMessage = async (
       message: string,
       options: any,
@@ -230,6 +232,11 @@ suite("Remove Command Tests", () => {
     ) => {
       windowWarningCalls.push({ message, options, buttons });
       return warningResponses.shift();
+    };
+
+    // Mock window.showInformationMessage (for ignore prompt)
+    (window as any).showInformationMessage = async () => {
+      return infoResponses.shift();
     };
 
     // Mock window.showErrorMessage
@@ -240,58 +247,34 @@ suite("Remove Command Tests", () => {
   });
 
   teardown(() => {
-    removeCmd.dispose();
+    untrackCmd.dispose();
   });
 
-  test("remove single file - keep local copy (Yes)", async () => {
-    warningResponses.push("Yes");
+  test("untrack single file - always keeps local copy", async () => {
+    infoResponses.push(undefined); // Decline ignore prompt
 
     const fileUri = Uri.file("/workspace/file.txt");
     const resource = new Resource(fileUri, Status.ADDED);
 
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
+    (untrackCmd as any).getResourceStatesOrExit = async () => [resource];
+    (untrackCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
         uris.map((u: Uri) => u.fsPath)
       );
     };
 
-    await removeCmd.execute(resource);
+    await untrackCmd.execute(resource);
 
-    assert.strictEqual(windowWarningCalls.length, 1);
-    assert.strictEqual(
-      windowWarningCalls[0]!.message,
-      "Would you like to keep a local copy of the files?"
-    );
+    // No warning dialog for files (only folders get confirmation)
+    assert.strictEqual(windowWarningCalls.length, 0);
     assert.strictEqual(removeFilesCalls.length, 1);
     assert.deepStrictEqual(removeFilesCalls[0]!.files, ["/workspace/file.txt"]);
     assert.strictEqual(removeFilesCalls[0]!.keepLocal, true);
   });
 
-  test("remove single file - delete local copy (No)", async () => {
-    warningResponses.push("No");
-
-    const fileUri = Uri.file("/workspace/file.txt");
-    const resource = new Resource(fileUri, Status.ADDED);
-
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(
-        mockRepository,
-        uris.map((u: Uri) => u.fsPath)
-      );
-    };
-
-    await removeCmd.execute(resource);
-
-    assert.strictEqual(removeFilesCalls.length, 1);
-    assert.deepStrictEqual(removeFilesCalls[0]!.files, ["/workspace/file.txt"]);
-    assert.strictEqual(removeFilesCalls[0]!.keepLocal, false);
-  });
-
-  test("remove multiple files - keep local copy", async () => {
-    warningResponses.push("Yes");
+  test("untrack multiple files - always keeps local copy", async () => {
+    infoResponses.push(undefined);
 
     const files = [
       Uri.file("/workspace/file1.txt"),
@@ -301,15 +284,15 @@ suite("Remove Command Tests", () => {
 
     const resources = files.map(f => new Resource(f, Status.ADDED));
 
-    (removeCmd as any).getResourceStatesOrExit = async () => resources;
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
+    (untrackCmd as any).getResourceStatesOrExit = async () => resources;
+    (untrackCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
         uris.map((u: Uri) => u.fsPath)
       );
     };
 
-    await removeCmd.execute(...resources);
+    await untrackCmd.execute(...resources);
 
     assert.strictEqual(removeFilesCalls.length, 1);
     assert.deepStrictEqual(removeFilesCalls[0]!.files, [
@@ -320,92 +303,19 @@ suite("Remove Command Tests", () => {
     assert.strictEqual(removeFilesCalls[0]!.keepLocal, true);
   });
 
-  test("remove multiple files - delete local copy", async () => {
-    warningResponses.push("No");
-
-    const files = [
-      Uri.file("/workspace/file1.txt"),
-      Uri.file("/workspace/file2.txt")
-    ];
-
-    const resources = files.map(f => new Resource(f, Status.MODIFIED));
-
-    (removeCmd as any).getResourceStatesOrExit = async () => resources;
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(
-        mockRepository,
-        uris.map((u: Uri) => u.fsPath)
-      );
-    };
-
-    await removeCmd.execute(...resources);
-
-    assert.strictEqual(removeFilesCalls.length, 1);
-    assert.deepStrictEqual(removeFilesCalls[0]!.files, [
-      "/workspace/file1.txt",
-      "/workspace/file2.txt"
-    ]);
-    assert.strictEqual(removeFilesCalls[0]!.keepLocal, false);
-  });
-
-  test("remove with user cancellation", async () => {
-    warningResponses.push(undefined); // User clicks Cancel
-
-    const fileUri = Uri.file("/workspace/file.txt");
-    const resource = new Resource(fileUri, Status.ADDED);
-
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async () => {
+  test("untrack with no resources returns early", async () => {
+    (untrackCmd as any).getResourceStatesOrExit = async () => null;
+    (untrackCmd as any).runByRepository = async () => {
       throw new Error("Should not be called");
     };
 
-    await removeCmd.execute(resource);
-
-    assert.strictEqual(windowWarningCalls.length, 1);
-    assert.strictEqual(
-      removeFilesCalls.length,
-      0,
-      "Should not call removeFiles"
-    );
-  });
-
-  test("remove with no resources returns early", async () => {
-    (removeCmd as any).getResourceStatesOrExit = async () => null;
-    (removeCmd as any).runByRepository = async () => {
-      throw new Error("Should not be called");
-    };
-
-    await removeCmd.execute();
+    await untrackCmd.execute();
 
     assert.strictEqual(windowWarningCalls.length, 0);
     assert.strictEqual(removeFilesCalls.length, 0);
   });
 
-  test("remove shows warning message with modal option", async () => {
-    warningResponses.push("Yes");
-
-    const fileUri = Uri.file("/workspace/file.txt");
-    const resource = new Resource(fileUri, Status.ADDED);
-
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(
-        mockRepository,
-        uris.map((u: Uri) => u.fsPath)
-      );
-    };
-
-    await removeCmd.execute(resource);
-
-    assert.strictEqual(windowWarningCalls.length, 1);
-    const call = windowWarningCalls[0]!;
-    assert.strictEqual(call.options.modal, true);
-    assert.deepStrictEqual(call.buttons, ["Yes", "No"]);
-  });
-
-  test("remove handles repository error", async () => {
-    warningResponses.push("Yes");
-
+  test("untrack handles repository error", async () => {
     const fileUri = Uri.file("/workspace/file.txt");
     const resource = new Resource(fileUri, Status.ADDED);
 
@@ -413,97 +323,22 @@ suite("Remove Command Tests", () => {
       throw new Error("SVN remove failed");
     };
 
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
+    (untrackCmd as any).getResourceStatesOrExit = async () => [resource];
+    (untrackCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
         uris.map((u: Uri) => u.fsPath)
       );
     };
 
-    await removeCmd.execute(resource);
+    await untrackCmd.execute(resource);
 
     assert.strictEqual(showErrorCalls.length, 1);
-    assert.strictEqual(showErrorCalls[0], "Unable to remove files");
+    assert.ok(showErrorCalls[0]!.includes("Unable to untrack"));
   });
 
-  test("remove calls Repository.removeFiles with keepLocal=true", async () => {
-    warningResponses.push("Yes");
-
-    const fileUri = Uri.file("/workspace/test.txt");
-    const resource = new Resource(fileUri, Status.MODIFIED);
-
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(
-        mockRepository,
-        uris.map((u: Uri) => u.fsPath)
-      );
-    };
-
-    await removeCmd.execute(resource);
-
-    assert.strictEqual(removeFilesCalls.length, 1);
-    const call = removeFilesCalls[0]!;
-    assert.strictEqual(call.keepLocal, true);
-  });
-
-  test("remove calls Repository.removeFiles with keepLocal=false", async () => {
-    warningResponses.push("No");
-
-    const fileUri = Uri.file("/workspace/test.txt");
-    const resource = new Resource(fileUri, Status.MODIFIED);
-
-    (removeCmd as any).getResourceStatesOrExit = async () => [resource];
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(
-        mockRepository,
-        uris.map((u: Uri) => u.fsPath)
-      );
-    };
-
-    await removeCmd.execute(resource);
-
-    assert.strictEqual(removeFilesCalls.length, 1);
-    const call = removeFilesCalls[0]!;
-    assert.strictEqual(call.keepLocal, false);
-  });
-
-  test("remove with mixed status files", async () => {
-    warningResponses.push("Yes");
-
-    const files = [
-      Uri.file("/workspace/added.txt"),
-      Uri.file("/workspace/modified.txt"),
-      Uri.file("/workspace/deleted.txt")
-    ];
-
-    const resources = [
-      new Resource(files[0]!, Status.ADDED),
-      new Resource(files[1]!, Status.MODIFIED),
-      new Resource(files[2]!, Status.DELETED)
-    ];
-
-    (removeCmd as any).getResourceStatesOrExit = async () => resources;
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(
-        mockRepository,
-        uris.map((u: Uri) => u.fsPath)
-      );
-    };
-
-    await removeCmd.execute(...resources);
-
-    assert.strictEqual(removeFilesCalls.length, 1);
-    assert.deepStrictEqual(removeFilesCalls[0]!.files, [
-      "/workspace/added.txt",
-      "/workspace/modified.txt",
-      "/workspace/deleted.txt"
-    ]);
-  });
-
-  test("remove preserves file order in removal call", async () => {
-    warningResponses.push("No");
+  test("untrack preserves file order", async () => {
+    infoResponses.push(undefined);
 
     const files = [
       Uri.file("/workspace/z_file.txt"),
@@ -513,15 +348,15 @@ suite("Remove Command Tests", () => {
 
     const resources = files.map(f => new Resource(f, Status.ADDED));
 
-    (removeCmd as any).getResourceStatesOrExit = async () => resources;
-    (removeCmd as any).runByRepository = async (uris: any, fn: any) => {
+    (untrackCmd as any).getResourceStatesOrExit = async () => resources;
+    (untrackCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
         uris.map((u: Uri) => u.fsPath)
       );
     };
 
-    await removeCmd.execute(...resources);
+    await untrackCmd.execute(...resources);
 
     // Verify file order is preserved (not sorted)
     assert.deepStrictEqual(removeFilesCalls[0]!.files, [

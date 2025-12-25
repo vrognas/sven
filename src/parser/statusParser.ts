@@ -104,7 +104,10 @@ function processEntry(
   if (entry.wcStatus.movedTo && r.status === "deleted") {
     return [];
   }
-  if (entry.wcStatus.movedFrom && r.status === "added") {
+  if (
+    entry.wcStatus.movedFrom &&
+    (r.status === "added" || r.status === "replaced")
+  ) {
     r.rename = entry.wcStatus.movedFrom;
   }
   if (entry.wcStatus.commit) {
