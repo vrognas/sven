@@ -510,6 +510,11 @@ export class SourceControlManager implements IDisposable {
 
       this.openRepositories.push(openRepository);
       this._onDidOpenRepository.fire(repository);
+
+      // Prompt walkthrough on first repository open (P0.3)
+      if (this.openRepositories.length === 1) {
+        this.promptWalkthrough();
+      }
     } catch (error) {
       // Cleanup on failure to prevent resource leaks
       disappearListener.dispose();
@@ -560,6 +565,34 @@ export class SourceControlManager implements IDisposable {
       logError("Working copy upgrade failed", e);
     }
     return false;
+  }
+
+  /**
+   * Prompt user with walkthrough on first repository open.
+   * Design: Only show once per installation, not per session.
+   */
+  private async promptWalkthrough(): Promise<void> {
+    const hasCompletedSetup =
+      this.context.globalState.get<boolean>("sven.setupComplete");
+    if (hasCompletedSetup) {
+      return;
+    }
+
+    const action = await window.showInformationMessage(
+      "SVN repository detected. Need help getting started?",
+      "Quick Tour",
+      "Dismiss"
+    );
+
+    if (action === "Quick Tour") {
+      await commands.executeCommand(
+        "workbench.action.openWalkthrough",
+        "vrognas.sven#sven.gettingStarted"
+      );
+    }
+
+    // Mark as complete regardless of choice (don't ask again)
+    await this.context.globalState.update("sven.setupComplete", true);
   }
 
   public dispose(): void {
