@@ -35,9 +35,6 @@ import { isPositron, getEnvironmentName } from "./positron/runtime";
 import { logError, logWarning } from "./util/errorLogger";
 import { registerSvnConnectionsProvider } from "./positron/connectionsProvider";
 import { BlameStatusBar } from "./blame/blameStatusBar";
-import { WatchService } from "./services/WatchService";
-import { WatchStatusBar } from "./statusbar/watchStatusBar";
-import { WatchNotifier } from "./services/WatchNotifier";
 import { NeedsLockStatusBar } from "./statusbar/needsLockStatusBar";
 import { LockStatusBar } from "./statusbar/lockStatusBar";
 
@@ -92,13 +89,8 @@ async function init(
     extensionContext
   );
 
-  // Create WatchService (workspace-scoped)
-  console.log("Sven: Creating WatchService...");
-  const watchService = new WatchService(extensionContext.workspaceState);
-  disposables.push(watchService);
-
   console.log("Sven: Registering commands...");
-  registerCommands(sourceControlManager, disposables, watchService);
+  registerCommands(sourceControlManager, disposables);
 
   console.log("Sven: Creating providers...");
   try {
@@ -139,22 +131,6 @@ async function init(
     })
   );
   console.log("Sven: BlameStatusBar created");
-
-  // Initialize watch status bar
-  console.log("Sven: Creating WatchStatusBar...");
-  const watchStatusBar = new WatchStatusBar(watchService);
-  disposables.push(watchStatusBar);
-  console.log("Sven: WatchStatusBar created");
-
-  // Initialize watch notifier (monitors remote changes for watched files)
-  console.log("Sven: Creating WatchNotifier...");
-  const watchNotifier = new WatchNotifier(
-    sourceControlManager,
-    watchService,
-    watchStatusBar
-  );
-  disposables.push(watchNotifier);
-  console.log("Sven: WatchNotifier created");
 
   // Initialize needs-lock status bar
   console.log("Sven: Creating NeedsLockStatusBar...");
