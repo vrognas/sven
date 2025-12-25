@@ -15,6 +15,12 @@
 - **Resolve conflict**: Non-modal confirmation instead of blocking modal
 - **Pre-commit conflicts**: Non-modal warning instead of blocking modal
 
+### UX: Auto-Onboarding
+
+- **First repo open**: Shows "Quick Tour" / "Dismiss" prompt when user opens first SVN repository
+- **Walkthrough**: Opens "Getting Started with SVN" walkthrough if user clicks "Quick Tour"
+- **Once per install**: Uses globalState to show only once, not per session
+
 ## [0.1.9] (2025-12-23)
 
 ### Feature: SVN Property Management (eol-style, mime-type, auto-props)

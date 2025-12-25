@@ -254,7 +254,9 @@ await window.showInformationMessage(
 
 ---
 
-### P0.3: Auto-Trigger Onboarding
+### P0.3: Auto-Trigger Onboarding ✅ COMPLETE
+
+**Status**: Implemented in `source_control_manager.ts:promptWalkthrough()`. Shows once per installation.
 
 **Problem**: 5 walkthroughs exist but no auto-trigger on first use.
 
@@ -842,7 +844,7 @@ export async function manageProperties(uri: Uri): Promise<void> {
 | ----- | ---------------------- | ------ | ------------ | ------- |
 | 1     | P0.1 Action buttons    | 4h     | None         | ✅ Done |
 | 2     | P0.2 Inline validation | 6h     | None         | ✅ Done |
-| 3     | P0.3 Auto-onboarding   | 2h     | None         | Pending |
+| 3     | P0.3 Auto-onboarding   | 2h     | None         | ✅ Done |
 | 4     | P1.1 Command naming    | 8h     | None         | Pending |
 | 5     | P1.2 Glossary command  | 2h     | P1.1         | Pending |
 | 6     | P1.3 Dynamic progress  | 3h     | None         | Pending |
