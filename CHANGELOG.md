@@ -26,6 +26,14 @@
 - **Categories**: Line Endings (EOL), File Types (MIME), Auto-Properties, Ignore Patterns, Lock Settings
 - **Consolidates**: 6+ property commands into single entry point
 
+### Docs: Design System (P3.1)
+
+- **New doc**: `docs/DESIGN_SYSTEM.md` documents visual patterns
+- **Color palette**: gitDecoration mappings, lock colors, revision badges
+- **Badge system**: Single-char (A/M/D/C), dual-char (B/S), folder prefixes (📁A)
+- **Dialog patterns**: When modal vs inline, QuickPick step indicators
+- **Terminology conventions**: SVN jargon → user-friendly mappings
+
 ### UX: Actionable Error Buttons
 
 - **Auth errors**: "Clear Credentials" button for E170001, E215004
