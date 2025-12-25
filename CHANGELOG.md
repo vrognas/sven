@@ -1,3 +1,14 @@
+## [0.2.0] (2025-12-25)
+
+### UX: Actionable Error Buttons
+
+- **Auth errors**: "Clear Credentials" button for E170001, E215004
+- **Network errors**: "Retry" button for E170013, E175002 (auto-retries operation)
+- **Lock conflicts**: "Steal Lock" button for E200035 (file locked by other)
+- **Lock missing/expired**: "Lock File" button for E200036, E200041
+- **Permission errors**: "Show Output" button for E261001, E261002, E250006
+- **Error priority**: Auth > Cleanup > Update > Conflict > Lock > Network > Output
+
 ## [0.1.9] (2025-12-23)
 
 ### Feature: SVN Property Management (eol-style, mime-type, auto-props)

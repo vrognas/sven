@@ -1,6 +1,6 @@
 # Aesthetic-Usability Implementation Plan
 
-**Version**: 0.1.9
+**Version**: 0.2.0
 **Date**: 2025-12-25
 **Parent**: [AESTHETIC_USABILITY_ANALYSIS.md](./AESTHETIC_USABILITY_ANALYSIS.md)
 
@@ -14,7 +14,9 @@ Detailed implementation plans for addressing usability issues masked by aestheti
 
 ## P0: Address Masked Critical Issues
 
-### P0.1: Add Action Buttons to Errors
+### P0.1: Add Action Buttons to Errors ✅ COMPLETE
+
+**Status**: Implemented in `command.ts:handleRepositoryOperation()` with 4 new detection methods.
 
 **Problem**: Only 4 error types have action buttons; `actionableError.ts` functions exist but are NEVER CALLED.
 
@@ -834,17 +836,17 @@ export async function manageProperties(uri: Uri): Promise<void> {
 
 ## Implementation Order
 
-| Phase | Task                   | Effort | Dependencies |
-| ----- | ---------------------- | ------ | ------------ |
-| 1     | P0.1 Action buttons    | 4h     | None         |
-| 2     | P0.2 Inline validation | 6h     | None         |
-| 3     | P0.3 Auto-onboarding   | 2h     | None         |
-| 4     | P1.1 Command naming    | 8h     | None         |
-| 5     | P1.2 Glossary command  | 2h     | P1.1         |
-| 6     | P1.3 Dynamic progress  | 3h     | None         |
-| 7     | P2.1 Commit dialog     | 12h    | P0.2         |
-| 8     | P2.2 Property mgmt     | 4h     | None         |
-| 9     | P3.1 Design docs       | 4h     | All above    |
+| Phase | Task                   | Effort | Dependencies | Status  |
+| ----- | ---------------------- | ------ | ------------ | ------- |
+| 1     | P0.1 Action buttons    | 4h     | None         | ✅ Done |
+| 2     | P0.2 Inline validation | 6h     | None         | Pending |
+| 3     | P0.3 Auto-onboarding   | 2h     | None         | Pending |
+| 4     | P1.1 Command naming    | 8h     | None         | Pending |
+| 5     | P1.2 Glossary command  | 2h     | P1.1         | Pending |
+| 6     | P1.3 Dynamic progress  | 3h     | None         | Pending |
+| 7     | P2.1 Commit dialog     | 12h    | P0.2         | Pending |
+| 8     | P2.2 Property mgmt     | 4h     | None         | Pending |
+| 9     | P3.1 Design docs       | 4h     | All above    | Pending |
 
 **Total Estimated Effort**: ~45 hours
 
