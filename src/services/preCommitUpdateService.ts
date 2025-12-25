@@ -96,10 +96,10 @@ export class PreCommitUpdateService {
    * Prompt user to choose action when conflicts detected
    */
   async promptConflictResolution(): Promise<ConflictChoice> {
+    // Non-modal warning - less disruptive UX
     const choice = await window.showWarningMessage(
-      "Update found conflicts. Resolve conflicts before committing, or commit anyway?",
-      { modal: true },
-      "Abort",
+      "Conflicts detected during update. Resolve before committing?",
+      "Resolve First",
       "Commit Anyway"
     );
 

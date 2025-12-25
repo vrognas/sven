@@ -21,14 +21,14 @@ export class Resolved extends Command {
 
     if (!autoResolve) {
       const basename = path.basename(uri.fsPath);
+      // Non-modal confirmation - less disruptive UX
       const pick = await window.showWarningMessage(
-        `Mark the conflict as resolved for "${basename}"?`,
-        { modal: true },
-        "Yes",
-        "No"
+        `Mark "${basename}" as resolved?`,
+        "Resolve",
+        "Cancel"
       );
 
-      if (pick !== "Yes") {
+      if (pick !== "Resolve") {
         return;
       }
     }
