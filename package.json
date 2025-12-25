@@ -1021,6 +1021,12 @@
         "title": "Show Terminology Help...",
         "category": "SVN",
         "icon": "$(book)"
+      },
+      {
+        "command": "sven.manageProperties",
+        "title": "Manage Properties...",
+        "category": "SVN",
+        "icon": "$(symbol-property)"
       }
     ],
     "submenus": [

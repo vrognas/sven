@@ -744,7 +744,9 @@ For users who prefer visual file trees, a webview dialog could be added as
 
 ---
 
-### P2.2: Unified Property Management
+### P2.2: Unified Property Management ✅ COMPLETE
+
+**Status**: Implemented `src/commands/manageProperties.ts` with 5 category quick-pick.
 
 **Problem**: 6 separate commands for property management.
 
@@ -855,7 +857,7 @@ export async function manageProperties(uri: Uri): Promise<void> {
 | 5     | P1.2 Glossary command  | 2h     | P1.1         | ✅ Done |
 | 6     | P1.3 Dynamic progress  | 3h     | None         | ✅ Done |
 | 7     | P2.1 Commit dialog     | 12h    | P0.2         | Pending |
-| 8     | P2.2 Property mgmt     | 4h     | None         | Pending |
+| 8     | P2.2 Property mgmt     | 4h     | None         | ✅ Done |
 | 9     | P3.1 Design docs       | 4h     | All above    | Pending |
 
 **Total Estimated Effort**: ~45 hours

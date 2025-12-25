@@ -85,6 +85,7 @@ import { SetMimeType, RemoveMimeType } from "./commands/setMimeType";
 import { ManageAutoProps } from "./commands/manageAutoProps";
 import { OpenClientConfig } from "./commands/openClientConfig";
 import { ShowGlossary } from "./commands/showGlossary";
+import { ManageProperties } from "./commands/manageProperties";
 
 export function registerCommands(
   sourceControlManager: SourceControlManager,
@@ -187,6 +188,9 @@ export function registerCommands(
   // Auto-props commands
   disposables.push(new ManageAutoProps());
   disposables.push(new OpenClientConfig());
+
+  // Unified property management
+  disposables.push(new ManageProperties());
 
   // Help commands
   disposables.push(new ShowGlossary());

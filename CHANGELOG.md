@@ -13,6 +13,12 @@
 - **Core concepts**: BASE, HEAD, PREV, Working Copy, Revision, Lock, Annotations (Blame)
 - **Searchable**: matchOnDetail enabled - search by term or definition
 
+### UX: Unified Property Management (P2.2)
+
+- **New command**: "SVN: Manage Properties..." opens quick-pick with 5 categories
+- **Categories**: Line Endings (EOL), File Types (MIME), Auto-Properties, Ignore Patterns, Lock Settings
+- **Consolidates**: 6+ property commands into single entry point
+
 ### UX: Actionable Error Buttons
 
 - **Auth errors**: "Clear Credentials" button for E170001, E215004
