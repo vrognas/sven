@@ -529,7 +529,9 @@ export async function showGlossary(): Promise<void> {
 
 ---
 
-### P1.3: Update Progress Dynamically
+### P1.3: Update Progress Dynamically ✅ ALREADY COMPLETE
+
+**Status**: Already implemented in sparse checkout with file monitors, folder monitors, speed tracking, and ETA updates (lines 1135-1172).
 
 **Problem**: Progress shows initial ETA but doesn't update as download progresses.
 
@@ -851,7 +853,7 @@ export async function manageProperties(uri: Uri): Promise<void> {
 | 3     | P0.3 Auto-onboarding   | 2h     | None         | ✅ Done |
 | 4     | P1.1 Command naming    | 8h     | None         | ✅ Done |
 | 5     | P1.2 Glossary command  | 2h     | P1.1         | ✅ Done |
-| 6     | P1.3 Dynamic progress  | 3h     | None         | Pending |
+| 6     | P1.3 Dynamic progress  | 3h     | None         | ✅ Done |
 | 7     | P2.1 Commit dialog     | 12h    | P0.2         | Pending |
 | 8     | P2.2 Property mgmt     | 4h     | None         | Pending |
 | 9     | P3.1 Design docs       | 4h     | All above    | Pending |
