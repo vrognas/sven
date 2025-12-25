@@ -3,6 +3,7 @@
 
 import { SourceControlResourceState, Uri, window } from "vscode";
 import { Command } from "./command";
+import { confirmDestructive } from "../ui";
 import { validateLockComment } from "../validation";
 import { makeWritable } from "../fs";
 
@@ -100,16 +101,11 @@ export class StealLock extends Command {
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
     // Confirm stealing lock
-    const answer = await window.showWarningMessage(
+    const confirmed = await confirmDestructive(
       "Steal lock from another user? They will lose their lock.",
-      { modal: true },
-      "Steal Lock",
-      "Cancel"
+      "Steal Lock"
     );
-
-    if (answer !== "Steal Lock") {
-      return;
-    }
+    if (!confirmed) return;
 
     // Handle Uri from Explorer context menu
     // args[0] = clicked item, args[1] = array of all selected items (multi-select)

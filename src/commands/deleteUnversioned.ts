@@ -2,8 +2,9 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { SourceControlResourceState, window } from "vscode";
+import { SourceControlResourceState } from "vscode";
 import { exists, lstat, unlink } from "../fs";
+import { confirmDestructive } from "../ui";
 import { deleteDirectory } from "../util";
 import { Command } from "./command";
 
@@ -16,31 +17,24 @@ export class DeleteUnversioned extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
     const uris = selection.map(resource => resource.resourceUri);
-    const yes = "Delete";
-    const answer = await window.showWarningMessage(
-      "Would you like to delete selected files?",
-      { modal: true },
-      yes,
-      "Cancel"
-    );
-    if (answer === yes) {
-      for (const uri of uris) {
-        const fsPath = uri.fsPath;
+    if (!(await confirmDestructive("Delete selected files?", "Delete"))) return;
 
-        await this.handleRepositoryOperation(async () => {
-          if (!(await exists(fsPath))) {
-            return;
-          }
+    for (const uri of uris) {
+      const fsPath = uri.fsPath;
 
-          const stat = await lstat(fsPath);
+      await this.handleRepositoryOperation(async () => {
+        if (!(await exists(fsPath))) {
+          return;
+        }
 
-          if (stat.isDirectory()) {
-            await deleteDirectory(fsPath);
-          } else {
-            await unlink(fsPath);
-          }
-        }, "Unable to delete file");
-      }
+        const stat = await lstat(fsPath);
+
+        if (stat.isDirectory()) {
+          await deleteDirectory(fsPath);
+        } else {
+          await unlink(fsPath);
+        }
+      }, "Unable to delete file");
     }
   }
 }

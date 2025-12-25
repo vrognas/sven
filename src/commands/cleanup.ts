@@ -5,6 +5,7 @@
 import { ProgressLocation, QuickPickItem, window } from "vscode";
 import { ICleanupOptions } from "../common/types";
 import { Repository } from "../repository";
+import { confirmDestructive } from "../ui";
 import { Command } from "./command";
 
 interface CleanupQuickPickItem extends QuickPickItem {
@@ -92,16 +93,11 @@ export class Cleanup extends Command {
       const names = destructive
         .map(d => d.label.replace(/\$\([^)]+\)\s*/, ""))
         .join(", ");
-      const deleteBtn = "Delete Files";
-      const confirm = await window.showWarningMessage(
+      const confirmed = await confirmDestructive(
         `WARNING: "${names}" will permanently delete files. Continue?`,
-        { modal: true },
-        deleteBtn,
-        "Cancel"
+        "Delete Files"
       );
-      if (confirm !== deleteBtn) {
-        return;
-      }
+      if (!confirmed) return;
     }
 
     // Build options object and collect operation names

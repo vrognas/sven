@@ -3,8 +3,8 @@
 // Licensed under MIT License
 
 import { Repository } from "../repository";
+import { confirmDestructive } from "../ui";
 import { Command } from "./command";
-import { window } from "vscode";
 
 export class RemoveUnversioned extends Command {
   constructor() {
@@ -12,15 +12,11 @@ export class RemoveUnversioned extends Command {
   }
 
   public async execute(repository: Repository) {
-    const answer = await window.showWarningMessage(
-      "Are you sure? This will remove all unversioned files except for ignored.",
-      { modal: true },
-      "Yes",
-      "No"
+    const confirmed = await confirmDestructive(
+      "Remove all unversioned files except ignored?",
+      "Remove"
     );
-    if (answer !== "Yes") {
-      return;
-    }
+    if (!confirmed) return;
     await repository.removeUnversioned();
   }
 }

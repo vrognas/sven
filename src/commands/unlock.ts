@@ -3,6 +3,7 @@
 
 import { SourceControlResourceState, Uri, window } from "vscode";
 import { Command } from "./command";
+import { confirmDestructive } from "../ui";
 import { makeReadOnly } from "../fs";
 
 export class Unlock extends Command {
@@ -83,17 +84,11 @@ export class BreakLock extends Command {
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
     // Confirm breaking lock
-    const breakBtn = "Break Lock";
-    const answer = await window.showWarningMessage(
+    const confirmed = await confirmDestructive(
       "Break lock owned by another user? This cannot be undone.",
-      { modal: true },
-      breakBtn,
-      "Cancel"
+      "Break Lock"
     );
-
-    if (answer !== breakBtn) {
-      return;
-    }
+    if (!confirmed) return;
 
     // Handle Uri from Explorer context menu
     // args[0] = clicked item, args[1] = array of all selected items (multi-select)
