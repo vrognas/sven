@@ -41,11 +41,10 @@ import { PatchChangeList } from "./commands/patchChangeList";
 import { PickCommitMessage } from "./commands/pickCommitMessage";
 import { PromptAuth } from "./commands/promptAuth";
 import { PromptRemove } from "./commands/promptRemove";
-import { PullIncomingChange } from "./commands/pullIncomingChange";
+import { PullIncommingChange } from "./commands/pullIncomingChange";
 import { ClearCredentials } from "./commands/clearCredentials";
 import { Refresh } from "./commands/refresh";
 import { RefreshRemoteChanges } from "./commands/refreshRemoteChanges";
-import { Untrack, UntrackExplorer } from "./commands/untrack";
 import { RemoveUnversioned } from "./commands/removeUnversioned";
 import { RenameExplorer } from "./commands/renameExplorer";
 import { Resolve } from "./commands/resolve";
@@ -68,7 +67,6 @@ import { SearchLogByRevision } from "./commands/search_log_by_revision";
 import { SearchLogByText } from "./commands/search_log_by_text";
 import { RevealInExplorer } from "./commands/revealInExplorer";
 import { RevealInExplorerView } from "./commands/revealInExplorerView";
-import { CopyRelativePath, CopyAbsolutePath } from "./commands/copyPath";
 import { Merge } from "./commands/merge";
 import { DiffWithExternalTool } from "./commands/diffWithExternalTool";
 import { Blame } from "./commands/blame";
@@ -79,34 +77,26 @@ import { EnableBlame } from "./commands/blame/enableBlame";
 import { DisableBlame } from "./commands/blame/disableBlame";
 import { UntrackedInfo } from "./commands/blame/untrackedInfo";
 import { ApplyRecommendedSettings } from "./commands/applyRecommendedSettings";
-import { ToggleWatch } from "./commands/toggleWatch";
-import { ManageWatches } from "./commands/manageWatches";
 import { ManageNeedsLock } from "./commands/manageNeedsLock";
 import { ManageLocks } from "./commands/manageLocks";
-import { ShowIgnoredFiles } from "./commands/showIgnoredFiles";
 import { SetEolStyle, RemoveEolStyle } from "./commands/setEolStyle";
 import { ManageEolStyle } from "./commands/manageEolStyle";
 import { SetMimeType, RemoveMimeType } from "./commands/setMimeType";
 import { ManageAutoProps } from "./commands/manageAutoProps";
 import { OpenClientConfig } from "./commands/openClientConfig";
-import { WatchService } from "./services/WatchService";
 
 export function registerCommands(
   sourceControlManager: SourceControlManager,
-  disposables: Disposable[],
-  watchService: WatchService
+  disposables: Disposable[]
 ) {
   // Phase 10.2 perf fix - cache SourceControlManager
   Command.setSourceControlManager(sourceControlManager);
-  Command.setWatchService(watchService);
 
   disposables.push(new GetSourceControlManager(sourceControlManager));
   disposables.push(new FileOpen());
   disposables.push(new OpenFile());
   disposables.push(new RevealInExplorer());
   disposables.push(new RevealInExplorerView());
-  disposables.push(new CopyRelativePath());
-  disposables.push(new CopyAbsolutePath());
   disposables.push(new PromptAuth());
   disposables.push(new CommitWithMessage());
   disposables.push(new CommitAll());
@@ -130,12 +120,10 @@ export function registerCommands(
   disposables.push(new Unstage());
   disposables.push(new UnstageAll());
   disposables.push(new Update());
-  disposables.push(new PullIncomingChange());
+  disposables.push(new PullIncommingChange());
   disposables.push(new PatchAll());
   disposables.push(new Patch());
   disposables.push(new PatchChangeList());
-  disposables.push(new Untrack());
-  disposables.push(new UntrackExplorer());
   disposables.push(new ResolveAll());
   disposables.push(new Resolve());
   disposables.push(new Resolved());
@@ -180,18 +168,11 @@ export function registerCommands(
   disposables.push(new UntrackedInfo());
   disposables.push(new ApplyRecommendedSettings());
 
-  // Watch commands
-  disposables.push(new ToggleWatch());
-  disposables.push(new ManageWatches());
-
   // Needs-lock commands
   disposables.push(new ManageNeedsLock());
 
   // Lock management commands
   disposables.push(new ManageLocks());
-
-  // Ignored files commands
-  disposables.push(new ShowIgnoredFiles());
 
   // EOL-style commands
   disposables.push(new SetEolStyle());

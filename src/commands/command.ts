@@ -34,7 +34,6 @@ import { Resource } from "../resource";
 import { fromSvnUri, toSvnUri } from "../uri";
 import { getSvnDir } from "../util";
 import { logError, logWarning } from "../util/errorLogger";
-import { WatchService } from "../services/WatchService";
 
 /**
  * Type-safe command argument patterns used across all commands.
@@ -62,18 +61,9 @@ export type CommandResult = void | Promise<void> | Promise<unknown>;
 export abstract class Command implements Disposable {
   // Phase 10.2 perf fix - cache SourceControlManager to avoid IPC overhead
   private static _sourceControlManager?: SourceControlManager;
-  private static _watchService?: WatchService;
 
   static setSourceControlManager(scm: SourceControlManager) {
     Command._sourceControlManager = scm;
-  }
-
-  static setWatchService(ws: WatchService) {
-    Command._watchService = ws;
-  }
-
-  protected get watchService(): WatchService | undefined {
-    return Command._watchService;
   }
 
   private _disposable?: Disposable;
