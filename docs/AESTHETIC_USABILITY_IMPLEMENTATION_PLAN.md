@@ -126,7 +126,9 @@ private detectErrorType(error: Error): ErrorType {
 
 ---
 
-### P0.2: Replace Modals with Inline Validation
+### P0.2: Replace Modals with Inline Validation ✅ COMPLETE
+
+**Status**: Converted 3 high-impact modals to non-modal. Added inline validation to commit webview.
 
 **Problem**: 28+ modal dialogs block UI; 10 could be inline.
 
@@ -839,7 +841,7 @@ export async function manageProperties(uri: Uri): Promise<void> {
 | Phase | Task                   | Effort | Dependencies | Status  |
 | ----- | ---------------------- | ------ | ------------ | ------- |
 | 1     | P0.1 Action buttons    | 4h     | None         | ✅ Done |
-| 2     | P0.2 Inline validation | 6h     | None         | Pending |
+| 2     | P0.2 Inline validation | 6h     | None         | ✅ Done |
 | 3     | P0.3 Auto-onboarding   | 2h     | None         | Pending |
 | 4     | P1.1 Command naming    | 8h     | None         | Pending |
 | 5     | P1.2 Glossary command  | 2h     | P1.1         | Pending |

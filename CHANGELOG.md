@@ -9,6 +9,12 @@
 - **Permission errors**: "Show Output" button for E261001, E261002, E250006
 - **Error priority**: Auth > Cleanup > Update > Conflict > Lock > Network > Output
 
+### UX: Less Intrusive Dialogs
+
+- **Commit message**: Inline validation warning (yellow box) when empty, non-modal confirmation
+- **Resolve conflict**: Non-modal confirmation instead of blocking modal
+- **Pre-commit conflicts**: Non-modal warning instead of blocking modal
+
 ## [0.1.9] (2025-12-23)
 
 ### Feature: SVN Property Management (eol-style, mime-type, auto-props)
