@@ -1,5 +1,12 @@
 ## [0.2.0] (2025-12-25)
 
+### UX: User-Friendly Command Names (P1.1)
+
+- **SVN jargon mapped**: EOL→"Line Ending", MIME→"File Type", Blame→"Annotations", Changelist→"Change Group"
+- **Ellipsis added**: Dialog-opening commands now end with "..." (Merge..., Switch Branch..., Search History...)
+- **Consistent naming**: "Set Line Ending Style (EOL)...", "Show Annotations (Blame)", "Go to Your Version (BASE)"
+- **Terminology module**: `src/constants/terminology.ts` provides humanize() helper for consistent naming
+
 ### UX: Actionable Error Buttons
 
 - **Auth errors**: "Clear Credentials" button for E170001, E215004

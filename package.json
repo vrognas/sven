@@ -426,28 +426,28 @@
       },
       {
         "command": "sven.addToIgnoreExplorer",
-        "title": "Ignore file/ext from SVN (svn:ignore)",
+        "title": "Add to Ignore List (svn:ignore)...",
         "category": "SVN"
       },
       {
         "command": "sven.removeFromIgnore",
-        "title": "Remove from svn:ignore",
+        "title": "Remove from Ignore List (svn:ignore)",
         "category": "SVN"
       },
       {
         "command": "sven.toggleIgnore",
-        "title": "Toggle svn:ignore",
+        "title": "Toggle Ignore (svn:ignore)",
         "category": "SVN",
         "icon": "$(eye-closed)"
       },
       {
         "command": "sven.viewIgnorePatterns",
-        "title": "View/Edit Ignore Patterns",
+        "title": "View Ignore Patterns...",
         "category": "SVN"
       },
       {
         "command": "sven.addToIgnoreSCM",
-        "title": "Ignore file/ext from SVN (svn:ignore)",
+        "title": "Add to Ignore List (svn:ignore)...",
         "category": "SVN"
       },
       {
@@ -458,7 +458,7 @@
       },
       {
         "command": "sven.manageWatches",
-        "title": "Manage Watches",
+        "title": "Manage Watches...",
         "category": "SVN"
       },
       {
@@ -469,34 +469,34 @@
       },
       {
         "command": "sven.setEolStyle",
-        "title": "Set EOL Style",
+        "title": "Set Line Ending Style (EOL)...",
         "category": "SVN",
         "icon": "$(symbol-text)"
       },
       {
         "command": "sven.removeEolStyle",
-        "title": "Remove EOL Style",
+        "title": "Remove Line Ending Style (EOL)",
         "category": "SVN"
       },
       {
         "command": "sven.manageEolStyle",
-        "title": "Manage EOL Styles",
+        "title": "Manage Line Ending Styles (EOL)...",
         "category": "SVN"
       },
       {
         "command": "sven.setMimeType",
-        "title": "Set MIME Type",
+        "title": "Set File Type (MIME)...",
         "category": "SVN",
         "icon": "$(file-media)"
       },
       {
         "command": "sven.removeMimeType",
-        "title": "Remove MIME Type",
+        "title": "Remove File Type (MIME)",
         "category": "SVN"
       },
       {
         "command": "sven.manageAutoProps",
-        "title": "Manage Auto-Props",
+        "title": "Manage Auto-Properties...",
         "category": "SVN",
         "icon": "$(gear)"
       },
@@ -508,36 +508,36 @@
       },
       {
         "command": "sven.blameFile",
-        "title": "Blame File",
+        "title": "Show Annotations (Blame)",
         "category": "SVN",
         "icon": "$(git-commit)"
       },
       {
         "command": "sven.blame.clearBlame",
-        "title": "Clear Blame",
+        "title": "Clear Annotations",
         "category": "SVN Blame",
         "icon": "$(close)"
       },
       {
         "command": "sven.blame.showBlame",
-        "title": "Show Blame",
+        "title": "Show Annotations",
         "category": "SVN Blame",
         "icon": "$(git-commit)"
       },
       {
         "command": "sven.blame.toggleBlame",
-        "title": "Toggle Blame",
+        "title": "Toggle Annotations (Blame)",
         "category": "SVN Blame"
       },
       {
         "command": "sven.blame.enableBlame",
-        "title": "Enable Blame",
+        "title": "Enable Annotations",
         "category": "SVN Blame",
         "icon": "$(eye-closed)"
       },
       {
         "command": "sven.blame.disableBlame",
-        "title": "Disable Blame",
+        "title": "Disable Annotations",
         "category": "SVN Blame",
         "icon": "$(eye)"
       },
@@ -560,13 +560,13 @@
       },
       {
         "command": "sven.changelist",
-        "title": "Set changelist",
+        "title": "Set Change Group (Changelist)...",
         "category": "SVN",
         "icon": "$(list-unordered)"
       },
       {
         "command": "sven.checkout",
-        "title": "Checkout",
+        "title": "Checkout...",
         "category": "SVN"
       },
       {
@@ -668,7 +668,7 @@
       {
         "command": "sven.repolog.goToRevision",
         "category": "SVN",
-        "title": "Go to revision"
+        "title": "Go to Revision..."
       },
       {
         "command": "sven.log",
@@ -677,7 +677,7 @@
       },
       {
         "command": "sven.merge",
-        "title": "Merge",
+        "title": "Merge...",
         "category": "SVN"
       },
       {
@@ -737,22 +737,22 @@
       },
       {
         "command": "sven.patch",
-        "title": "Show diff patch for selected",
+        "title": "Show Changes (Patch) for Selected",
         "category": "SVN"
       },
       {
         "command": "sven.patchAll",
-        "title": "Show all diff patch",
+        "title": "Show All Changes (Patch)",
         "category": "SVN"
       },
       {
         "command": "sven.patchChangeList",
-        "title": "Show patch from changelist",
+        "title": "Show Changes from Change Group (Changelist)",
         "category": "SVN"
       },
       {
         "command": "sven.pickCommitMessage",
-        "title": "Pick a previous commit message",
+        "title": "Pick Previous Message...",
         "category": "SVN",
         "icon": "$(history)"
       },
@@ -810,13 +810,13 @@
       },
       {
         "command": "sven.toggleNeedsLock",
-        "title": "Toggle Needs-Lock Property",
+        "title": "Toggle Require Lock (needs-lock)",
         "category": "SVN",
         "icon": "$(shield)"
       },
       {
         "command": "sven.setDepth",
-        "title": "Change Depth...",
+        "title": "Set Download Scope (Depth)...",
         "category": "SVN",
         "icon": "$(folder)"
       },
@@ -845,7 +845,7 @@
       },
       {
         "command": "sven.renameExplorer",
-        "title": "Rename with SVN",
+        "title": "Rename...",
         "category": "SVN"
       },
       {
@@ -866,17 +866,17 @@
       {
         "command": "sven.repolog.openFileLocal",
         "category": "SVN",
-        "title": "Open WC version of a file"
+        "title": "Open Local Version"
       },
       {
         "command": "sven.repolog.openFileRemote",
         "category": "SVN",
-        "title": "Open this revision"
+        "title": "Open This Revision"
       },
       {
         "command": "sven.repolog.goToBase",
         "category": "SVN",
-        "title": "Go to BASE",
+        "title": "Go to Your Version (BASE)",
         "icon": "$(target)"
       },
       {
@@ -909,7 +909,7 @@
       {
         "command": "sven.repolog.filterHistory",
         "category": "SVN",
-        "title": "Filter History",
+        "title": "Filter History...",
         "icon": "$(filter)"
       },
       {
@@ -985,17 +985,17 @@
       },
       {
         "command": "sven.searchLogByRevision",
-        "title": "Search log by revision",
+        "title": "Search by Revision...",
         "category": "SVN"
       },
       {
         "command": "sven.searchLogByText",
-        "title": "Search log",
+        "title": "Search History...",
         "category": "SVN"
       },
       {
         "command": "sven.switchBranch",
-        "title": "Switch Branch",
+        "title": "Switch Branch...",
         "category": "SVN"
       },
       {

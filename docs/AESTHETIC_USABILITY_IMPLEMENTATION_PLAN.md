@@ -323,7 +323,9 @@ private async promptWalkthrough(): Promise<void> {
 
 ## P1: Reduce Cognitive Load
 
-### P1.1: Consolidate Command Names
+### P1.1: Consolidate Command Names ✅ COMPLETE
+
+**Status**: Implemented with `src/constants/terminology.ts` and 30+ command title updates in `package.json`.
 
 **Problem**: 80+ commands with inconsistent naming, ellipsis, capitalization.
 
