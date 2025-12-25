@@ -18,27 +18,8 @@ export class ToggleNeedsLock extends Command {
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
-    // Handle Uri from Explorer context menu
-    // args[0] = clicked item, args[1] = array of all selected items (multi-select)
-    if (args.length > 0 && args[0] instanceof Uri) {
-      const uris = Array.isArray(args[1])
-        ? (args[1] as Uri[]).filter((a): a is Uri => a instanceof Uri)
-        : [args[0]];
-      await this.runByRepository(uris, async (repository, resources) => {
-        const paths = resources.map(r => r.fsPath);
-        await this.toggleNeedsLockOnPaths(repository, paths);
-      });
-      return;
-    }
-
-    // Handle SourceControlResourceState from SCM view
-    const selection = await this.getResourceStatesOrExit(
-      args as SourceControlResourceState[]
-    );
-    if (!selection) return;
-
-    await this.executeOnResources(
-      selection,
+    await this.executeOnUrisOrResources(
+      args,
       async (repository, paths) => {
         await this.toggleNeedsLockOnPaths(repository, paths);
       },

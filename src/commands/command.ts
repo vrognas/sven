@@ -158,6 +158,20 @@ export abstract class Command implements Disposable {
     return selection.length === 0 ? null : selection;
   }
 
+  /**
+   * Extract URIs from command args (Explorer context menu multi-select).
+   * Returns null if args are not URI-based (e.g., SCM resource states).
+   * Pattern: args[0] = clicked item, args[1] = all selected items (multi-select)
+   */
+  protected extractUris(args: unknown[]): Uri[] | null {
+    if (args.length > 0 && args[0] instanceof Uri) {
+      return Array.isArray(args[1])
+        ? (args[1] as Uri[]).filter((a): a is Uri => a instanceof Uri)
+        : [args[0]];
+    }
+    return null;
+  }
+
   protected runByRepository<T>(
     resource: Uri,
     fn: (repository: Repository, resource: Uri) => Promise<T>
@@ -616,6 +630,41 @@ export abstract class Command implements Disposable {
         }
       }
     });
+  }
+
+  /**
+   * Execute operation on URIs or resource states (unified handler).
+   * Handles both Explorer context menu (URIs) and SCM view (resource states).
+   * Returns true if executed, false if cancelled/empty.
+   */
+  protected async executeOnUrisOrResources(
+    args: unknown[],
+    operation: (repository: Repository, paths: string[]) => Promise<void>,
+    errorMsg: string
+  ): Promise<boolean> {
+    // Try URI path first (Explorer context menu)
+    const uris = this.extractUris(args);
+    if (uris) {
+      await this.runByRepository(uris, async (repository, resources) => {
+        const paths = resources.map(r => r.fsPath);
+        try {
+          await operation(repository, paths);
+        } catch (error) {
+          logError("URI operation failed", error);
+          window.showErrorMessage(errorMsg);
+        }
+      });
+      return true;
+    }
+
+    // Fall back to resource states (SCM view)
+    const selection = await this.getResourceStatesOrExit(
+      args as SourceControlResourceState[]
+    );
+    if (!selection) return false;
+
+    await this.executeOnResources(selection, operation, errorMsg);
+    return true;
   }
 
   /**
