@@ -218,29 +218,60 @@ Areas where good design genuinely improves usability:
 
 ## Recommendations
 
+> **Detailed Implementation**: See [AESTHETIC_USABILITY_IMPLEMENTATION_PLAN.md](./AESTHETIC_USABILITY_IMPLEMENTATION_PLAN.md)
+
 ### P0: Address Masked Critical Issues
 
-1. **Add action buttons to errors** - Use `actionableError.ts` pattern for top 10 error types
-2. **Replace modals with inline validation** - Especially for commit message warnings
-3. **Auto-trigger onboarding** - Show walkthrough on first repository open
+1. **Add action buttons to errors** (~4h)
+   - `actionableError.ts` functions exist but are NEVER CALLED
+   - Top 10 errors need actions: E170001 (auth), E170013 (network), E200035 (lock conflict)
+   - Extend `command.ts:handleRepositoryOperation()` error detection
+
+2. **Replace modals with inline validation** (~6h)
+   - 28 modal dialogs found; 10 could be inline
+   - Priority: `messages.ts:247` (empty commit), `resolved.ts:26`, `preCommitUpdateService.ts:101`
+   - Use `inputBox.validateInput` and quick-picks instead
+
+3. **Auto-trigger onboarding** (~2h)
+   - 5 walkthroughs exist but no auto-trigger
+   - Add first-run check in `extension.ts`
+   - Prompt on first repository open
 
 ### P1: Reduce Cognitive Load
 
-4. **Consolidate command names** - Standardize category prefixes and ellipsis usage
-5. **Create terminology glossary** - Accessible via "SVN: Show Terminology Help" command
-6. **Update progress titles dynamically** - Reflect actual download state
+4. **Consolidate command names** (~8h)
+   - 80+ commands with inconsistent naming
+   - Ellipsis missing on 12 dialog-opening commands
+   - Replace jargon: BASE→"your version", HEAD→"server latest", WC→"local"
+
+5. **Create terminology glossary** (~2h)
+   - New `sven.showGlossary` command
+   - Quick-pick with searchable SVN→user-friendly term mappings
+
+6. **Update progress titles dynamically** (~3h)
+   - `sparseCheckoutProvider.ts:985-993` shows static ETA
+   - Create `DynamicProgress` helper with throttled updates
 
 ### P2: Improve Discoverability
 
-7. **Single-dialog commit flow** - Reduce 6 steps to 2 (file tree + message)
-8. **Unified property management** - Single dialog with tabs
-9. **Add tooltips to dialog options** - Explain "vacuum pristines" etc.
+7. **Single-dialog commit flow** (~12h)
+   - Current: 6 decision points (changelist → files → update → conflicts → message → warning)
+   - Target: 1 dialog with file tree + message textarea + toggles
+
+8. **Unified property management** (~4h)
+   - Replace 6 commands with single "Manage Properties..." quick-pick
+   - Tabs: Line Endings, File Types, Auto-Properties, Ignore, Lock Settings
+
+9. **Add tooltips to dialog options**
+   - Explain "vacuum pristines", "remove unversioned", etc.
 
 ### P3: Maintain Visual Excellence
 
 10. **Continue VS Code theme integration** - Current approach is exemplary
-11. **Document design decisions** - Create design system doc for contributors
-12. **Test with users unfamiliar with SVN** - Identify Git→SVN translation friction
+11. **Document design decisions** - Create `docs/DESIGN_SYSTEM.md`
+12. **Test with users unfamiliar with SVN** - Screen recording user tests
+
+**Total Estimated Effort**: ~45 hours
 
 ---
 
@@ -277,5 +308,6 @@ Sven's aesthetic quality is a genuine asset—it follows VS Code conventions exp
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Analysis Scope**: 150+ TypeScript files, package.json, SCSS, icons
+**Implementation Plan**: [AESTHETIC_USABILITY_IMPLEMENTATION_PLAN.md](./AESTHETIC_USABILITY_IMPLEMENTATION_PLAN.md)
