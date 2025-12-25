@@ -48,31 +48,6 @@ import { revealFileInOS, diffWithExternalTool } from "../util/fileOperations";
 import { logError } from "../util/errorLogger";
 import { HistoryFilterService, ActionType } from "./historyFilter";
 
-// Reserved for future use - icon rendering in history view
-/*
-function getActionIcon(action: string) {
-  let name: string | undefined;
-  switch (action) {
-    case "A":
-      name = "status-added";
-      break;
-    case "D":
-      name = "status-deleted";
-      break;
-    case "M":
-      name = "status-modified";
-      break;
-    case "R":
-      name = "status-renamed";
-      break;
-  }
-  if (name === undefined) {
-    return undefined;
-  }
-  return getIconObject(name);
-}
-*/
-
 export class RepoLogProvider
   implements TreeDataProvider<ILogTreeItem>, Disposable
 {

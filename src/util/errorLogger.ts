@@ -62,31 +62,6 @@ export function logWarning(message: string, data?: unknown): void {
 }
 
 /**
- * Safely throw an error with sanitized message
- * Use this when re-throwing or creating errors from untrusted input
- *
- * @param message Error message
- * @param originalError Optional original error for context
- * @returns Error with sanitized message
- */
-export function createSafeError(
-  message: string,
-  originalError?: unknown
-): Error {
-  const sanitizedMessage = sanitizeString(message);
-  const error = new Error(sanitizedMessage);
-
-  if (originalError && originalError instanceof Error) {
-    // Preserve stack trace but sanitize it
-    if (originalError.stack) {
-      error.stack = sanitizeString(originalError.stack);
-    }
-  }
-
-  return error;
-}
-
-/**
  * Format SVN error message with error code if available
  * Extracts SVN error codes (E12345) from error string
  *

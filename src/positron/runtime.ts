@@ -58,28 +58,6 @@ export function getPositronApi(): PositronApi | undefined {
 }
 
 /**
- * Execute callback only in Positron environment
- *
- * Helper for conditional feature activation
- *
- * @param callback Function to execute if in Positron
- *
- * @example
- * ```typescript
- * whenPositron(() => {
- *   console.log("Running Positron-specific initialization");
- *   registerConnectionsProvider();
- * });
- * ```
- */
-export function whenPositron(callback: (api: PositronApi) => void): void {
-  const api = getPositronApi();
-  if (api) {
-    callback(api);
-  }
-}
-
-/**
  * Get environment name for logging/telemetry
  *
  * @returns "Positron" or "VS Code"

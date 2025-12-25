@@ -57,14 +57,6 @@ export enum LogTreeItemKind {
   TItem
 }
 
-// svn:// or ^/ or WC-path
-export class SvnPath {
-  constructor(private path: string) {}
-  public toString(): string {
-    return this.path;
-  }
-}
-
 export interface ICachedLog {
   entries: ISvnLogEntry[];
   // O(1) lookup for deduplication during pagination
@@ -85,6 +77,13 @@ export interface ICachedLog {
   lastAccessed?: number; // LRU tracking
   // Active filter for this cache
   filter?: IHistoryFilter;
+}
+
+export class SvnPath {
+  constructor(private path: string) {}
+  public toString(): string {
+    return this.path;
+  }
 }
 
 type TreeItemData = ISvnLogEntry | ISvnLogEntryPath | SvnPath | TreeItem;

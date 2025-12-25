@@ -66,14 +66,6 @@ export function getSvnConfigDir(): string {
 }
 
 /**
- * Get all existing SVN config directories.
- * Useful for debugging or showing user all config locations.
- */
-export function getAllExistingConfigDirs(): string[] {
-  return getConfigDirCandidates().filter(dir => fs.existsSync(dir));
-}
-
-/**
  * Get the SVN client config file path.
  * Returns the path to the 'config' file in the SVN config directory.
  */

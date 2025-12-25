@@ -7,10 +7,6 @@ import { commands, Uri, ViewColumn, WebviewPanel, window } from "vscode";
 import { SourceControlManager } from "./source_control_manager";
 import { configuration } from "./helpers/configuration";
 
-export function noChangesToCommit() {
-  return window.showInformationMessage("There are no changes to commit.");
-}
-
 let panel: WebviewPanel;
 
 // for tests only

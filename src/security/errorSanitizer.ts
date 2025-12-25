@@ -163,54 +163,6 @@ export function sanitizeString(input: string): string {
 }
 
 /**
- * Represents values that can be safely returned after sanitization
- */
-type SanitizedPrimitive = string | number | boolean | null | undefined;
-type SanitizedArray = Array<SanitizedPrimitive | SanitizedObject>;
-type SanitizedObject = { [key: string]: SanitizedValue };
-type SanitizedValue = SanitizedPrimitive | SanitizedArray | SanitizedObject;
-
-/**
- * Type guard to check if value is a plain object (not array, not null)
- */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
- * Sanitize an object by removing sensitive fields
- * @param obj Object to sanitize (typically error data)
- * @returns New object with sanitized string values
- */
-export function sanitizeObject(obj: Record<string, unknown>): SanitizedObject {
-  if (!obj || typeof obj !== "object") {
-    return {};
-  }
-
-  const sanitized: SanitizedObject = {};
-
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === "string") {
-      // String values: sanitize and assign
-      sanitized[key] = sanitizeString(value);
-    } else if (Array.isArray(value)) {
-      // Array values: sanitize string items, preserve others
-      sanitized[key] = value.map(item =>
-        typeof item === "string" ? sanitizeString(item) : item
-      );
-    } else if (isPlainObject(value)) {
-      // Nested objects: recurse
-      sanitized[key] = sanitizeObject(value);
-    } else {
-      // Primitives (number, boolean, null, undefined): pass through
-      sanitized[key] = value as SanitizedPrimitive;
-    }
-  }
-
-  return sanitized;
-}
-
-/**
  * Type guard to check if object has a property
  */
 function hasProperty<K extends string>(

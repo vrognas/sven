@@ -174,13 +174,3 @@ export function validateLockComment(comment: string): boolean {
   // Reject shell metacharacters: ; & | $ ( ) ` { } \
   return !/[;&|$(){}`\\]/.test(comment);
 }
-
-export const validators = {
-  changelist: validateChangelist,
-  acceptAction: validateAcceptAction,
-  searchPattern: validateSearchPattern,
-  revision: validateRevision,
-  filePath: validateFilePath,
-  repositoryUrl: validateRepositoryUrl,
-  lockComment: validateLockComment
-};
