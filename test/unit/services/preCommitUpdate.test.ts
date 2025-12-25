@@ -145,14 +145,14 @@ describe("PreCommitUpdateService", () => {
     });
 
     it("shows appropriate warning message", async () => {
-      mockWindow.showWarningMessage.mockResolvedValueOnce("Abort");
+      mockWindow.showWarningMessage.mockResolvedValueOnce("Resolve First");
 
       await service.promptConflictResolution();
 
+      // Non-modal warning (no modal option object)
       expect(mockWindow.showWarningMessage).toHaveBeenCalledWith(
-        expect.stringContaining("conflict"),
-        expect.objectContaining({ modal: true }),
-        "Abort",
+        expect.stringContaining("Conflicts"),
+        "Resolve First",
         "Commit Anyway"
       );
     });

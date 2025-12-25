@@ -102,6 +102,9 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
         </div>
         <label for="message">Commit message</label>
         <textarea id="message" rows="3" placeholder="Message (press Ctrl+Enter to commit)"></textarea>
+        <div id="emptyWarning" class="validation-warning" style="display: none;">
+          <span class="warning-icon">⚠</span> Commit message is empty
+        </div>
         <button id="commit" class="button-primary">Commit</button>
         <div class="float-right">
           <button id="cancel" class="button button-outline">Cancel</button>
@@ -116,6 +119,13 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
     const btnCommit = document.getElementById("commit");
     const btnCancel = document.getElementById("cancel");
     const linkPickCommitMessage = document.getElementById("pickCommitMessage");
+    const emptyWarning = document.getElementById("emptyWarning");
+
+    // Show/hide empty message warning
+    function updateValidation() {
+      const isEmpty = !txtMessage.value.trim();
+      emptyWarning.style.display = isEmpty ? "block" : "none";
+    }
 
     // load current message
     txtMessage.value = ${JSON.stringify(message)};
@@ -140,15 +150,17 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
       }
     });
 
-    // Auto resize the height of message
+    // Auto resize the height of message and validate
     txtMessage.addEventListener("input", function(e) {
       txtMessage.style.height = "auto";
       txtMessage.style.height = (txtMessage.scrollHeight) + "px";
+      updateValidation();
     });
 
     window.addEventListener("load", function() {
       setTimeout(() => {
         txtMessage.focus();
+        updateValidation();
       }, 1000);
     });
 
@@ -165,6 +177,7 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
         case "setMessage":
           txtMessage.value = message.message;
           txtMessage.dispatchEvent(new Event("input"));
+          updateValidation();
           break;
       }
     });
@@ -242,13 +255,14 @@ export async function inputCommitMessage(
   );
 
   if (message === "" && checkEmptyMessage) {
+    // Non-modal warning - less disruptive UX
     const allowEmpty = await window.showWarningMessage(
-      "Do you really want to commit an empty message?",
-      { modal: true },
-      "Yes"
+      "Commit message is empty. Continue anyway?",
+      "Commit Empty",
+      "Cancel"
     );
 
-    if (allowEmpty === "Yes") {
+    if (allowEmpty === "Commit Empty") {
       return "";
     } else {
       return undefined;

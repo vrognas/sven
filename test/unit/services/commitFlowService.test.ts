@@ -169,9 +169,9 @@ describe("CommitFlowService", () => {
         }
       );
 
+      // Non-modal warning (3 args, no modal options object)
       expect(mockWindow.showWarningMessage).toHaveBeenCalledWith(
-        expect.stringContaining("conflict"),
-        expect.anything(),
+        expect.stringContaining("Conflicts"),
         expect.anything(),
         expect.anything()
       );

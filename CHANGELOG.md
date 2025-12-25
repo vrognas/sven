@@ -1,3 +1,60 @@
+## [0.2.0] (2025-12-25)
+
+### UX: User-Friendly Command Names (P1.1)
+
+- **SVN jargon mapped**: EOL→"Line Ending", MIME→"File Type", Blame→"Annotations", Changelist→"Change Group"
+- **Ellipsis added**: Dialog-opening commands now end with "..." (Merge..., Switch Branch..., Search History...)
+- **Consistent naming**: "Set Line Ending Style (EOL)...", "Show Annotations (Blame)", "Go to Your Version (BASE)"
+- **Terminology module**: `src/constants/terminology.ts` provides humanize() helper for consistent naming
+
+### UX: Terminology Glossary (P1.2)
+
+- **New command**: "SVN: Show Terminology Help..." opens quick-pick with 12 glossary entries
+- **Core concepts**: BASE, HEAD, PREV, Working Copy, Revision, Lock, Annotations (Blame)
+- **Searchable**: matchOnDetail enabled - search by term or definition
+
+### UX: Streamlined Commit Flow (P2.1)
+
+- **2-step flow**: File selection → Message input (with `conventionalCommits: false`)
+- **Step indicators**: Added "(1/2)", "(2/2)" to QuickPick titles for clarity
+- **Settings-based**: Pre-commit update controlled by `sven.commit.autoUpdate` (not modals)
+- **Inline validation**: Empty message shows error in InputBox, not modal dialog
+
+### UX: Unified Property Management (P2.2)
+
+- **New command**: "SVN: Manage Properties..." opens quick-pick with 5 categories
+- **Categories**: Line Endings (EOL), File Types (MIME), Auto-Properties, Ignore Patterns, Lock Settings
+- **Consolidates**: 6+ property commands into single entry point
+
+### Docs: Design System (P3.1)
+
+- **New doc**: `docs/DESIGN_SYSTEM.md` documents visual patterns
+- **Color palette**: gitDecoration mappings, lock colors, revision badges
+- **Badge system**: Single-char (A/M/D/C), dual-char (B/S), folder prefixes (📁A)
+- **Dialog patterns**: When modal vs inline, QuickPick step indicators
+- **Terminology conventions**: SVN jargon → user-friendly mappings
+
+### UX: Actionable Error Buttons
+
+- **Auth errors**: "Clear Credentials" button for E170001, E215004
+- **Network errors**: "Retry" button for E170013, E175002 (auto-retries operation)
+- **Lock conflicts**: "Steal Lock" button for E200035 (file locked by other)
+- **Lock missing/expired**: "Lock File" button for E200036, E200041
+- **Permission errors**: "Show Output" button for E261001, E261002, E250006
+- **Error priority**: Auth > Cleanup > Update > Conflict > Lock > Network > Output
+
+### UX: Less Intrusive Dialogs
+
+- **Commit message**: Inline validation warning (yellow box) when empty, non-modal confirmation
+- **Resolve conflict**: Non-modal confirmation instead of blocking modal
+- **Pre-commit conflicts**: Non-modal warning instead of blocking modal
+
+### UX: Auto-Onboarding
+
+- **First repo open**: Shows "Quick Tour" / "Dismiss" prompt when user opens first SVN repository
+- **Walkthrough**: Opens "Getting Started with SVN" walkthrough if user clicks "Quick Tour"
+- **Once per install**: Uses globalState to show only once, not per session
+
 ## [0.1.9] (2025-12-23)
 
 ### Feature: SVN Property Management (eol-style, mime-type, auto-props)
