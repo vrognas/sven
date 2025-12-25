@@ -242,7 +242,8 @@ Areas where good design genuinely improves usability:
 4. **Consolidate command names** (~8h)
    - 80+ commands with inconsistent naming
    - Ellipsis missing on 12 dialog-opening commands
-   - Replace jargon: BASE→"your version", HEAD→"server latest", WC→"local"
+   - Add user-friendly prefixes: BASE→"your version (BASE)", HEAD→"server latest (HEAD)"
+   - Keep SVN terms in parentheses for documentation lookup
 
 5. **Create terminology glossary** (~2h)
    - New `sven.showGlossary` command

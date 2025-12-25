@@ -347,13 +347,23 @@ private async promptWalkthrough(): Promise<void> {
 
 **Naming Rules to Apply**:
 
-| Rule           | Before                      | After                         |
-| -------------- | --------------------------- | ----------------------------- |
-| Ellipsis       | "Set EOL Style"             | "Set line ending style..."    |
-| Jargon         | "Open diff with BASE"       | "Open diff with your version" |
-| Capitalization | "Refresh branch changes"    | "Refresh"                     |
-| Acronyms       | "EOL Style"                 | "Line ending style"           |
-| Consistency    | "Blame File" / "Show Blame" | "Show file annotations"       |
+| Rule           | Before                      | After                                |
+| -------------- | --------------------------- | ------------------------------------ |
+| Ellipsis       | "Set EOL Style"             | "Set line ending style..."           |
+| Jargon         | "Open diff with BASE"       | "Open diff with your version (BASE)" |
+| Capitalization | "Refresh branch changes"    | "Refresh"                            |
+| Acronyms       | "EOL Style"                 | "Line ending style"                  |
+| Consistency    | "Blame File" / "Show Blame" | "Show file annotations"              |
+
+**Design Decision**: Keep SVN jargon in parentheses.
+
+Users should learn official SVN terminology so they can:
+
+- Look up SVN documentation
+- Communicate with other SVN users
+- Understand error messages from SVN CLI
+
+Pattern: `"User-friendly term (SVN_TERM)"`
 
 **Implementation Steps**:
 
@@ -363,7 +373,7 @@ private async promptWalkthrough(): Promise<void> {
 // src/constants/terminology.ts - NEW FILE
 
 export const TERMINOLOGY = {
-  // SVN jargon → User-friendly
+  // SVN jargon → User-friendly (keeps original in parentheses)
   BASE: "your version",
   HEAD: "server latest",
   PREV: "previous revision",
@@ -376,8 +386,13 @@ export const TERMINOLOGY = {
   "needs-lock": "require lock on edit"
 } as const;
 
-export function humanize(term: keyof typeof TERMINOLOGY): string {
-  return TERMINOLOGY[term];
+// Format: "User-friendly (SVN_TERM)"
+export function humanize(
+  term: keyof typeof TERMINOLOGY,
+  includeOriginal = true
+): string {
+  const friendly = TERMINOLOGY[term];
+  return includeOriginal ? `${friendly} (${term})` : friendly;
 }
 ```
 
@@ -388,21 +403,34 @@ export function humanize(term: keyof typeof TERMINOLOGY): string {
   "commands": [
     {
       "command": "sven.openDiffBase",
-      "title": "Open diff with your version"
+      "title": "Open diff with your version (BASE)"
     },
     {
       "command": "sven.openDiffHead",
-      "title": "Open diff with server latest"
+      "title": "Open diff with server latest (HEAD)"
+    },
+    {
+      "command": "sven.openDiffPrev",
+      "title": "Open diff with previous revision (PREV)"
     },
     { "command": "sven.setEolStyle", "title": "Set line ending style..." },
     { "command": "sven.setMimeType", "title": "Set file type..." },
-    { "command": "sven.setChangelist", "title": "Set change group..." },
-    { "command": "sven.blame", "title": "Show file annotations" },
-    { "command": "sven.toggleBlame", "title": "Toggle annotations" },
-    { "command": "sven.changeDepth", "title": "Set download scope..." }
+    {
+      "command": "sven.setChangelist",
+      "title": "Set change group (changelist)..."
+    },
+    { "command": "sven.blame", "title": "Show file annotations (blame)" },
+    { "command": "sven.toggleBlame", "title": "Toggle annotations (blame)" },
+    { "command": "sven.changeDepth", "title": "Set download scope (depth)..." }
   ]
 }
 ```
+
+**Note**: Parenthetical SVN terms help users:
+
+- Search SVN docs: "What is BASE in SVN?"
+- Understand CLI output: `svn diff -r BASE:HEAD`
+- Communicate with team: "Check the HEAD revision"
 
 3. **Standardize Ellipsis** (commands opening dialogs):
 
@@ -624,73 +652,101 @@ await window.withProgress(
 **Proposed Flow**:
 
 ```
-1. Commit Dialog (file tree + message) → 2. Commit
+1. Quick-pick commit dialog → 2. Commit
 ```
+
+**Design Decision**: Use native VS Code quick-pick sequence (not webview).
+
+- Follows VS Code UX patterns
+- Keyboard-driven, no mouse required
+- Faster than webview DOM rendering
+- Familiar to Git extension users
 
 **Implementation Steps**:
 
-1. **Create Unified Commit Dialog** (WebView):
+1. **Create Multi-Step Quick-Pick Commit Flow**:
 
 ```typescript
-// src/webviews/commitDialog.ts - NEW FILE
+// src/commands/commitQuickPick.ts - NEW FILE
 
-export class CommitDialogPanel {
-  public static readonly viewType = "sven.commitDialog";
+export async function commitWithQuickPick(
+  repository: Repository
+): Promise<void> {
+  // Step 1: Show staged files with toggle options
+  const stagedFiles = repository.staged;
+  const fileItems = stagedFiles.map(f => ({
+    label: `$(check) ${basename(f.resourceUri.fsPath)}`,
+    description: f.type,
+    detail: f.resourceUri.fsPath,
+    picked: true,
+    file: f
+  }));
 
-  private constructor(
-    private readonly panel: WebviewPanel,
-    private readonly repository: Repository
-  ) {
-    this.update();
-  }
+  const selected = await window.showQuickPick(fileItems, {
+    title: "Commit (1/2): Select files",
+    placeHolder: "All staged files selected",
+    canPickMany: true
+  });
 
-  public static async show(
-    repository: Repository
-  ): Promise<string | undefined> {
-    const panel = window.createWebviewPanel(
-      this.viewType,
-      "Commit Changes",
-      ViewColumn.Active,
-      { enableScripts: true }
+  if (!selected || selected.length === 0) return;
+
+  // Step 2: Enter commit message with inline validation
+  const message = await window.showInputBox({
+    title: "Commit (2/2): Enter message",
+    placeHolder: "Commit message (Ctrl+Enter to commit)",
+    prompt: `Committing ${selected.length} file(s)`,
+    validateInput: value => {
+      if (!value.trim()) {
+        return "Commit message cannot be empty";
+      }
+      return undefined;
+    }
+  });
+
+  if (!message) return;
+
+  // Commit with selected files
+  await repository.commit(
+    message,
+    selected.map(s => s.file)
+  );
+}
+```
+
+2. **Add Pre-commit Update as Setting** (not modal):
+
+```typescript
+// Check setting instead of prompting
+const preCommitUpdate = configuration.get<boolean>("commit.preCommitUpdate");
+if (preCommitUpdate) {
+  await repository.update();
+  // If conflicts, show inline notification (not modal)
+  if (repository.hasConflicts) {
+    const action = await window.showWarningMessage(
+      "Conflicts detected. Resolve before committing?",
+      "Resolve",
+      "Commit Anyway"
     );
-
-    return new Promise(resolve => {
-      panel.webview.onDidReceiveMessage(message => {
-        if (message.type === "commit") {
-          resolve(message.message);
-          panel.dispose();
-        } else if (message.type === "cancel") {
-          resolve(undefined);
-          panel.dispose();
-        }
-      });
-
-      // Render dialog with:
-      // - File tree (staged files with checkboxes)
-      // - Commit message textarea
-      // - Pre-commit update toggle
-      // - Commit / Cancel buttons
-    });
+    // ...
   }
 }
 ```
 
-2. **Simplify Flow**:
-   - Combine changelist selection + file selection into single tree
-   - Move pre-commit update to toggle switch (not modal)
-   - Show conflicts inline in tree (not separate prompt)
-   - Validate message inline (not modal)
+3. **Optional Webview Alternative** (future consideration):
 
-3. **Files to Modify**:
-   - `src/webviews/commitDialog.ts` - New webview
-   - `src/webviews/commitDialog.html` - Dialog template
-   - `src/commands/commit.ts` - Use new dialog
-   - `src/services/commitFlowService.ts` - Refactor to single-step
+For users who prefer visual file trees, a webview dialog could be added as
+`svn.commit.useWebviewDialog` setting. Not in initial scope.
 
-4. **Tests** (3 E2E):
-   - Test commit dialog shows file tree
-   - Test inline message validation
-   - Test pre-commit update toggle works
+4. **Files to Modify**:
+   - `src/commands/commitQuickPick.ts` - New quick-pick flow
+   - `src/commands/commit.ts` - Route to quick-pick
+   - `src/services/commitFlowService.ts` - Simplify to 2 steps
+   - `package.json` - Add `svn.commit.preCommitUpdate` setting
+
+5. **Tests** (3 E2E):
+   - Test quick-pick shows staged files
+   - Test inline message validation rejects empty
+   - Test pre-commit update setting works
 
 ---
 
@@ -814,24 +870,30 @@ export async function manageProperties(uri: Uri): Promise<void> {
 
 ## Success Metrics
 
-| Metric                      | Before | After Target |
-| --------------------------- | ------ | ------------ |
-| Error types with actions    | 4      | 15           |
-| Modal dialogs               | 28     | <15          |
-| Commit flow steps           | 6      | 2            |
-| Commands with ellipsis bugs | 12     | 0            |
-| Jargon terms in UI          | 15+    | 0            |
+| Metric                      | Before          | After Target                      |
+| --------------------------- | --------------- | --------------------------------- |
+| Error types with actions    | 4               | 15                                |
+| Modal dialogs               | 28              | <15                               |
+| Commit flow steps           | 6               | 2                                 |
+| Commands with ellipsis bugs | 12              | 0                                 |
+| Unexplained jargon in UI    | 15+ (raw terms) | 0 (all have user-friendly prefix) |
 
 ---
+
+## Design Decisions (Resolved)
+
+1. **Commit dialog**: Use native quick-pick sequence (not webview)
+   - Webview can be added later as optional `svn.commit.useWebviewDialog` setting
+2. **SVN jargon**: Keep in parentheses for documentation lookup
+   - Pattern: `"User-friendly term (SVN_TERM)"`
+   - Example: `"Open diff with your version (BASE)"`
 
 ## Unresolved Questions
 
-1. Should commit dialog be webview or native quick-pick sequence?
-2. Keep "BASE/HEAD" as parenthetical hints or remove entirely?
-3. Auto-onboarding: prompt on first activation or first repo open?
-4. Dynamic progress: update title or just message?
+1. Auto-onboarding: prompt on first activation or first repo open?
+2. Dynamic progress: update title or just message?
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Last Updated**: 2025-12-25
