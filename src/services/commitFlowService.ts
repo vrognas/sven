@@ -378,7 +378,7 @@ export class CommitFlowService {
     }));
 
     const selected = await window.showQuickPick(items, {
-      title: `Commit (1/2): Select files (${filePaths.length} changed)`,
+      title: `Select files to commit (${filePaths.length} changed)`,
       placeHolder: "Check/uncheck files to include in commit",
       canPickMany: true
     });
@@ -404,7 +404,7 @@ export class CommitFlowService {
     const maxLen = this.conventionalService.getMaxLength();
 
     return window.showInputBox({
-      title: "Commit (2/2): Enter message",
+      title: "Commit: Enter message",
       prompt: "Enter your commit message",
       value: repository.inputBox.value,
       placeHolder: "Your commit message",
