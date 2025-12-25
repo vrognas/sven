@@ -27,26 +27,6 @@ export function spawn(
   options: SpawnOptions = {}
 ): ChildProcess {
   const proc = cp.spawn(command, args, options);
-
-  // let fullCommand = "command: " + command;
-
-  // if (args) {
-  //   fullCommand += ' "' + args.join('" "') + '"';
-  // }
-  // console.log(fullCommand);
-
-  // proc.stdout.on("data", function(data) {
-  //   console.log("stdout: " + data.toString());
-  // });
-
-  // proc.stderr.on("data", function(data) {
-  //   console.log("stderr: " + data.toString());
-  // });
-
-  // proc.on("exit", function(code) {
-  //   console.log("child process exited with code " + code.toString());
-  // });
-
   return proc;
 }
 

@@ -74,11 +74,3 @@ export function getAuthorColorDot(author: string): Uri {
 
   return uri;
 }
-
-/**
- * Clear the color cache (for testing or config changes)
- */
-export function clearColorCache(): void {
-  colorCache.clear();
-  colorAccessOrder.clear();
-}

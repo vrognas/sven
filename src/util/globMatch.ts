@@ -26,7 +26,11 @@ interface MatcherCache {
   patterns: readonly string[];
   opts: PicomatchOptions;
   simpleMatchers: SimpleMatcher[];
-  complexMatchers: Array<{ pattern: string; isExclusion: boolean; matcher: picomatch.Matcher }>;
+  complexMatchers: Array<{
+    pattern: string;
+    isExclusion: boolean;
+    matcher: picomatch.Matcher;
+  }>;
 }
 
 let cachedMatcher: MatcherCache | null = null;
@@ -38,16 +42,20 @@ let cachedMatcher: MatcherCache | null = null;
  */
 function isSimplePattern(pattern: string): boolean {
   const cleanPattern = pattern[0] === "!" ? pattern.slice(1) : pattern;
-  return !cleanPattern.includes("**") &&
-         !cleanPattern.includes("{") &&
-         !cleanPattern.includes("[") &&
-         !cleanPattern.includes("?(");
+  return (
+    !cleanPattern.includes("**") &&
+    !cleanPattern.includes("{") &&
+    !cleanPattern.includes("[") &&
+    !cleanPattern.includes("?(")
+  );
 }
 
 /**
  * Create fast matcher for simple pattern
  */
-function createSimpleMatcher(pattern: string): ((path: string) => boolean) | null {
+function createSimpleMatcher(
+  pattern: string
+): ((path: string) => boolean) | null {
   const cleanPattern = pattern[0] === "!" ? pattern.slice(1) : pattern;
 
   // *.ext - suffix match
@@ -64,7 +72,8 @@ function createSimpleMatcher(pattern: string): ((path: string) => boolean) | nul
 
   // exact - literal match
   if (!cleanPattern.includes("*") && !cleanPattern.includes("?")) {
-    return (path: string) => path === cleanPattern || path.endsWith("/" + cleanPattern);
+    return (path: string) =>
+      path === cleanPattern || path.endsWith("/" + cleanPattern);
   }
 
   return null;
@@ -90,7 +99,11 @@ function getCachedMatchers(
 
   // Phase 21.C: Two-tier matching - split simple vs complex patterns
   const simpleMatchers: SimpleMatcher[] = [];
-  const complexMatchers: Array<{ pattern: string; isExclusion: boolean; matcher: picomatch.Matcher }> = [];
+  const complexMatchers: Array<{
+    pattern: string;
+    isExclusion: boolean;
+    matcher: picomatch.Matcher;
+  }> = [];
 
   for (const pattern of patterns) {
     const isExclusion = pattern[0] === "!";
@@ -101,7 +114,11 @@ function getCachedMatchers(
       simpleMatchers.push({ pattern, isExclusion, matchFn });
     } else {
       // Slow path: complex pattern needs picomatch
-      complexMatchers.push({ pattern, isExclusion, matcher: picomatch(pattern, opts) });
+      complexMatchers.push({
+        pattern,
+        isExclusion,
+        matcher: picomatch(pattern, opts)
+      });
     }
   }
 
@@ -142,11 +159,4 @@ export function matchAll(
 
 export function match(pattern: string) {
   return picomatch(pattern);
-}
-
-/**
- * Clear the matcher cache (useful for testing or config changes)
- */
-export function clearMatcherCache(): void {
-  cachedMatcher = null;
 }
