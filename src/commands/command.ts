@@ -863,9 +863,82 @@ export abstract class Command implements Disposable {
   }
 
   /**
+   * Check if error indicates authentication action needed.
+   * Returns true for E170001 (auth failed), E215004 (no credentials).
+   */
+  private needsAuthAction(error: unknown): boolean {
+    const fullError = this.getFullErrorString(error);
+
+    return (
+      fullError.includes("e170001") ||
+      fullError.includes("e215004") ||
+      fullError.includes("no more credentials") ||
+      fullError.includes("authorization failed") ||
+      fullError.includes("authentication failed")
+    );
+  }
+
+  /**
+   * Check if error indicates network retry might help.
+   * Returns true for E170013 (connection failed), E175002 (timeout).
+   */
+  private needsNetworkRetry(error: unknown): boolean {
+    const fullError = this.getFullErrorString(error);
+
+    return (
+      fullError.includes("e170013") ||
+      fullError.includes("e175002") ||
+      fullError.includes("unable to connect") ||
+      fullError.includes("network timeout") ||
+      fullError.includes("connection refused") ||
+      fullError.includes("could not connect")
+    );
+  }
+
+  /**
+   * Check if error is a file lock issue (not working copy lock).
+   * Returns the specific lock error type for choosing the right action.
+   * E200035 (locked by other), E200036 (not locked), E200041 (expired)
+   */
+  private getLockErrorType(
+    error: unknown
+  ): "conflict" | "notLocked" | "expired" | null {
+    const fullError = this.getFullErrorString(error);
+
+    if (fullError.includes("e200035") || fullError.includes("already locked")) {
+      return "conflict";
+    }
+    if (fullError.includes("e200036") || fullError.includes("not locked")) {
+      return "notLocked";
+    }
+    if (fullError.includes("e200041") || fullError.includes("lock expired")) {
+      return "expired";
+    }
+    return null;
+  }
+
+  /**
+   * Check if error needs "Show Output" action for diagnostics.
+   * E261001 (access denied), E261002 (partial), E250006 (version mismatch)
+   */
+  private needsOutputAction(error: unknown): boolean {
+    const fullError = this.getFullErrorString(error);
+
+    return (
+      fullError.includes("e261001") ||
+      fullError.includes("e261002") ||
+      fullError.includes("e250006") ||
+      fullError.includes("access denied") ||
+      fullError.includes("permission denied") ||
+      fullError.includes("not readable")
+    );
+  }
+
+  /**
    * Handle repository operation with consistent error handling.
    * Pattern: try/catch with console.log + showErrorMessage
-   * Offers actionable buttons: "Run Cleanup", "Update", "Resolve Conflicts"
+   * Offers actionable buttons based on error type.
+   * Priority: auth > cleanup > update > conflict > lock > network > output
    */
   protected async handleRepositoryOperation<T>(
     operation: () => Promise<T>,
@@ -877,15 +950,23 @@ export abstract class Command implements Disposable {
       logError("Repository operation failed", error);
       const userMessage = this.formatErrorMessage(error, errorMsg);
 
-      // Offer cleanup button for cleanup-related errors
-      if (this.needsCleanup(error)) {
+      // Auth errors - highest priority (often appears with network errors)
+      if (this.needsAuthAction(error)) {
+        const clearCreds = "Clear Credentials";
+        const choice = await window.showErrorMessage(userMessage, clearCreds);
+        if (choice === clearCreds) {
+          await commands.executeCommand("sven.clearCredentials");
+        }
+      }
+      // Cleanup for working copy issues
+      else if (this.needsCleanup(error)) {
         const runCleanup = "Run Cleanup";
         const choice = await window.showErrorMessage(userMessage, runCleanup);
         if (choice === runCleanup) {
           await commands.executeCommand("sven.cleanup");
         }
       }
-      // Offer update button for out-of-date errors
+      // Update for out-of-date errors
       else if (this.needsUpdate(error)) {
         const runUpdate = "Update";
         const choice = await window.showErrorMessage(userMessage, runUpdate);
@@ -893,7 +974,7 @@ export abstract class Command implements Disposable {
           await commands.executeCommand("sven.update");
         }
       }
-      // Offer resolve conflicts button for conflict errors
+      // Conflict resolution
       else if (this.needsConflictResolution(error)) {
         const resolveConflicts = "Resolve Conflicts";
         const choice = await window.showErrorMessage(
@@ -902,6 +983,43 @@ export abstract class Command implements Disposable {
         );
         if (choice === resolveConflicts) {
           await commands.executeCommand("sven.resolveAll");
+        }
+      }
+      // File lock errors (not working copy lock)
+      else if (this.getLockErrorType(error) !== null) {
+        const lockType = this.getLockErrorType(error);
+        if (lockType === "conflict") {
+          const stealLock = "Steal Lock";
+          const choice = await window.showErrorMessage(userMessage, stealLock);
+          if (choice === stealLock) {
+            await commands.executeCommand("sven.stealLock");
+          }
+        } else if (lockType === "notLocked" || lockType === "expired") {
+          const acquireLock = "Lock File";
+          const choice = await window.showErrorMessage(
+            userMessage,
+            acquireLock
+          );
+          if (choice === acquireLock) {
+            await commands.executeCommand("sven.lock");
+          }
+        }
+      }
+      // Network errors - offer retry
+      else if (this.needsNetworkRetry(error)) {
+        const retry = "Retry";
+        const choice = await window.showErrorMessage(userMessage, retry);
+        if (choice === retry) {
+          // Re-run the operation
+          return this.handleRepositoryOperation(operation, errorMsg);
+        }
+      }
+      // Permission/diagnostic errors - show output
+      else if (this.needsOutputAction(error)) {
+        const showOutput = "Show Output";
+        const choice = await window.showErrorMessage(userMessage, showOutput);
+        if (choice === showOutput) {
+          await commands.executeCommand("sven.showOutput");
         }
       } else {
         window.showErrorMessage(userMessage);
