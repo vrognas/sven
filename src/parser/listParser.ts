@@ -2,35 +2,24 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { XmlParserAdapter } from "./xmlParserAdapter";
+import {
+  XmlParserAdapter,
+  DEFAULT_PARSE_OPTIONS,
+  ensureArray
+} from "./xmlParserAdapter";
 import { ISvnListItem } from "../common/types";
 import { logError } from "../util/errorLogger";
 
 export async function parseSvnList(content: string): Promise<ISvnListItem[]> {
   return new Promise<ISvnListItem[]>((resolve, reject) => {
     try {
-      const result = XmlParserAdapter.parse(content, {
-        mergeAttrs: true,
-        explicitArray: false,
-        camelcase: true
-      });
+      const result = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
 
       // SVN outputs <lists><list path="..."><entry>...
       // Handle both <lists><list> and direct <list> formats
-      let listNode = result.list;
-      if (result.lists?.list) {
-        listNode = result.lists.list;
-      }
+      const listNode = result.lists?.list ?? result.list;
 
-      if (listNode?.entry) {
-        // Normalize: ensure array even for single entry
-        if (!Array.isArray(listNode.entry)) {
-          listNode.entry = [listNode.entry];
-        }
-        resolve(listNode.entry);
-      } else {
-        resolve([]);
-      }
+      resolve(ensureArray(listNode?.entry));
     } catch (err) {
       logError("parseSvnList error", err);
       reject(

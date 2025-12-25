@@ -48,6 +48,16 @@ export const DEFAULT_PARSE_OPTIONS: ParseOptions = {
 };
 
 /**
+ * Normalize a value to an array.
+ * Handles undefined, single values, and existing arrays.
+ * Use when XML parsing may return T or T[] depending on element count.
+ */
+export function ensureArray<T>(value: T | T[] | undefined | null): T[] {
+  if (value === undefined || value === null) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+/**
  * XML Parser Adapter providing xml2js-compatible parsing using fast-xml-parser
  *
  * Implements key xml2js behaviors:

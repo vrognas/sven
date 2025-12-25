@@ -3,7 +3,11 @@
 // Licensed under MIT License
 
 import { ISvnBlameLine } from "../common/types";
-import { XmlParserAdapter, DEFAULT_PARSE_OPTIONS } from "./xmlParserAdapter";
+import {
+  XmlParserAdapter,
+  DEFAULT_PARSE_OPTIONS,
+  ensureArray
+} from "./xmlParserAdapter";
 import { logError } from "../util/errorLogger";
 
 /**
@@ -39,19 +43,8 @@ export async function parseSvnBlame(content: string): Promise<ISvnBlameLine[]> {
 
       const target = result.target as Record<string, unknown>;
 
-      // Handle empty file (no entries)
-      if (!target.entry) {
-        resolve([]);
-        return;
-      }
-
-      // Normalize entry to array (single entry becomes object with explicitArray: false)
-      let entries = [];
-      if (Array.isArray(target.entry)) {
-        entries = target.entry;
-      } else {
-        entries = [target.entry];
-      }
+      // Normalize entry to array (handles empty, single, or multiple entries)
+      const entries = ensureArray(target.entry);
 
       // Transform XML entries to ISvnBlameLine[]
       const blameLines: ISvnBlameLine[] = entries.map((entry: unknown) => {

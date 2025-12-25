@@ -2,7 +2,11 @@
 // Licensed under MIT License
 
 import { ISvnLockInfo } from "../common/types";
-import { XmlParserAdapter, DEFAULT_PARSE_OPTIONS } from "./xmlParserAdapter";
+import {
+  XmlParserAdapter,
+  DEFAULT_PARSE_OPTIONS,
+  ensureArray
+} from "./xmlParserAdapter";
 import { logError } from "../util/errorLogger";
 
 interface ParsedLock {
@@ -41,8 +45,8 @@ export function parseLockInfo(content: string): ISvnLockInfo | null {
       throw new Error("Invalid info XML: missing entry element");
     }
 
-    // Handle single entry (not array)
-    const entry = Array.isArray(result.entry) ? result.entry[0]! : result.entry;
+    // Handle single entry (not array) - guaranteed non-empty by check above
+    const entry = ensureArray(result.entry)[0]!;
     const lock = entry.lock;
     if (!lock) {
       // File is not locked
@@ -91,8 +95,7 @@ export function parseBatchLockInfo(
       return result;
     }
 
-    // Normalize to array
-    const entries = Array.isArray(parsed.entry) ? parsed.entry : [parsed.entry];
+    const entries = ensureArray(parsed.entry);
 
     for (const entry of entries) {
       // Use URL as key (matches what we pass to svn info)

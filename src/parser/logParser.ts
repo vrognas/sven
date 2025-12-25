@@ -3,7 +3,11 @@
 // Licensed under MIT License
 
 import { ISvnLogEntry } from "../common/types";
-import { XmlParserAdapter, DEFAULT_PARSE_OPTIONS } from "./xmlParserAdapter";
+import {
+  XmlParserAdapter,
+  DEFAULT_PARSE_OPTIONS,
+  ensureArray
+} from "./xmlParserAdapter";
 import { logError } from "../util/errorLogger";
 
 export async function parseSvnLog(content: string): Promise<ISvnLogEntry[]> {
@@ -16,26 +20,11 @@ export async function parseSvnLog(content: string): Promise<ISvnLogEntry[]> {
         return;
       }
 
-      // Normalize logentry to array
-      let transformed = [];
-      if (Array.isArray(result.logentry)) {
-        transformed = result.logentry;
-      } else if (typeof result.logentry === "object") {
-        transformed = [result.logentry];
-      }
+      const transformed = ensureArray(result.logentry);
 
-      // Normalize paths structure
+      // Normalize paths structure: unwrap paths.path to paths array
       for (const logentry of transformed) {
-        if (logentry.paths === undefined) {
-          logentry.paths = [];
-        } else if (Array.isArray(logentry.paths.path)) {
-          logentry.paths = logentry.paths.path;
-        } else if (logentry.paths.path !== undefined) {
-          logentry.paths = [logentry.paths.path];
-        } else {
-          // paths exists but path is undefined (empty <paths> tag)
-          logentry.paths = [];
-        }
+        logentry.paths = ensureArray(logentry.paths?.path);
       }
 
       resolve(transformed);
