@@ -59,7 +59,7 @@ export async function manageProperties(uri?: Uri): Promise<void> {
 
   switch (selected.id) {
     case "eol":
-      await commands.executeCommand("sven.manageEolStyles", uri);
+      await commands.executeCommand("sven.manageEolStyle", uri);
       break;
     case "mime":
       await commands.executeCommand("sven.setMimeType", uri);

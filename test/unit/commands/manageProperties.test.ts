@@ -40,7 +40,7 @@ async function manageProperties(uri?: { fsPath: string }): Promise<void> {
 
   switch (selected.id) {
     case "eol":
-      await mockCommands.executeCommand("sven.manageEolStyles", uri);
+      await mockCommands.executeCommand("sven.manageEolStyle", uri);
       break;
     case "mime":
       await mockCommands.executeCommand("sven.setMimeType", uri);
@@ -99,7 +99,7 @@ describe("Manage Properties Command (P2.2)", () => {
       await manageProperties(uri);
 
       expect(mockCommands.executeCommand).toHaveBeenCalledWith(
-        "sven.manageEolStyles",
+        "sven.manageEolStyle",
         uri
       );
     });
