@@ -84,6 +84,7 @@ import { ManageEolStyle } from "./commands/manageEolStyle";
 import { SetMimeType, RemoveMimeType } from "./commands/setMimeType";
 import { ManageAutoProps } from "./commands/manageAutoProps";
 import { OpenClientConfig } from "./commands/openClientConfig";
+import { ShowGlossary } from "./commands/showGlossary";
 
 export function registerCommands(
   sourceControlManager: SourceControlManager,
@@ -186,4 +187,7 @@ export function registerCommands(
   // Auto-props commands
   disposables.push(new ManageAutoProps());
   disposables.push(new OpenClientConfig());
+
+  // Help commands
+  disposables.push(new ShowGlossary());
 }

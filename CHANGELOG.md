@@ -7,6 +7,12 @@
 - **Consistent naming**: "Set Line Ending Style (EOL)...", "Show Annotations (Blame)", "Go to Your Version (BASE)"
 - **Terminology module**: `src/constants/terminology.ts` provides humanize() helper for consistent naming
 
+### UX: Terminology Glossary (P1.2)
+
+- **New command**: "SVN: Show Terminology Help..." opens quick-pick with 12 glossary entries
+- **Core concepts**: BASE, HEAD, PREV, Working Copy, Revision, Lock, Annotations (Blame)
+- **Searchable**: matchOnDetail enabled - search by term or definition
+
 ### UX: Actionable Error Buttons
 
 - **Auth errors**: "Clear Credentials" button for E170001, E215004

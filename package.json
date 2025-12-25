@@ -1015,6 +1015,12 @@
         "title": "Apply Recommended Settings",
         "category": "SVN",
         "icon": "$(gear)"
+      },
+      {
+        "command": "sven.showGlossary",
+        "title": "Show Terminology Help...",
+        "category": "SVN",
+        "icon": "$(book)"
       }
     ],
     "submenus": [

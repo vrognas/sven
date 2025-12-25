@@ -442,7 +442,9 @@ ADD "..." to:
 
 ---
 
-### P1.2: Create Terminology Glossary Command
+### P1.2: Create Terminology Glossary Command ✅ COMPLETE
+
+**Status**: Implemented in `src/commands/showGlossary.ts` with 12 glossary entries.
 
 **Problem**: Users unfamiliar with SVN don't understand BASE/HEAD/PREV.
 
@@ -847,8 +849,8 @@ export async function manageProperties(uri: Uri): Promise<void> {
 | 1     | P0.1 Action buttons    | 4h     | None         | ✅ Done |
 | 2     | P0.2 Inline validation | 6h     | None         | ✅ Done |
 | 3     | P0.3 Auto-onboarding   | 2h     | None         | ✅ Done |
-| 4     | P1.1 Command naming    | 8h     | None         | Pending |
-| 5     | P1.2 Glossary command  | 2h     | P1.1         | Pending |
+| 4     | P1.1 Command naming    | 8h     | None         | ✅ Done |
+| 5     | P1.2 Glossary command  | 2h     | P1.1         | ✅ Done |
 | 6     | P1.3 Dynamic progress  | 3h     | None         | Pending |
 | 7     | P2.1 Commit dialog     | 12h    | P0.2         | Pending |
 | 8     | P2.2 Property mgmt     | 4h     | None         | Pending |
