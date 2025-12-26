@@ -207,6 +207,14 @@ export interface BufferResult {
   stderr: string;
 }
 
+/** Raw process result before encoding detection */
+interface RawProcessResult {
+  exitCode: number;
+  stdout: Buffer;
+  stderr: string;
+  useSystemKeyring: boolean;
+}
+
 export class Svn {
   public version: string;
 
@@ -233,263 +241,276 @@ export class Svn {
     return this.authCache;
   }
 
+  /**
+   * Core process execution - shared by exec() and execBuffer().
+   * Handles auth setup, spawning, timeout, and result collection.
+   */
+  private async executeProcess(
+    cwd: string,
+    args: string[],
+    options: ICpOptions = {}
+  ): Promise<RawProcessResult> {
+    if (cwd) {
+      this.lastCwd = cwd;
+      options.cwd = cwd;
+    }
+
+    if (options.log !== false) {
+      const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
+      this.logOutput(
+        `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
+      );
+    }
+
+    // Determine credential mode based on setting and environment (cached)
+    const authConfig = getAuthConfig();
+    const useSystemKeyring = authConfig.useSystemKeyring;
+
+    if (options.username) {
+      args.push("--username", options.username);
+    }
+
+    // Check if SVN 1.10+ for --password-from-stdin support (hides password from ps)
+    const supportsStdinPassword = semver.gte(this.version, "1.10.0");
+    let passwordForStdin: string | undefined;
+
+    // Add password if provided
+    // SECURITY: Only use --password-from-stdin (SVN 1.10+) to avoid exposing password in process list
+    // For older SVN versions, password is not passed - user must use system keyring
+    if (options.password) {
+      if (supportsStdinPassword) {
+        args.push("--password-from-stdin");
+        passwordForStdin = options.password;
+      } else {
+        // SVN < 1.10: Don't pass password via --password (visible in ps/top)
+        // Log warning - auth will fail if system keyring doesn't have credentials
+        this.logOutput(
+          `[SECURITY] SVN ${this.version} < 1.10 does not support --password-from-stdin. ` +
+            `Password not passed to avoid process list exposure. Use system keyring or upgrade SVN.\n`
+        );
+      }
+    }
+
+    // Disable native credential stores when not using system keyring
+    if (!useSystemKeyring) {
+      args.push("--config-option", "config:auth:password-stores=");
+      args.push("--config-option", "servers:global:store-auth-creds=no");
+    }
+
+    // Force non interactive environment
+    args.push("--non-interactive");
+
+    // Read configurable timeout (in seconds, convert to ms)
+    const timeoutSeconds = configuration.get<number>("auth.commandTimeout", 60);
+    const configuredTimeoutMs = timeoutSeconds * 1000;
+
+    // Log auth mode (controlled by svn.output.authLogging setting)
+    if (options.log !== false && shouldLogAuthMode()) {
+      this.logOutput(`[auth: ${authConfig.modeDescription}]\n`);
+    }
+
+    const defaults: cp.SpawnOptions = {
+      env: proc.env
+    };
+    if (cwd) {
+      defaults.cwd = cwd;
+    }
+
+    defaults.env = Object.assign({}, proc.env, options.env || {}, {
+      LC_ALL: DEFAULT_LOCALE,
+      LANG: DEFAULT_LOCALE
+    });
+
+    const spawnedProcess = cp.spawn(this.svnPath, args, defaults);
+
+    // Write password via stdin if using --password-from-stdin (SVN 1.10+)
+    // This hides password from process list (ps aux)
+    if (passwordForStdin && spawnedProcess.stdin) {
+      try {
+        spawnedProcess.stdin.write(passwordForStdin);
+        spawnedProcess.stdin.end();
+      } catch (err) {
+        // stdin write can fail if process exits early (EPIPE)
+        // SVN will fail with auth error, retry logic will handle it
+        logError("stdin write failed", err);
+      }
+    }
+
+    const disposables: IDisposable[] = [];
+
+    const once = <T extends unknown[]>(
+      ee: NodeJS.EventEmitter,
+      name: string,
+      fn: (...args: T) => void
+    ) => {
+      ee.once(name, fn);
+      disposables.push(toDisposable(() => ee.removeListener(name, fn)));
+    };
+
+    const on = <T extends unknown[]>(
+      ee: NodeJS.EventEmitter,
+      name: string,
+      fn: (...args: T) => void
+    ) => {
+      ee.on(name, fn);
+      disposables.push(toDisposable(() => ee.removeListener(name, fn)));
+    };
+
+    // Phase 12 perf fix - Add timeout to prevent hanging SVN commands
+    // Use configured timeout from settings, or explicit option, or default
+    const timeoutMs = options.timeout || configuredTimeoutMs;
+    let timeoutHandle: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<[number, Buffer, string]>(
+      (_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          spawnedProcess.kill();
+          reject(
+            new SvnError({
+              message: `SVN command timeout after ${timeoutMs}ms`,
+              svnCommand: args[0],
+              exitCode: 124
+            })
+          );
+        }, timeoutMs);
+      }
+    );
+
+    // Phase 18 perf fix - Add cancellation token support
+    const cancellationPromise = new Promise<[number, Buffer, string]>(
+      (_, reject) => {
+        if (options.token) {
+          options.token.onCancellationRequested(() => {
+            spawnedProcess.kill();
+            reject(
+              new SvnError({
+                message: `SVN command cancelled`,
+                svnCommand: args[0],
+                exitCode: 130
+              })
+            );
+          });
+        }
+      }
+    );
+
+    let result: [number, Buffer, string];
+    try {
+      result = await Promise.race([
+        Promise.all([
+          new Promise<number>((resolve, reject) => {
+            once(spawnedProcess, "error", reject);
+            once(spawnedProcess, "exit", resolve);
+          }),
+          new Promise<Buffer>(resolve => {
+            const buffers: Buffer[] = [];
+            on(spawnedProcess.stdout as Readable, "data", (b: Buffer) =>
+              buffers.push(b)
+            );
+            once(spawnedProcess.stdout as Readable, "close", () =>
+              resolve(Buffer.concat(buffers))
+            );
+          }),
+          new Promise<string>(resolve => {
+            const buffers: Buffer[] = [];
+            on(spawnedProcess.stderr as Readable, "data", (b: Buffer) =>
+              buffers.push(b)
+            );
+            once(spawnedProcess.stderr as Readable, "close", () =>
+              resolve(Buffer.concat(buffers).toString())
+            );
+          })
+        ]),
+        timeoutPromise,
+        ...(options.token ? [cancellationPromise] : [])
+      ]);
+    } finally {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    }
+
+    const [exitCode, stdout, stderr] = result;
+
+    dispose(disposables);
+
+    // Log stderr if present
+    if (options.log !== false && stderr.length > 0) {
+      const name = this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop();
+      const err = stderr
+        .split("\n")
+        .filter((line: string) => line)
+        .map((line: string) => `[${name}]$ ${line}`)
+        .join("\n");
+      this.logOutput(err);
+    }
+
+    return { exitCode, stdout, stderr, useSystemKeyring };
+  }
+
   public async exec(
     cwd: string,
     args: string[],
     options: ICpOptions = {}
   ): Promise<IExecutionResult> {
-    try {
-      if (cwd) {
-        this.lastCwd = cwd;
-        options.cwd = cwd;
-      }
+    // Determine encoding before executeProcess modifies args
+    let encoding: string | undefined | null = options.encoding;
+    delete options.encoding;
 
-      if (options.log !== false) {
-        const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
-        this.logOutput(
-          `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
-        );
-      }
-
-      // Determine credential mode based on setting and environment (cached)
-      const authConfig = getAuthConfig();
-      const useSystemKeyring = authConfig.useSystemKeyring;
-
-      if (options.username) {
-        args.push("--username", options.username);
-      }
-
-      // Check if SVN 1.10+ for --password-from-stdin support (hides password from ps)
-      const supportsStdinPassword = semver.gte(this.version, "1.10.0");
-      let passwordForStdin: string | undefined;
-
-      // Add password if provided
-      // SECURITY: Only use --password-from-stdin (SVN 1.10+) to avoid exposing password in process list
-      // For older SVN versions, password is not passed - user must use system keyring
-      if (options.password) {
-        if (supportsStdinPassword) {
-          args.push("--password-from-stdin");
-          passwordForStdin = options.password;
-        } else {
-          // SVN < 1.10: Don't pass password via --password (visible in ps/top)
-          // Log warning - auth will fail if system keyring doesn't have credentials
-          this.logOutput(
-            `[SECURITY] SVN ${this.version} < 1.10 does not support --password-from-stdin. ` +
-              `Password not passed to avoid process list exposure. Use system keyring or upgrade SVN.\n`
-          );
-        }
-      }
-
-      // Disable native credential stores when not using system keyring
-      if (!useSystemKeyring) {
-        args.push("--config-option", "config:auth:password-stores=");
-        args.push("--config-option", "servers:global:store-auth-creds=no");
-      }
-
-      // Force non interactive environment
-      args.push("--non-interactive");
-
-      // Read configurable timeout (in seconds, convert to ms)
-      const timeoutSeconds = configuration.get<number>(
-        "auth.commandTimeout",
-        60
-      );
-      const configuredTimeoutMs = timeoutSeconds * 1000;
-
-      // Log auth mode (controlled by svn.output.authLogging setting)
-      if (options.log !== false && shouldLogAuthMode()) {
-        this.logOutput(`[auth: ${authConfig.modeDescription}]\n`);
-      }
-
-      let encoding: string | undefined | null = options.encoding;
-      delete options.encoding;
-
-      // SVN with '--xml' always return 'UTF-8', and jschardet detects this encoding: 'TIS-620'
-      if (args.includes("--xml")) {
-        encoding = "utf8";
-      }
-
-      const defaults: cp.SpawnOptions = {
-        env: proc.env
-      };
-      if (cwd) {
-        defaults.cwd = cwd;
-      }
-
-      defaults.env = Object.assign({}, proc.env, options.env || {}, {
-        LC_ALL: DEFAULT_LOCALE,
-        LANG: DEFAULT_LOCALE
-      });
-
-      const process = cp.spawn(this.svnPath, args, defaults);
-
-      // Write password via stdin if using --password-from-stdin (SVN 1.10+)
-      // This hides password from process list (ps aux)
-      if (passwordForStdin && process.stdin) {
-        try {
-          process.stdin.write(passwordForStdin);
-          process.stdin.end();
-        } catch (err) {
-          // stdin write can fail if process exits early (EPIPE)
-          // SVN will fail with auth error, retry logic will handle it
-          logError("stdin write failed", err);
-        }
-      }
-
-      const disposables: IDisposable[] = [];
-
-      const once = <T extends unknown[]>(
-        ee: NodeJS.EventEmitter,
-        name: string,
-        fn: (...args: T) => void
-      ) => {
-        ee.once(name, fn);
-        disposables.push(toDisposable(() => ee.removeListener(name, fn)));
-      };
-
-      const on = <T extends unknown[]>(
-        ee: NodeJS.EventEmitter,
-        name: string,
-        fn: (...args: T) => void
-      ) => {
-        ee.on(name, fn);
-        disposables.push(toDisposable(() => ee.removeListener(name, fn)));
-      };
-
-      // Phase 12 perf fix - Add timeout to prevent hanging SVN commands
-      // Use configured timeout from settings, or explicit option, or default
-      const timeoutMs = options.timeout || configuredTimeoutMs;
-      let timeoutHandle: NodeJS.Timeout | undefined;
-      const timeoutPromise = new Promise<[number, Buffer, string]>(
-        (_, reject) => {
-          timeoutHandle = setTimeout(() => {
-            process.kill();
-            reject(
-              new SvnError({
-                message: `SVN command timeout after ${timeoutMs}ms`,
-                svnCommand: args[0],
-                exitCode: 124
-              })
-            );
-          }, timeoutMs);
-        }
-      );
-
-      // Phase 18 perf fix - Add cancellation token support
-      const cancellationPromise = new Promise<[number, Buffer, string]>(
-        (_, reject) => {
-          if (options.token) {
-            options.token.onCancellationRequested(() => {
-              process.kill();
-              reject(
-                new SvnError({
-                  message: `SVN command cancelled`,
-                  svnCommand: args[0],
-                  exitCode: 130
-                })
-              );
-            });
-          }
-        }
-      );
-
-      let result: [number, Buffer, string];
-      try {
-        result = await Promise.race([
-          Promise.all([
-            new Promise<number>((resolve, reject) => {
-              once(process, "error", reject);
-              once(process, "exit", resolve);
-            }),
-            new Promise<Buffer>(resolve => {
-              const buffers: Buffer[] = [];
-              on(process.stdout as Readable, "data", (b: Buffer) =>
-                buffers.push(b)
-              );
-              once(process.stdout as Readable, "close", () =>
-                resolve(Buffer.concat(buffers))
-              );
-            }),
-            new Promise<string>(resolve => {
-              const buffers: Buffer[] = [];
-              on(process.stderr as Readable, "data", (b: Buffer) =>
-                buffers.push(b)
-              );
-              once(process.stderr as Readable, "close", () =>
-                resolve(Buffer.concat(buffers).toString())
-              );
-            })
-          ]),
-          timeoutPromise,
-          ...(options.token ? [cancellationPromise] : [])
-        ]);
-      } finally {
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-        }
-      }
-
-      const [exitCode, stdout, stderr] = result;
-
-      dispose(disposables);
-
-      if (!encoding) {
-        encoding = encodeUtil.detectEncoding(stdout);
-      }
-
-      // if not detected
-      if (!encoding) {
-        encoding = configuration.get<string>("default.encoding");
-      }
-
-      if (!iconv.encodingExists(encoding)) {
-        if (encoding) {
-          console.warn(`SVN: The encoding "${encoding}" is invalid`);
-        }
-        encoding = "utf8";
-      }
-
-      const decodedStdout = iconv.decode(stdout, encoding);
-
-      if (options.log !== false && stderr.length > 0) {
-        const name = this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop();
-        const err = stderr
-          .split("\n")
-          .filter((line: string) => line)
-          .map((line: string) => `[${name}]$ ${line}`)
-          .join("\n");
-        this.logOutput(err);
-      }
-
-      if (exitCode) {
-        const svnErrorCode = getSvnErrorCode(stderr);
-
-        // Show notification for system keyring auth failures (keyring may need unlock)
-        if (
-          useSystemKeyring &&
-          svnErrorCode === svnErrorCodes.AuthorizationFailed
-        ) {
-          // Fire and forget - don't await, just show notification
-          showSystemKeyringAuthNotification();
-        }
-
-        return Promise.reject<IExecutionResult>(
-          new SvnError({
-            message: "Failed to execute svn",
-            stdout: decodedStdout,
-            stderr,
-            stderrFormated: stderr.replace(/^svn: E\d+: +/gm, ""),
-            exitCode,
-            svnErrorCode,
-            svnCommand: args[0]
-          })
-        );
-      }
-
-      return { exitCode, stdout: decodedStdout, stderr };
-    } catch (err) {
-      throw err;
+    // SVN with '--xml' always return 'UTF-8', and jschardet detects this encoding: 'TIS-620'
+    if (args.includes("--xml")) {
+      encoding = "utf8";
     }
+
+    // Execute the process using shared method
+    const { exitCode, stdout, stderr, useSystemKeyring } =
+      await this.executeProcess(cwd, args, options);
+
+    // Detect encoding if not specified
+    if (!encoding) {
+      encoding = encodeUtil.detectEncoding(stdout);
+    }
+
+    // if not detected
+    if (!encoding) {
+      encoding = configuration.get<string>("default.encoding");
+    }
+
+    if (!iconv.encodingExists(encoding)) {
+      if (encoding) {
+        console.warn(`SVN: The encoding "${encoding}" is invalid`);
+      }
+      encoding = "utf8";
+    }
+
+    const decodedStdout = iconv.decode(stdout, encoding);
+
+    // Handle non-zero exit code
+    if (exitCode) {
+      const svnErrorCode = getSvnErrorCode(stderr);
+
+      // Show notification for system keyring auth failures (keyring may need unlock)
+      if (
+        useSystemKeyring &&
+        svnErrorCode === svnErrorCodes.AuthorizationFailed
+      ) {
+        // Fire and forget - don't await, just show notification
+        showSystemKeyringAuthNotification();
+      }
+
+      return Promise.reject<IExecutionResult>(
+        new SvnError({
+          message: "Failed to execute svn",
+          stdout: decodedStdout,
+          stderr,
+          stderrFormated: stderr.replace(/^svn: E\d+: +/gm, ""),
+          exitCode,
+          svnErrorCode,
+          svnCommand: args[0]
+        })
+      );
+    }
+
+    return { exitCode, stdout: decodedStdout, stderr };
   }
 
   public async execBuffer(
@@ -497,188 +518,13 @@ export class Svn {
     args: string[],
     options: ICpOptions = {}
   ): Promise<BufferResult> {
-    try {
-      if (cwd) {
-        this.lastCwd = cwd;
-        options.cwd = cwd;
-      }
-
-      if (options.log !== false) {
-        const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
-        this.logOutput(
-          `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
-        );
-      }
-
-      // Determine credential mode based on setting and environment (cached)
-      const authConfig = getAuthConfig();
-      const useSystemKeyring = authConfig.useSystemKeyring;
-
-      if (options.username) {
-        args.push("--username", options.username);
-      }
-
-      // Check if SVN 1.10+ for --password-from-stdin support (hides password from ps)
-      const supportsStdinPassword = semver.gte(this.version, "1.10.0");
-      let passwordForStdin: string | undefined;
-
-      // Add password if provided
-      // SECURITY: Only use --password-from-stdin (SVN 1.10+) to avoid exposing password in process list
-      // For older SVN versions, password is not passed - user must use system keyring
-      if (options.password) {
-        if (supportsStdinPassword) {
-          args.push("--password-from-stdin");
-          passwordForStdin = options.password;
-        } else {
-          // SVN < 1.10: Don't pass password via --password (visible in ps/top)
-          // Log warning - auth will fail if system keyring doesn't have credentials
-          this.logOutput(
-            `[SECURITY] SVN ${this.version} < 1.10 does not support --password-from-stdin. ` +
-              `Password not passed to avoid process list exposure. Use system keyring or upgrade SVN.\n`
-          );
-        }
-      }
-
-      // Disable native credential stores when not using system keyring
-      if (!useSystemKeyring) {
-        args.push("--config-option", "config:auth:password-stores=");
-        args.push("--config-option", "servers:global:store-auth-creds=no");
-      }
-
-      // Force non interactive environment
-      args.push("--non-interactive");
-
-      // Read configurable timeout (in seconds, convert to ms)
-      const timeoutSeconds = configuration.get<number>(
-        "auth.commandTimeout",
-        60
-      );
-      const configuredTimeoutMs = timeoutSeconds * 1000;
-
-      // Log auth mode (controlled by svn.output.authLogging setting)
-      if (options.log !== false && shouldLogAuthMode()) {
-        this.logOutput(`[auth: ${authConfig.modeDescription}]\n`);
-      }
-
-      const defaults: cp.SpawnOptions = {
-        env: proc.env
-      };
-      if (cwd) {
-        defaults.cwd = cwd;
-      }
-
-      defaults.env = Object.assign({}, proc.env, options.env || {}, {
-        LC_ALL: DEFAULT_LOCALE,
-        LANG: DEFAULT_LOCALE
-      });
-
-      const process = cp.spawn(this.svnPath, args, defaults);
-
-      // Write password via stdin if using --password-from-stdin (SVN 1.10+)
-      // This hides password from process list (ps aux)
-      if (passwordForStdin && process.stdin) {
-        try {
-          process.stdin.write(passwordForStdin);
-          process.stdin.end();
-        } catch (err) {
-          // stdin write can fail if process exits early (EPIPE)
-          // SVN will fail with auth error, retry logic will handle it
-          logError("stdin write failed", err);
-        }
-      }
-
-      const disposables: IDisposable[] = [];
-
-      const once = <T extends unknown[]>(
-        ee: NodeJS.EventEmitter,
-        name: string,
-        fn: (...args: T) => void
-      ) => {
-        ee.once(name, fn);
-        disposables.push(toDisposable(() => ee.removeListener(name, fn)));
-      };
-
-      const on = <T extends unknown[]>(
-        ee: NodeJS.EventEmitter,
-        name: string,
-        fn: (...args: T) => void
-      ) => {
-        ee.on(name, fn);
-        disposables.push(toDisposable(() => ee.removeListener(name, fn)));
-      };
-
-      // Phase 12 perf fix - Add timeout to prevent hanging SVN commands
-      // Use configured timeout from settings, or explicit option, or default
-      const timeoutMs = options.timeout || configuredTimeoutMs;
-      let timeoutHandle: NodeJS.Timeout | undefined;
-      const timeoutPromise = new Promise<[number, Buffer, string]>(
-        (_, reject) => {
-          timeoutHandle = setTimeout(() => {
-            process.kill();
-            reject(
-              new SvnError({
-                message: `SVN command timeout after ${timeoutMs}ms`,
-                svnCommand: args[0],
-                exitCode: 124
-              })
-            );
-          }, timeoutMs);
-        }
-      );
-
-      let result: [number, Buffer, string];
-      try {
-        result = await Promise.race([
-          Promise.all([
-            new Promise<number>((resolve, reject) => {
-              once(process, "error", reject);
-              once(process, "exit", resolve);
-            }),
-            new Promise<Buffer>(resolve => {
-              const buffers: Buffer[] = [];
-              on(process.stdout as Readable, "data", (b: Buffer) =>
-                buffers.push(b)
-              );
-              once(process.stdout as Readable, "close", () =>
-                resolve(Buffer.concat(buffers))
-              );
-            }),
-            new Promise<string>(resolve => {
-              const buffers: Buffer[] = [];
-              on(process.stderr as Readable, "data", (b: Buffer) =>
-                buffers.push(b)
-              );
-              once(process.stderr as Readable, "close", () =>
-                resolve(Buffer.concat(buffers).toString())
-              );
-            })
-          ]),
-          timeoutPromise
-        ]);
-      } finally {
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-        }
-      }
-
-      const [exitCode, stdout, stderr] = result;
-
-      dispose(disposables);
-
-      if (options.log !== false && stderr.length > 0) {
-        const name = this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop();
-        const err = stderr
-          .split("\n")
-          .filter((line: string) => line)
-          .map((line: string) => `[${name}]$ ${line}`)
-          .join("\n");
-        this.logOutput(err);
-      }
-
-      return { exitCode, stdout, stderr };
-    } catch (err) {
-      throw err;
-    }
+    // Execute the process using shared method (returns raw Buffer)
+    const { exitCode, stdout, stderr } = await this.executeProcess(
+      cwd,
+      args,
+      options
+    );
+    return { exitCode, stdout, stderr };
   }
 
   public async getRepositoryRoot(path: string) {

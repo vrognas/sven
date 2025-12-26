@@ -1,3 +1,11 @@
+## [0.2.2] (2025-12-26)
+
+### Refactor: exec/execBuffer Consolidation
+
+- **New private method**: `executeProcess()` handles auth, spawning, timeout, cancellation
+- **Reduced duplication**: `exec()` and `execBuffer()` now share core process logic
+- **Line reduction**: svn.ts reduced from 716 to 565 lines (-151 lines, -21%)
+
 ## [0.2.1] (2025-12-26)
 
 ### Refactor: DRY Command Helpers
