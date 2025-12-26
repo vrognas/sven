@@ -15,6 +15,7 @@ import { stat } from "../fs";
 import { Resource } from "../resource";
 import { Repository as BaseRepository } from "../svnRepository";
 import { isDescendant } from "../util";
+import { chunkArray } from "../util/batchOperations";
 import { matchAll } from "../util/globMatch";
 import * as path from "path";
 
@@ -512,11 +513,7 @@ export class StatusService implements IStatusService {
     }
 
     // Fetch property changes concurrently (limit to 5 parallel)
-    const CONCURRENCY_LIMIT = 5;
-    const chunks: IFileStatus[][] = [];
-    for (let i = 0; i < filesWithPropChanges.length; i += CONCURRENCY_LIMIT) {
-      chunks.push(filesWithPropChanges.slice(i, i + CONCURRENCY_LIMIT));
-    }
+    const chunks = chunkArray(filesWithPropChanges, 5);
 
     for (const chunk of chunks) {
       const promises = chunk.map(async status => {

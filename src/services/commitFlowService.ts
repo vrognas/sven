@@ -13,6 +13,7 @@ import {
   ConventionalCommit
 } from "./conventionalCommitService";
 import { PreCommitUpdateService } from "./preCommitUpdateService";
+import { truncate } from "../util/formatting";
 
 /**
  * Result of the commit flow
@@ -194,7 +195,7 @@ export class CommitFlowService {
     if (prevMessage && prevMessage.trim()) {
       items.push({
         label: "$(history) Use previous message",
-        description: this.truncate(prevMessage, 40),
+        description: truncate(prevMessage, 40),
         isPreviousMessage: true,
         message: prevMessage
       });
@@ -452,16 +453,6 @@ export class CommitFlowService {
       return repoWithScopes.getRecentScopes();
     }
     return [];
-  }
-
-  /**
-   * Truncate string with ellipsis
-   */
-  private truncate(str: string, maxLen: number): string {
-    if (str.length <= maxLen) {
-      return str;
-    }
-    return str.slice(0, maxLen - 3) + "...";
   }
 
   /**

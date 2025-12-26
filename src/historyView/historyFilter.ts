@@ -3,6 +3,7 @@
 
 import { Disposable, Event, EventEmitter } from "vscode";
 import { ISvnLogEntry } from "../common/types";
+import { truncate } from "../util/formatting";
 
 /**
  * Action types for file changes in SVN commits
@@ -130,8 +131,6 @@ export class HistoryFilterService implements Disposable {
     if (!this._filter) return "";
 
     const parts: string[] = [];
-    const truncate = (s: string, max: number) =>
-      s.length > max ? s.slice(0, max - 3) + "..." : s;
 
     if (this._filter.message) {
       parts.push(`msg:${truncate(this._filter.message, 15)}`);

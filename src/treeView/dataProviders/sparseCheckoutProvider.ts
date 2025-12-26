@@ -701,7 +701,7 @@ export default class SparseCheckoutProvider
 
     // Evict expired entries if cache is large
     if (this.depthCache.size >= MAX_CACHE_SIZE) {
-      this.evictExpiredDepthCacheEntries(now);
+      this.evictExpiredEntries(this.depthCache, now);
     }
 
     try {
@@ -720,11 +720,14 @@ export default class SparseCheckoutProvider
     }
   }
 
-  /** Remove expired depth cache entries */
-  private evictExpiredDepthCacheEntries(now: number): void {
-    for (const [key, entry] of this.depthCache) {
+  /** Remove expired entries from a cache */
+  private evictExpiredEntries<T>(
+    cache: Map<string, CacheEntry<T>>,
+    now: number
+  ): void {
+    for (const [key, entry] of cache) {
       if (entry.expires <= now) {
-        this.depthCache.delete(key);
+        cache.delete(key);
       }
     }
   }
@@ -744,7 +747,7 @@ export default class SparseCheckoutProvider
 
     // Evict expired entries if cache is large
     if (this.serverListCache.size >= MAX_CACHE_SIZE) {
-      this.evictExpiredCacheEntries(now);
+      this.evictExpiredEntries(this.serverListCache, now);
     }
 
     // Fetch from server (returns full ISvnListItem with commit metadata)
@@ -757,15 +760,6 @@ export default class SparseCheckoutProvider
     });
 
     return listItems;
-  }
-
-  /** Remove expired cache entries */
-  private evictExpiredCacheEntries(now: number): void {
-    for (const [key, entry] of this.serverListCache) {
-      if (entry.expires <= now) {
-        this.serverListCache.delete(key);
-      }
-    }
   }
 
   private computeGhosts(

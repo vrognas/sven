@@ -1,6 +1,8 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import { truncate } from "../util/formatting";
+
 /**
  * Conventional commit type definition
  */
@@ -136,11 +138,7 @@ export class ConventionalCommitService {
     }
 
     const maxDescLength = MAX_MESSAGE_LENGTH - prefix.length;
-    let truncatedDesc = description;
-
-    if (description.length > maxDescLength) {
-      truncatedDesc = description.slice(0, maxDescLength - 3) + "...";
-    }
+    const truncatedDesc = truncate(description, maxDescLength);
 
     return prefix + truncatedDesc;
   }

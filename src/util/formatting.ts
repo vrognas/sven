@@ -76,3 +76,11 @@ export function formatDate(isoDate?: string): string {
     return isoDate.slice(0, 19).replace("T", " ");
   }
 }
+
+/**
+ * Truncate string with ellipsis if exceeds max length.
+ */
+export function truncate(str: string, maxLen: number): string {
+  if (str.length <= maxLen) return str;
+  return str.slice(0, maxLen - 3) + "...";
+}

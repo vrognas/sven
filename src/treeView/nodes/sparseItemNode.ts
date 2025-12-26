@@ -9,9 +9,10 @@ import {
   ThemeColor,
   Uri
 } from "vscode";
-import { ISparseItem, LockStatus, SparseDepthKey } from "../../common/types";
+import { ISparseItem, SparseDepthKey } from "../../common/types";
 import BaseNode from "./baseNode";
 import { formatDate, formatSize } from "../../util/formatting";
+import { getLockTooltip } from "../../util/lockHelpers";
 
 type ChildrenLoader = (path: string) => Promise<ISparseItem[]>;
 /** Callback to refresh tree; pass node for targeted refresh, undefined for full */
@@ -24,22 +25,6 @@ const depthLabels: Record<SparseDepthKey, string> = {
   immediates: "Shallow",
   infinity: "Full"
 };
-
-/** Get lock status tooltip */
-function getLockTooltip(status?: LockStatus, owner?: string): string {
-  switch (status) {
-    case LockStatus.K:
-      return "Locked by you";
-    case LockStatus.O:
-      return owner ? `Locked by ${owner}` : "Locked by others";
-    case LockStatus.B:
-      return "Lock broken";
-    case LockStatus.T:
-      return owner ? `Lock stolen by ${owner}` : "Lock stolen";
-    default:
-      return "";
-  }
-}
 
 export default class SparseItemNode extends BaseNode {
   constructor(

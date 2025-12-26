@@ -10,6 +10,7 @@ import {
   window
 } from "vscode";
 import { LockStatus } from "../common/types";
+import { getLockTooltip } from "../util/lockHelpers";
 
 /**
  * Provides file decorations for selective download tree items.
@@ -75,7 +76,7 @@ export class SparseFileDecorationProvider
       decoration.badge = decoration.badge
         ? `${lockStatus}${decoration.badge}`
         : lockStatus;
-      const lockTooltip = this.getLockTooltip(lockStatus, lockOwner);
+      const lockTooltip = getLockTooltip(lockStatus, lockOwner, "Locked");
       decoration.tooltip = decoration.tooltip
         ? `${decoration.tooltip} - ${lockTooltip}`
         : lockTooltip;
@@ -107,24 +108,6 @@ export class SparseFileDecorationProvider
         return new ThemeColor("errorForeground");
       default:
         return new ThemeColor("charts.orange");
-    }
-  }
-
-  private getLockTooltip(
-    lockStatus: LockStatus,
-    lockOwner: string | null
-  ): string {
-    switch (lockStatus) {
-      case LockStatus.K:
-        return "Locked by you";
-      case LockStatus.O:
-        return lockOwner ? `Locked by ${lockOwner}` : "Locked by others";
-      case LockStatus.B:
-        return "Lock broken";
-      case LockStatus.T:
-        return lockOwner ? `Lock stolen by ${lockOwner}` : "Lock stolen";
-      default:
-        return "Locked";
     }
   }
 }
