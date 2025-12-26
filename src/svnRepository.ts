@@ -126,13 +126,7 @@ export class Repository {
     args: string[],
     options: ICpOptions = {}
   ): Promise<IExecutionResult> {
-    options.username = this.username;
-    options.password = this.password;
-    // Security: Pass repository URL for credential cache (CVSS 7.5 → 3.2 fix)
-    if (this._info?.url) {
-      options.realmUrl = this._info.url;
-    }
-
+    this.injectCredentials(options);
     return this.svn.exec(this.workspaceRoot, args, options);
   }
 
@@ -140,13 +134,7 @@ export class Repository {
     args: string[],
     options: ICpOptions = {}
   ): Promise<BufferResult> {
-    options.username = this.username;
-    options.password = this.password;
-    // Security: Pass repository URL for credential cache (CVSS 7.5 → 3.2 fix)
-    if (this._info?.url) {
-      options.realmUrl = this._info.url;
-    }
-
+    this.injectCredentials(options);
     return this.svn.execBuffer(this.workspaceRoot, args, options);
   }
 
@@ -160,6 +148,25 @@ export class Repository {
     }
 
     return fixPegRevision(file);
+  }
+
+  /**
+   * Normalize an array of absolute file paths to relative paths.
+   * Shared helper to reduce duplication across SVN operations.
+   */
+  private normalizeFilePaths(files: string[]): string[] {
+    return files.map(file => this.removeAbsolutePath(file));
+  }
+
+  /**
+   * Inject credentials into options for SVN command execution.
+   */
+  private injectCredentials(options: ICpOptions): void {
+    options.username = this.username;
+    options.password = this.password;
+    if (this._info?.url) {
+      options.realmUrl = this._info.url;
+    }
   }
 
   // ========== Property helper methods (DRY) ==========
@@ -834,7 +841,7 @@ export class Repository {
   }
 
   public async commitFiles(message: string, files: string[]) {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
 
     const args = ["commit", ...files];
 
@@ -926,7 +933,7 @@ export class Repository {
       return [file];
     };
     files = (await Promise.all(files.map(file => allFiles(file)))).flat();
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
     return this.exec(["add", "--depth=empty", ...files]);
   }
 
@@ -935,7 +942,7 @@ export class Repository {
     if (ignoreList.length > 0) {
       return this.addFilesByIgnore(files, ignoreList);
     }
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
 
     // Phase 21.D: Adaptive batching for large file sets
     const { executeBatched } = await import("./util/batchOperations");
@@ -951,12 +958,12 @@ export class Repository {
     if (!validateChangelist(changelist)) {
       throw new Error("Invalid changelist name");
     }
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
     return this.exec(["changelist", changelist, ...files]);
   }
 
   public removeChangelist(files: string[]) {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
     return this.exec(["changelist", "--remove", ...files]);
   }
 
@@ -1146,7 +1153,7 @@ export class Repository {
   }
 
   public async revert(files: string[], depth: keyof typeof SvnDepth) {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
 
     // Phase 21.D: Adaptive batching for large file sets
     const { executeBatched } = await import("./util/batchOperations");
@@ -1190,14 +1197,14 @@ export class Repository {
   }
 
   public async patch(files: string[]) {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
     const result = await this.exec(["diff", "--internal-diff", ...files]);
     const message = result.stdout;
     return message;
   }
 
   public async patchBuffer(files: string[]) {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
     const result = await this.execBuffer(["diff", "--internal-diff", ...files]);
     const message = result.stdout;
     return message;
@@ -1229,7 +1236,7 @@ export class Repository {
   }
 
   public async removeFiles(files: string[], keepLocal: boolean) {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
     const args = ["remove"];
 
     if (keepLocal) {
@@ -1251,7 +1258,7 @@ export class Repository {
       );
     }
 
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
 
     const result = await this.exec(["resolve", "--accept", action, ...files]);
 
@@ -1919,7 +1926,7 @@ export class Repository {
     files: string[],
     options: ILockOptions = {}
   ): Promise<IExecutionResult> {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
 
     // Validate paths to prevent path traversal
     for (const file of files) {
@@ -1960,7 +1967,7 @@ export class Repository {
     files: string[],
     options: IUnlockOptions = {}
   ): Promise<IExecutionResult> {
-    files = files.map(file => this.removeAbsolutePath(file));
+    files = this.normalizeFilePaths(files);
 
     // Validate paths to prevent path traversal
     for (const file of files) {
