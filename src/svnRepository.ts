@@ -1717,113 +1717,119 @@ export class Repository {
     return parseSvnList(result.stdout);
   }
 
-  public async getCurrentIgnore(directory: string) {
-    directory = this.removeAbsolutePath(directory);
+  // ========== svn:ignore property methods ==========
 
-    let currentIgnore = "";
+  /**
+   * Get svn:ignore patterns for a directory.
+   * Returns empty array if property not set (W200017 handled gracefully).
+   */
+  public async getCurrentIgnore(directory: string): Promise<string[]> {
+    const normalized = this.removeAbsolutePath(directory);
+    const value = await this.getIgnorePropertyValue(normalized);
+    return value ? value.split(/[\r\n]+/).filter(p => p.trim()) : [];
+  }
 
+  /**
+   * Get raw svn:ignore property value with W200017 handling.
+   * @returns Property value or null if not set
+   */
+  private async getIgnorePropertyValue(
+    directory: string
+  ): Promise<string | null> {
     try {
-      const args = ["propget", "svn:ignore"];
-      this.pushDirTarget(args, directory);
-
-      const currentIgnoreResult = await this.exec(args);
-
-      currentIgnore = currentIgnoreResult.stdout.trim();
+      const result = await this.getProperty("svn:ignore", directory || ".");
+      return result;
     } catch (error) {
       // W200017 = "Property 'svn:ignore' not found" - expected when no patterns set
       if (!String(error).includes("W200017")) {
-        logError(
-          `Failed to get svn:ignore property for ${directory || "."}`,
-          error
-        );
+        logError(`Failed to get svn:ignore for ${directory || "."}`, error);
       }
+      return null;
     }
+  }
 
-    const ignores = currentIgnore.split(/[\r\n]+/);
+  /**
+   * Modify svn:ignore patterns atomically (read-modify-write).
+   * If updateFn returns empty array, deletes the property.
+   *
+   * WARNING: Non-atomic read-modify-write. Concurrent modifications may be lost.
+   */
+  private async modifyIgnorePatterns(
+    directory: string,
+    updateFn: (patterns: string[]) => string[]
+  ): Promise<void> {
+    const normalized = this.removeAbsolutePath(directory);
+    const current = await this.getCurrentIgnore(directory);
+    const updated = updateFn(current);
 
-    return ignores;
+    if (updated.length === 0) {
+      await this.deleteProperty("svn:ignore", normalized || ".");
+    } else {
+      const value = [...new Set(updated)].sort().join("\n");
+      await this.setProperty("svn:ignore", value, normalized || ".");
+    }
   }
 
   public async addToIgnore(
     expressions: string[],
     directory: string,
     recursive: boolean = false
-  ) {
-    const ignores = await this.getCurrentIgnore(directory);
+  ): Promise<string> {
+    const normalized = this.removeAbsolutePath(directory);
 
-    directory = this.removeAbsolutePath(directory);
-
-    ignores.push(...expressions);
-    const newIgnore = [...new Set(ignores)]
-      .filter(v => !!v)
-      .sort()
-      .join("\n");
-
-    const args = ["propset", "svn:ignore", newIgnore];
-    this.pushDirTarget(args, directory);
     if (recursive) {
+      // Recursive mode uses raw exec (setProperty doesn't support --recursive flag position)
+      const ignores = await this.getCurrentIgnore(directory);
+      ignores.push(...expressions);
+      const newIgnore = [...new Set(ignores)]
+        .filter(v => !!v)
+        .sort()
+        .join("\n");
+      const args = ["propset", "svn:ignore", newIgnore];
+      this.pushDirTarget(args, normalized);
       args.push("--recursive");
+      const result = await this.exec(args);
+      return result.stdout;
     }
 
-    const result = await this.exec(args);
-
-    return result.stdout;
+    await this.modifyIgnorePatterns(directory, patterns => [
+      ...patterns,
+      ...expressions
+    ]);
+    return "";
   }
 
   /**
    * Remove a pattern from svn:ignore property.
    * If the pattern is the last one, deletes the property entirely.
-   *
-   * WARNING: Non-atomic read-modify-write. Concurrent modifications may be lost.
-   * SVN doesn't support atomic property updates.
    */
   public async removeFromIgnore(
     expression: string,
     directory: string
   ): Promise<void> {
-    const ignores = await this.getCurrentIgnore(directory);
-    directory = this.removeAbsolutePath(directory);
-
-    const filtered = ignores.filter(p => p !== expression && p.trim() !== "");
-
-    if (filtered.length === 0) {
-      // No patterns left, delete the property
-      const args = ["propdel", "svn:ignore"];
-      this.pushDirTarget(args, directory);
-      await this.exec(args);
-    } else {
-      // Set remaining patterns
-      const newIgnore = filtered.sort().join("\n");
-      const args = ["propset", "svn:ignore", newIgnore];
-      this.pushDirTarget(args, directory);
-      await this.exec(args);
-    }
+    await this.modifyIgnorePatterns(directory, patterns =>
+      patterns.filter(p => p !== expression)
+    );
   }
 
   /**
    * Delete the svn:ignore property from a directory.
    */
   public async deleteIgnoreProperty(directory: string): Promise<void> {
-    directory = this.removeAbsolutePath(directory);
-    const args = ["propdel", "svn:ignore"];
-    this.pushDirTarget(args, directory);
-    await this.exec(args);
+    const normalized = this.removeAbsolutePath(directory);
+    await this.deleteProperty("svn:ignore", normalized || ".");
   }
 
   /**
    * Set the svn:ignore property to specific patterns.
-   *
-   * WARNING: Non-atomic operation. Concurrent modifications may be lost.
    */
   public async setIgnoreProperty(
     patterns: string[],
     directory: string
   ): Promise<void> {
-    directory = this.removeAbsolutePath(directory);
-    const newIgnore = patterns.sort().join("\n");
-    const args = ["propset", "svn:ignore", newIgnore];
-    this.pushDirTarget(args, directory);
-    await this.exec(args);
+    const normalized = this.removeAbsolutePath(directory);
+    const value = patterns.sort().join("\n");
+    await this.setProperty("svn:ignore", value, normalized || ".");
   }
 
   /**
@@ -2257,13 +2263,7 @@ export class Repository {
    * @returns Auto-props configuration string or null if not set
    */
   public async getAutoProps(): Promise<string | null> {
-    try {
-      const result = await this.exec(["propget", "svn:auto-props", "."]);
-      const value = result.stdout.trim();
-      return value || null;
-    } catch {
-      return null;
-    }
+    return this.getProperty("svn:auto-props", ".");
   }
 
   /**
@@ -2271,14 +2271,14 @@ export class Repository {
    * Format: "*.txt = svn:eol-style=native\n*.png = svn:mime-type=image/png"
    */
   public async setAutoProps(value: string): Promise<IExecutionResult> {
-    return this.exec(["propset", "svn:auto-props", value, "."]);
+    return this.setProperty("svn:auto-props", value, ".");
   }
 
   /**
    * Remove svn:auto-props property from repository root directory.
    */
   public async removeAutoProps(): Promise<IExecutionResult> {
-    return this.exec(["propdel", "svn:auto-props", "."]);
+    return this.deleteProperty("svn:auto-props", ".");
   }
 
   /** Clear all caches (call on repository disposal). */

@@ -1,3 +1,12 @@
+## [0.2.3] (2025-12-26)
+
+### Refactor: Property Operations Consolidation
+
+- **Auto-props**: `getAutoProps()`, `setAutoProps()`, `removeAutoProps()` now use generic property methods
+- **Ignore patterns**: New `modifyIgnorePatterns()` helper for read-modify-write operations
+- **Code organization**: Added section comments for property method groups
+- **DRYer code**: 11 property methods now share core `getProperty/setProperty/deleteProperty`
+
 ## [0.2.2] (2025-12-26)
 
 ### Refactor: exec/execBuffer Consolidation
