@@ -6,6 +6,7 @@ import { XMLParser } from "fast-xml-parser";
 import { configuration } from "../helpers/configuration";
 import { camelcase } from "../util";
 import { logError } from "../util/errorLogger";
+import { capitalize } from "../util/formatting";
 
 /**
  * Represents a primitive value in parsed XML
@@ -308,10 +309,7 @@ export function parseXml<T>(
       const parsed = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
       resolve(transform(parsed));
     } catch (err) {
-      logError(
-        `parse${name.charAt(0).toUpperCase() + name.slice(1)} error`,
-        err
-      );
+      logError(`parse${capitalize(name)} error`, err);
       reject(
         new Error(
           `Failed to parse ${name} XML: ${err instanceof Error ? err.message : "Unknown error"}`

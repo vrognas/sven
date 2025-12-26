@@ -13,6 +13,7 @@ import {
 import { LockStatus, PropStatus, PropertyChange, Status } from "./common/types";
 import { memoize } from "./decorators";
 import { configuration } from "./helpers/configuration";
+import { capitalize } from "./util/formatting";
 
 export class Resource implements SourceControlResourceState {
   constructor(
@@ -172,7 +173,7 @@ export class Resource implements SourceControlResourceState {
       // Property-only change - show which properties changed
       tip = this.formatPropertyChangesTooltip();
     } else {
-      tip = this.type.charAt(0).toUpperCase() + this.type.slice(1);
+      tip = capitalize(this.type);
     }
 
     // Add lock info to tooltip
@@ -206,8 +207,7 @@ export class Resource implements SourceControlResourceState {
   private formatPropertyChangesTooltip(): string {
     if (!this._propertyChanges || this._propertyChanges.length === 0) {
       // Fallback if no detailed info available
-      const propStatus =
-        this.props!.charAt(0).toUpperCase() + this.props!.slice(1);
+      const propStatus = capitalize(this.props!);
       return `Property ${propStatus}`;
     }
 
