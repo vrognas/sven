@@ -4,9 +4,12 @@
 
 "use strict";
 
-import { Uri, window } from "vscode";
+import { Uri } from "vscode";
 import { Command } from "../command";
-import { blameStateManager } from "../../blame/blameStateManager";
+import {
+  blameStateManager,
+  getBlameTargetUri
+} from "../../blame/blameStateManager";
 
 /**
  * Command shown when blame is enabled (eye icon)
@@ -18,15 +21,8 @@ export class DisableBlame extends Command {
   }
 
   async execute(uri?: Uri): Promise<void> {
-    if (!uri) {
-      const editor = window.activeTextEditor;
-      if (!editor) {
-        return;
-      }
-      uri = editor.document.uri;
-    }
-
-    // Disable blame
-    blameStateManager.setBlameEnabled(uri, false);
+    const target = getBlameTargetUri(uri);
+    if (!target) return;
+    blameStateManager.setBlameEnabled(target, false);
   }
 }

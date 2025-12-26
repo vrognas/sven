@@ -4,7 +4,16 @@
 
 "use strict";
 
-import { Disposable, Event, EventEmitter, Uri } from "vscode";
+import { Disposable, Event, EventEmitter, Uri, window } from "vscode";
+
+/**
+ * Get target URI from argument or active editor.
+ * Shared by all blame commands.
+ */
+export function getBlameTargetUri(uri?: Uri): Uri | undefined {
+  if (uri) return uri;
+  return window.activeTextEditor?.document.uri;
+}
 
 /**
  * Manages per-file and global blame state
