@@ -3,44 +3,8 @@
 
 import { SourceControlResourceState } from "vscode";
 import { Repository } from "../repository";
+import { unstageWithRestoreOptimistic } from "../helpers/stageHelper";
 import { Command } from "./command";
-
-/**
- * Unstage files with optimistic UI update.
- * Restores files to their original changelist if they had one.
- * Uses optimistic updates to skip full status refresh.
- */
-async function unstageWithRestoreOptimistic(
-  repository: Repository,
-  paths: string[]
-): Promise<void> {
-  // Group paths by their restore destination
-  const toRestore = new Map<string, string[]>(); // changelist → paths
-  const toRemove: string[] = []; // paths with no original changelist
-
-  for (const path of paths) {
-    const original = repository.staging.getOriginalChangelist(path);
-    if (original) {
-      const list = toRestore.get(original) || [];
-      list.push(path);
-      toRestore.set(original, list);
-    } else {
-      toRemove.push(path);
-    }
-  }
-
-  // Use optimistic updates for each group
-  for (const [changelist, filePaths] of toRestore) {
-    await repository.unstageOptimistic(filePaths, changelist);
-  }
-
-  if (toRemove.length > 0) {
-    await repository.unstageOptimistic(toRemove);
-  }
-
-  // Clear tracking for all unstaged files
-  repository.staging.clearOriginalChangelists(paths);
-}
 
 export class Unstage extends Command {
   constructor() {

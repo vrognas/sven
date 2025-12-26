@@ -1,58 +1,15 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { SourceControlResourceState, window } from "vscode";
+import { SourceControlResourceState } from "vscode";
 import { Repository } from "../repository";
-import { Resource } from "../resource";
-import { STAGING_CHANGELIST } from "../services/stagingService";
+import {
+  getAffectedChangelists,
+  buildOriginalChangelistMap,
+  warnAboutChangelists,
+  saveOriginalChangelists
+} from "../helpers/stageHelper";
 import { Command } from "./command";
-
-/**
- * Check if any resources are in changelists (other than staging).
- * Returns list of changelist names that will be affected.
- */
-function getAffectedChangelists(resources: Resource[]): string[] {
-  const changelists = new Set<string>();
-  for (const resource of resources) {
-    if (resource.changelist && resource.changelist !== STAGING_CHANGELIST) {
-      changelists.add(resource.changelist);
-    }
-  }
-  return Array.from(changelists);
-}
-
-/**
- * Build a map of file path → original changelist for resources.
- * Used to restore changelists on unstage.
- */
-function buildOriginalChangelistMap(
-  resources: Resource[]
-): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const resource of resources) {
-    if (resource.changelist && resource.changelist !== STAGING_CHANGELIST) {
-      map.set(resource.resourceUri.fsPath, resource.changelist);
-    }
-  }
-  return map;
-}
-
-/**
- * Warn user if staging will remove files from existing changelists.
- * Returns true if user wants to proceed, false to cancel.
- */
-async function warnAboutChangelists(changelists: string[]): Promise<boolean> {
-  if (changelists.length === 0) return true;
-
-  const listStr = changelists.join(", ");
-  const message =
-    changelists.length === 1
-      ? `This will remove files from changelist "${listStr}". Continue?`
-      : `This will remove files from changelists: ${listStr}. Continue?`;
-
-  const choice = await window.showWarningMessage(message, "Stage", "Cancel");
-  return choice === "Stage";
-}
 
 export class Stage extends Command {
   constructor() {
@@ -74,14 +31,7 @@ export class Stage extends Command {
 
     await this.runByRepository(uris, async (repository, resources) => {
       const paths = resources.map(r => r.fsPath);
-
-      // Save original changelists for restore on unstage
-      for (const path of paths) {
-        const original = originalChangelists.get(path);
-        if (original) {
-          repository.staging.saveOriginalChangelist(path, original);
-        }
-      }
+      saveOriginalChangelists(repository, paths, originalChangelists);
 
       // Use optimistic update - skips full status refresh
       await this.handleRepositoryOperation(
@@ -116,14 +66,7 @@ export class StageWithChildren extends Command {
 
     await this.runByRepository(uris, async (repository, resources) => {
       const paths = resources.map(r => r.fsPath);
-
-      // Save original changelists for restore on unstage
-      for (const path of paths) {
-        const original = originalChangelists.get(path);
-        if (original) {
-          repository.staging.saveOriginalChangelist(path, original);
-        }
-      }
+      saveOriginalChangelists(repository, paths, originalChangelists);
 
       // Use optimistic update with children - expands directories
       await this.handleRepositoryOperation(
@@ -160,14 +103,7 @@ export class StageAll extends Command {
       const uris = selection.map(resource => resource.resourceUri);
       await this.runByRepository(uris, async (repository, resources) => {
         const paths = resources.map(r => r.fsPath);
-
-        // Save original changelists for restore on unstage
-        for (const path of paths) {
-          const original = originalChangelists.get(path);
-          if (original) {
-            repository.staging.saveOriginalChangelist(path, original);
-          }
-        }
+        saveOriginalChangelists(repository, paths, originalChangelists);
 
         // Use optimistic update - skips full status refresh
         await this.handleRepositoryOperation(
