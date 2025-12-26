@@ -2,10 +2,9 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from "path";
 import { window } from "vscode";
 import { inputCommitFiles } from "../changelistItems";
-import { Status } from "../common/types";
+import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
@@ -22,41 +21,26 @@ export class CommitWithMessage extends Command {
       return;
     }
 
-    // Use Set to avoid duplicates when multiple files share parent dirs
-    const filePathSet = new Set(
-      resourceStates.map(state => state.resourceUri.fsPath)
-    );
+    // Filter to Resource instances for path building
+    const resources = resourceStates.filter(
+      s => s instanceof Resource
+    ) as Resource[];
+
+    // Build initial paths for message input
+    const initialPaths = resources.map(r => r.resourceUri.fsPath);
 
     const message = await inputCommitMessage(
       repository.inputBox.value,
       false,
-      Array.from(filePathSet)
+      initialPaths
     );
     if (message === undefined) {
       return;
     }
 
-    // Add renamed files and added parent directories
-    resourceStates.forEach(state => {
-      if (state instanceof Resource) {
-        if (state.type === Status.ADDED && state.renameResourceUri) {
-          filePathSet.add(state.renameResourceUri.fsPath);
-        }
-
-        let dir = path.dirname(state.resourceUri.fsPath);
-        let parent = repository.getResourceFromFile(dir);
-
-        while (parent) {
-          if (parent.type === Status.ADDED) {
-            filePathSet.add(dir);
-          }
-          dir = path.dirname(dir);
-          parent = repository.getResourceFromFile(dir);
-        }
-      }
-    });
-
-    const filePaths = Array.from(filePathSet);
+    // Build paths including parent dirs and track renames
+    const { displayPaths, renameMap } = buildCommitPaths(resources, repository);
+    const filePaths = expandCommitPaths(displayPaths, renameMap);
 
     await this.handleRepositoryOperation(async () => {
       const result = await repository.commitFiles(message, filePaths);

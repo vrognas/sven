@@ -3,7 +3,7 @@
 
 import * as path from "path";
 import { window } from "vscode";
-import { Status } from "../common/types";
+import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
 import { Command } from "./command";
@@ -28,30 +28,12 @@ export class CommitQuick extends Command {
       return;
     }
 
-    // Use Set to avoid duplicates when multiple files share parent dirs
-    const filePathSet = new Set(
-      stagedResources.map(state => state.resourceUri.fsPath)
+    // Build paths including parent dirs and track renames
+    const { displayPaths, renameMap } = buildCommitPaths(
+      stagedResources,
+      repository
     );
-
-    // Handle renamed files and parent directories
-    stagedResources.forEach(state => {
-      if (state.type === Status.ADDED && state.renameResourceUri) {
-        filePathSet.add(state.renameResourceUri.fsPath);
-      }
-
-      let dir = path.dirname(state.resourceUri.fsPath);
-      let parent = repository.getResourceFromFile(dir);
-
-      while (parent) {
-        if (parent.type === Status.ADDED) {
-          filePathSet.add(dir);
-        }
-        dir = path.dirname(dir);
-        parent = repository.getResourceFromFile(dir);
-      }
-    });
-
-    const filePaths = Array.from(filePathSet);
+    const filePaths = expandCommitPaths(displayPaths, renameMap);
 
     // Use input box value or auto-generate message
     let message = repository.inputBox.value.trim();

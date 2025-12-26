@@ -2,21 +2,11 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from "path";
 import { SourceControlResourceState, Uri, window } from "vscode";
-import { Status } from "../common/types";
+import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Resource } from "../resource";
 import { Command } from "./command";
-
-/**
- * Convert file system path to URI string for resource map lookup
- * @param fsPath File system path
- * @returns URI string key for resource map
- */
-function pathToUriKey(fsPath: string): string {
-  return Uri.file(fsPath).toString();
-}
 
 export class Commit extends Command {
   constructor() {
@@ -48,41 +38,22 @@ export class Commit extends Command {
     }
 
     const uris = selection.map(resource => resource.resourceUri);
-    selection.forEach(resource => {
-      if (resource.type === Status.ADDED && resource.renameResourceUri) {
-        uris.push(resource.renameResourceUri);
-      }
-    });
 
-    await this.runByRepository(uris, async (repository, resources) => {
-      // Use Set to avoid duplicates when multiple files share parent dirs
-      const pathSet = new Set(resources.map(resource => resource.fsPath));
-
-      // Phase 21.A fix: Use flat resource map for O(1) parent lookups
-      // Eliminates URI conversion overhead in hot loop (20-100ms → 5-20ms)
-      const resourceMap = repository.getResourceMap();
-
-      for (const resource of resources) {
-        let dir = path.dirname(resource.fsPath);
-        let parentKey = pathToUriKey(dir);
-        let parent = resourceMap.get(parentKey);
-
-        while (parent) {
-          if (parent.type === Status.ADDED) {
-            pathSet.add(dir);
-          }
-          dir = path.dirname(dir);
-          parentKey = pathToUriKey(dir);
-          parent = resourceMap.get(parentKey);
-        }
-      }
-
-      const paths = Array.from(pathSet);
+    await this.runByRepository(uris, async (repository, _resources) => {
+      // Build paths including parent dirs and track renames
+      const repoResources = selection.filter(r =>
+        r.resourceUri.fsPath.startsWith(repository.workspaceRoot)
+      );
+      const { displayPaths, renameMap } = buildCommitPaths(
+        repoResources,
+        repository
+      );
+      const paths = expandCommitPaths(displayPaths, renameMap);
 
       const message = await inputCommitMessage(
         repository.inputBox.value,
         true,
-        paths
+        displayPaths
       );
 
       if (message === undefined) {
