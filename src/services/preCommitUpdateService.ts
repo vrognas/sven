@@ -109,29 +109,4 @@ export class PreCommitUpdateService {
 
     return "abort";
   }
-
-  /**
-   * Parse SVN update output to extract revision and conflict info
-   */
-  parseUpdateOutput(output: string): UpdateResult {
-    const result: UpdateResult = { success: true };
-
-    // Extract revision from "Updated to revision X." or "At revision X."
-    const revMatch = output.match(/(?:Updated to|At) revision (\d+)/i);
-    if (revMatch && revMatch[1]) {
-      result.revision = parseInt(revMatch[1], 10);
-    }
-
-    // Check for conflict indicators
-    if (
-      output.includes("Summary of conflicts:") ||
-      /^C\s+/m.test(output) ||
-      output.includes("Text conflicts:")
-    ) {
-      result.hasConflicts = true;
-      result.success = false;
-    }
-
-    return result;
-  }
 }

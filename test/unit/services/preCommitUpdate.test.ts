@@ -157,28 +157,4 @@ describe("PreCommitUpdateService", () => {
       );
     });
   });
-
-  describe("parseUpdateOutput", () => {
-    it("extracts revision from success message", () => {
-      const result = service.parseUpdateOutput("Updated to revision 42.");
-      expect(result.revision).toBe(42);
-    });
-
-    it("extracts revision from At revision message", () => {
-      const result = service.parseUpdateOutput("At revision 123.");
-      expect(result.revision).toBe(123);
-    });
-
-    it("detects conflict markers in output", () => {
-      const output = `
-        Updating '.':
-        C    src/file.txt
-        Updated to revision 50.
-        Summary of conflicts:
-          Text conflicts: 1
-      `;
-      const result = service.parseUpdateOutput(output);
-      expect(result.hasConflicts).toBe(true);
-    });
-  });
 });
