@@ -27,11 +27,11 @@ import { dispose } from "../util";
 import {
   checkIfFile,
   copyCommitToClipboard,
+  createLoadMoreItem,
   fetchMore,
   getCommitIcon,
   getCommitLabel,
   getCommitToolTip,
-  getLimit,
   hasContentChanges,
   ICachedLog,
   ILogTreeItem,
@@ -1016,7 +1016,6 @@ export class RepoLogProvider
         return [];
       }
 
-      const limit = getLimit();
       const logentries = cached.entries;
 
       // Show loading indicator while fetching
@@ -1052,15 +1051,9 @@ export class RepoLogProvider
       }
 
       if (!cached.isComplete) {
-        const ti = new TreeItem(`Load another ${limit} revisions`);
-        ti.tooltip = "Paging size may be adjusted using log.length setting";
-        ti.command = {
-          command: "sven.repolog.fetch",
-          arguments: [undefined, true],
-          title: "fetch more"
-        };
-        ti.iconPath = new ThemeIcon("unfold");
-        result.push({ kind: LogTreeItemKind.TItem, data: ti });
+        result.push(
+          createLoadMoreItem("sven.repolog.fetch", [undefined, true])
+        );
       }
       return result;
     } else if (element.kind === LogTreeItemKind.Commit) {

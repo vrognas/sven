@@ -224,6 +224,18 @@ export function getLimit(): number {
   return limit;
 }
 
+/** Create "Load more" tree item for log pagination */
+export function createLoadMoreItem(
+  command: string,
+  args: unknown[]
+): ILogTreeItem {
+  const ti = new TreeItem(`Load another ${getLimit()} revisions`);
+  ti.tooltip = "Paging size may be adjusted using log.length setting";
+  ti.command = { command, arguments: args, title: "load more" };
+  ti.iconPath = new ThemeIcon("unfold");
+  return { kind: LogTreeItemKind.TItem, data: ti };
+}
+
 /// @note: cached.svnTarget should be valid
 export async function fetchMore(cached: ICachedLog) {
   const entries = cached.entries;

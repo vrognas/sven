@@ -22,11 +22,11 @@ import { SourceControlManager } from "../source_control_manager";
 import { dispose } from "../util";
 import {
   copyCommitToClipboard,
+  createLoadMoreItem,
   fetchMore,
   getCommitIcon,
   getCommitLabel,
   getCommitToolTip,
-  getLimit,
   hasContentChanges,
   ICachedLog,
   ILogTreeItem,
@@ -410,19 +410,9 @@ export class ItemLogProvider
       const result = transform(entries, LogTreeItemKind.Commit);
       insertBaseMarker(this.currentItem, entries, result);
       if (!this.currentItem.isComplete) {
-        const ti = new TreeItem(`Load another ${getLimit()} revisions`);
-        const ltItem: ILogTreeItem = {
-          kind: LogTreeItemKind.TItem,
-          data: ti
-        };
-        ti.tooltip = "Paging size may be adjusted using log.length setting";
-        ti.command = {
-          command: "sven.itemlog.refresh",
-          arguments: [element, undefined, true],
-          title: "refresh element"
-        };
-        ti.iconPath = new ThemeIcon("unfold");
-        result.push(ltItem);
+        result.push(
+          createLoadMoreItem("sven.itemlog.refresh", [element, undefined, true])
+        );
       }
       return result;
     }
