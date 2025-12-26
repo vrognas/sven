@@ -169,6 +169,18 @@ export class Repository {
     }
   }
 
+  /**
+   * Push directory target to args array for property operations.
+   * Uses fixPegRevision for non-empty paths, "." for root.
+   */
+  private pushDirTarget(args: string[], directory: string): void {
+    if (directory) {
+      args.push(fixPegRevision(directory));
+    } else {
+      args.push(".");
+    }
+  }
+
   // ========== Property helper methods (DRY) ==========
 
   /**
@@ -1712,10 +1724,7 @@ export class Repository {
 
     try {
       const args = ["propget", "svn:ignore"];
-
-      if (directory) {
-        args.push(fixPegRevision(directory));
-      }
+      this.pushDirTarget(args, directory);
 
       const currentIgnoreResult = await this.exec(args);
 
@@ -1751,12 +1760,7 @@ export class Repository {
       .join("\n");
 
     const args = ["propset", "svn:ignore", newIgnore];
-
-    if (directory) {
-      args.push(fixPegRevision(directory));
-    } else {
-      args.push(".");
-    }
+    this.pushDirTarget(args, directory);
     if (recursive) {
       args.push("--recursive");
     }
@@ -1785,21 +1789,13 @@ export class Repository {
     if (filtered.length === 0) {
       // No patterns left, delete the property
       const args = ["propdel", "svn:ignore"];
-      if (directory) {
-        args.push(fixPegRevision(directory));
-      } else {
-        args.push(".");
-      }
+      this.pushDirTarget(args, directory);
       await this.exec(args);
     } else {
       // Set remaining patterns
       const newIgnore = filtered.sort().join("\n");
       const args = ["propset", "svn:ignore", newIgnore];
-      if (directory) {
-        args.push(fixPegRevision(directory));
-      } else {
-        args.push(".");
-      }
+      this.pushDirTarget(args, directory);
       await this.exec(args);
     }
   }
@@ -1810,11 +1806,7 @@ export class Repository {
   public async deleteIgnoreProperty(directory: string): Promise<void> {
     directory = this.removeAbsolutePath(directory);
     const args = ["propdel", "svn:ignore"];
-    if (directory) {
-      args.push(fixPegRevision(directory));
-    } else {
-      args.push(".");
-    }
+    this.pushDirTarget(args, directory);
     await this.exec(args);
   }
 
@@ -1830,11 +1822,7 @@ export class Repository {
     directory = this.removeAbsolutePath(directory);
     const newIgnore = patterns.sort().join("\n");
     const args = ["propset", "svn:ignore", newIgnore];
-    if (directory) {
-      args.push(fixPegRevision(directory));
-    } else {
-      args.push(".");
-    }
+    this.pushDirTarget(args, directory);
     await this.exec(args);
   }
 
