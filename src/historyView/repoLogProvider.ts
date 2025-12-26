@@ -48,6 +48,13 @@ import { revealFileInOS, diffWithExternalTool } from "../util/fileOperations";
 import { logError } from "../util/errorLogger";
 import { HistoryFilterService, ActionType } from "./historyFilter";
 
+/** Create loading indicator tree item */
+function createLoadingItem(): ILogTreeItem {
+  const item = new TreeItem("Loading...");
+  item.iconPath = new ThemeIcon("loading~spin");
+  return { kind: LogTreeItemKind.TItem, data: item };
+}
+
 export class RepoLogProvider
   implements TreeDataProvider<ILogTreeItem>, Disposable
 {
@@ -1014,9 +1021,7 @@ export class RepoLogProvider
 
       // Show loading indicator while fetching
       if (cached.isLoading) {
-        const loadingItem = new TreeItem("Loading...");
-        loadingItem.iconPath = new ThemeIcon("loading~spin");
-        return [{ kind: LogTreeItemKind.TItem, data: loadingItem }];
+        return [createLoadingItem()];
       }
 
       // Fetch more if needed (non-blocking)
@@ -1032,10 +1037,7 @@ export class RepoLogProvider
             this._onDidChangeTreeData.fire(undefined);
           }
         });
-        // Show loading state
-        const loadingItem = new TreeItem("Loading...");
-        loadingItem.iconPath = new ThemeIcon("loading~spin");
-        return [{ kind: LogTreeItemKind.TItem, data: loadingItem }];
+        return [createLoadingItem()];
       }
 
       const result = transform(logentries, LogTreeItemKind.Commit, undefined);
