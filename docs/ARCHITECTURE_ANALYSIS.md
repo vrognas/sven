@@ -1,7 +1,7 @@
 # SVN Extension Architecture
 
-**Version**: 2.18.0
-**Updated**: 2025-11-28
+**Version**: 2.19.0
+**Updated**: 2025-12-26
 
 ---
 
@@ -64,11 +64,12 @@ Flow: activate() → SvnFinder → Svn → SourceControlManager → registerComm
 
 ### Command Pattern
 
-**Command base** (492 lines):
+**Command base** (~530 lines):
 
 - 50+ subclasses for SVN operations
 - Repository resolution
 - Diff/show infrastructure
+- DRY helpers: `filterResources()`, `toUris()`, `toPaths()`, `resourcesToPaths()`
 
 ---
 

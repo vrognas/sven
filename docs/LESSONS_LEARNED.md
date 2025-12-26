@@ -673,8 +673,8 @@ dispose(): void {
 
 ---
 
-**Document Version**: 2.12
-**Last Updated**: 2025-12-04
+**Document Version**: 2.13
+**Last Updated**: 2025-12-26
 
 ### 23. VS Code TreeView Providers: Listen for Repository Open/Close Events
 
@@ -1077,5 +1077,62 @@ After rebranding extension (svn-scm → sven), having both old and new versions 
 **Anti-pattern avoided**: Over-engineering activation guards based on speculation. We initially implemented multi-layered guards (module flags + command checks) when the fix was simply uninstalling the duplicate.
 
 **Rule**: Diagnose root cause before implementing fixes. Trust VS Code's `context.subscriptions` pattern for cleanup.
+
+---
+
+### 28. DRY Helpers in Command Base Class
+
+**Lesson**: Extract common patterns to base class helpers to reduce duplication across commands.
+
+**Issue** (v0.2.1):
+
+- 11 commands had `.filter(s => s instanceof Resource) as Resource[]`
+- 22+ commands had `.map(r => r.resourceUri)`
+- 7+ commands had `.map(u => u.fsPath)`
+- Type casts (`as Resource[]`) are unsafe, lose type guard benefits
+
+**Fix**:
+
+```typescript
+// In Command base class
+protected filterResources(states: SourceControlResourceState[]): Resource[] {
+  return states.filter((s): s is Resource => s instanceof Resource);
+}
+protected toUris(resources: Resource[]): Uri[] {
+  return resources.map(r => r.resourceUri);
+}
+protected toPaths(uris: Uri[]): string[] {
+  return uris.map(u => u.fsPath);
+}
+protected resourcesToPaths(resources: Resource[]): string[] {
+  return resources.map(r => r.resourceUri.fsPath);
+}
+```
+
+**Usage in commands**:
+
+```typescript
+// BEFORE: Inline patterns with unsafe cast
+const selection = states.filter(s => s instanceof Resource) as Resource[];
+const uris = selection.map(r => r.resourceUri);
+await this.runByRepository(uris, async (repo, resources) => {
+  const paths = resources.map(r => r.fsPath);
+});
+
+// AFTER: Concise, type-safe helpers
+const selection = this.filterResources(states);
+await this.runByRepository(this.toUris(selection), async (repo, resources) => {
+  const paths = this.toPaths(resources);
+});
+```
+
+**Benefits**:
+
+- Type-safe: `filterResources()` uses type guard, not unsafe cast
+- Concise: One-liners instead of inline patterns
+- Discoverable: IDE autocomplete shows available helpers
+- Consistent: All commands use same patterns
+
+**Rule**: When you see the same pattern 3+ times across commands, extract to base class helper.
 
 ---
