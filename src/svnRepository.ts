@@ -159,6 +159,18 @@ export class Repository {
   }
 
   /**
+   * Validate file paths to prevent path traversal attacks.
+   * Throws if any path is invalid.
+   */
+  private validateFilePaths(files: string[]): void {
+    for (const file of files) {
+      if (!validateFilePath(file)) {
+        throw new Error(`Invalid file path: ${file}`);
+      }
+    }
+  }
+
+  /**
    * Inject credentials into options for SVN command execution.
    */
   private injectCredentials(options: ICpOptions): void {
@@ -1921,13 +1933,7 @@ export class Repository {
     options: ILockOptions = {}
   ): Promise<IExecutionResult> {
     files = this.normalizeFilePaths(files);
-
-    // Validate paths to prevent path traversal
-    for (const file of files) {
-      if (!validateFilePath(file)) {
-        throw new Error(`Invalid file path: ${file}`);
-      }
-    }
+    this.validateFilePaths(files);
 
     // Validate comment to prevent command injection
     if (options.comment && !validateLockComment(options.comment)) {
@@ -1962,13 +1968,7 @@ export class Repository {
     options: IUnlockOptions = {}
   ): Promise<IExecutionResult> {
     files = this.normalizeFilePaths(files);
-
-    // Validate paths to prevent path traversal
-    for (const file of files) {
-      if (!validateFilePath(file)) {
-        throw new Error(`Invalid file path: ${file}`);
-      }
-    }
+    this.validateFilePaths(files);
 
     const args = ["unlock"];
 
