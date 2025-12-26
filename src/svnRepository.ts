@@ -53,6 +53,7 @@ import {
 } from "./util";
 import { logError } from "./util/errorLogger";
 import { matchAll } from "./util/globMatch";
+import { LRUCache } from "./util/lruCache";
 import { parseDiffXml } from "./parser/diffParser";
 import SvnError from "./svnError";
 import {
@@ -64,35 +65,15 @@ import {
 } from "./validation";
 
 export class Repository {
-  private _infoCache = new Map<
-    string,
-    { info: ISvnInfo; timeout: NodeJS.Timeout; lastAccessed: number }
-  >();
+  // LRU caches with TTL expiration
+  private _infoCache = new LRUCache<ISvnInfo | null>(500, 2 * 60 * 1000);
+  private _blameCache = new LRUCache<ISvnBlameLine[]>(100, 5 * 60 * 1000);
+  private _logCache = new LRUCache<ISvnLogEntry[]>(50, 60 * 1000);
+
   private _info?: ISvnInfo;
-  private readonly MAX_CACHE_SIZE = 500;
   // Phase 10.3 perf fix - timestamp-based caching (5s)
   private lastInfoUpdate: number = 0;
   private readonly INFO_CACHE_MS = 5000;
-
-  // Blame cache - smaller than info cache (blame is heavier operation)
-  private _blameCache = new Map<
-    string,
-    { blame: ISvnBlameLine[]; timeout: NodeJS.Timeout; lastAccessed: number }
-  >();
-  private readonly MAX_BLAME_CACHE_SIZE = 100;
-  private readonly BLAME_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-  // Log cache - SVN logs are immutable, longer TTL safe
-  private _logCache = new Map<
-    string,
-    {
-      entries: ISvnLogEntry[];
-      timeout: NodeJS.Timeout;
-      lastAccessed: number;
-    }
-  >();
-  private readonly MAX_LOG_CACHE_SIZE = 50;
-  private readonly LOG_CACHE_TTL_MS = 60 * 1000; // 60 seconds
 
   public username?: string;
   public password?: string;
@@ -422,85 +403,21 @@ export class Repository {
     return unwrap(this._info);
   }
 
-  public resetInfoCache(file: string = "") {
-    const entry = this._infoCache.get(file);
-    if (entry) {
-      clearTimeout(entry.timeout);
-      this._infoCache.delete(file);
-    }
-  }
-
-  private evictLRUEntry(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Infinity;
-
-    for (const [key, entry] of this._infoCache.entries()) {
-      if (entry.lastAccessed < oldestTime) {
-        oldestTime = entry.lastAccessed;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey !== null) {
-      this.resetInfoCache(oldestKey);
-    }
+  public resetInfoCache(file: string = ""): void {
+    this._infoCache.delete(file);
   }
 
   public resetBlameCache(cacheKey: string): void {
-    const entry = this._blameCache.get(cacheKey);
-    if (entry) {
-      clearTimeout(entry.timeout);
-      this._blameCache.delete(cacheKey);
-    }
-  }
-
-  private evictBlameEntry(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Infinity;
-
-    for (const [key, entry] of this._blameCache.entries()) {
-      if (entry.lastAccessed < oldestTime) {
-        oldestTime = entry.lastAccessed;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey !== null) {
-      this.resetBlameCache(oldestKey);
-    }
+    this._blameCache.delete(cacheKey);
   }
 
   public resetLogCache(cacheKey: string): void {
-    const entry = this._logCache.get(cacheKey);
-    if (entry) {
-      clearTimeout(entry.timeout);
-      this._logCache.delete(cacheKey);
-    }
+    this._logCache.delete(cacheKey);
   }
 
-  /**
-   * Clear all log cache entries.
-   * Call after operations that create new revisions (commit, update).
-   */
+  /** Clear all log cache entries (call after commit/update). */
   public clearLogCache(): void {
-    this._logCache.forEach(entry => clearTimeout(entry.timeout));
     this._logCache.clear();
-  }
-
-  private evictLogEntry(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Infinity;
-
-    for (const [key, entry] of this._logCache.entries()) {
-      if (entry.lastAccessed < oldestTime) {
-        oldestTime = entry.lastAccessed;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey !== null) {
-      this.resetLogCache(oldestKey);
-    }
   }
 
   @sequentialize
@@ -517,15 +434,15 @@ export class Repository {
       ? `${normalizedFile}@${revision}`
       : normalizedFile;
 
-    const cacheEntry = this._infoCache.get(cacheKey);
-    if (!skipCache && cacheEntry) {
-      // Update access time on cache hit
-      cacheEntry.lastAccessed = Date.now();
+    if (!skipCache && this._infoCache.has(cacheKey)) {
+      const cached = this._infoCache.get(cacheKey);
       // Check for negative cache (unversioned file marker)
-      if (cacheEntry.info === null) {
+      if (cached === null) {
         throw new Error(`File not under version control: ${file}`);
       }
-      return cacheEntry.info;
+      if (cached !== undefined) {
+        return cached;
+      }
     }
 
     const args = ["info", "--xml"];
@@ -556,7 +473,6 @@ export class Repository {
       result = await this.exec(args);
     } catch (err) {
       // Negative cache for unversioned files (W155010/E200009)
-      // Cache for 30 seconds to avoid repeated failed calls
       if (
         err &&
         typeof err === "object" &&
@@ -564,14 +480,7 @@ export class Repository {
         typeof err.stderr === "string" &&
         (err.stderr.includes("W155010") || err.stderr.includes("E200009"))
       ) {
-        const timer = setTimeout(() => {
-          this._infoCache.delete(cacheKey);
-        }, 30 * 1000);
-        this._infoCache.set(cacheKey, {
-          info: null as unknown as ISvnInfo, // Sentinel for negative cache
-          timeout: timer,
-          lastAccessed: Date.now()
-        });
+        this._infoCache.set(cacheKey, null);
       }
       throw err;
     }
@@ -586,25 +495,7 @@ export class Repository {
       );
     }
 
-    // Evict LRU entry if cache is at max size
-    if (this._infoCache.size >= this.MAX_CACHE_SIZE) {
-      this.evictLRUEntry();
-    }
-
-    // Cache for 2 minutes
-    const timer = setTimeout(
-      () => {
-        this._infoCache.delete(cacheKey);
-      },
-      2 * 60 * 1000
-    );
-
-    this._infoCache.set(cacheKey, {
-      info,
-      timeout: timer,
-      lastAccessed: Date.now()
-    });
-
+    this._infoCache.set(cacheKey, info);
     return info;
   }
 
@@ -633,11 +524,11 @@ export class Repository {
     const cacheKey = `${relativePath}@${revision}`;
 
     // Check cache first (unless skipCache=true)
-    const cacheEntry = this._blameCache.get(cacheKey);
-    if (!skipCache && cacheEntry) {
-      // Update access time on cache hit
-      cacheEntry.lastAccessed = Date.now();
-      return cacheEntry.blame;
+    if (!skipCache) {
+      const cached = this._blameCache.get(cacheKey);
+      if (cached !== undefined) {
+        return cached;
+      }
     }
 
     // Build SVN blame command
@@ -702,22 +593,7 @@ export class Repository {
       );
     }
 
-    // Evict LRU entry if cache is at max size
-    if (this._blameCache.size >= this.MAX_BLAME_CACHE_SIZE) {
-      this.evictBlameEntry();
-    }
-
-    // Cache with TTL
-    const timer = setTimeout(() => {
-      this.resetBlameCache(cacheKey);
-    }, this.BLAME_CACHE_TTL_MS);
-
-    this._blameCache.set(cacheKey, {
-      blame,
-      timeout: timer,
-      lastAccessed: Date.now()
-    });
-
+    this._blameCache.set(cacheKey, blame);
     return blame;
   }
 
@@ -1451,9 +1327,8 @@ export class Repository {
 
     // Check cache
     const cached = this._logCache.get(cacheKey);
-    if (cached) {
-      cached.lastAccessed = Date.now();
-      return cached.entries;
+    if (cached !== undefined) {
+      return cached;
     }
 
     const args = [
@@ -1475,22 +1350,7 @@ export class Repository {
     const result = await this.exec(args);
     const entries = await parseSvnLog(result.stdout);
 
-    // Evict LRU if at max size
-    if (this._logCache.size >= this.MAX_LOG_CACHE_SIZE) {
-      this.evictLogEntry();
-    }
-
-    // Cache with TTL
-    const timer = setTimeout(() => {
-      this.resetLogCache(cacheKey);
-    }, this.LOG_CACHE_TTL_MS);
-
-    this._logCache.set(cacheKey, {
-      entries,
-      timeout: timer,
-      lastAccessed: Date.now()
-    });
-
+    this._logCache.set(cacheKey, entries);
     return entries;
   }
 
@@ -1515,9 +1375,8 @@ export class Repository {
 
     // Check cache
     const cached = this._logCache.get(cacheKey);
-    if (cached) {
-      cached.lastAccessed = Date.now();
-      return cached.entries;
+    if (cached !== undefined) {
+      return cached;
     }
 
     // Build base args
@@ -1551,22 +1410,7 @@ export class Repository {
       entries = filterEntriesByAction(entries, filter.actions);
     }
 
-    // Evict LRU if at max size
-    if (this._logCache.size >= this.MAX_LOG_CACHE_SIZE) {
-      this.evictLogEntry();
-    }
-
-    // Cache with TTL
-    const timer = setTimeout(() => {
-      this.resetLogCache(cacheKey);
-    }, this.LOG_CACHE_TTL_MS);
-
-    this._logCache.set(cacheKey, {
-      entries,
-      timeout: timer,
-      lastAccessed: Date.now()
-    });
-
+    this._logCache.set(cacheKey, entries);
     return entries;
   }
 
@@ -1614,10 +1458,9 @@ export class Repository {
 
     // Check cache - stores full range, filter to requested
     const cached = this._logCache.get(cacheKey);
-    if (cached) {
-      cached.lastAccessed = Date.now();
+    if (cached !== undefined) {
       const requestedSet = new Set(revisions);
-      return cached.entries.filter(e => requestedSet.has(e.revision));
+      return cached.filter(e => requestedSet.has(e.revision));
     }
 
     // Fetch entire range (trade bandwidth for speed)
@@ -1635,21 +1478,7 @@ export class Repository {
     const result = await this.exec(args);
     const allEntries = await parseSvnLog(result.stdout);
 
-    // Evict LRU if at max size
-    if (this._logCache.size >= this.MAX_LOG_CACHE_SIZE) {
-      this.evictLogEntry();
-    }
-
-    // Cache full range with TTL
-    const timer = setTimeout(() => {
-      this.resetLogCache(cacheKey);
-    }, this.LOG_CACHE_TTL_MS);
-
-    this._logCache.set(cacheKey, {
-      entries: allEntries,
-      timeout: timer,
-      lastAccessed: Date.now()
-    });
+    this._logCache.set(cacheKey, allEntries);
 
     // Filter to only requested revisions (discard intermediate entries)
     const requestedSet = new Set(revisions);
@@ -2457,16 +2286,10 @@ export class Repository {
     return this.exec(["propdel", "svn:auto-props", "."]);
   }
 
-  /**
-   * Clear all info cache timers (Phase 8.2 perf fix - prevent memory leak)
-   * Should be called on repository disposal
-   */
+  /** Clear all caches (call on repository disposal). */
   public clearInfoCacheTimers(): void {
-    this._infoCache.forEach(entry => clearTimeout(entry.timeout));
     this._infoCache.clear();
-    this._blameCache.forEach(entry => clearTimeout(entry.timeout));
     this._blameCache.clear();
-    this._logCache.forEach(entry => clearTimeout(entry.timeout));
     this._logCache.clear();
   }
 }
