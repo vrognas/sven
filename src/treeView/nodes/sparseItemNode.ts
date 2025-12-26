@@ -11,6 +11,7 @@ import {
 } from "vscode";
 import { ISparseItem, LockStatus, SparseDepthKey } from "../../common/types";
 import BaseNode from "./baseNode";
+import { formatDate, formatSize } from "../../util/formatting";
 
 type ChildrenLoader = (path: string) => Promise<ISparseItem[]>;
 /** Callback to refresh tree; pass node for targeted refresh, undefined for full */
@@ -23,29 +24,6 @@ const depthLabels: Record<SparseDepthKey, string> = {
   immediates: "Shallow",
   infinity: "Full"
 };
-
-/** Format SVN date (ISO 8601) to YYYY-MM-DD HH:MM:SS */
-function formatDate(isoDate?: string): string {
-  if (!isoDate) return "";
-  try {
-    const d = new Date(isoDate);
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  } catch {
-    return isoDate.slice(0, 19).replace("T", " ");
-  }
-}
-
-/** Format file size in human-readable form */
-function formatSize(bytes?: string): string {
-  if (!bytes) return "";
-  const n = parseInt(bytes, 10);
-  if (isNaN(n)) return bytes;
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
 
 /** Get lock status tooltip */
 function getLockTooltip(status?: LockStatus, owner?: string): string {

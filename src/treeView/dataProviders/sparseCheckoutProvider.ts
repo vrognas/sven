@@ -34,6 +34,11 @@ import SparseItemNode from "../nodes/sparseItemNode";
 import { SparseFileDecorationProvider } from "../sparseFileDecorationProvider";
 import { dispose } from "../../util";
 import { logError } from "../../util/errorLogger";
+import {
+  formatBytes,
+  formatDuration,
+  parseSizeToBytes
+} from "../../util/formatting";
 
 class RepositoryRootNode extends BaseNode {
   constructor(
@@ -90,29 +95,6 @@ const DEFAULT_SPEED_BPS = 1 * 1024 * 1024;
 
 /** Max speed samples to keep for averaging */
 const MAX_SPEED_SAMPLES = 5;
-
-/** Format duration in human-readable form */
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  return `${Math.round(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
-}
-
-/** Parse size string to bytes */
-function parseSizeToBytes(size?: string): number {
-  if (!size) return 0;
-  const n = parseInt(size, 10);
-  return isNaN(n) ? 0 : n;
-}
-
-/** Format bytes as human-readable string */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
 
 /** Polling interval for file size monitoring (ms) */
 const FILE_POLL_INTERVAL_MS = 500;

@@ -16,6 +16,7 @@ import { SvnDepth } from "../common/types";
 import { Command } from "./command";
 import { confirm } from "../ui";
 import { SourceControlManager } from "../source_control_manager";
+import { formatBytes, formatDuration, formatSpeed } from "../util/formatting";
 
 /** Default download timeout in minutes */
 const DEFAULT_DOWNLOAD_TIMEOUT_MINUTES = 10;
@@ -34,38 +35,6 @@ const ETA_SMOOTHING_FACTOR = 0.3;
 
 /** Minimum elapsed seconds before showing ETA (avoids wild initial estimates) */
 const MIN_ELAPSED_FOR_ETA = 2;
-
-/** Format seconds into human-readable duration */
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.round(seconds % 60);
-    return s > 0 ? `${m}m ${s}s` : `${m}m`;
-  }
-  const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-/** Format bytes into human-readable size */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-/** Format speed in human-readable form (bytes/sec) */
-function formatSpeed(bytesPerSec: number): string {
-  if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
-  if (bytesPerSec < 1024 * 1024)
-    return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-  if (bytesPerSec < 1024 * 1024 * 1024)
-    return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
-  return `${(bytesPerSec / (1024 * 1024 * 1024)).toFixed(1)} GB/s`;
-}
 
 /** Folder statistics returned by single traversal */
 interface FolderStats {
