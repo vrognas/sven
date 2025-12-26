@@ -1,10 +1,10 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { window } from "vscode";
 import {
   buildCommitPaths,
   executeCommit,
+  requireStaged,
   runCommitMessageFlow
 } from "../helpers/commitHelper";
 import { Repository } from "../repository";
@@ -20,15 +20,11 @@ export class CommitStaged extends Command {
   }
 
   public async execute(repository: Repository) {
-    // Get staged resources
     const stagedResources = this.filterResources(
       repository.staged.resourceStates
     );
 
-    if (stagedResources.length === 0) {
-      window.showInformationMessage("No staged files to commit");
-      return;
-    }
+    if (!requireStaged(stagedResources)) return;
 
     // Build display paths and rename map using helper
     const { displayPaths, renameMap } = buildCommitPaths(

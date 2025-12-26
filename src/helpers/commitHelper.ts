@@ -10,6 +10,55 @@ import { Repository } from "../repository";
 import { Resource } from "../resource";
 import { CommitFlowService } from "../services/commitFlowService";
 
+/**
+ * Check if there are staged files to commit.
+ * Shows message if none staged.
+ * @returns true if staged files exist, false otherwise
+ */
+export function requireStaged(staged: Resource[]): boolean {
+  if (staged.length === 0) {
+    window.showInformationMessage("No staged files to commit");
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Ensure staged files exist, or offer to stage all changes.
+ * Used by commit commands that support auto-staging.
+ *
+ * @returns true if files are staged (or just got staged), false if cancelled
+ */
+export async function ensureStagedOrOffer(
+  staged: Resource[],
+  changes: Resource[],
+  repository: Repository,
+  resourcesToPaths: (resources: Resource[]) => string[]
+): Promise<boolean> {
+  if (staged.length > 0) {
+    return true;
+  }
+
+  if (changes.length === 0) {
+    window.showInformationMessage("No changes to commit");
+    return false;
+  }
+
+  const choice = await window.showInformationMessage(
+    `${changes.length} file(s) not staged. Stage all and commit?`,
+    "Stage All",
+    "Cancel"
+  );
+
+  if (choice !== "Stage All") {
+    return false;
+  }
+
+  const changePaths = resourcesToPaths(changes);
+  await repository.stageOptimistic(changePaths);
+  return true;
+}
+
 export interface CommitPaths {
   /** Paths to display in picker (new names only for renames) */
   displayPaths: string[];

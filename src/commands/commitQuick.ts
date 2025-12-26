@@ -3,7 +3,11 @@
 
 import * as path from "path";
 import { window } from "vscode";
-import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
+import {
+  buildCommitPaths,
+  expandCommitPaths,
+  requireStaged
+} from "../helpers/commitHelper";
 import { Repository } from "../repository";
 import { Command } from "./command";
 
@@ -17,15 +21,11 @@ export class CommitQuick extends Command {
   }
 
   public async execute(repository: Repository) {
-    // Get staged resources
     const stagedResources = this.filterResources(
       repository.staged.resourceStates
     );
 
-    if (stagedResources.length === 0) {
-      window.showInformationMessage("No staged files to commit");
-      return;
-    }
+    if (!requireStaged(stagedResources)) return;
 
     // Build paths including parent dirs and track renames
     const { displayPaths, renameMap } = buildCommitPaths(

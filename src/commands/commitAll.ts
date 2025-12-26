@@ -2,9 +2,9 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { window } from "vscode";
 import {
   buildCommitPaths,
+  ensureStagedOrOffer,
   executeCommit,
   runCommitMessageFlow
 } from "../helpers/commitHelper";
@@ -21,32 +21,16 @@ export class CommitAll extends Command {
   }
 
   public async execute(repository: Repository) {
-    // Get staged and changed files
     const staged = this.filterResources(repository.staged.resourceStates);
     const changes = this.filterResources(repository.changes.resourceStates);
 
-    // Require files to be staged before commit
-    if (staged.length === 0) {
-      if (changes.length === 0) {
-        window.showInformationMessage("No changes to commit");
-        return;
-      }
-
-      // Offer to stage all and commit
-      const choice = await window.showInformationMessage(
-        `${changes.length} file(s) not staged. Stage all and commit?`,
-        "Stage All",
-        "Cancel"
-      );
-
-      if (choice !== "Stage All") {
-        return;
-      }
-
-      // Stage all changes
-      const changePaths = this.resourcesToPaths(changes);
-      await repository.stageOptimistic(changePaths);
-    }
+    const proceed = await ensureStagedOrOffer(
+      staged,
+      changes,
+      repository,
+      this.resourcesToPaths.bind(this)
+    );
+    if (!proceed) return;
 
     // Get staged files (possibly just auto-staged)
     const resourcesToCommit = this.filterResources(
