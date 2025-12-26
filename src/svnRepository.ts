@@ -171,6 +171,21 @@ export class Repository {
   }
 
   /**
+   * Build path with peg revision for SVN commands.
+   * Adds @revision suffix for non-working-copy revisions (not BASE/COMMITTED/PREV).
+   */
+  private buildPegPath(path: string, revision?: string): string {
+    const escaped = fixPegRevision(path);
+    if (
+      revision &&
+      !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
+    ) {
+      return `${escaped}@${revision}`;
+    }
+    return escaped;
+  }
+
+  /**
    * Inject credentials into options for SVN command execution.
    */
   private injectCredentials(options: ICpOptions): void {
@@ -487,16 +502,7 @@ export class Repository {
       if (!isUrl) {
         targetFile = fixPathSeparator(file);
       }
-      // Add peg revision for non-working-copy revisions to handle renamed/moved/deleted files
-      if (
-        revision &&
-        !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
-      ) {
-        targetFile = fixPegRevision(targetFile) + "@" + revision;
-      } else {
-        targetFile = fixPegRevision(targetFile);
-      }
-      args.push(targetFile);
+      args.push(this.buildPegPath(targetFile, revision));
     }
 
     let result;
@@ -760,18 +766,7 @@ export class Repository {
       }
     }
 
-    // Add peg revision for non-working-copy revisions to handle renamed/moved/deleted files
-    // SVN syntax: path@revision tells SVN to look at path as it existed at that revision
-    if (
-      revision &&
-      !["BASE", "COMMITTED", "PREV"].includes(revision.toUpperCase())
-    ) {
-      target = fixPegRevision(target) + "@" + revision;
-    } else {
-      target = fixPegRevision(target);
-    }
-
-    args.push(target);
+    args.push(this.buildPegPath(target, revision));
 
     return { args, uri, filePath };
   }
