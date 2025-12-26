@@ -15,15 +15,16 @@ export class Unstage extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
 
-    const uris = selection.map(resource => resource.resourceUri);
-
-    await this.runByRepository(uris, async (repository, resources) => {
-      const paths = resources.map(r => r.fsPath);
-      await this.handleRepositoryOperation(
-        async () => unstageWithRestoreOptimistic(repository, paths),
-        "Unable to unstage files"
-      );
-    });
+    await this.runByRepository(
+      this.toUris(selection),
+      async (repository, resources) => {
+        const paths = this.toPaths(resources);
+        await this.handleRepositoryOperation(
+          async () => unstageWithRestoreOptimistic(repository, paths),
+          "Unable to unstage files"
+        );
+      }
+    );
   }
 }
 
@@ -43,14 +44,16 @@ export class UnstageAll extends Command {
       const selection = await this.getResourceStates(resourceStates);
       if (selection.length === 0) return;
 
-      const uris = selection.map(resource => resource.resourceUri);
-      await this.runByRepository(uris, async (repository, resources) => {
-        const paths = resources.map(r => r.fsPath);
-        await this.handleRepositoryOperation(
-          async () => unstageWithRestoreOptimistic(repository, paths),
-          "Unable to unstage files"
-        );
-      });
+      await this.runByRepository(
+        this.toUris(selection),
+        async (repository, resources) => {
+          const paths = this.toPaths(resources);
+          await this.handleRepositoryOperation(
+            async () => unstageWithRestoreOptimistic(repository, paths),
+            "Unable to unstage files"
+          );
+        }
+      );
     } else {
       // Unstage all staged files across all repositories
       await this.runForAllStaged(async (repository, paths) => {

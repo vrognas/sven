@@ -27,18 +27,19 @@ export class Stage extends Command {
     // Build map of original changelists before staging
     const originalChangelists = buildOriginalChangelistMap(selection);
 
-    const uris = selection.map(resource => resource.resourceUri);
+    await this.runByRepository(
+      this.toUris(selection),
+      async (repository, resources) => {
+        const paths = this.toPaths(resources);
+        saveOriginalChangelists(repository, paths, originalChangelists);
 
-    await this.runByRepository(uris, async (repository, resources) => {
-      const paths = resources.map(r => r.fsPath);
-      saveOriginalChangelists(repository, paths, originalChangelists);
-
-      // Use optimistic update - skips full status refresh
-      await this.handleRepositoryOperation(
-        async () => repository.stageOptimistic(paths),
-        "Unable to stage files"
-      );
-    });
+        // Use optimistic update - skips full status refresh
+        await this.handleRepositoryOperation(
+          async () => repository.stageOptimistic(paths),
+          "Unable to stage files"
+        );
+      }
+    );
   }
 }
 
@@ -62,18 +63,19 @@ export class StageWithChildren extends Command {
     // Build map of original changelists before staging
     const originalChangelists = buildOriginalChangelistMap(selection);
 
-    const uris = selection.map(resource => resource.resourceUri);
+    await this.runByRepository(
+      this.toUris(selection),
+      async (repository, resources) => {
+        const paths = this.toPaths(resources);
+        saveOriginalChangelists(repository, paths, originalChangelists);
 
-    await this.runByRepository(uris, async (repository, resources) => {
-      const paths = resources.map(r => r.fsPath);
-      saveOriginalChangelists(repository, paths, originalChangelists);
-
-      // Use optimistic update with children - expands directories
-      await this.handleRepositoryOperation(
-        async () => repository.stageOptimisticWithChildren(paths),
-        "Unable to stage files"
-      );
-    });
+        // Use optimistic update with children - expands directories
+        await this.handleRepositoryOperation(
+          async () => repository.stageOptimisticWithChildren(paths),
+          "Unable to stage files"
+        );
+      }
+    );
   }
 }
 
@@ -100,17 +102,19 @@ export class StageAll extends Command {
       // Build map of original changelists before staging
       const originalChangelists = buildOriginalChangelistMap(selection);
 
-      const uris = selection.map(resource => resource.resourceUri);
-      await this.runByRepository(uris, async (repository, resources) => {
-        const paths = resources.map(r => r.fsPath);
-        saveOriginalChangelists(repository, paths, originalChangelists);
+      await this.runByRepository(
+        this.toUris(selection),
+        async (repository, resources) => {
+          const paths = this.toPaths(resources);
+          saveOriginalChangelists(repository, paths, originalChangelists);
 
-        // Use optimistic update - skips full status refresh
-        await this.handleRepositoryOperation(
-          async () => repository.stageOptimistic(paths),
-          "Unable to stage files"
-        );
-      });
+          // Use optimistic update - skips full status refresh
+          await this.handleRepositoryOperation(
+            async () => repository.stageOptimistic(paths),
+            "Unable to stage files"
+          );
+        }
+      );
     } else {
       // Stage all changes in all repositories
       await this.runForAllChanges(async (repository, paths) => {

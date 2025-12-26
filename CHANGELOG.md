@@ -1,3 +1,11 @@
+## [0.2.1] (2025-12-26)
+
+### Refactor: DRY Command Helpers
+
+- **New helpers in Command base**: `filterResources()`, `toUris()`, `toPaths()`, `resourcesToPaths()`
+- **Reduced duplication**: Stage, Unstage, Revert, Commit commands use shared helpers
+- **Type safety**: `filterResources()` uses type guard instead of unsafe cast
+
 ## [0.2.0] (2025-12-25)
 
 ### UX: User-Friendly Command Names (P1.1)

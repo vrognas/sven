@@ -158,6 +158,42 @@ export abstract class Command implements Disposable {
     return selection.length === 0 ? null : selection;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // DRY Helpers - Reduce common patterns in commands
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Filter resource states to only Resource instances.
+   * Replaces: `.filter(s => s instanceof Resource) as Resource[]`
+   */
+  protected filterResources(states: SourceControlResourceState[]): Resource[] {
+    return states.filter((s): s is Resource => s instanceof Resource);
+  }
+
+  /**
+   * Extract URIs from resources.
+   * Replaces: `.map(resource => resource.resourceUri)`
+   */
+  protected toUris(resources: Resource[]): Uri[] {
+    return resources.map(r => r.resourceUri);
+  }
+
+  /**
+   * Extract file system paths from URIs.
+   * Replaces: `.map(uri => uri.fsPath)`
+   */
+  protected toPaths(uris: Uri[]): string[] {
+    return uris.map(u => u.fsPath);
+  }
+
+  /**
+   * Convert resources directly to paths (combines toUris + toPaths).
+   * Replaces: `.map(r => r.resourceUri).map(u => u.fsPath)`
+   */
+  protected resourcesToPaths(resources: Resource[]): string[] {
+    return resources.map(r => r.resourceUri.fsPath);
+  }
+
   /**
    * Extract URIs from command args (Explorer context menu multi-select).
    * Returns null if args are not URI-based (e.g., SCM resource states).
