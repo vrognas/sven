@@ -16,7 +16,7 @@ export class DeleteUnversioned extends Command {
   public async execute(...resourceStates: SourceControlResourceState[]) {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
-    const uris = selection.map(resource => resource.resourceUri);
+    const uris = this.toUris(this.filterResources(selection));
     if (!(await confirmDestructive("Delete selected files?", "Delete"))) return;
 
     for (const uri of uris) {

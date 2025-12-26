@@ -19,7 +19,7 @@ export class ChangeList extends Command {
     let uris: Uri[];
 
     if (args[0] instanceof Resource) {
-      uris = (args as Resource[]).map(resource => resource.resourceUri);
+      uris = this.toUris(args as Resource[]);
     } else if (args[0] instanceof Uri) {
       uris = args[1] as Uri[];
     } else if (window.activeTextEditor) {

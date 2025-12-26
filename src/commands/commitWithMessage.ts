@@ -7,7 +7,6 @@ import { inputCommitFiles } from "../changelistItems";
 import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
-import { Resource } from "../resource";
 import { Command } from "./command";
 
 export class CommitWithMessage extends Command {
@@ -22,12 +21,10 @@ export class CommitWithMessage extends Command {
     }
 
     // Filter to Resource instances for path building
-    const resources = resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
+    const resources = this.filterResources(resourceStates);
 
     // Build initial paths for message input
-    const initialPaths = resources.map(r => r.resourceUri.fsPath);
+    const initialPaths = this.resourcesToPaths(resources);
 
     const message = await inputCommitMessage(
       repository.inputBox.value,

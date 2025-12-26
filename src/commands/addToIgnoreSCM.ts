@@ -14,7 +14,7 @@ export class AddToIgnoreSCM extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
 
-    const uris = selection.map(resource => resource.resourceUri);
+    const uris = this.toUris(this.filterResources(selection));
 
     return this.addToIgnore(uris);
   }

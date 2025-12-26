@@ -14,10 +14,10 @@ export class Patch extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
 
-    const uris = selection.map(resource => resource.resourceUri);
+    const uris = this.toUris(this.filterResources(selection));
 
     await this.runByRepository(uris, async (repository, resources) => {
-      const files = resources.map(resource => resource.fsPath);
+      const files = this.toPaths(resources);
       const content = await repository.patch(files);
       await this.showDiffPath(repository, content);
     });

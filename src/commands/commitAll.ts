@@ -9,7 +9,6 @@ import {
   runCommitMessageFlow
 } from "../helpers/commitHelper";
 import { Repository } from "../repository";
-import { Resource } from "../resource";
 import { Command } from "./command";
 
 /**
@@ -23,13 +22,8 @@ export class CommitAll extends Command {
 
   public async execute(repository: Repository) {
     // Get staged and changed files
-    const staged = repository.staged.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
-
-    const changes = repository.changes.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
+    const staged = this.filterResources(repository.staged.resourceStates);
+    const changes = this.filterResources(repository.changes.resourceStates);
 
     // Require files to be staged before commit
     if (staged.length === 0) {
@@ -50,14 +44,14 @@ export class CommitAll extends Command {
       }
 
       // Stage all changes
-      const changePaths = changes.map(r => r.resourceUri.fsPath);
+      const changePaths = this.resourcesToPaths(changes);
       await repository.stageOptimistic(changePaths);
     }
 
     // Get staged files (possibly just auto-staged)
-    const resourcesToCommit = repository.staged.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
+    const resourcesToCommit = this.filterResources(
+      repository.staged.resourceStates
+    );
 
     // Build display paths and rename map using helper
     const { displayPaths, renameMap } = buildCommitPaths(

@@ -7,7 +7,6 @@ import { Status } from "../common/types";
 import { configuration } from "../helpers/configuration";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
-import { Resource } from "../resource";
 import { CommitFlowService } from "../services/commitFlowService";
 import { Command } from "./command";
 
@@ -26,13 +25,8 @@ export class CommitFromInputBox extends Command {
 
   public async execute(repository: Repository) {
     // Get staged and changed files
-    const staged = repository.staged.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
-
-    const changes = repository.changes.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
+    const staged = this.filterResources(repository.staged.resourceStates);
+    const changes = this.filterResources(repository.changes.resourceStates);
 
     // Require files to be staged before commit
     if (staged.length === 0) {
@@ -53,14 +47,14 @@ export class CommitFromInputBox extends Command {
       }
 
       // Stage all changes
-      const changePaths = changes.map(r => r.resourceUri.fsPath);
+      const changePaths = this.resourcesToPaths(changes);
       await repository.stageOptimistic(changePaths);
     }
 
     // Get staged files (possibly just auto-staged)
-    const resourcesToCommit = repository.staged.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
+    const resourcesToCommit = this.filterResources(
+      repository.staged.resourceStates
+    );
 
     // Use Set to avoid duplicates when multiple files share parent dirs
     // Display paths: shown in picker (only new names for renames)

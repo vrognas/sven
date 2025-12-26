@@ -5,7 +5,6 @@ import * as path from "path";
 import { window } from "vscode";
 import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
 import { Repository } from "../repository";
-import { Resource } from "../resource";
 import { Command } from "./command";
 
 /**
@@ -19,9 +18,9 @@ export class CommitQuick extends Command {
 
   public async execute(repository: Repository) {
     // Get staged resources
-    const stagedResources = repository.staged.resourceStates.filter(
-      s => s instanceof Resource
-    ) as Resource[];
+    const stagedResources = this.filterResources(
+      repository.staged.resourceStates
+    );
 
     if (stagedResources.length === 0) {
       window.showInformationMessage("No staged files to commit");

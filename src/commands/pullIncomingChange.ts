@@ -17,10 +17,10 @@ export class PullIncomingChange extends Command {
       true
     );
 
-    const uris = changes.map(change => change.resourceUri);
+    const uris = this.toUris(this.filterResources(changes));
 
     await this.runByRepository(uris, async (repository, resources) => {
-      const files = resources.map(resource => resource.fsPath);
+      const files = this.toPaths(resources);
 
       // Pull files, collecting successes and failures
       const results: string[] = [];

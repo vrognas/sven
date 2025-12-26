@@ -54,7 +54,8 @@
       "Bash(svn diff:*)",
       "WebFetch(domain:www.apache.org)",
       "Bash(svn --version:*)",
-      "Bash(svn help:*)"
+      "Bash(svn help:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
