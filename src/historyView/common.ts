@@ -214,14 +214,7 @@ export async function checkIfFile(
 }
 
 export function getLimit(): number {
-  const limit = Number.parseInt(
-    configuration.get<string>("log.length") || "50",
-    10
-  );
-  if (isNaN(limit) || limit <= 0) {
-    throw new Error("Invalid log.length setting value");
-  }
-  return limit;
+  return configuration.logLength();
 }
 
 /** Create "Load more" tree item for log pagination */

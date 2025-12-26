@@ -472,13 +472,11 @@ export class Svn {
 
     // if not detected
     if (!encoding) {
-      encoding = configuration.get<string>("default.encoding");
+      encoding = configuration.defaultEncoding() || "utf8";
     }
 
     if (!iconv.encodingExists(encoding)) {
-      if (encoding) {
-        console.warn(`SVN: The encoding "${encoding}" is invalid`);
-      }
+      console.warn(`SVN: The encoding "${encoding}" is invalid`);
       encoding = "utf8";
     }
 

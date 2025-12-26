@@ -813,8 +813,7 @@ export class Repository {
         }
       }
     } else {
-      const svnEncoding: string | undefined =
-        configuration.get<string>("default.encoding");
+      const svnEncoding = configuration.defaultEncoding();
       if (svnEncoding) {
         encoding = svnEncoding;
       }
@@ -1285,26 +1284,24 @@ export class Repository {
   }
 
   public async plainLog(): Promise<string> {
-    const logLength = configuration.get<string>("log.length") ?? "50";
     const result = await this.exec([
       "log",
       "-r",
       "HEAD:1",
       "--limit",
-      logLength
+      configuration.logLength().toString()
     ]);
 
     return result.stdout;
   }
 
   public async plainLogBuffer(): Promise<Buffer> {
-    const logLength = configuration.get<string>("log.length") ?? "50";
     const result = await this.execBuffer([
       "log",
       "-r",
       "HEAD:1",
       "--limit",
-      logLength
+      configuration.logLength().toString()
     ]);
 
     return result.stdout;

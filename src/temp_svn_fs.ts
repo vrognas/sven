@@ -211,7 +211,7 @@ class TempSvnFs implements FileSystemProvider, Disposable {
     const fname = `r${revision}_${path.basename(svnUri.fsPath)}`;
     const hash = crypto.createHash("md5");
     const filePathHash = hash.update(svnUri.path).digest("hex");
-    const encoding = configuration.get<string>("default.encoding");
+    const encoding = configuration.defaultEncoding();
     let contentBuffer: Buffer;
 
     if (encoding) {

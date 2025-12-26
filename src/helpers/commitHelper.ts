@@ -156,12 +156,9 @@ export async function runCommitMessageFlow(
   displayPaths: string[],
   renameMap: Map<string, string>
 ): Promise<CommitFlowResult> {
-  const useQuickPick = configuration.get<boolean>("commit.useQuickPick", true);
-  const conventionalCommits = configuration.get<boolean>(
-    "commit.conventionalCommits",
-    true
-  );
-  const autoUpdate = configuration.get<string>("commit.autoUpdate", "both");
+  const useQuickPick = configuration.commitUseQuickPick();
+  const conventionalCommits = configuration.commitConventionalCommits();
+  const autoUpdate = configuration.commitAutoUpdate();
   const updateBeforeCommit = autoUpdate === "both" || autoUpdate === "before";
 
   let message: string | undefined;
