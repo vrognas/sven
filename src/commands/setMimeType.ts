@@ -194,35 +194,18 @@ export class SetMimeType extends Command {
       mimeType = customType;
     }
 
-    let successCount = 0;
-    let errorMessage = "";
+    const binaryWarning =
+      mimeType === "application/octet-stream" || !mimeType.startsWith("text/")
+        ? " (binary - no merge/diff)"
+        : "";
 
-    for (const filePath of paths) {
-      try {
-        const result = await repository.setMimeType(filePath, mimeType);
-        if (result.exitCode === 0) {
-          successCount++;
-        } else {
-          errorMessage = result.stderr || "Unknown error";
-        }
-      } catch (error) {
-        errorMessage = error instanceof Error ? error.message : "Unknown error";
-      }
-    }
-
-    if (successCount > 0) {
-      const binaryWarning =
-        mimeType === "application/octet-stream" || !mimeType.startsWith("text/")
-          ? " (binary - no merge/diff)"
-          : "";
-      window.showInformationMessage(
-        `Set svn:mime-type=${mimeType} on ${successCount} file(s)${binaryWarning}`
-      );
-    }
-
-    if (errorMessage) {
-      window.showErrorMessage(`Failed to set mime-type: ${errorMessage}`);
-    }
+    await this.executeWithFeedback(
+      paths,
+      path => repository.setMimeType(path, mimeType),
+      count =>
+        `Set svn:mime-type=${mimeType} on ${count} file(s)${binaryWarning}`,
+      "Failed to set mime-type"
+    );
   }
 }
 
@@ -248,23 +231,12 @@ export class RemoveMimeType extends Command {
     repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
     paths: string[]
   ): Promise<void> {
-    let successCount = 0;
-
-    for (const filePath of paths) {
-      try {
-        const result = await repository.removeMimeType(filePath);
-        if (result.exitCode === 0) {
-          successCount++;
-        }
-      } catch {
-        // Ignore errors for individual files
-      }
-    }
-
-    if (successCount > 0) {
-      window.showInformationMessage(
-        `Removed svn:mime-type from ${successCount} file(s)`
-      );
-    }
+    await this.executeWithFeedback(
+      paths,
+      path => repository.removeMimeType(path),
+      "Removed svn:mime-type from {count} file(s)",
+      "Failed to remove mime-type",
+      { ignoreErrors: true }
+    );
   }
 }

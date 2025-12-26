@@ -105,40 +105,12 @@ export class SetEolStyle extends Command {
       recursive = answer.label === "Yes";
     }
 
-    let successCount = 0;
-    let errorMessage = "";
-
-    for (const filePath of paths) {
-      try {
-        const result = await repository.setEolStyle(
-          filePath,
-          selected.value,
-          recursive
-        );
-        if (result.exitCode === 0) {
-          successCount++;
-        } else {
-          // Common error: binary mime type
-          if (result.stderr.includes("binary mime type")) {
-            errorMessage = `${filePath}: Cannot set eol-style on binary file`;
-          } else {
-            errorMessage = result.stderr || "Unknown error";
-          }
-        }
-      } catch (error) {
-        errorMessage = error instanceof Error ? error.message : "Unknown error";
-      }
-    }
-
-    if (successCount > 0) {
-      window.showInformationMessage(
-        `Set svn:eol-style=${selected.value} on ${successCount} item(s)`
-      );
-    }
-
-    if (errorMessage) {
-      window.showErrorMessage(`Failed to set eol-style: ${errorMessage}`);
-    }
+    await this.executeWithFeedback(
+      paths,
+      path => repository.setEolStyle(path, selected.value, recursive),
+      count => `Set svn:eol-style=${selected.value} on ${count} item(s)`,
+      "Failed to set eol-style"
+    );
   }
 }
 
@@ -201,23 +173,12 @@ export class RemoveEolStyle extends Command {
       recursive = answer.label === "Yes";
     }
 
-    let successCount = 0;
-
-    for (const filePath of paths) {
-      try {
-        const result = await repository.removeEolStyle(filePath, recursive);
-        if (result.exitCode === 0) {
-          successCount++;
-        }
-      } catch {
-        // Ignore errors for individual files
-      }
-    }
-
-    if (successCount > 0) {
-      window.showInformationMessage(
-        `Removed svn:eol-style from ${successCount} item(s)`
-      );
-    }
+    await this.executeWithFeedback(
+      paths,
+      path => repository.removeEolStyle(path, recursive),
+      "Removed svn:eol-style from {count} item(s)",
+      "Failed to remove eol-style",
+      { ignoreErrors: true }
+    );
   }
 }

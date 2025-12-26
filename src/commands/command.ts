@@ -1079,6 +1079,60 @@ export abstract class Command implements Disposable {
   }
 
   /**
+   * Execute operation on each path with success/error feedback.
+   * Common pattern: loop paths, count successes, show messages.
+   *
+   * @param paths Paths to operate on
+   * @param operation Function returning { exitCode, stderr? } or void
+   * @param successMsg Message template: string with {count} or function
+   * @param errorPrefix Prefix for error message
+   * @param options.ignoreErrors If true, don't track/show errors
+   * @returns Number of successful operations
+   */
+  protected async executeWithFeedback(
+    paths: string[],
+    operation: (
+      path: string
+    ) => Promise<{ exitCode: number; stderr?: string } | void>,
+    successMsg: string | ((count: number) => string),
+    errorPrefix: string,
+    options?: { ignoreErrors?: boolean }
+  ): Promise<number> {
+    let successCount = 0;
+    let errorMessage = "";
+
+    for (const filePath of paths) {
+      try {
+        const result = await operation(filePath);
+        if (!result || result.exitCode === 0) {
+          successCount++;
+        } else if (!options?.ignoreErrors) {
+          errorMessage = result.stderr || "Unknown error";
+        }
+      } catch (error) {
+        if (!options?.ignoreErrors) {
+          errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        }
+      }
+    }
+
+    if (successCount > 0) {
+      const msg =
+        typeof successMsg === "function"
+          ? successMsg(successCount)
+          : successMsg.replace("{count}", String(successCount));
+      window.showInformationMessage(msg);
+    }
+
+    if (errorMessage) {
+      window.showErrorMessage(`${errorPrefix}: ${errorMessage}`);
+    }
+
+    return successCount;
+  }
+
+  /**
    * Execute revert operation with depth check and confirmation.
    * Shared by revert and revertExplorer commands.
    */
