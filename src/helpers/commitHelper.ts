@@ -2,9 +2,13 @@
 // Licensed under MIT License
 
 import * as path from "path";
+import { window } from "vscode";
 import { Status } from "../common/types";
+import { configuration } from "./configuration";
+import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
+import { CommitFlowService } from "../services/commitFlowService";
 
 export interface CommitPaths {
   /** Paths to display in picker (new names only for renames) */
@@ -76,4 +80,83 @@ export function expandCommitPaths(
     }
   }
   return commitPaths;
+}
+
+export interface CommitFlowResult {
+  message?: string;
+  commitPaths?: string[];
+  cancelled: boolean;
+}
+
+// Shared commit flow service instance
+let commitFlowServiceInstance: CommitFlowService | undefined;
+
+function getCommitFlowService(): CommitFlowService {
+  if (!commitFlowServiceInstance) {
+    commitFlowServiceInstance = new CommitFlowService();
+  }
+  return commitFlowServiceInstance;
+}
+
+/**
+ * Run the shared commit flow: get config, show UI, return message/paths.
+ * Used by commitAll and commitStaged commands.
+ */
+export async function runCommitMessageFlow(
+  repository: Repository,
+  displayPaths: string[],
+  renameMap: Map<string, string>
+): Promise<CommitFlowResult> {
+  const useQuickPick = configuration.get<boolean>("commit.useQuickPick", true);
+  const conventionalCommits = configuration.get<boolean>(
+    "commit.conventionalCommits",
+    true
+  );
+  const autoUpdate = configuration.get<string>("commit.autoUpdate", "both");
+  const updateBeforeCommit = autoUpdate === "both" || autoUpdate === "before";
+
+  let message: string | undefined;
+  let selectedPaths: string[] | undefined;
+
+  if (useQuickPick) {
+    const result = await getCommitFlowService().runCommitFlow(
+      repository,
+      displayPaths,
+      { conventionalCommits, updateBeforeCommit }
+    );
+
+    if (result.cancelled) {
+      return { cancelled: true };
+    }
+    message = result.message;
+    selectedPaths = result.selectedFiles;
+  } else {
+    message = await inputCommitMessage(
+      repository.inputBox.value,
+      true,
+      displayPaths
+    );
+    selectedPaths = displayPaths;
+  }
+
+  if (message === undefined || !selectedPaths) {
+    return { cancelled: true };
+  }
+
+  const commitPaths = expandCommitPaths(selectedPaths, renameMap);
+  return { message, commitPaths, cancelled: false };
+}
+
+/**
+ * Execute the commit and show result.
+ */
+export async function executeCommit(
+  repository: Repository,
+  message: string,
+  commitPaths: string[]
+): Promise<void> {
+  const result = await repository.commitFiles(message, commitPaths);
+  window.showInformationMessage(result);
+  repository.inputBox.value = "";
+  repository.staging.clearOriginalChangelists(commitPaths);
 }
