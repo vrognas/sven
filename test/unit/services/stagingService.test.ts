@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as path from "path";
 import {
   StagingService,
   STAGING_CHANGELIST
@@ -8,9 +9,15 @@ import { Uri } from "vscode";
 // Mock vscode
 vi.mock("vscode", () => ({
   Uri: {
-    file: (path: string) => ({ fsPath: path, toString: () => path })
+    file: (p: string) => ({ fsPath: p, toString: () => p })
   }
 }));
+
+// Helper to get expected normalized path (matches util.ts behavior)
+function expectedPath(p: string): string {
+  const normalized = p.replace(/[/\\]/g, path.sep);
+  return path.sep === "\\" ? normalized.toLowerCase() : normalized;
+}
 
 describe("StagingService", () => {
   let service: StagingService;
@@ -71,8 +78,8 @@ describe("StagingService", () => {
       service.syncFromChangelist(["/repo/a.txt", "/repo/b.txt"]);
       const paths = service.getStagedPaths();
       expect(paths).toHaveLength(2);
-      expect(paths).toContain("/repo/a.txt");
-      expect(paths).toContain("/repo/b.txt");
+      expect(paths).toContain(expectedPath("/repo/a.txt"));
+      expect(paths).toContain(expectedPath("/repo/b.txt"));
     });
 
     it("returns empty array when nothing staged", () => {
@@ -91,9 +98,20 @@ describe("StagingService", () => {
   });
 
   describe("path normalization", () => {
-    it("normalizes backslashes to forward slashes", () => {
+    it("normalizes paths consistently across separators", () => {
       service.syncFromChangelist(["C:\\repo\\file.txt"]);
+      // Both formats should match after normalization
       expect(service.isStaged("C:/repo/file.txt")).toBe(true);
+      expect(service.isStaged("C:\\repo\\file.txt")).toBe(true);
+    });
+
+    it("handles case-insensitivity on Windows", () => {
+      service.syncFromChangelist(["C:\\Repo\\File.txt"]);
+      // On Windows, paths are normalized to lowercase
+      if (path.sep === "\\") {
+        expect(service.isStaged("c:\\repo\\file.txt")).toBe(true);
+        expect(service.isStaged("C:/REPO/FILE.TXT")).toBe(true);
+      }
     });
   });
 

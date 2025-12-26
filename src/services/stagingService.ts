@@ -2,6 +2,7 @@
 // Licensed under MIT License
 
 import { Disposable, Uri } from "vscode";
+import { normalizePath } from "../util";
 
 /**
  * Reserved SVN changelist name for staging.
@@ -37,7 +38,7 @@ export class StagingService implements Disposable {
   syncFromChangelist(paths: string[]): void {
     this._stagedPaths.clear();
     for (const path of paths) {
-      this._stagedPaths.add(this.normalizePath(path));
+      this._stagedPaths.add(normalizePath(path));
     }
   }
 
@@ -46,7 +47,7 @@ export class StagingService implements Disposable {
    */
   isStaged(uri: Uri | string): boolean {
     const path = typeof uri === "string" ? uri : uri.fsPath;
-    return this._stagedPaths.has(this.normalizePath(path));
+    return this._stagedPaths.has(normalizePath(path));
   }
 
   /**
@@ -68,7 +69,7 @@ export class StagingService implements Disposable {
    * Called by stage command when file has existing changelist.
    */
   saveOriginalChangelist(path: string, changelist: string): void {
-    this._originalChangelists.set(this.normalizePath(path), changelist);
+    this._originalChangelists.set(normalizePath(path), changelist);
   }
 
   /**
@@ -76,7 +77,7 @@ export class StagingService implements Disposable {
    * Returns undefined if file had no changelist before staging.
    */
   getOriginalChangelist(path: string): string | undefined {
-    return this._originalChangelists.get(this.normalizePath(path));
+    return this._originalChangelists.get(normalizePath(path));
   }
 
   /**
@@ -85,15 +86,8 @@ export class StagingService implements Disposable {
    */
   clearOriginalChangelists(paths: string[]): void {
     for (const path of paths) {
-      this._originalChangelists.delete(this.normalizePath(path));
+      this._originalChangelists.delete(normalizePath(path));
     }
-  }
-
-  /**
-   * Normalize path for consistent comparison
-   */
-  private normalizePath(path: string): string {
-    return path.replace(/\\/g, "/");
   }
 
   dispose(): void {

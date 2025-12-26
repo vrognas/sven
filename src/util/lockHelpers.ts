@@ -1,6 +1,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import { ThemeColor } from "vscode";
 import { LockStatus } from "../common/types";
 
 /**
@@ -25,5 +26,23 @@ export function getLockTooltip(
       return owner ? `Lock stolen by ${owner}` : "Lock stolen";
     default:
       return defaultText;
+  }
+}
+
+/**
+ * Get color for lock status badge.
+ * K=blue (safe), O=orange (blocked), B/T=red (error)
+ */
+export function getLockColor(lockStatus: LockStatus): ThemeColor {
+  switch (lockStatus) {
+    case LockStatus.K:
+      return new ThemeColor("charts.blue");
+    case LockStatus.O:
+      return new ThemeColor("charts.orange");
+    case LockStatus.B:
+    case LockStatus.T:
+      return new ThemeColor("errorForeground");
+    default:
+      return new ThemeColor("charts.orange");
   }
 }

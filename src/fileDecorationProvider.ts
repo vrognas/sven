@@ -14,6 +14,7 @@ import {
 import { LockStatus, PropertyChange, PropStatus, Status } from "./common/types";
 import { configuration } from "./helpers/configuration";
 import { Repository } from "./repository";
+import { getLockColor, getLockTooltip } from "./util/lockHelpers";
 
 /**
  * Provides file decorations (badges and colors) for SVN-tracked files in Explorer view
@@ -160,10 +161,7 @@ export class SvnFileDecorationProvider
     // Add lock info to tooltip, badge, and color (K/O/B/T per SVN convention)
     // VS Code limits badges to 2 chars, so only append lock if badge is 1 char
     if (resource.lockStatus) {
-      const lockInfo = this.getLockTooltip(
-        resource.lockStatus,
-        resource.lockOwner
-      );
+      const lockInfo = getLockTooltip(resource.lockStatus, resource.lockOwner);
       tooltip = tooltip ? `${tooltip} (${lockInfo})` : lockInfo;
       // Use SVN lock letters: K=yours, O=others, B=broken, T=stolen
       const lockLetter = resource.lockStatus;
@@ -177,7 +175,7 @@ export class SvnFileDecorationProvider
         resource.lockStatus === LockStatus.T ||
         !color
       ) {
-        color = this.getLockColor(resource.lockStatus);
+        color = getLockColor(resource.lockStatus);
       }
     } else if (resource.locked) {
       // Fallback for legacy lock detection without lockStatus
@@ -195,7 +193,7 @@ export class SvnFileDecorationProvider
       }
       // Use lock color if no status color
       if (!color) {
-        color = this.getLockColor(lockLetter);
+        color = getLockColor(lockLetter);
       }
     }
 
@@ -251,11 +249,11 @@ export class SvnFileDecorationProvider
     const lockInfo = this.repository.getLockStatusCached(uri.fsPath);
     if (lockInfo) {
       const lockLetter = lockInfo.lockStatus;
-      let tooltip: string | undefined = this.getLockTooltip(
+      let tooltip: string | undefined = getLockTooltip(
         lockInfo.lockStatus,
         lockInfo.lockOwner
       );
-      const color = this.getLockColor(lockInfo.lockStatus);
+      const color = getLockColor(lockInfo.lockStatus);
 
       // Append property info (eol-style, mime-type)
       tooltip = this.appendPropertyTooltip(uri.fsPath, tooltip);
@@ -442,37 +440,6 @@ export class SvnFileDecorationProvider
         return new ThemeColor("gitDecoration.conflictingResourceForeground");
       default:
         return undefined;
-    }
-  }
-
-  private getLockTooltip(lockStatus: LockStatus, lockOwner?: string): string {
-    switch (lockStatus) {
-      case LockStatus.K:
-        return "Locked by you";
-      case LockStatus.O:
-        return lockOwner ? `Locked by ${lockOwner}` : "Locked by others";
-      case LockStatus.B:
-        return "Lock broken (your lock was removed)";
-      case LockStatus.T:
-        return lockOwner
-          ? `Lock stolen by ${lockOwner}`
-          : "Lock stolen by another user";
-    }
-  }
-
-  /**
-   * Get color for lock status
-   * K=blue (safe), O=orange (blocked), B/T=red (error)
-   */
-  private getLockColor(lockStatus: LockStatus): ThemeColor {
-    switch (lockStatus) {
-      case LockStatus.K:
-        return new ThemeColor("charts.blue");
-      case LockStatus.O:
-        return new ThemeColor("charts.orange");
-      case LockStatus.B:
-      case LockStatus.T:
-        return new ThemeColor("errorForeground");
     }
   }
 

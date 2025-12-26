@@ -3,16 +3,16 @@
 // Licensed under MIT License
 
 import { Disposable } from "vscode";
-import * as semver from "semver";
-import { setVscodeContext } from "../util";
+import { createVersionContext } from "./svnVersionContext";
 
 export class IsSvn19orGreater implements Disposable {
-  constructor(svnVersion: string) {
-    const is19orGreater = semver.satisfies(svnVersion, ">= 1.9");
+  private context: Disposable;
 
-    setVscodeContext("isSvn19orGreater", is19orGreater);
+  constructor(svnVersion: string) {
+    this.context = createVersionContext(svnVersion, "1.9", "isSvn19orGreater");
   }
 
-   
-  dispose() {}
+  dispose() {
+    this.context.dispose();
+  }
 }
