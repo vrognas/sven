@@ -5,6 +5,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { configuration } from "../helpers/configuration";
 import { camelcase } from "../util";
+import { logError } from "../util/errorLogger";
 
 /**
  * Represents a primitive value in parsed XML
@@ -285,4 +286,37 @@ export class XmlParserAdapter {
 
     return result;
   }
+}
+
+/**
+ * Parse XML with standardized error handling.
+ * Wraps XmlParserAdapter.parse() with consistent try/catch/logging pattern.
+ *
+ * @param content XML string to parse
+ * @param transform Function to transform parsed result to desired type
+ * @param name Parser name for error messages (e.g., "info", "log")
+ * @returns Promise resolving to transformed result
+ * @throws Error with formatted message on parse failure
+ */
+export function parseXml<T>(
+  content: string,
+  transform: (parsed: unknown) => T,
+  name: string
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    try {
+      const parsed = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
+      resolve(transform(parsed));
+    } catch (err) {
+      logError(
+        `parse${name.charAt(0).toUpperCase() + name.slice(1)} error`,
+        err
+      );
+      reject(
+        new Error(
+          `Failed to parse ${name} XML: ${err instanceof Error ? err.message : "Unknown error"}`
+        )
+      );
+    }
+  });
 }

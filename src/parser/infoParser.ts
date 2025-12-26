@@ -3,27 +3,18 @@
 // Licensed under MIT License
 
 import { ISvnInfo } from "../common/types";
-import { XmlParserAdapter, DEFAULT_PARSE_OPTIONS } from "./xmlParserAdapter";
-import { logError } from "../util/errorLogger";
+import { parseXml } from "./xmlParserAdapter";
 
-export async function parseInfoXml(content: string): Promise<ISvnInfo> {
-  return new Promise<ISvnInfo>((resolve, reject) => {
-    try {
-      const result = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
-
+export function parseInfoXml(content: string): Promise<ISvnInfo> {
+  return parseXml(
+    content,
+    (parsed: unknown) => {
+      const result = parsed as { entry?: ISvnInfo };
       if (typeof result.entry === "undefined") {
-        reject(new Error("Invalid info XML: missing entry element"));
-        return;
+        throw new Error("Invalid info XML: missing entry element");
       }
-
-      resolve(result.entry);
-    } catch (err) {
-      logError("parseInfoXml error", err);
-      reject(
-        new Error(
-          `Failed to parse info XML: ${err instanceof Error ? err.message : "Unknown error"}`
-        )
-      );
-    }
-  });
+      return result.entry;
+    },
+    "info"
+  );
 }

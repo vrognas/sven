@@ -2,9 +2,8 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { XmlParserAdapter, DEFAULT_PARSE_OPTIONS } from "./xmlParserAdapter";
+import { parseXml } from "./xmlParserAdapter";
 import { IEntry, IFileStatus, IWcStatus, LockStatus } from "../common/types";
-import { logError } from "../util/errorLogger";
 
 function processEntry(
   entry: IEntry | IEntry[],
@@ -157,22 +156,10 @@ function xmlToStatus(xml: Record<string, unknown>) {
   return statusList;
 }
 
-export async function parseStatusXml(content: string): Promise<IFileStatus[]> {
-  return new Promise<IFileStatus[]>((resolve, reject) => {
-    try {
-      const parsed = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
-
-      const result = parsed as Record<string, unknown>;
-      const statusList: IFileStatus[] = xmlToStatus(result);
-
-      resolve(statusList);
-    } catch (err) {
-      logError("parseStatusXml error", err);
-      reject(
-        new Error(
-          `Failed to parse status XML: ${err instanceof Error ? err.message : "Unknown error"}`
-        )
-      );
-    }
-  });
+export function parseStatusXml(content: string): Promise<IFileStatus[]> {
+  return parseXml(
+    content,
+    (parsed: unknown) => xmlToStatus(parsed as Record<string, unknown>),
+    "status"
+  );
 }

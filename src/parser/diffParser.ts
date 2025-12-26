@@ -3,31 +3,18 @@
 // Licensed under MIT License
 
 import { ISvnPath } from "../common/types";
-import {
-  XmlParserAdapter,
-  DEFAULT_PARSE_OPTIONS,
-  ensureArray
-} from "./xmlParserAdapter";
-import { logError } from "../util/errorLogger";
+import { parseXml, ensureArray } from "./xmlParserAdapter";
 
-export async function parseDiffXml(content: string): Promise<ISvnPath[]> {
-  return new Promise<ISvnPath[]>((resolve, reject) => {
-    try {
-      const result = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
-
+export function parseDiffXml(content: string): Promise<ISvnPath[]> {
+  return parseXml(
+    content,
+    (parsed: unknown) => {
+      const result = parsed as { paths?: { path?: unknown } };
       if (!result.paths?.path) {
-        reject(new Error("Invalid diff XML: missing paths or path elements"));
-        return;
+        throw new Error("Invalid diff XML: missing paths or path elements");
       }
-
-      resolve(ensureArray(result.paths.path));
-    } catch (err) {
-      logError("parseDiffXml error", err);
-      reject(
-        new Error(
-          `Failed to parse diff XML: ${err instanceof Error ? err.message : "Unknown error"}`
-        )
-      );
-    }
-  });
+      return ensureArray(result.paths.path) as ISvnPath[];
+    },
+    "diff"
+  );
 }

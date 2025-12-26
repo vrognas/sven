@@ -3,12 +3,7 @@
 // Licensed under MIT License
 
 import { ISvnBlameLine } from "../common/types";
-import {
-  XmlParserAdapter,
-  DEFAULT_PARSE_OPTIONS,
-  ensureArray
-} from "./xmlParserAdapter";
-import { logError } from "../util/errorLogger";
+import { parseXml, ensureArray } from "./xmlParserAdapter";
 
 /**
  * Parse SVN blame XML output into structured blame lines
@@ -28,17 +23,15 @@ import { logError } from "../util/errorLogger";
  * const blameLines = await parseSvnBlame(xml);
  * // blameLines[0] = { lineNumber: 1, revision: "123", author: "john", date: "..." }
  */
-export async function parseSvnBlame(content: string): Promise<ISvnBlameLine[]> {
-  return new Promise<ISvnBlameLine[]>((resolve, reject) => {
-    try {
-      const parsed = XmlParserAdapter.parse(content, DEFAULT_PARSE_OPTIONS);
-
+export function parseSvnBlame(content: string): Promise<ISvnBlameLine[]> {
+  return parseXml(
+    content,
+    (parsed: unknown) => {
       const result = parsed as Record<string, unknown>;
 
       // Validate structure
       if (!result.target || typeof result.target !== "object") {
-        reject(new Error("Invalid blame XML: missing target element"));
-        return;
+        throw new Error("Invalid blame XML: missing target element");
       }
 
       const target = result.target as Record<string, unknown>;
@@ -47,7 +40,7 @@ export async function parseSvnBlame(content: string): Promise<ISvnBlameLine[]> {
       const entries = ensureArray(target.entry);
 
       // Transform XML entries to ISvnBlameLine[]
-      const blameLines: ISvnBlameLine[] = entries.map((entry: unknown) => {
+      return entries.map((entry: unknown) => {
         const e = entry as Record<string, unknown>;
         if (!e.lineNumber) {
           throw new Error("Invalid blame entry: missing lineNumber");
@@ -80,17 +73,7 @@ export async function parseSvnBlame(content: string): Promise<ISvnBlameLine[]> {
 
         return line;
       });
-
-      resolve(blameLines);
-    } catch (err) {
-      logError("parseSvnBlame error", err);
-      reject(
-        new Error(
-          `Failed to parse blame XML: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }`
-        )
-      );
-    }
-  });
+    },
+    "blame"
+  );
 }
