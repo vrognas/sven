@@ -208,6 +208,30 @@ export abstract class Command implements Disposable {
     return null;
   }
 
+  /**
+   * Run operation for all resources in a group across all repositories.
+   * Replaces: runForAllChanges/runForAllStaged patterns
+   */
+  protected async runForAllInGroup(
+    group: "changes" | "staged",
+    fn: (repository: Repository, paths: string[]) => Promise<void>
+  ): Promise<void> {
+    const { commands } = await import("vscode");
+
+    const sourceControlManager = (await commands.executeCommand(
+      "sven.getSourceControlManager",
+      ""
+    )) as { repositories: Repository[] };
+
+    for (const repository of sourceControlManager.repositories) {
+      const resources = repository[group].resourceStates;
+      const paths = resources.map(r => r.resourceUri.fsPath);
+      if (paths.length > 0) {
+        await fn(repository, paths);
+      }
+    }
+  }
+
   protected runByRepository<T>(
     resource: Uri,
     fn: (repository: Repository, resource: Uri) => Promise<T>

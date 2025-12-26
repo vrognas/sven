@@ -2,7 +2,6 @@
 // Licensed under MIT License
 
 import { SourceControlResourceState } from "vscode";
-import { Repository } from "../repository";
 import { unstageWithRestoreOptimistic } from "../helpers/stageHelper";
 import { Command } from "./command";
 
@@ -56,34 +55,12 @@ export class UnstageAll extends Command {
       );
     } else {
       // Unstage all staged files across all repositories
-      await this.runForAllStaged(async (repository, paths) => {
+      await this.runForAllInGroup("staged", async (repository, paths) => {
         await this.handleRepositoryOperation(
           async () => unstageWithRestoreOptimistic(repository, paths),
           "Unable to unstage files"
         );
       });
-    }
-  }
-
-  /**
-   * Run operation for all staged files across all repositories.
-   */
-  private async runForAllStaged(
-    fn: (repository: Repository, paths: string[]) => Promise<void>
-  ): Promise<void> {
-    const { commands } = await import("vscode");
-
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as { repositories: Repository[] };
-
-    for (const repository of sourceControlManager.repositories) {
-      const staged = repository.staged.resourceStates;
-      const paths = staged.map(r => r.resourceUri.fsPath);
-      if (paths.length > 0) {
-        await fn(repository, paths);
-      }
     }
   }
 }

@@ -2,7 +2,6 @@
 // Licensed under MIT License
 
 import { SourceControlResourceState } from "vscode";
-import { Repository } from "../repository";
 import {
   getAffectedChangelists,
   buildOriginalChangelistMap,
@@ -117,34 +116,12 @@ export class StageAll extends Command {
       );
     } else {
       // Stage all changes in all repositories
-      await this.runForAllChanges(async (repository, paths) => {
+      await this.runForAllInGroup("changes", async (repository, paths) => {
         await this.handleRepositoryOperation(
           async () => repository.stageOptimistic(paths),
           "Unable to stage files"
         );
       });
-    }
-  }
-
-  /**
-   * Run operation for all changes across all repositories.
-   */
-  private async runForAllChanges(
-    fn: (repository: Repository, paths: string[]) => Promise<void>
-  ): Promise<void> {
-    const { commands } = await import("vscode");
-
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as { repositories: Repository[] };
-
-    for (const repository of sourceControlManager.repositories) {
-      const changes = repository.changes.resourceStates;
-      const paths = changes.map(r => r.resourceUri.fsPath);
-      if (paths.length > 0) {
-        await fn(repository, paths);
-      }
     }
   }
 }
