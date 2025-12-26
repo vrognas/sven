@@ -1,8 +1,9 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { ThemeColor } from "vscode";
-import { LockStatus } from "../common/types";
+import { ThemeColor, window } from "vscode";
+import { LockStatus, IExecutionResult } from "../common/types";
+import { makeWritable, makeReadOnly } from "../fs";
 
 /**
  * Get human-readable tooltip for lock status.
@@ -44,5 +45,56 @@ export function getLockColor(lockStatus: LockStatus): ThemeColor {
       return new ThemeColor("errorForeground");
     default:
       return new ThemeColor("charts.orange");
+  }
+}
+
+/**
+ * Handle SVN command result with success/error messaging.
+ * @returns true if operation succeeded, false otherwise
+ */
+export function handleSvnResult(
+  result: IExecutionResult,
+  successMessage: string,
+  errorPrefix: string
+): boolean {
+  if (result.exitCode === 0) {
+    window.showInformationMessage(successMessage);
+    return true;
+  } else {
+    window.showErrorMessage(
+      `${errorPrefix}: ${result.stderr || "Unknown error"}`
+    );
+    return false;
+  }
+}
+
+/**
+ * Make files writable after locking (ignore errors).
+ */
+export async function makeFilesWritable(paths: string[]): Promise<void> {
+  for (const p of paths) {
+    try {
+      await makeWritable(p);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
+ * Make files read-only after unlocking if they have svn:needs-lock.
+ */
+export async function makeFilesReadOnlyIfNeeded(
+  paths: string[],
+  hasNeedsLock: (path: string) => Promise<boolean>
+): Promise<void> {
+  for (const p of paths) {
+    if (await hasNeedsLock(p)) {
+      try {
+        await makeReadOnly(p);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }

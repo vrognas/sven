@@ -1,10 +1,12 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { window } from "vscode";
 import { Command } from "./command";
 import { confirmDestructive } from "../ui";
-import { makeReadOnly } from "../fs";
+import {
+  handleSvnResult,
+  makeFilesReadOnlyIfNeeded
+} from "../util/lockHelpers";
 
 export class Unlock extends Command {
   constructor() {
@@ -16,20 +18,15 @@ export class Unlock extends Command {
       args,
       async (repository, paths) => {
         const result = await repository.unlock(paths);
-        if (result.exitCode === 0) {
-          for (const p of paths) {
-            if (await repository.hasNeedsLock(p)) {
-              try {
-                await makeReadOnly(p);
-              } catch {
-                /* ignore */
-              }
-            }
-          }
-          window.showInformationMessage(`Unlocked ${paths.length} file(s)`);
-        } else {
-          window.showErrorMessage(
-            `Unlock failed: ${result.stderr || "Unknown error"}`
+        if (
+          handleSvnResult(
+            result,
+            `Unlocked ${paths.length} file(s)`,
+            "Unlock failed"
+          )
+        ) {
+          await makeFilesReadOnlyIfNeeded(paths, p =>
+            repository.hasNeedsLock(p)
           );
         }
       },
@@ -54,22 +51,15 @@ export class BreakLock extends Command {
       args,
       async (repository, paths) => {
         const result = await repository.unlock(paths, { force: true });
-        if (result.exitCode === 0) {
-          for (const p of paths) {
-            if (await repository.hasNeedsLock(p)) {
-              try {
-                await makeReadOnly(p);
-              } catch {
-                /* ignore */
-              }
-            }
-          }
-          window.showInformationMessage(
-            `Broke lock on ${paths.length} file(s)`
-          );
-        } else {
-          window.showErrorMessage(
-            `Break lock failed: ${result.stderr || "Unknown error"}`
+        if (
+          handleSvnResult(
+            result,
+            `Broke lock on ${paths.length} file(s)`,
+            "Break lock failed"
+          )
+        ) {
+          await makeFilesReadOnlyIfNeeded(paths, p =>
+            repository.hasNeedsLock(p)
           );
         }
       },

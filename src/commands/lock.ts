@@ -4,8 +4,8 @@
 import { window } from "vscode";
 import { Command } from "./command";
 import { confirmDestructive } from "../ui";
+import { handleSvnResult, makeFilesWritable } from "../util/lockHelpers";
 import { validateLockComment } from "../validation";
-import { makeWritable } from "../fs";
 
 export class Lock extends Command {
   constructor() {
@@ -30,19 +30,14 @@ export class Lock extends Command {
       args,
       async (repository, paths) => {
         const result = await repository.lock(paths, comment ? { comment } : {});
-        if (result.exitCode === 0) {
-          for (const p of paths) {
-            try {
-              await makeWritable(p);
-            } catch {
-              /* ignore */
-            }
-          }
-          window.showInformationMessage(`Locked ${paths.length} file(s)`);
-        } else {
-          window.showErrorMessage(
-            `Lock failed: ${result.stderr || "Unknown error"}`
-          );
+        if (
+          handleSvnResult(
+            result,
+            `Locked ${paths.length} file(s)`,
+            "Lock failed"
+          )
+        ) {
+          await makeFilesWritable(paths);
         }
       },
       "Unable to lock files"
@@ -67,21 +62,14 @@ export class StealLock extends Command {
       args,
       async (repository, paths) => {
         const result = await repository.lock(paths, { force: true });
-        if (result.exitCode === 0) {
-          for (const p of paths) {
-            try {
-              await makeWritable(p);
-            } catch {
-              /* ignore */
-            }
-          }
-          window.showInformationMessage(
-            `Stole lock on ${paths.length} file(s)`
-          );
-        } else {
-          window.showErrorMessage(
-            `Steal lock failed: ${result.stderr || "Unknown error"}`
-          );
+        if (
+          handleSvnResult(
+            result,
+            `Stole lock on ${paths.length} file(s)`,
+            "Steal lock failed"
+          )
+        ) {
+          await makeFilesWritable(paths);
         }
       },
       "Unable to steal lock"
