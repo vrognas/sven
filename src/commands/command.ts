@@ -34,6 +34,7 @@ import { Resource } from "../resource";
 import { fromSvnUri, toSvnUri } from "../uri";
 import { getSvnDir } from "../util";
 import { logError, logWarning } from "../util/errorLogger";
+import { STAGING_CHANGELIST } from "../services/stagingService";
 
 /**
  * Type-safe command argument patterns used across all commands.
@@ -1207,8 +1208,24 @@ export abstract class Command implements Disposable {
 
       const paths = resources.map(resource => resource.fsPath).reverse();
 
+      // Find staged files before revert so we can unstage them after
+      const stagedPaths = paths.filter(p => {
+        const resource = repository.getResourceFromFile(p);
+        return resource?.changelist === STAGING_CHANGELIST;
+      });
+
       try {
         await repository.revert(paths, depth);
+
+        // Post-revert cleanup
+        await repository.refreshNeedsLockCache();
+        repository.refreshExplorerDecorations(resources);
+
+        // Unstage reverted files
+        if (stagedPaths.length > 0) {
+          await repository.removeChangelist(stagedPaths);
+          repository.staging.clearOriginalChangelists(stagedPaths);
+        }
       } catch (error) {
         logError("Revert operation failed", error);
         window.showErrorMessage("Unable to revert");
