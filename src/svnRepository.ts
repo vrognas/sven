@@ -208,6 +208,18 @@ export class Repository {
     }
   }
 
+  /**
+   * Require minimum SVN version for a feature.
+   * Throws descriptive error if version requirement not met.
+   */
+  private requireSvnVersion(minVersion: string, feature: string): void {
+    if (!semver.gte(this.svn.version, minVersion)) {
+      throw new Error(
+        `${feature} requires SVN ${minVersion}+, you have ${this.svn.version}`
+      );
+    }
+  }
+
   // ========== Property helper methods (DRY) ==========
 
   /**
@@ -1527,11 +1539,7 @@ export class Repository {
    * @throws Error if SVN version < 1.9
    */
   public async removeUnversioned(): Promise<string> {
-    if (!semver.gte(this.svn.version, "1.9.0")) {
-      throw new Error(
-        `--remove-unversioned requires SVN 1.9+, you have ${this.svn.version}`
-      );
-    }
+    this.requireSvnVersion("1.9.0", "--remove-unversioned");
     const result = await this.exec(["cleanup", "--remove-unversioned"]);
     this.svn.logOutput(result.stdout);
     this.resetInfoCache();
@@ -1545,11 +1553,7 @@ export class Repository {
    * @throws Error if SVN version < 1.9
    */
   public async removeIgnored(): Promise<string> {
-    if (!semver.gte(this.svn.version, "1.9.0")) {
-      throw new Error(
-        `--remove-ignored requires SVN 1.9+, you have ${this.svn.version}`
-      );
-    }
+    this.requireSvnVersion("1.9.0", "--remove-ignored");
     const result = await this.exec(["cleanup", "--remove-ignored"]);
     this.svn.logOutput(result.stdout);
     this.resetInfoCache();
@@ -1563,11 +1567,7 @@ export class Repository {
    * @throws Error if SVN version < 1.10
    */
   public async vacuumPristines(): Promise<string> {
-    if (!semver.gte(this.svn.version, "1.10.0")) {
-      throw new Error(
-        `--vacuum-pristines requires SVN 1.10+, you have ${this.svn.version}`
-      );
-    }
+    this.requireSvnVersion("1.10.0", "--vacuum-pristines");
     const result = await this.exec(["cleanup", "--vacuum-pristines"]);
     this.svn.logOutput(result.stdout);
     return result.stdout;
@@ -1580,11 +1580,7 @@ export class Repository {
    * @throws Error if SVN version < 1.9
    */
   public async cleanupWithExternals(): Promise<string> {
-    if (!semver.gte(this.svn.version, "1.9.0")) {
-      throw new Error(
-        `--include-externals requires SVN 1.9+, you have ${this.svn.version}`
-      );
-    }
+    this.requireSvnVersion("1.9.0", "--include-externals");
     const result = await this.exec(["cleanup", "--include-externals"]);
     this.svn.logOutput(result.stdout);
     return result.stdout;
@@ -1606,15 +1602,11 @@ export class Repository {
       options.removeUnversioned ||
       options.removeIgnored ||
       options.includeExternals;
-    if (needs19 && !semver.gte(this.svn.version, "1.9.0")) {
-      throw new Error(
-        `Cleanup options require SVN 1.9+, you have ${this.svn.version}`
-      );
+    if (needs19) {
+      this.requireSvnVersion("1.9.0", "Cleanup options");
     }
-    if (options.vacuumPristines && !semver.gte(this.svn.version, "1.10.0")) {
-      throw new Error(
-        `--vacuum-pristines requires SVN 1.10+, you have ${this.svn.version}`
-      );
+    if (options.vacuumPristines) {
+      this.requireSvnVersion("1.10.0", "--vacuum-pristines");
     }
 
     const args = ["cleanup"];
