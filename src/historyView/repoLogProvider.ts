@@ -32,14 +32,13 @@ import {
   getCommitIcon,
   getCommitLabel,
   getCommitToolTip,
-  hasContentChanges,
   ICachedLog,
   ILogTreeItem,
   insertBaseMarker,
   LogTreeItemKind,
   openDiff,
   openFileRemote,
-  openPatch,
+  showPatchIfPropertyOnly,
   SvnPath,
   transform,
   getCommitDescription
@@ -293,20 +292,11 @@ export class RepoLogProvider
     }
 
     // For modified files, check if it's property-only change
-    // Get patch first to detect content vs property changes
-    if (commit.action === "M") {
-      try {
-        const patch = await item.repo.patchRevision(
-          parent.revision,
-          remotePath
-        );
-        if (patch && !hasContentChanges(patch)) {
-          // Property-only change - show patch instead of empty diff
-          return openPatch(item.repo, remotePath, parent.revision);
-        }
-      } catch {
-        // Fall through to normal diff on error
-      }
+    if (
+      commit.action === "M" &&
+      (await showPatchIfPropertyOnly(item.repo, remotePath, parent.revision))
+    ) {
+      return;
     }
 
     let prevRev: ISvnLogEntry;

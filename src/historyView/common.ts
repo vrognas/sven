@@ -509,3 +509,26 @@ export async function openPatch(
   };
   return commands.executeCommand<void>("vscode.open", patchUri, opts);
 }
+
+/**
+ * Check if a revision is property-only change and show patch if so.
+ * Used by history view diff commands to avoid showing empty diffs.
+ *
+ * @returns true if it was a property-only change (patch shown), false otherwise
+ */
+export async function showPatchIfPropertyOnly(
+  repo: IRemoteRepository,
+  target: Uri,
+  revision: string
+): Promise<boolean> {
+  try {
+    const patch = await repo.patchRevision(revision, target);
+    if (patch && !hasContentChanges(patch)) {
+      await openPatch(repo, target, revision);
+      return true;
+    }
+  } catch {
+    // Fall through to normal diff on error
+  }
+  return false;
+}
