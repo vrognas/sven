@@ -2,7 +2,6 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-export { access } from "./access";
 export { makeReadOnly, makeWritable } from "./chmod";
 export { exists } from "./exists";
 export { lstat } from "./lstat";
