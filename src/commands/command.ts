@@ -706,7 +706,7 @@ export abstract class Command implements Disposable {
     const uris = this.extractUris(args);
     if (uris) {
       await this.runByRepository(uris, async (repository, resources) => {
-        const paths = resources.map(r => r.fsPath);
+        const paths = this.toPaths(resources);
         try {
           await operation(repository, paths);
         } catch (error) {
