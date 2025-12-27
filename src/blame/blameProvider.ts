@@ -28,7 +28,7 @@ import {
   clearTemplateCache,
   CompiledTemplateFn
 } from "./templateCompiler";
-import { logError } from "../util/errorLogger";
+import { getErrorMessage, logError } from "../util/errorLogger";
 import { Status } from "../common/types";
 import { isDescendant } from "../util";
 
@@ -765,8 +765,7 @@ export class BlameProvider implements Disposable {
       return data;
     } catch (err) {
       // Extract error details
-      const errorMsg =
-        err instanceof Error ? err.message : String(err) || "Unknown error";
+      const errorMsg = getErrorMessage(err) || "Unknown error";
       const stderrStr =
         err && typeof err === "object" && "stderr" in err
           ? String((err as { stderr?: unknown }).stderr)

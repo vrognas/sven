@@ -37,7 +37,7 @@ import {
   transform,
   getCommitDescription
 } from "./common";
-import { logError } from "../util/errorLogger";
+import { getErrorMessage, logError } from "../util/errorLogger";
 
 export class ItemLogProvider
   implements TreeDataProvider<ILogTreeItem>, Disposable
@@ -175,8 +175,7 @@ export class ItemLogProvider
         `Rolled back to revision ${commit.revision}. Review changes and commit.`
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      window.showErrorMessage(`Rollback failed: ${message}`);
+      window.showErrorMessage(`Rollback failed: ${getErrorMessage(error)}`);
     } finally {
       // Keep blocking refreshes briefly to let file change events settle.
       // Rollback doesn't change BASE revision, so no refresh is needed.

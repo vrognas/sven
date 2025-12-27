@@ -7,7 +7,7 @@ import { Resource } from "../resource";
 import { Command } from "./command";
 import { SourceControlManager } from "../source_control_manager";
 import { diffWithExternalTool } from "../util/fileOperations";
-import { logError } from "../util/errorLogger";
+import { getErrorMessage, logError } from "../util/errorLogger";
 
 /**
  * Command to open file diff with external diff tool using SVN's --diff-cmd
@@ -70,9 +70,10 @@ export class DiffWithExternalTool extends Command {
         sourceControlManager.context
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       logError("Failed to launch external diff", error);
-      window.showErrorMessage(`Failed to launch external diff: ${message}`);
+      window.showErrorMessage(
+        `Failed to launch external diff: ${getErrorMessage(error)}`
+      );
     }
   }
 }

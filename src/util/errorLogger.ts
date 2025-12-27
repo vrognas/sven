@@ -62,6 +62,14 @@ export function logWarning(message: string, data?: unknown): void {
 }
 
 /**
+ * Extract error message from unknown error type
+ * Use in catch blocks to safely get error message string
+ */
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * Format SVN error message with error code if available
  * Extracts SVN error codes (E12345) from error string
  *
