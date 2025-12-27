@@ -655,14 +655,14 @@ export abstract class Command implements Disposable {
       return;
     }
 
-    const uris = selection.map(resource => resource.resourceUri);
+    const uris = this.toUris(selection);
 
     await this.runByRepository(uris, async (repository, resources) => {
       if (!repository) {
         return;
       }
 
-      const paths = resources.map(resource => resource.fsPath);
+      const paths = this.toPaths(resources);
 
       try {
         await operation(repository, paths);
