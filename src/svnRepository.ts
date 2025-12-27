@@ -51,7 +51,7 @@ import {
   normalizePath,
   unwrap
 } from "./util";
-import { logError } from "./util/errorLogger";
+import { logError, getErrorMessage } from "./util/errorLogger";
 import { matchAll } from "./util/globMatch";
 import { LRUCache } from "./util/lruCache";
 import { parseDiffXml } from "./parser/diffParser";
@@ -116,9 +116,7 @@ export class Repository {
         `Failed to parse repository info for ${this.workspaceRoot}`,
         err
       );
-      throw new Error(
-        `Repository info unavailable: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
+      throw new Error(`Repository info unavailable: ${getErrorMessage(err)}`);
     }
   }
 
@@ -395,9 +393,7 @@ export class Repository {
       status = await parseStatusXml(result.stdout);
     } catch (err) {
       logError(`Failed to parse status XML for ${this.workspaceRoot}`, err);
-      throw new Error(
-        `Status update failed: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
+      throw new Error(`Status update failed: ${getErrorMessage(err)}`);
     }
 
     // Only fetch external UUIDs when needed (combineExternal=true)
@@ -449,9 +445,7 @@ export class Repository {
       status = await parseStatusXml(result.stdout);
     } catch (err) {
       logError(`Failed to parse scoped status XML for ${relativePath}`, err);
-      throw new Error(
-        `Scoped status failed: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
+      throw new Error(`Scoped status failed: ${getErrorMessage(err)}`);
     }
 
     return status;
@@ -540,7 +534,7 @@ export class Repository {
     } catch (err) {
       logError(`Failed to parse info XML for ${file}`, err);
       throw new Error(
-        `File info unavailable for ${file}: ${err instanceof Error ? err.message : "Unknown error"}`
+        `File info unavailable for ${file}: ${getErrorMessage(err)}`
       );
     }
 
@@ -627,7 +621,7 @@ export class Repository {
       }
       logError(`Failed to execute blame for ${relativePath}`, err);
       throw new Error(
-        `Blame failed for ${relativePath}: ${err instanceof Error ? err.message : "Unknown error"}`
+        `Blame failed for ${relativePath}: ${getErrorMessage(err)}`
       );
     }
 
@@ -638,7 +632,7 @@ export class Repository {
     } catch (err) {
       logError(`Failed to parse blame XML for ${relativePath}`, err);
       throw new Error(
-        `Blame parse failed for ${relativePath}: ${err instanceof Error ? err.message : "Unknown error"}`
+        `Blame parse failed for ${relativePath}: ${getErrorMessage(err)}`
       );
     }
 

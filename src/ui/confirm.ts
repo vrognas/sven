@@ -4,23 +4,6 @@
 import { window } from "vscode";
 
 /**
- * Show modal confirmation for destructive operations.
- * @returns true if confirmed, false if cancelled
- */
-export async function confirmDestructive(
-  message: string,
-  confirmLabel: string
-): Promise<boolean> {
-  const answer = await window.showWarningMessage(
-    message,
-    { modal: true },
-    confirmLabel,
-    "Cancel"
-  );
-  return answer === confirmLabel;
-}
-
-/**
  * Show modal confirmation with custom button labels.
  * @returns true if confirmed, false if cancelled
  */
@@ -36,6 +19,17 @@ export async function confirm(
     cancelLabel
   );
   return answer === confirmLabel;
+}
+
+/**
+ * Show modal confirmation for destructive operations.
+ * @returns true if confirmed, false if cancelled
+ */
+export async function confirmDestructive(
+  message: string,
+  confirmLabel: string
+): Promise<boolean> {
+  return confirm(message, confirmLabel);
 }
 
 /**

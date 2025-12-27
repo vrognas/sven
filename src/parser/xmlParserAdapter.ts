@@ -5,7 +5,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { configuration } from "../helpers/configuration";
 import { camelcase } from "../util";
-import { logError } from "../util/errorLogger";
+import { logError, getErrorMessage } from "../util/errorLogger";
 import { capitalize } from "../util/formatting";
 
 /**
@@ -310,11 +310,7 @@ export function parseXml<T>(
       resolve(transform(parsed));
     } catch (err) {
       logError(`parse${capitalize(name)} error`, err);
-      reject(
-        new Error(
-          `Failed to parse ${name} XML: ${err instanceof Error ? err.message : "Unknown error"}`
-        )
-      );
+      reject(new Error(`Failed to parse ${name} XML: ${getErrorMessage(err)}`));
     }
   });
 }

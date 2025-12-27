@@ -1192,7 +1192,10 @@ export class Repository implements IRemoteRepository {
   public async stageOptimisticWithChildren(files: string[]): Promise<void> {
     // Expand directories to include all changed descendant files
     // (SVN changelists don't support directories)
-    const expanded = this.expandDirectoriesToChangedFiles(files);
+    const expanded = this.expandDirectoriesToGroupFiles(
+      files,
+      this.groupManager.changes
+    );
 
     // Find unversioned items that need `svn add` first
     const unversionedPaths = this.findUnversionedPaths(expanded);
@@ -1249,27 +1252,24 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Expand directory paths to include all changed descendant files.
+   * Expand directory paths to include all descendant files from a resource group.
    * SVN changelists only work with files, not directories.
    */
-  private expandDirectoriesToChangedFiles(paths: string[]): string[] {
+  private expandDirectoriesToGroupFiles(
+    paths: string[],
+    group: SourceControlResourceGroup
+  ): string[] {
     const result = new Set<string>();
-    const changedPaths = this.groupManager.changes.resourceStates.map(
-      r => r.resourceUri.fsPath
-    );
+    const groupPaths = group.resourceStates.map(r => r.resourceUri.fsPath);
 
     for (const p of paths) {
-      // Always include the original path
       result.add(p);
-
-      // Check if any changed files are descendants of this path
-      for (const changed of changedPaths) {
-        if (isDescendant(p, changed)) {
-          result.add(changed);
+      for (const gp of groupPaths) {
+        if (isDescendant(p, gp)) {
+          result.add(gp);
         }
       }
     }
-
     return Array.from(result);
   }
 
@@ -1284,7 +1284,10 @@ export class Repository implements IRemoteRepository {
     targetChangelist?: string
   ): Promise<void> {
     // Expand directories to include all staged descendant files
-    const expanded = this.expandDirectoriesToStagedFiles(files);
+    const expanded = this.expandDirectoriesToGroupFiles(
+      files,
+      this.groupManager.staged
+    );
 
     // Filter out directories for SVN command (changelists are file-only)
     const filesOnly = await this.filterOutDirectories(expanded);
@@ -1302,28 +1305,6 @@ export class Repository implements IRemoteRepository {
     this.groupManager.moveFromStaged(expanded, targetChangelist);
     this.updateActionButton();
     this.triggerInputValidation();
-  }
-
-  /**
-   * Expand directory paths to include all staged descendant files.
-   */
-  private expandDirectoriesToStagedFiles(paths: string[]): string[] {
-    const result = new Set<string>();
-    const stagedPaths = this.groupManager.staged.resourceStates.map(
-      r => r.resourceUri.fsPath
-    );
-
-    for (const p of paths) {
-      result.add(p);
-
-      for (const staged of stagedPaths) {
-        if (isDescendant(p, staged)) {
-          result.add(staged);
-        }
-      }
-    }
-
-    return Array.from(result);
   }
 
   public async getCurrentBranch() {
