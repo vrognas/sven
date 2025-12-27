@@ -56,6 +56,18 @@ export async function warnAboutChangelists(
 }
 
 /**
+ * Prepare for staging: warn about changelists and build original map.
+ * Returns null if user cancels, otherwise the original changelist map.
+ */
+export async function prepareStaging(
+  selection: Resource[]
+): Promise<Map<string, string> | null> {
+  const affected = getAffectedChangelists(selection);
+  if (!(await warnAboutChangelists(affected))) return null;
+  return buildOriginalChangelistMap(selection);
+}
+
+/**
  * Save original changelists for paths before staging.
  * Allows restoring on unstage.
  */

@@ -3,9 +3,7 @@
 
 import { SourceControlResourceState } from "vscode";
 import {
-  getAffectedChangelists,
-  buildOriginalChangelistMap,
-  warnAboutChangelists,
+  prepareStaging,
   saveOriginalChangelists
 } from "../helpers/stageHelper";
 import { Command } from "./command";
@@ -19,12 +17,8 @@ export class Stage extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
 
-    // Warn if files are in other changelists
-    const affected = getAffectedChangelists(selection);
-    if (!(await warnAboutChangelists(affected))) return;
-
-    // Build map of original changelists before staging
-    const originalChangelists = buildOriginalChangelistMap(selection);
+    const originalChangelists = await prepareStaging(selection);
+    if (!originalChangelists) return;
 
     await this.runByRepository(
       this.toUris(selection),
@@ -55,12 +49,8 @@ export class StageWithChildren extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
 
-    // Warn if files are in other changelists
-    const affected = getAffectedChangelists(selection);
-    if (!(await warnAboutChangelists(affected))) return;
-
-    // Build map of original changelists before staging
-    const originalChangelists = buildOriginalChangelistMap(selection);
+    const originalChangelists = await prepareStaging(selection);
+    if (!originalChangelists) return;
 
     await this.runByRepository(
       this.toUris(selection),
@@ -94,12 +84,8 @@ export class StageAll extends Command {
       const selection = await this.getResourceStates(resourceStates);
       if (selection.length === 0) return;
 
-      // Warn if files are in other changelists
-      const affected = getAffectedChangelists(selection);
-      if (!(await warnAboutChangelists(affected))) return;
-
-      // Build map of original changelists before staging
-      const originalChangelists = buildOriginalChangelistMap(selection);
+      const originalChangelists = await prepareStaging(selection);
+      if (!originalChangelists) return;
 
       await this.runByRepository(
         this.toUris(selection),
