@@ -3,7 +3,7 @@
 
 import { QuickPickItem, SourceControlResourceState, Uri, window } from "vscode";
 import { Command } from "./command";
-import * as fs from "../fs";
+import { askRecursive, hasAnyDirectory } from "../helpers/propertyHelper";
 
 type EolStyleValue = "native" | "LF" | "CRLF" | "CR";
 
@@ -34,19 +34,8 @@ export class SetEolStyle extends Command {
     repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
     paths: string[]
   ): Promise<void> {
-    // Check if any path is a directory
-    let hasDirectory = false;
-    for (const path of paths) {
-      try {
-        const stat = await fs.stat(path);
-        if (stat.isDirectory()) {
-          hasDirectory = true;
-          break;
-        }
-      } catch {
-        // Ignore stat errors
-      }
-    }
+    // Check for directories (for title and recursive prompt)
+    const hasDirectory = await hasAnyDirectory(paths);
 
     // Build QuickPick items with descriptions
     const items: EolStyleQuickPickItem[] = [
@@ -88,21 +77,9 @@ export class SetEolStyle extends Command {
     // Ask about recursive if any directories selected
     let recursive = false;
     if (hasDirectory) {
-      const answer = await window.showQuickPick(
-        [
-          {
-            label: "Yes",
-            description: "Apply to all files in selected directories"
-          },
-          { label: "No", description: "Apply only to directories themselves" }
-        ],
-        {
-          placeHolder: "Apply recursively to directory contents?",
-          title: "Recursive Application"
-        }
-      );
-      if (!answer) return;
-      recursive = answer.label === "Yes";
+      const answer = await askRecursive("Apply");
+      if (answer === undefined) return;
+      recursive = answer;
     }
 
     await this.executeWithFeedback(
@@ -136,41 +113,12 @@ export class RemoveEolStyle extends Command {
     repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
     paths: string[]
   ): Promise<void> {
-    // Check if any path is a directory
-    let hasDirectory = false;
-    for (const path of paths) {
-      try {
-        const stat = await fs.stat(path);
-        if (stat.isDirectory()) {
-          hasDirectory = true;
-          break;
-        }
-      } catch {
-        // Ignore stat errors
-      }
-    }
-
     // Ask about recursive if any directories selected
     let recursive = false;
-    if (hasDirectory) {
-      const answer = await window.showQuickPick(
-        [
-          {
-            label: "Yes",
-            description: "Remove from all files in selected directories"
-          },
-          {
-            label: "No",
-            description: "Remove only from directories themselves"
-          }
-        ],
-        {
-          placeHolder: "Remove recursively from directory contents?",
-          title: "Recursive Removal"
-        }
-      );
-      if (!answer) return;
-      recursive = answer.label === "Yes";
+    if (await hasAnyDirectory(paths)) {
+      const answer = await askRecursive("Remove");
+      if (answer === undefined) return;
+      recursive = answer;
     }
 
     await this.executeWithFeedback(

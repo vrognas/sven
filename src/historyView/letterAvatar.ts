@@ -2,26 +2,11 @@
 // Licensed under MIT License
 
 import { Uri } from "vscode";
+import { LRUCache } from "../util/lruCache";
 
-// Cache for generated color dot URIs
-const colorCache: Map<string, Uri> = new Map();
-const colorAccessOrder: Map<string, number> = new Map();
-const MAX_COLOR_CACHE_SIZE = 100;
-
-function evictOldestColor(): void {
-  let oldestKey: string | null = null;
-  let oldestTime = Infinity;
-  for (const [key, time] of colorAccessOrder.entries()) {
-    if (time < oldestTime) {
-      oldestTime = time;
-      oldestKey = key;
-    }
-  }
-  if (oldestKey !== null) {
-    colorCache.delete(oldestKey);
-    colorAccessOrder.delete(oldestKey);
-  }
-}
+// LRU cache for generated color dot URIs
+// TTL of 24h effectively means "never expire" for session lifetime
+const colorCache = new LRUCache<Uri>(100, 24 * 60 * 60 * 1000);
 
 /**
  * Generate deterministic HSL color from string
@@ -57,7 +42,6 @@ function createColorDotSvg(color: string): string {
 export function getAuthorColorDot(author: string): Uri {
   const cached = colorCache.get(author);
   if (cached) {
-    colorAccessOrder.set(author, Date.now());
     return cached;
   }
 
@@ -65,12 +49,6 @@ export function getAuthorColorDot(author: string): Uri {
   const dataUri = createColorDotSvg(color);
   const uri = Uri.parse(dataUri);
 
-  if (colorCache.size >= MAX_COLOR_CACHE_SIZE) {
-    evictOldestColor();
-  }
-
   colorCache.set(author, uri);
-  colorAccessOrder.set(author, Date.now());
-
   return uri;
 }
