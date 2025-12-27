@@ -92,11 +92,6 @@ export interface RepositoryChangeEvent {
   uri: Uri;
 }
 
-export interface IOriginalResourceChangeEvent {
-  repository: Repository;
-  uri: Uri;
-}
-
 export interface IOpenRepository extends Disposable {
   repository: Repository;
 }
@@ -320,15 +315,6 @@ export interface IUpdateResult {
   conflicts: string[];
   /** User-friendly message (last line of output) */
   message: string;
-}
-
-export interface ICacheRow {
-  uri: Uri;
-  timestamp: number;
-}
-
-export interface ICache {
-  [uri: string]: ICacheRow;
 }
 
 export interface ISvn {
