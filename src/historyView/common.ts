@@ -229,6 +229,13 @@ export function createLoadMoreItem(
   return { kind: LogTreeItemKind.TItem, data: ti };
 }
 
+/** Create loading indicator tree item */
+export function createLoadingItem(): ILogTreeItem {
+  const item = new TreeItem("Loading...");
+  item.iconPath = new ThemeIcon("loading~spin");
+  return { kind: LogTreeItemKind.TItem, data: item };
+}
+
 /// @note: cached.svnTarget should be valid
 export async function fetchMore(cached: ICachedLog) {
   const entries = cached.entries;
