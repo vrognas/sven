@@ -1,14 +1,13 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as path from "path";
-import { window } from "vscode";
-import { Status } from "../common/types";
-import { configuration } from "../helpers/configuration";
-import { ensureStagedOrOffer } from "../helpers/commitHelper";
-import { inputCommitMessage } from "../messages";
+import {
+  buildCommitPaths,
+  ensureStagedOrOffer,
+  executeCommit,
+  runCommitMessageFlow
+} from "../helpers/commitHelper";
 import { Repository } from "../repository";
-import { CommitFlowService } from "../services/commitFlowService";
 import { Command } from "./command";
 
 /**
@@ -17,11 +16,8 @@ import { Command } from "./command";
  * If no files staged, offers to stage all and proceed.
  */
 export class CommitFromInputBox extends Command {
-  private commitFlowService: CommitFlowService;
-
   constructor() {
     super("sven.commitFromInputBox", { repository: true });
-    this.commitFlowService = new CommitFlowService();
   }
 
   public async execute(repository: Repository) {
@@ -41,91 +37,29 @@ export class CommitFromInputBox extends Command {
       repository.staged.resourceStates
     );
 
-    // Use Set to avoid duplicates when multiple files share parent dirs
-    // Display paths: shown in picker (only new names for renames)
-    const displayPathSet = new Set(
-      resourcesToCommit.map(state => state.resourceUri.fsPath)
+    const { displayPaths, renameMap } = buildCommitPaths(
+      resourcesToCommit,
+      repository
     );
 
-    // Track renamed files: map new path -> old path (for SVN commit)
-    const renameMap = new Map<string, string>();
+    const flowResult = await runCommitMessageFlow(
+      repository,
+      displayPaths,
+      renameMap
+    );
 
-    // Handle renamed files and parent directories
-    resourcesToCommit.forEach(state => {
-      // Track old paths for renamed files (needed for SVN commit, not for display)
-      if (state.type === Status.ADDED && state.renameResourceUri) {
-        renameMap.set(state.resourceUri.fsPath, state.renameResourceUri.fsPath);
-      }
-
-      let dir = path.dirname(state.resourceUri.fsPath);
-      let parent = repository.getResourceFromFile(dir);
-
-      while (parent) {
-        if (parent.type === Status.ADDED) {
-          displayPathSet.add(dir);
-        }
-        dir = path.dirname(dir);
-        parent = repository.getResourceFromFile(dir);
-      }
-    });
-
-    // Display paths for file picker (excludes old paths of renamed files)
-    const displayPaths = Array.from(displayPathSet);
-
-    // Get config options
-    const useQuickPick = configuration.commitUseQuickPick();
-    const conventionalCommits = configuration.commitConventionalCommits();
-    const autoUpdate = configuration.commitAutoUpdate();
-    const updateBeforeCommit = autoUpdate === "both" || autoUpdate === "before";
-
-    let message: string | undefined;
-    let selectedPaths: string[] | undefined;
-
-    if (useQuickPick) {
-      // New flow: QuickPick multi-step
-      const result = await this.commitFlowService.runCommitFlow(
-        repository,
-        displayPaths,
-        {
-          conventionalCommits,
-          updateBeforeCommit
-        }
-      );
-
-      if (result.cancelled) {
-        return;
-      }
-      message = result.message;
-      selectedPaths = result.selectedFiles;
-    } else {
-      // Legacy flow: Webview
-      message = await inputCommitMessage(
-        repository.inputBox.value,
-        true,
-        displayPaths
-      );
-      selectedPaths = displayPaths;
-    }
-
-    if (message === undefined || !selectedPaths) {
+    if (
+      flowResult.cancelled ||
+      !flowResult.message ||
+      !flowResult.commitPaths
+    ) {
       return;
     }
 
-    // Add old paths for renamed files (required for SVN commit)
-    const commitPaths = [...selectedPaths];
-    for (const selectedPath of selectedPaths) {
-      const oldPath = renameMap.get(selectedPath);
-      if (oldPath) {
-        commitPaths.push(oldPath);
-      }
-    }
-
-    await this.handleRepositoryOperation(async () => {
-      const result = await repository.commitFiles(message!, commitPaths);
-      window.showInformationMessage(result);
-      repository.inputBox.value = "";
-      // Clear original changelist tracking for committed files
-      repository.staging.clearOriginalChangelists(commitPaths);
-    }, "Unable to commit");
+    await this.handleRepositoryOperation(
+      () =>
+        executeCommit(repository, flowResult.message!, flowResult.commitPaths!),
+      "Unable to commit"
+    );
   }
 }
