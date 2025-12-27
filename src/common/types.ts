@@ -372,10 +372,6 @@ export interface ISvnBlameLine {
   };
 }
 
-export interface IDisposable {
-  dispose(): void;
-}
-
 export interface IOperations {
   isIdle(): boolean;
   isRunning(operation: Operation): boolean;
