@@ -4,7 +4,7 @@
 
 import { SourceControlResourceGroup } from "vscode";
 import { getStagedPaths, unstageRevertedFiles } from "../helpers/revertHelper";
-import { confirmRevert } from "../input/revert";
+import { confirmRevert } from "../ui/confirm";
 import { Command } from "./command";
 
 export class RevertAll extends Command {

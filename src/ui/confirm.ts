@@ -37,3 +37,23 @@ export async function confirm(
   );
   return answer === confirmLabel;
 }
+
+/**
+ * Confirm revert operation that will wipe local changes.
+ */
+export async function confirmRevert(): Promise<boolean> {
+  return confirmDestructive(
+    "Are you sure? This will wipe all local changes.",
+    "Yes, revert"
+  );
+}
+
+/**
+ * Confirm rollback to a specific revision.
+ */
+export async function confirmRollback(revision: string): Promise<boolean> {
+  return confirmDestructive(
+    `Rollback file to revision ${revision}? This will modify your working copy.`,
+    "Yes, rollback"
+  );
+}

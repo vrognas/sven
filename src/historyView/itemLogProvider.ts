@@ -17,7 +17,7 @@ import {
   window
 } from "vscode";
 import { ISvnLogEntry } from "../common/types";
-import { confirmRollback } from "../input/rollback";
+import { confirmRollback } from "../ui/confirm";
 import { SourceControlManager } from "../source_control_manager";
 import { dispose } from "../util";
 import {

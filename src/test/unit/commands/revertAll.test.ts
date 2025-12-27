@@ -5,7 +5,7 @@ import { RevertExplorer } from "../../../commands/revertExplorer";
 import { Status } from "../../../common/types";
 import { Repository } from "../../../repository";
 import { Resource } from "../../../resource";
-import * as revertInput from "../../../input/revert";
+import * as confirmModule from "../../../ui/confirm";
 
 interface MockState {
   confirmRevertResult: boolean;
@@ -18,7 +18,7 @@ interface MockState {
 suite("RevertAll & RevertExplorer Commands Tests", () => {
   let mockState: MockState;
   let mockRepository: Partial<Repository>;
-  const originalConfirmRevert = revertInput.confirmRevert;
+  const originalConfirmRevert = confirmModule.confirmRevert;
 
   setup(() => {
     mockState = {
@@ -38,15 +38,15 @@ suite("RevertAll & RevertExplorer Commands Tests", () => {
       }
     };
 
-    // Mock revertInput.confirmRevert
-    (revertInput as any).confirmRevert = async () => {
+    // Mock confirmModule.confirmRevert
+    (confirmModule as any).confirmRevert = async () => {
       mockState.confirmRevertCalled = true;
       return mockState.confirmRevertResult;
     };
   });
 
   teardown(() => {
-    (revertInput as any).confirmRevert = originalConfirmRevert;
+    (confirmModule as any).confirmRevert = originalConfirmRevert;
   });
 
   function resetMockCalls() {

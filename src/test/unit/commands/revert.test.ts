@@ -3,7 +3,7 @@ import { Uri } from "vscode";
 import { Status } from "../../../common/types";
 import { Revert } from "../../../commands/revert";
 import { Resource } from "../../../resource";
-import * as revertInput from "../../../input/revert";
+import * as confirmModule from "../../../ui/confirm";
 
 interface MockState {
   confirmRevertResult: boolean;
@@ -18,7 +18,7 @@ interface MockState {
 suite("Revert Command Tests", () => {
   let revert: Revert;
   let mockState: MockState;
-  const originalConfirmRevert = revertInput.confirmRevert;
+  const originalConfirmRevert = confirmModule.confirmRevert;
 
   setup(() => {
     revert = new Revert();
@@ -31,8 +31,8 @@ suite("Revert Command Tests", () => {
       getResourceStatesOrExitCalled: false
     };
 
-    // Mock revertInput.confirmRevert
-    (revertInput as any).confirmRevert = async () => {
+    // Mock confirmModule.confirmRevert
+    (confirmModule as any).confirmRevert = async () => {
       mockState.confirmRevertCalled = true;
       return mockState.confirmRevertResult;
     };
@@ -52,7 +52,7 @@ suite("Revert Command Tests", () => {
   });
 
   teardown(() => {
-    (revertInput as any).confirmRevert = originalConfirmRevert;
+    (confirmModule as any).confirmRevert = originalConfirmRevert;
   });
 
   function resetMockCalls() {

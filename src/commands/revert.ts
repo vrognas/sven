@@ -6,7 +6,7 @@ import * as path from "path";
 import { SourceControlResourceState, Uri } from "vscode";
 import { Status } from "../common/types";
 import { getStagedPaths, unstageRevertedFiles } from "../helpers/revertHelper";
-import { confirmRevert } from "../input/revert";
+import { confirmRevert } from "../ui/confirm";
 import { Command } from "./command";
 
 export class Revert extends Command {

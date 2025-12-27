@@ -3,7 +3,7 @@
 // Licensed under MIT License
 
 import { Uri } from "vscode";
-import { confirmRevert } from "../input/revert";
+import { confirmRevert } from "../ui/confirm";
 import { Command } from "./command";
 
 export class RevertExplorer extends Command {
