@@ -3,7 +3,11 @@
 // Licensed under MIT License
 
 import { SourceControlResourceState, window } from "vscode";
-import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
+import {
+  buildCommitPaths,
+  executeCommit,
+  expandCommitPaths
+} from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Command } from "./command";
 
@@ -50,11 +54,10 @@ export class Commit extends Command {
 
         repository.inputBox.value = message;
 
-        await this.handleRepositoryOperation(async () => {
-          const result = await repository.commitFiles(message, paths);
-          window.showInformationMessage(result);
-          repository.inputBox.value = "";
-        }, "Unable to commit");
+        await this.handleRepositoryOperation(
+          () => executeCommit(repository, message, paths),
+          "Unable to commit"
+        );
       }
     );
   }

@@ -2,9 +2,12 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { window } from "vscode";
 import { inputCommitFiles } from "../changelistItems";
-import { buildCommitPaths, expandCommitPaths } from "../helpers/commitHelper";
+import {
+  buildCommitPaths,
+  executeCommit,
+  expandCommitPaths
+} from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Command } from "./command";
@@ -39,10 +42,9 @@ export class CommitWithMessage extends Command {
     const { displayPaths, renameMap } = buildCommitPaths(resources, repository);
     const filePaths = expandCommitPaths(displayPaths, renameMap);
 
-    await this.handleRepositoryOperation(async () => {
-      const result = await repository.commitFiles(message, filePaths);
-      window.showInformationMessage(result);
-      repository.inputBox.value = "";
-    }, "Unable to commit");
+    await this.handleRepositoryOperation(
+      () => executeCommit(repository, message, filePaths),
+      "Unable to commit"
+    );
   }
 }
