@@ -103,7 +103,8 @@ function getAuthConfig(): {
 }
 
 // Invalidate cache when config changes
-configuration.onDidChange(e => {
+// Store disposable for cleanup on extension deactivation
+export const authConfigDisposable = configuration.onDidChange(e => {
   if (e.affectsConfiguration("sven.auth.credentialMode")) {
     authConfigCache = null;
   }

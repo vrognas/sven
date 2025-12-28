@@ -22,7 +22,7 @@ import { ItemLogProvider } from "./historyView/itemLogProvider";
 import { RepoLogProvider } from "./historyView/repoLogProvider";
 import * as messages from "./messages";
 import { SourceControlManager } from "./source_control_manager";
-import { Svn } from "./svn";
+import { Svn, authConfigDisposable } from "./svn";
 import { SvnFinder, SVN_CACHE_KEY } from "./svnFinder";
 import SparseCheckoutProvider from "./treeView/dataProviders/sparseCheckoutProvider";
 import { toDisposable } from "./util";
@@ -171,6 +171,7 @@ async function init(
     toDisposable(() => svn.onOutput.removeListener("log", onOutput))
   );
   disposables.push(toDisposable(messages.dispose));
+  disposables.push(authConfigDisposable);
   console.log("Sven: init() complete");
 }
 

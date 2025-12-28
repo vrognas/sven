@@ -267,7 +267,9 @@ export class SvnFileDecorationProvider
     }
 
     // Check if file is inside an unversioned or ignored folder
-    const parentStatus = this.getParentFolderStatus(uri.fsPath);
+    const parentStatus = this.repository.isInsideUnversionedOrIgnored(
+      uri.fsPath
+    );
     if (parentStatus) {
       const badge = this.getBadge(parentStatus, undefined, false);
       const color = this.getColor(parentStatus);
@@ -304,34 +306,6 @@ export class SvnFileDecorationProvider
       tooltip,
       propagate: false
     };
-  }
-
-  /**
-   * Check if file is inside an unversioned or ignored folder.
-   * Returns the parent folder's status if found, undefined otherwise.
-   */
-  private getParentFolderStatus(filePath: string): Status | undefined {
-    // Check unversioned folders
-    for (const resource of this.repository.unversioned.resourceStates) {
-      if (
-        resource.kind === "dir" &&
-        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
-      ) {
-        return Status.UNVERSIONED;
-      }
-    }
-
-    // Check ignored folders (repository.ignored is Resource[])
-    for (const resource of this.repository.ignored) {
-      if (
-        resource.kind === "dir" &&
-        filePath.startsWith(resource.resourceUri.fsPath + path.sep)
-      ) {
-        return Status.IGNORED;
-      }
-    }
-
-    return undefined;
   }
 
   /**

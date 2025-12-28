@@ -2655,6 +2655,13 @@ export class Repository implements IRemoteRepository {
     this.remoteChangeService.dispose();
     this.statusService.dispose();
     this.repository.clearInfoCacheTimers(); // Phase 8.2 perf fix - clear timers
+
+    // Clear caches to free memory
+    this.needsLockFilesSet.clear();
+    this.eolStyleCache.clear();
+    this.mimeTypeCache.clear();
+    this.lockStatusCache.clear();
+
     this.disposables = dispose(this.disposables);
   }
 }

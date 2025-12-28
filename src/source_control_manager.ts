@@ -155,7 +155,10 @@ export class SourceControlManager implements IDisposable {
       this.disposables
     );
 
-    const fsWatcher = workspace.createFileSystemWatcher("**");
+    // Watch only .svn directories for new repo discovery (perf: avoid watching all files)
+    const fsWatcher = workspace.createFileSystemWatcher(
+      "**/.svn/{wc.db,entries}"
+    );
     this.disposables.push(fsWatcher);
 
     const onWorkspaceChange = anyEvent(
