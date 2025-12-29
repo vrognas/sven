@@ -2,14 +2,21 @@
 
 **Version**: 0.2.3
 
-## Core Documentation
+## User Documentation
 
-| Document                                             | Purpose                               | Audience         |
-| ---------------------------------------------------- | ------------------------------------- | ---------------- |
-| [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md) | System architecture, layers, patterns | Developers       |
-| [LESSONS_LEARNED.md](LESSONS_LEARNED.md)             | Development patterns, anti-patterns   | Developers       |
-| [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)                 | UI/UX conventions, colors, icons      | UI developers    |
-| [PERFORMANCE.md](PERFORMANCE.md)                     | Optimization strategies, benchmarks   | Performance work |
+| Document                                                   | Purpose                          |
+| ---------------------------------------------------------- | -------------------------------- |
+| [SETTINGS.md](SETTINGS.md)                                 | All 70+ configuration options    |
+| [SECURITY_QUICK_REFERENCE.md](SECURITY_QUICK_REFERENCE.md) | Authentication & troubleshooting |
+
+## Developer Documentation
+
+| Document                                             | Purpose                               |
+| ---------------------------------------------------- | ------------------------------------- |
+| [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md) | System architecture, layers, patterns |
+| [LESSONS_LEARNED.md](LESSONS_LEARNED.md)             | Development patterns, anti-patterns   |
+| [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)                 | UI/UX conventions, colors, icons      |
+| [PERFORMANCE.md](PERFORMANCE.md)                     | Optimization strategies, benchmarks   |
 
 ## Feature Documentation
 
@@ -18,14 +25,6 @@
 | [BLAME_SYSTEM.md](BLAME_SYSTEM.md)                         | Blame feature architecture      |
 | [POSITRON_INTEGRATION.md](POSITRON_INTEGRATION.md)         | Positron IDE support            |
 | [POSITRON_SCM_LIMITATIONS.md](POSITRON_SCM_LIMITATIONS.md) | SCM API constraints in Positron |
-
-## Security
-
-| Document                                                   | Purpose                                  |
-| ---------------------------------------------------------- | ---------------------------------------- |
-| [SECURITY_QUICK_REFERENCE.md](SECURITY_QUICK_REFERENCE.md) | Security practices, credential handling  |
-| [../SECURITY.md](../SECURITY.md)                           | Security policy, vulnerability reporting |
-| [../PRIVACY.md](../PRIVACY.md)                             | Privacy policy, data handling            |
 
 ## Root Documents
 
