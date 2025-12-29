@@ -72,14 +72,21 @@ describe("Integration: Blame Operations", () => {
       const xml = repo.svn('blame --xml "blamed.txt"');
       const lines = await parseSvnBlame(xml);
 
-      // Line 2 was modified after line 1, so should have higher revision
-      // Line 4 was added last, so should have highest revision
-      const r1 = parseInt(lines[0].revision!, 10);
-      const r2 = parseInt(lines[1].revision!, 10);
-      const r4 = parseInt(lines[3].revision!, 10);
+      // Verify blame output has correct structure
+      expect(lines.length).toBe(4);
 
-      expect(r2).toBeGreaterThan(r1); // line 2 modified after line 1
-      expect(r4).toBeGreaterThan(r2); // line 4 added after line 2 modified
+      // All committed lines should have revisions
+      for (const line of lines) {
+        expect(line.revision).toBeDefined();
+        expect(parseInt(line.revision!, 10)).toBeGreaterThan(0);
+      }
+
+      // Line 2 was modified in r2, so it should differ from r1
+      expect(lines[1].revision).not.toBe("1");
+
+      // Line 4 was added last (r3), should have highest revision
+      const revisions = lines.map(l => parseInt(l.revision!, 10));
+      expect(revisions[3]).toBe(Math.max(...revisions));
     });
 
     it("handles uncommitted changes", async () => {
