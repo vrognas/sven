@@ -1,412 +1,178 @@
 # SVN Extension Architecture
 
-**Version**: 2.19.0
-**Updated**: 2025-12-26
+**Version**: 0.2.3
+**Updated**: 2025-12-29
 
 ---
 
-## Executive Summary
+## Overview
 
-Mature VS Code extension for SVN integration. Event-driven architecture, decorator-based commands, multi-repository management.
+VS Code extension for SVN source control with Positron IDE support. Event-driven architecture, decorator-based commands, multi-repository management. Zero telemetry, local-only operations.
 
 **Stats**:
 
-- **Source lines**: ~13,200 (+550 blame config system)
-- **Repository**: 923 lines (22% reduction via 3 extracted services)
-- **Commands**: 54 (+3 blame commands)
-- **Coverage**: ~60-65% (930+ tests, +41 e2e critical paths) ✅ EXCEEDED TARGET
-- **Stability**: 🟢 P0 foundation complete ✅ (4 bugs fixed/addressed)
-- **Performance**: 🟢 All P1 bottlenecks fixed ✅ (commit 4-5x, status 3-5x, glob 3x, batch 2-3x faster)
-- **Security**: 🟢 All error logging sanitized ✅ (100% coverage, 0 violations)
-- **Positron**: 🟢 Runtime detection + Connections pane ✅
-- **Blame**: 🟢 Default enabled + dynamic toggle icon ✅
-- **Bloat**: ~500-1000 lines removable (duplicate methods, god classes)
-- **Test tooling**: c8 coverage reporting configured ✅
+- ~13,200 source lines
+- 54 commands (+3 blame)
+- 930+ tests, 60-65% coverage
+- Targets: vscode ^1.105.0, positron ^2025.11.0
 
 ---
 
 ## Architecture Layers
 
-### Extension Entry
+```
+┌─────────────────────────────────────────────────┐
+│  Extension Entry (extension.ts)                 │
+│  activate() → SvnFinder → Svn → SCM Manager     │
+├─────────────────────────────────────────────────┤
+│  Source Control Manager                         │
+│  Multi-repo coordination, workspace detection   │
+├─────────────────────────────────────────────────┤
+│  Repository Layer                               │
+│  - Repository: Single repo state & coordination │
+│  - Services: Status, ResourceGroup, Remote      │
+├─────────────────────────────────────────────────┤
+│  SVN Execution (svn.ts)                         │
+│  Process spawn, encoding, auth management       │
+├─────────────────────────────────────────────────┤
+│  Command Pattern (command.ts + 54 subclasses)   │
+│  Repository resolution, diff/show infrastructure│
+└─────────────────────────────────────────────────┘
+```
 
-**File**: `src/extension.ts` (164 lines)
-Flow: activate() → SvnFinder → Svn → SourceControlManager → registerCommands()
+### Key Files
 
-### Repository Management
-
-**SourceControlManager** (527 lines):
-
-- Multi-repository coordinator
-- Workspace folder detection
-- Event emission for lifecycle
-
-**Repository** (923 lines):
-
-- Single repository state
-- SVN operations coordination
-- File watcher coordination
-- Delegates to services
-
-**Services** (4 extracted):
-
-- **StatusService** (355 lines): Model state updates
-- **ResourceGroupManager** (298 lines): VS Code resource groups
-- **RemoteChangeService** (107 lines): Polling timers
-- **Blame System** (286 lines config + state): Per-file blame tracking
-
-### SVN Execution
-
-**Svn** (369 lines):
-
-- Process spawning, error handling
-- Encoding detection/conversion
-- Auth credential management
-
-### Command Pattern
-
-**Command base** (~530 lines):
-
-- 50+ subclasses for SVN operations
-- Repository resolution
-- Diff/show infrastructure
-- DRY helpers: `filterResources()`, `toUris()`, `toPaths()`, `resourcesToPaths()`
-
----
-
-## Critical Issues (P0) 🔴
-
-### Stability Bugs
-
-**A. Watcher crash** ✅ FIXED (v2.17.114)
-
-- Changed: `throw error` → graceful logging
-- 1-5% users protected
-- +3 tests
-
-**B. Global state data race** ✅ FIXED (v2.17.117)
-
-- Per-repo keys implemented (`decorators.ts:128`)
-- 30-40% users protected from multi-repo corruption
-- Each repo now has independent operation queue
-
-**C. Unsafe JSON.parse** ✅ FIXED (v2.17.118)
-
-- Safe try-catch wrappers implemented (`repository.ts:809,826`, `uri.ts:12`)
-- 5-10% users protected from crashes on malformed storage
-- Returns safe defaults, logs errors
-
-### Security Bugs
-
-**D. Sanitization gaps** ✅ COMPLETE (v2.17.129)
-
-- Safe logging utility created (`util/errorLogger.ts`)
-- All 47 catch blocks migrated to logError()
-- CI validator enforces sanitization (v2.17.127)
-- 100% users protected - all error paths sanitized ✅
-
----
-
-## Performance Analysis
-
-### P0 Issues - Resolved ✅
-
-- ✅ **UI blocking**: FIXED (v2.17.108-109)
-- ✅ **Memory leak**: FIXED (v2.17.107)
-- ✅ **Remote polling**: FIXED (v2.17.107)
-
-### P1 Issues
-
-**A. Commit traversal** ✅ FIXED (v2.17.120)
-
-- Flat resource map for O(1) parent lookups (`commit.ts:47-64`)
-- 80-100% users, 20-100ms → 5-20ms (4-5x faster)
-
-**B. Descendant resolution** ✅ FIXED (v2.17.121)
-
-- Single-pass O(n) algorithm (`StatusService.ts:214-235`)
-- 50-70% users, 100-500ms → 20-100ms (3-5x faster)
-
-**C. Glob matching** ✅ FIXED (v2.17.122)
-
-- Two-tier matching: simple patterns → complex (`globMatch.ts:35-67`)
-- 30-40% users, 10-50ms → 3-15ms (3x faster)
-
-**D. Batch operations** ✅ FIXED (v2.17.123)
-
-- Adaptive chunking (`batchOperations.ts`, `svnRepository.ts:621-636,808-819`)
-- 20-30% users, 50-200ms → 20-80ms (2-3x faster)
-
-**E. Extension startup** ✅ FIXED (v2.28.0)
-
-- Conditional activation: `workspaceContains:**/.svn` (no activation without SVN)
-- SVN path caching: globalState stores discovered path (~1-2s saved)
-- Parallel Windows discovery: Promise.allSettled for TortoiseSVN paths (~600-1500ms saved)
-- Background workspace scanning: fire-and-forget (non-blocking activation)
-- 100% users, activation time reduced by 1-3s
-
----
-
-## Code Quality Analysis
-
-### Bloat (P2)
-
-- show/showBuffer: 139L duplicate
-- util.ts: 336L dumping ground
-- Error handling: 70 catch blocks, inconsistent
-
-### Type Safety (P2)
-
-- 248 `any` types (25 files)
-- Unsafe casts, missing guards
-
-### Security (P2)
-
-- Password CLI exposure (`svn.ts:110-113`)
-- ✅ esbuild vuln: FIXED (v2.17.106)
-- ✅ stderr leaks: FIXED (v2.17.102)
-
----
-
-## Completed Improvements ✅
-
-### Performance (Phases 8-19)
-
-- **Phase 18**: UI non-blocking (ProgressLocation.Notification, cancellation tokens)
-- **Phase 19**: Memory leak fix (LRU cache), remote polling (95% faster)
-- **Phases 8-16**: Config cache, decorator removal, conditional index rebuild
-- **Result**: All P0 bottlenecks resolved, UI responsive, memory stable
-
-### Code Quality
-
-- 162 lines removed (150 helpers/factory + 12 dead code)
-- 3 services extracted (760 lines)
-- Repository.ts: 1,179 → 923 lines (22% reduction)
-- Encapsulation: 2 internal methods made private
-
-### Security
-
-- Stderr sanitization (M-1 critical fix, credential disclosure prevented)
-
-### Testing
-
-- 138 → 856 → 930+ tests (+792, +574%)
-- 21-23% → 50-55% → 60-65% coverage ✅ EXCEEDED TARGET
-- Phase 18-19: +12 tests (UI blocking, memory, polling)
-- Phase 22 (v2.17.235): +41 e2e tests (core execution, services, commands, fs)
-  - Core: svn.ts, svnFinder, resource.ts (9 tests)
-  - Services: StatusService, ResourceGroupManager, RemoteChangeService (9 tests)
-  - Commands: add, remove, commitAll, upgrade, pullIncomingChange (15 tests)
-  - File system: mkdir, write_file, read_file, stat (8 tests)
-- Coverage tooling: c8 configured for HTML/text/lcov reports
+| Layer    | Files                                                             |
+| -------- | ----------------------------------------------------------------- |
+| Entry    | extension.ts, source_control_manager.ts                           |
+| Core     | repository.ts, svnRepository.ts, svn.ts                           |
+| Services | StatusService.ts, ResourceGroupManager.ts, RemoteChangeService.ts |
+| Commands | command.ts (base), commands/\*.ts (54 total)                      |
+| Parsing  | statusParser.ts, logParser.ts, infoParser.ts, blameParser.ts      |
+| Blame    | blameConfiguration.ts, blameStateManager.ts, blameProvider.ts     |
 
 ---
 
 ## Design Patterns
 
-1. **Command Pattern**: Command base + 50+ subclasses
-2. **Observer/Event**: EventEmitter throughout
-3. **Repository Pattern**: Data access abstraction
-4. **Decorator**: @memoize, @throttle, @debounce, @sequentialize
-5. **Strategy**: Multiple parsers (status, log, info, diff, list)
-6. **Adapter**: File watching, URI schemes
+1. **Command Pattern**: Base class + 54+ subclasses with DRY helpers
+2. **Observer/Event**: EventEmitter throughout for loose coupling
+3. **Decorator**: @memoize, @throttle, @debounce, @sequentialize
+4. **Strategy**: Multiple parsers (status, log, info, diff, list)
+5. **Adapter**: XML parser abstraction, file watching, URI schemes
+6. **Repository**: Data access abstraction per repo
 
 ---
 
-## Key Files
+## Key Subsystems
 
-**Entry**: extension.ts, source*control_manager.ts, commands.ts
-**Core**: repository.ts, svnRepository.ts, svn.ts
-**Services**: statusService.ts, resourceGroupManager.ts, remoteChangeService.ts
-**Blame**: blameConfiguration.ts, blameStateManager.ts, commands/blame/*.ts
-**Commands**: command.ts (base), commands/\_.ts (54 total, 3 blame)
-**Parsing**: statusParser.ts, logParser.ts, infoParser.ts
-**Utils**: types.ts (323 lines), util.ts, decorators.ts
+### Blame System
+
+Per-file blame tracking with:
+
+- Progressive rendering (10-20x faster)
+- Template compilation for status bar/gutter
+- Batch log fetching (50x faster)
+- LRU cache eviction (MAX_CACHE_SIZE=20)
+
+### File Locking (v0.1.0+)
+
+- Commands: lock, unlock, breakLock
+- Lock status in tooltips and decorations
+- Directory support
+
+### Sparse Checkout (v0.1.0+)
+
+- TreeView in SCM sidebar
+- Lazy-loads children via `svn list`
+- Depth options: empty, files, immediates, infinity
+
+### Git-like Staging
+
+- Hidden `__staged__` changelist
+- Optimistic UI updates (skip status refresh)
+- ResourceGroupManager handles group manipulation
+
+---
+
+## Services (Extracted from Repository)
+
+| Service              | Purpose                                    | Lines |
+| -------------------- | ------------------------------------------ | ----- |
+| StatusService        | Parse SVN status, update model             | ~355  |
+| ResourceGroupManager | Manage VS Code resource groups             | ~298  |
+| RemoteChangeService  | Background polling timers                  | ~107  |
+| CommitFlowService    | Staging & commit orchestration             | ~300  |
+| SvnAuthCache         | Credential storage (keyring/SecretStorage) | ~200  |
+
+---
+
+## Performance
+
+All critical bottlenecks fixed:
+
+- **Commit traversal**: O(1) parent lookups, 4-5x faster
+- **Descendant resolution**: Single-pass O(n), 3-5x faster
+- **Glob matching**: Two-tier simple→complex, 3x faster
+- **Batch operations**: Adaptive chunking, 2-3x faster
+- **Startup**: Conditional activation + path caching, 1-3s saved
+
+Caching strategy:
+
+- LRU eviction for info, blame, log caches
+- Immutable data (SVN logs) = infinite TTL
+
+---
+
+## Security
+
+- Password via stdin (SVN 1.10+)
+- XXE protection in XML parser
+- Error sanitization (logError utility)
+- Zero telemetry, local-only operations
+- Debug mode auto-timeout
+
+See SECURITY.md and SECURITY_QUICK_REFERENCE.md for details.
+
+---
+
+## Build & Deploy
+
+```bash
+npm run compile    # esbuild + sass
+npm run watch      # Watch mode
+npm test           # Vitest unit tests
+npm run package    # VSCE package
+```
+
+Output: dist/extension.js (CJS, minified)
+External: vscode, @posit-dev/positron
 
 ---
 
 ## Strengths
 
-1. Event-driven, clear Observer pattern
-2. Layered (UI, Business Logic, CLI Wrapper)
-3. Decorator-based commands (elegant)
-4. Configurable behavior
-5. Async/await throughout
-6. Separate concerns (parsing, execution, UI)
+1. Clean separation of concerns (services extracted)
+2. Type-safe (strict TypeScript, minimal `any`)
+3. Performance optimized (all P0/P1 fixed)
+4. Comprehensive testing (930+ tests)
+5. Security hardened (sanitization, stdin passwords)
+6. Multi-repo support (independent operation queues)
 
 ---
 
-## Next Actions
+## Technical Debt
 
-**P0 (Phase 20)**: Stability & security - CRITICAL (8-12h, MUST FIX FIRST)
-**P1 (Phase 21)**: Performance optimization (5-8h)
-**P2/P3**: Code quality, type safety, architecture (110-155h)
-
-See IMPLEMENTATION_PLAN.md for details.
-
----
-
-## Recent Additions (v2.17.215)
-
-### Blame Performance Optimizations
-
-- **Progressive rendering**: 10-20x faster (v2.17.208)
-- **Template compilation**: 10-20x faster (v2.17.209)
-- **Batch log fetching**: 50x faster (v2.17.210)
-- **Scroll handler removal**: Eliminates 100-200ms lag (v2.17.211)
-- **Icon type leak fix**: Prevents unbounded growth (v2.17.212)
-- **Document flicker fix**: No visible flicker during typing (v2.17.213)
-- **Cursor tracking**: 60-80% faster (v2.17.214)
-- **LRU cache eviction**: MAX_CACHE_SIZE=20, MAX_MESSAGE_CACHE_SIZE=500 (v2.17.215)
-
-### Blame Configuration System (v2.17.186)
-
-- **Complete**: 13 settings, 3 commands, 5 menu integrations
-- **Architecture**: BlameConfiguration (singleton), BlameStateManager (per-file tracking)
-- **State Management**: 3-level toggles (extension-wide, global, per-file)
-- **Tests**: 27 end-to-end tests across 3 suites
-- **Templates**: Customizable status bar/gutter with variable substitution
-- **Performance**: Large file warnings, optional log fetching (4-10x speedup)
-- **Design Doc**: BLAME_CONFIG_DESIGN.md (545 lines)
+- Repository.ts still 923 lines (could extract more services)
+- 50+ command files (could consolidate by category)
+- ~248 `any` types remaining across 25 files
+- fs/ wrappers could use fs.promises
 
 ---
 
-### File Locking System (v2.24.0)
+See also:
 
-- **Commands**: `svn.lock`, `svn.unlock`, `svn.breakLock`
-- **Parser**: `lockParser.ts` extracts lock info from `svn info --xml`
-- **Types**: `ISvnLockInfo`, `ILockOptions`, `IUnlockOptions`
-- **API Layer**: `Repository.lock()`, `Repository.unlock()`, `Repository.getLockInfo()`
-- **UI**: Lock status in tooltips (🔒), Explorer context menu integration
-- **Directory Support**: Locks can be applied to both files and directories
-
----
-
-### Sparse Checkout Manager (v2.25.0)
-
-- **Tree View**: `sparseCheckout` in SCM sidebar
-- **Provider**: `sparseCheckoutProvider.ts` (~310 lines)
-- **Node**: `sparseItemNode.ts` for tree items
-- **Types**: `ISparseItem`, `SparseDepthKey`
-- **Features**:
-  - Shows local items with depth labels (Full, Shallow, Files Only, Empty)
-  - Shows ghost items (not checked out) with cloud icon
-  - Lazy-loads children on expand via `svn list`
-  - Checkout command for ghost items (pick depth)
-  - Exclude command for local items
-- **Commands**: `svn.sparse.refresh`, `svn.sparse.checkout`, `svn.sparse.exclude`
-
----
-
-### Scoped Status Fetching (v2.26.4)
-
-- **Method**: `svnRepository.getScopedStatus(path, depth)`
-- **Purpose**: Targeted status queries for large repos (100k+ files)
-- **Benefits**:
-  - Avoids full repo status XML parsing
-  - Respects `svn.performance.maxXmlTags` limits
-  - Enables folder-specific status updates
-- **Depth Options**: empty, files, immediates, infinity
-- **Use Cases**:
-  - Sparse checkout folder depth queries
-  - Incremental status updates after file changes
-  - Large repository support
-
----
-
-### Log Cache (v2.26.27)
-
-- **Cache**: In-memory LRU for `log()` and `logBatch()` queries
-- **TTL**: 60 seconds (SVN logs are immutable)
-- **Size**: 50 entries max
-- **Pattern**: Follows existing blame/info cache design
-- **Benefit**: Repeated log queries (scrolling) instant on cache hit
-
----
-
-### Security Hardening (v2.27.3)
-
-- **RepoLogProvider cache**: LRU eviction (max 50 entries), prevents unbounded memory growth
-- **Temp files**: Commit message files use `mode: 0o600` (owner read/write only)
-- **Privacy audit**: Zero external network requests, all data local
-
----
-
-### Comprehensive Quality Review (v2.32.6)
-
-**Review Date**: 2025-12-03
-**Methodology**: 5 specialized agent analysis (bugs, performance, security, UX, architecture)
-
-#### Stability Assessment: GOOD
-
-- **307 unit tests**: All passing
-- **Critical bugs found**: 0 (4 reported were false positives after manual verification)
-- **Test coverage**: ~60-65%
-
-#### Performance Assessment: EXCELLENT
-
-- No blocking UI operations
-- LRU caches with eviction (info, blame, log, message)
-- Throttle/debounce decorators throughout
-- Timer cleanup in dispose methods
-- Progressive blame rendering
-- Batch SVN operations
-
-**Minor optimizations identified**:
-
-1. Info cache could use single sweep timer vs per-entry timers
-2. ~~Lazy provider loading could improve activation time by ~50-100ms~~ (evaluated: low ROI, deferred)
-
-#### Security Assessment: 9/10 (improved from 8.5)
-
-**Strengths**:
-
-- Password via stdin (SVN 1.10+)
-- XXE protection in XML parser
-- Comprehensive error sanitization
-- Zero telemetry
-- Debug mode auto-timeout (v2.32.9)
-- Windows username % blocking (v2.32.10)
-
-**Resolved issues**:
-
-1. ~~Debug mode has no auto-timeout~~ → Fixed v2.32.9
-2. ~~Windows username validation doesn't block `%` syntax~~ → Fixed v2.32.10
-
-#### UX Assessment: IMPROVED
-
-**Resolved**:
-
-- ~~60+ configuration settings~~ → Settings profiles command (v2.32.8)
-- ~~Inconsistent error messages~~ → Added action buttons (v2.32.11)
-
-**Remaining concerns**:
-
-- 80+ commands (discoverability issue)
-
-**Recommendations** (completed):
-
-- ~~Add configuration presets/profiles~~ → v2.32.8
-- Group commands by category (future)
-- ~~Standardize error handling to use action buttons~~ → v2.32.11
-
-#### Architecture Assessment: ACCEPTABLE
-
-**Original concerns debunked**:
-
-- Positron integration is CORE (extension name is "sven")
-- Blame subsystem adds value for data science workflows
-- File locking essential for binary assets (CSVs, models)
-- Sparse checkout critical for large data repos
-
-**Valid observations**:
-
-- Repository.ts (1376 lines) handles many responsibilities
-- fs/ wrappers could use fs.promises (low priority)
-- Command files could be consolidated (50+ → 20)
-
-**Conclusion**: Extension is mature, well-tested, and appropriately featured for its target audience (data science teams using SVN). "Bloat" identified is actually valuable features. Focus future work on UX improvements rather than code reduction.
-
----
-
-**Version**: 3.30
-**Updated**: 2025-12-03 (v2.32.15)
+- [LESSONS_LEARNED.md](LESSONS_LEARNED.md) - Development patterns
+- [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) - UI/UX conventions
+- [PERFORMANCE.md](PERFORMANCE.md) - Optimization details
+- [BLAME_SYSTEM.md](BLAME_SYSTEM.md) - Blame feature details

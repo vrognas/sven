@@ -1,747 +1,155 @@
-# Sven - Subversion for Positron
+# Sven - Subversion for VS Code & Positron
 
-Positron-optimized SVN extension with enhanced features for data science workflows.
+[![Version](https://img.shields.io/badge/version-0.2.3-blue)](CHANGELOG.md)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Original extension:** [JohnstonCode/svn-scm](https://github.com/JohnstonCode/svn-scm)
+Git-like SVN experience with staging, inline blame, file locking, and sparse checkout. Zero telemetry.
 
-# Prerequisites
+> **Requires:** [SVN](https://subversion.apache.org) installed. Windows users: enable **Command Line Tools** when installing [TortoiseSVN](https://tortoisesvn.net/).
 
-> **Note**: This extension leverages your machine's SVN installation,\
-> so you need to [install SVN](https://subversion.apache.org) first.
+## Why Sven?
 
-## Windows
+| Pain Point | Sven Solution |
+|------------|---------------|
+| SVN has no staging | ✅ Git-like stage → commit workflow |
+| "Who wrote this line?" | ✅ Inline blame annotations (GitLens-style) |
+| Binary file conflicts | ✅ File locking with visual indicators |
+| Giant repos are slow | ✅ Sparse checkout - download only what you need |
+| Clunky diff tools | ✅ Beyond Compare, Meld, any external tool |
 
-If you use [TortoiseSVN](https://tortoisesvn.net/), make sure the option
-**Command Line Tools** is checked during installation and
-`C:\Program Files\TortoiseSVN\bin` is available in PATH.
+## Quick Start
 
-## Feedback & Contributing
+### Open Existing Repository
+1. **File → Open Folder** → select folder with `.svn`
+2. SVN panel appears in Source Control sidebar
 
-* Please report any bugs, suggestions or documentation requests via the
-  [Issues](https://github.com/vrognas/sven/issues)
-* Feel free to submit
-  [pull requests](https://github.com/vrognas/sven/pulls)
+### Checkout New Repository
+1. `Ctrl+Shift+P` → **SVN: Checkout**
+2. Enter repository URL
+3. Choose local folder
 
-## Contributing as a Developer
-
-Want to contribute? Great! See our [CONTRIBUTING.md](./CONTRIBUTING.md) for:
-- Development environment setup
-- Testing & TDD workflow
-- Code style guidelines
-- Pull request process
-
-For comprehensive guides, see:
-- [Developer Setup Guide](./docs/DEVELOPER_SETUP.md) - Environment configuration
-- [Documentation Priority Matrix](./docs/DOCUMENTATION_PRIORITY_MATRIX.md) - For maintainers
-- [Lessons Learned](./docs/LESSONS_LEARNED.md) - Architecture insights
-
-# SVN Terminology Quick Reference
-
-When comparing file versions, SVN uses these keywords:
-
-| Term | Meaning | Example |
-|------|---------|---------|
-| **BASE** | Your last updated version | What you had after your last `svn update` |
-| **HEAD** | Server's latest version | The newest revision on the repository |
-| **PREV** | Previous committed version | The revision before HEAD |
-
-**Common scenarios:**
-- **"Open Changes with BASE"** - Compare your edits to what you downloaded
-- **"Open Changes with HEAD"** - See if server has newer changes
-- **"Open File (HEAD)"** - View the server's latest without changing your local copy
-
-# Features
-
-### Checkout
-
-You can checkout a SVN repository with the `SVN: Checkout` command in the **Command Palette** (`Ctrl+Shift+P`). You will be asked for the URL of the repository and the parent directory under which to put the local repository.
-
-----
-
-* Source Control View
-* Quick Diffs in gutter
-* Status Bar
-* Create changelists
-* Add files
-* Revert edits
-* Remove files
-* Create branches
-* Switch branches
-* Create patches
-* Diff changes
-* Diff with external tools (Beyond Compare, etc.)
-* Commit changes/changelists
-* See commit messages
-
-## Staging Area (Git-like Workflow)
-
-This extension simulates Git's staging area using SVN changelists, enforcing a **"stage before commit"** workflow.
-
-### How It Works
-
-Files must be staged (or in a changelist) before committing:
-
-1. **Stage files** - Click the `+` button or use "Stage" from context menu
-2. **Review staged** - Files appear in "Staged for Commit" group
-3. **Commit** - Press `Ctrl+Enter` or click the checkmark button
-
-If no files are staged, you'll be prompted to "Stage All" before committing.
-
-### Under the Hood
-
-- Staging uses a hidden SVN changelist (`__staged__`)
-- Files in custom changelists can also be committed directly
-- Original changelist membership is restored when unstaging
-- SVN automatically clears changelist membership after commit
-
-### Why This Workflow?
-
-- **Intentional commits** - Forces you to review what you're committing
-- **Partial commits** - Commit only specific files, not everything
-- **Familiar UX** - Works like Git for developers switching from Git
-- **Non-destructive** - Original changelists preserved on unstage
-
-### Quick Reference
-
-| Action | Shortcut/Button |
-|--------|-----------------|
-| Stage file | `+` button or context menu |
-| Stage all | `+` on Changes group header |
-| Unstage file | `-` button or context menu |
-| Unstage all | `-` on Staged group header |
-| Commit staged | `Ctrl+Enter` or checkmark button |
-
-## External Diff Tools
-
-Configure external diff tools like Beyond Compare for large files (e.g., CSVs) where built-in diff is insufficient.
-
-**Setup:**
-1. Set `svn.diff.tool` to path of wrapper batch file (e.g., `bcsvn.bat`)
-2. Right-click file in Source Control → **Diff with External Tool**
-3. For Beyond Compare setup, see: https://www.scootersoftware.com/kb/vcs#svn
-
-## File & Folder Decorations
-
-The extension displays status badges and icons on files in the Explorer and Source Control views.
-
-### Status Badges
-
-| Badge | Meaning |
-|-------|---------|
-| **A** | Added - new file scheduled for commit |
-| **M** | Modified - file has local changes |
-| **D** | Deleted - file scheduled for removal |
-| **R** | Renamed/Replaced - file moved or replaced |
-| **C** | Conflicted - merge conflict needs resolution |
-| **U** | Unversioned - new file not yet added to SVN |
-| **!** | Missing - file deleted outside SVN |
-| **I** | Ignored - file matches ignore pattern |
-
-### Folder Badges
-
-Folders show the same status with a folder prefix:
-- 📁A - Folder added
-- 📁M - Folder with modified contents
-- 📁D - Folder deleted
-
-### Lock Icons
-
-| Icon | Meaning |
-|------|---------|
-| 🔒 | File is locked (by you or others) |
-| 🔓 | File has `svn:needs-lock` property (unlocked, read-only) |
-| 🔒M | Locked and modified |
-| 🔒A | Locked and added |
-
-**Tooltip:** Hover over the lock icon to see who owns the lock.
-
-### Combined Badges
-
-When a file has both a status and lock, badges combine:
-- 🔒M - Locked + Modified
-- 🔒A - Locked + Added
-
-## Smart File Renaming
-
-When you rename tracked files in the Explorer, the extension automatically uses `svn move` to preserve file history.
-
-**How it works:**
-- Rename a tracked file via Explorer → extension intercepts and converts to `svn move`
-- File history is preserved across the rename
-- Untracked files are renamed normally (no SVN involvement)
-
-**What you get:**
-- Use the normal "Rename" command - no separate "SVN Rename" needed
-- `svn log` shows full history including before the rename
-- No "missing + unversioned" status after renaming
-
-**Limitations:**
-- Only intercepts renames within VS Code/Positron
-- External tools (command line, file manager) won't trigger auto-conversion
-- For external renames, manually use `svn move` or delete + add (loses history)
-
-## Smart File Deletion
-
-When you delete tracked files in the Explorer, the extension automatically runs `svn delete` to preserve proper version control.
-
-**Default behavior:**
-- Delete a tracked file via Explorer → extension runs `svn delete`
-- File is immediately marked for deletion (D status)
-- Untracked files are deleted normally (no SVN involvement)
-
-**Setting:** `svn.delete.actionForDeletedFiles`
-- `remove` (default) - Automatically run `svn delete`
-- `prompt` - Ask what to do each time
-- `none` - Do nothing (file shows as "missing" status)
-
-## SVN Properties
-
-Manage SVN properties that control file behavior across platforms.
-
-### EOL Style (`svn:eol-style`)
-
-Normalize line endings to prevent "every line changed" diffs in cross-platform teams.
-
-| Value | Behavior |
-|-------|----------|
-| `native` | Convert to platform EOL (CRLF on Windows, LF on Unix) |
-| `LF` | Force Unix line endings |
-| `CRLF` | Force Windows line endings |
-
-**Commands:**
-- `SVN: Set EOL Style` - Set property on selected file(s)
-- `SVN: Remove EOL Style` - Remove property
-- `SVN: Manage EOL Style` - View/modify all files with eol-style
-
-### MIME Type (`svn:mime-type`)
-
-Control how SVN handles merges and diffs for binary files.
-
-| Type | Behavior |
-|------|----------|
-| `text/*` | Normal text merge |
-| `application/octet-stream` | Binary - no merge, creates conflict files |
-| `image/*`, `application/pdf` | Binary treatment |
-
-**Commands:**
-- `SVN: Set MIME Type` - Set property (auto-suggests from extension)
-- `SVN: Remove MIME Type` - Remove property
-
-### Auto-Props
-
-Automatically apply properties when files are added via `svn add`.
-
-**Commands:**
-- `SVN: Manage Auto-Props` - Edit repository auto-props with options:
-  - **Edit/Create** - Open editor to modify rules
-  - **View** - See current configuration
-  - **Remove** - Delete auto-props
-  - **Use Default Template** - Apply recommended defaults
-  - **Import from Client Config** - Import rules from your SVN client config
-
-### Client Config
-
-Access your local SVN configuration file directly.
-
-**Command:** `SVN: Open SVN Client Config`
-
-Opens your SVN config file (auto-detected):
-- Windows: `%APPDATA%\Subversion\config`
-- Unix/macOS: `~/.subversion/config`
-
-**Tip:** Use "Import from Client Config" in Manage Auto-Props to copy your personal auto-props rules to the repository for team sharing.
-
-## Repository History
-
-View commit history for your repository in the dedicated History pane.
-
-### Features
-
-- **Commit list** - Browse all commits with author, date, and message
-- **File changes** - Expand commits to see which files were modified
-- **BASE indicator** - Purple **B** badge marks your working copy's BASE revision
-- **Diff view** - Click files to see changes in that commit
-
-### Toolbar Actions
-
-| Button | Action | Description |
-|--------|--------|-------------|
-| ↻ Refresh | Refresh from cache | Quick refresh using cached log data |
-| ↓ Fetch | Fetch from server | Get latest commits from server, update cache |
-| ↓↓ Pull | Fetch + Update | Fetch latest AND update working copy to HEAD |
-
-**When to use each:**
-- **Refresh** - Just redraw the UI (instant, no server contact)
-- **Fetch** - See new commits without changing your files
-- **Pull** - Get new commits AND update your working copy
-
-### BASE Revision
-
-The **B** badge (purple) indicates your working copy's BASE revision - the revision you last updated to.
-
-- Commits above BASE = newer changes on server (not in your working copy yet)
-- BASE commit = what your working copy is based on
-- Commits below BASE = older history
-
-**Tip:** If you see commits above BASE, use "Pull" or `svn update` to get them.
-
-### File History
-
-Right-click a file → **Show File History** to see commits that modified that specific file.
-
-From file history, you can:
-- **Go to Repository History** - Jump to that revision in the full repo log
-- **Open file at revision** - View file contents at that point in time
-- **Compare revisions** - Diff between any two versions
-
-## Blame Annotations
-
-View line-by-line revision history directly in the editor.
-
-**Features:**
-- Gutter annotations: colored revision indicators (enabled by default)
-- Inline messages: commit details at end of line, GitLens-style (enabled by default)
-- Status bar: blame info for current line
-- Auto-blame: automatically show blame when files open (enabled by default)
-- Hover tooltips: detailed commit info on hover
-
-**Configuration:**
-See all 19 configuration options in Settings → search "svn.blame"
-
-For advanced configuration, see [Blame System Documentation](docs/BLAME_SYSTEM.md).
-
-## Positron Integration
-
-Enhanced integration with Posit's Positron IDE for data science workflows.
-
-**Connections Pane**:
-- View SVN repositories alongside database connections
-- Quick checkout wizard with URL and directory inputs
-- Repository metadata display (branch, revision, remote URL)
-
-**Setup**: Automatically enabled when running in Positron. No configuration needed.
-
-**Privacy**: All operations are local. No data sent to Posit or external services. See [PRIVACY.md](./PRIVACY.md) for details.
-
-**What is Positron?** A next-generation IDE for data science by Posit PBC (creators of RStudio). Fork of VS Code optimized for R, Python, and Julia workflows.
-
-Learn more: https://posit.co/products/ide/positron/
-
-For technical details, see [docs/POSITRON_INTEGRATION.md](./docs/POSITRON_INTEGRATION.md).
-
-## Authentication & Security
-
-The extension provides secure authentication with multiple methods and comprehensive credential protection.
-
-### Security Warning: Upgrade from v2.17.229 or Earlier
-
-> **⚠️ CRITICAL:** Versions prior to v2.17.230 expose passwords in process listings. **Upgrade immediately** to v2.17.230+ to eliminate this security risk.
-
-### Authentication Methods
-
-**Recommended (in priority order):**
-
-1. **SSH Key Authentication** ⭐ BEST PRACTICE
-   - **Repository URL:** `svn+ssh://user@svn.example.com/repo`
-   - **Security:** Public key cryptography, zero credential exposure
-   - **Setup:**
-     ```bash
-     ssh-keygen -t ed25519 -C "your_email@example.com"
-     ssh-copy-id user@svn.example.com
-     ```
-   - **When to use:** Production environments, shared servers, automated systems
-
-2. **Password Authentication** (Secure with Credential Cache)
-   - **Repository URL:** `https://svn.example.com/repo`
-   - **Security:** Credentials stored in SVN cache (`~/.subversion/auth/`, mode 600)
-   - **Setup:** Extension prompts for password, automatically caches securely
-   - **When to use:** Quick testing, HTTPS-only repositories, personal projects
-
-3. **Public Repository** (No Authentication)
-   - **Repository URL:** `http://svn.example.com/public-repo`
-   - **Security:** No credentials needed
-   - **When to use:** Open-source projects, publicly accessible repositories
-
-### How Credential Caching Works
-
-**v2.17.230+** uses SVN's native credential cache for maximum security:
-
-1. You enter username/password in VS Code UI prompt
-2. Extension writes credentials to `~/.subversion/auth/svn.simple/<uuid>` (file mode 600)
-3. SVN commands executed **without** `--password` flag
-4. SVN reads credentials from cache automatically
-5. ✅ **Result:** No password exposure in process list, container logs, or CI/CD logs
-
-**Before v2.17.230:**
-```bash
-$ ps aux | grep svn
-user 12345 svn update --password "MyPassword123"  # ❌ EXPOSED
+### Daily Workflow
+```
+1. Make changes        → Files appear in "Changes"
+2. Click + to stage    → Files move to "Staged"
+3. Ctrl+Enter          → Commit staged files
 ```
 
-**After v2.17.230:**
-```bash
-$ ps aux | grep svn
-user 12345 svn update --username alice  # ✅ SECURE (no password)
-```
-
-### Authentication Method Indicators
-
-Extension shows which auth method is active in the Output panel:
-
-- `[auth: SSH key]` - SSH key authentication (most secure)
-- `[auth: password via credential cache]` - Cached password (secure)
-- `[auth: none - public repository]` - No authentication required
-
-**Example output:**
-```
-[my-project]$ svn update --username alice [auth: password via credential cache]
-At revision 1234.
-```
-
-This helps verify your authentication is configured correctly.
-
-### Debugging Authentication Issues
-
-#### Enable Verbose Output
-
-1. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-2. Run: `SVN: Show Output`
-3. Check authentication method indicators in logs
-
-#### Common Issues
-
-**Problem:** "Authentication failed" but credentials are correct
-```
-[repo]$ svn update --username alice [auth: password via credential cache]
-svn: E170001: Authentication failed
-```
-
-**Solutions:**
-1. Clear credential cache: `rm -rf ~/.subversion/auth/`
-2. Re-enter credentials when prompted
-3. Verify repository URL is correct
-4. Check SVN server is accessible: `svn info <repo-url>`
-
-**Problem:** Extension prompts for password repeatedly
-```
-ℹ No credentials configured - will prompt if needed
-```
-
-**Solutions:**
-1. Ensure credentials are being cached (check `~/.subversion/auth/`)
-2. Verify file permissions: `ls -la ~/.subversion/auth/svn.simple/` (should be 600)
-3. Try manual SVN command: `svn update` (should not prompt if cache works)
-
-**Problem:** Want to see raw error messages for debugging
-
-**Solution:** Enable debug mode (⚠️ **TEMPORARY ONLY**):
-```json
-{
-  "svn.debug.disableSanitization": true
-}
-```
-
-**⚠️ WARNING:**
-- Debug mode exposes credentials in logs
-- Extension shows prominent warning when enabled
-- Only enable temporarily for troubleshooting
-- **Disable immediately after debugging**
-
-When enabled, you'll see:
-```
-⚠️⚠️⚠️ SECURITY WARNING ⚠️⚠️⚠️
-Error sanitization is DISABLED
-Credentials WILL BE VISIBLE in logs
-Disable: svn.debug.disableSanitization = false
-⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-```
-
-Plus a dialog with **[Disable Now]** button.
-
-#### Verify Authentication Setup
-
-**Check credential cache:**
-```bash
-# List cached credentials
-ls -la ~/.subversion/auth/svn.simple/
-
-# Should show files with permissions: -rw------- (600)
-```
-
-**Check SVN version:**
-```bash
-svn --version
-# Requires SVN 1.6+ for credential cache
-```
-
-**Test repository access:**
-```bash
-svn info <your-repo-url>
-# Should show repository information without prompting
-```
-
-### Best Practices
-
-#### Production Environments
-- ✅ Use SSH keys (`svn+ssh://`)
-- ✅ Enable MFA on SVN server
-- ✅ Keep SVN client updated
-- ❌ Never use `svn.debug.disableSanitization` in production
-- ❌ Avoid HTTP URLs (use HTTPS or svn+ssh://)
-
-#### Development Workstations
-- ✅ Use HTTPS with credential cache for personal projects
-- ✅ Use SSH keys for shared/company repositories
-- ✅ Protect `~/.subversion/auth/` directory (mode 700)
-- ✅ Regularly update extension and SVN client
-
-#### CI/CD Pipelines
-- ✅ Use SSH keys stored in CI/CD secrets
-- ✅ Use repository access tokens (if supported by SVN server)
-- ❌ Never pass passwords via environment variables
-- ❌ Never commit credentials to `.vscode/settings.json`
-
-**Example GitHub Actions:**
-```yaml
-- name: Setup SSH key
-  run: |
-    mkdir -p ~/.ssh
-    echo "${{ secrets.SVN_SSH_KEY }}" > ~/.ssh/id_rsa
-    chmod 600 ~/.ssh/id_rsa
-- run: svn checkout svn+ssh://svn.example.com/repo
-```
-
-### Security Features
-
-1. **Error Sanitization**
-   - Automatic redaction of passwords, tokens, paths, URLs
-   - Active by default in all logs and error messages
-   - Protects against accidental credential exposure
-
-2. **SecretStorage Integration**
-   - Passwords stored in OS keychain (encrypted)
-     - **macOS:** Keychain Access
-     - **Windows:** Credential Manager
-     - **Linux:** Secret Service (gnome-keyring, KWallet)
-   - Never stored in plaintext in extension settings
-
-3. **Credential Cache Protection**
-   - Files stored with mode 600 (user-only access)
-   - Automatic cleanup of old credentials
-   - Isolated per repository/realm
+## Key Features
 
-4. **Audit Trail**
-   - All auth operations logged (credentials redacted)
-   - Authentication method always visible
-   - Debug mode warnings prevent accidental exposure
+### Staging (Git-like)
+Stage files before commit. No more accidental commits.
 
-### Troubleshooting Checklist
+| Action | How |
+|--------|-----|
+| Stage | `+` button or right-click |
+| Unstage | `-` button |
+| Commit | `Ctrl+Enter` |
 
-- [ ] Check authentication method indicator in Output panel
-- [ ] Verify repository URL is correct (HTTPS vs svn+ssh://)
-- [ ] Test SVN access outside VS Code: `svn info <repo-url>`
-- [ ] Check credential cache: `ls ~/.subversion/auth/svn.simple/`
-- [ ] Verify SVN version: `svn --version` (requires 1.6+)
-- [ ] Review error messages in Output panel
-- [ ] Try clearing cache: `rm -rf ~/.subversion/auth/` and re-enter credentials
-- [ ] For persistent issues, enable debug mode temporarily (see above)
+### Blame Annotations
+See who changed each line, when, and why.
 
-### Security Resources
+- **Gutter**: Colored revision indicators
+- **Inline**: Author + date at line end
+- **Hover**: Full commit message
 
-- [SECURITY.md](./SECURITY.md) - Security policy and vulnerability reporting
-- [SVN Security Best Practices](https://subversion.apache.org/docs/community-guide/conventions.html#security)
-- [Issue Tracker](https://github.com/vrognas/sven/issues) - Report bugs (not security vulnerabilities)
+Toggle: `Ctrl+Shift+P` → **SVN: Toggle Annotations**
 
-For security vulnerabilities, use [GitHub Security Advisories](https://github.com/vrognas/sven/security/advisories).
+### File Locking
+Prevent conflicts on binary files (CSVs, images, models).
 
-### Credential Storage
+| Command | Use Case |
+|---------|----------|
+| **Lock** | Claim exclusive edit rights |
+| **Unlock** | Release when done |
+| **Break Lock** | Admin override |
 
-The extension supports multiple credential storage modes via `svn.auth.credentialMode`:
+Visual: 🔒 = locked, 🔓 = needs lock (read-only)
 
-| Mode | Description |
-|------|-------------|
-| `auto` (default) | System keyring locally, extension storage remotely |
-| `systemKeyring` | Always use OS credential manager |
-| `extensionStorage` | Always use VS Code SecretStorage |
-| `prompt` | Never store credentials |
+### Sparse Checkout
+Download only specific folders from large repos.
 
-#### Auto Mode (Recommended)
+1. Open **Selective Download** panel in SCM sidebar
+2. Click ☁️ ghost folders to download
+3. Choose depth: Full, Shallow, Files Only, Empty
 
-The default `auto` mode automatically selects the best storage:
-- **Local development**: Uses system keyring (macOS Keychain, Windows Credential Manager, gnome-keyring)
-- **Remote SSH/WSL/Containers**: Uses VS Code SecretStorage (works without keyring setup)
+### Repository History
+Browse commits with file changes, diffs, and filtering.
 
-#### System Keyring Mode
+- **B badge** = your BASE revision
+- **↻ Refresh** / **↓ Fetch** / **↓↓ Pull**
+- Filter by author, date, text
 
-Uses native credential managers:
-- **macOS:** Keychain
-- **Windows:** Credential Manager
-- **Linux:** gnome-keyring, gpg-agent
+### Smart Operations
+Explorer actions auto-convert to SVN commands:
+- **Rename** → `svn move` (preserves history)
+- **Delete** → `svn delete` (proper removal)
 
-For gpg-agent in SSH sessions, set `GPG_TTY`:
+## Essential Settings
 
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export GPG_TTY=$(tty)
-```
+Open Settings (`Ctrl+,`) and search `sven`.
 
-#### Troubleshooting Auth
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `sven.blame.autoBlame` | `true` | Show blame when opening files |
+| `sven.commit.conventionalCommits` | `false` | Conventional commit format |
+| `sven.commit.autoUpdate` | `none` | Run update before/after commit |
+| `sven.diff.tool` | `null` | External diff tool path |
+| `sven.remoteChanges.checkFrequency` | `300` | Remote check interval (seconds) |
+| `sven.sourceControl.hideUnversioned` | `false` | Hide unversioned files |
+| `sven.log.length` | `50` | Commits shown in history |
 
-If password prompts cycle endlessly:
+[All 70+ settings →](docs/SETTINGS.md)
 
-1. Try `extensionStorage` mode:
-   ```json
-   { "svn.auth.credentialMode": "extensionStorage" }
-   ```
-2. Restart extension host (Ctrl+Shift+P → "Developer: Restart Extension Host")
-3. Re-enter credentials when prompted
+## Common Tasks
 
-#### Auth Method Indicators
+### Compare with server
+Right-click file → **Open Changes with HEAD**
 
-Watch the Output panel (SVN) for current mode:
-- `[auth: system keyring (local)]` - Using OS credential manager
-- `[auth: extension storage (remote)]` - Using VS Code SecretStorage
+### Resolve conflicts
+1. Fix conflict markers in file
+2. Right-click → **Resolve**
 
-## Settings
-Here are all of the extension settings with their default values. To change any of these, add the relevant Config key and value to your VSCode settings.json file. Alternatively search for the config key in the settings UI to change its value.
+### Switch branches
+`Ctrl+Shift+P` → **SVN: Switch Branch**
 
-<!--begin-settings-->
-```js
-{
-  // Whether auto refreshing is enabled
-  "svn.autorefresh": true,
+### Create patch
+Right-click files → **Show Changes (Patch)**
 
-  // Select all files when commit changes
-  "svn.commit.changes.selectedAll": true,
+### Set line endings
+Right-click file → **Set Line Ending Style (EOL)**
 
-  // Check empty message before commit
-  "svn.commit.checkEmptyMessage": true,
+## Troubleshooting
 
-  // Set file to status resolved after fix conflicts
-  "svn.conflicts.autoResolve": null,
+**"SVN not found"**
+- Set `sven.path` to full SVN path (e.g., `/usr/bin/svn`)
 
-  // Encoding of svn output if the output is not utf-8. When this parameter is null, the encoding is automatically detected. Example: 'windows-1252'.
-  "svn.default.encoding": null,
+**Password prompts loop**
+- Try `sven.auth.credentialMode`: `extensionStorage`
+- Then restart extension host
 
-  // The default location to checkout a svn repository.
-  "svn.defaultCheckoutDirectory": null,
+**Slow on large repos**
+- Enable sparse checkout
+- Reduce `sven.log.length`
 
-  // Action when tracked files are deleted in Explorer: `none` - Do nothing, `prompt` - Ask, `remove` - Auto svn delete
-  "svn.delete.actionForDeletedFiles": "remove"  // values: ["none","prompt","remove"],
+[Full troubleshooting →](docs/SECURITY_QUICK_REFERENCE.md)
 
-  // Ignored files/rules for `svn.delete.actionForDeletedFiles`(Ex.: file.txt or **/*.txt)
-  "svn.delete.ignoredRulesForDeletedFiles": [],
+## Positron IDE
 
-  // Controls whether to automatically detect svn externals.
-  "svn.detectExternals": true,
+Works automatically in [Positron](https://posit.co/products/ide/positron/):
+- Connections pane integration
+- Optimized for data science workflows
+- All operations local (zero telemetry)
 
-  // Controls whether to automatically detect svn on ignored folders.
-  "svn.detectIgnored": true,
+## Links
 
-  // Path to external diff tool wrapper (e.g., batch file for Beyond Compare). Used with 'Diff with External Tool' command
-  "svn.diff.tool": null,
+- [Full Settings Reference](docs/SETTINGS.md)
+- [Security & Authentication](docs/SECURITY_QUICK_REFERENCE.md)
+- [Privacy Policy](PRIVACY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Report Issue](https://github.com/vrognas/sven/issues)
 
-  // Show diff changes using latest revision in the repository. Set false to use latest revision in local folder
-  "svn.diff.withHead": true,
+---
 
-  // Whether svn is enabled
-  "svn.enabled": true,
-
-  // Try the experimental encoding detection
-  "svn.experimental.detect_encoding": null,
-
-  // Priority of encoding
-  "svn.experimental.encoding_priority": [],
-
-  // Url for the gravitar icon using the <AUTHOR>, <AUTHOR_MD5> and <SIZE> placeholders
-  "svn.gravatar.icon_url": "https://www.gravatar.com/avatar/<AUTHOR_MD5>.jpg?s=<SIZE>&d=robohash",
-
-  // Use garavatar icons in log viewers
-  "svn.gravatars.enabled": true,
-
-  // Ignores the warning when SVN is missing
-  "svn.ignoreMissingSvnWarning": null,
-
-  // List of SVN repositories to ignore.
-  "svn.ignoreRepositories": null,
-
-  // Ignores the warning when working copy is too old
-  "svn.ignoreWorkingCopyIsTooOld": null,
-
-  // Regex to detect path for 'branches' in SVN URL, 'null' to disable. Subpath use 'branches/[^/]+/([^/]+)(/.*)?' (Ex.: 'branches/...', 'versions/...')
-  "svn.layout.branchesRegex": "branches/([^/]+)(/.*)?",
-
-  // Regex group position for name of branch
-  "svn.layout.branchesRegexName": 1,
-
-  // Set true to show 'branches/<name>' and false to show only '<name>'
-  "svn.layout.showFullName": true,
-
-  // Regex group position for name of tag
-  "svn.layout.tagRegexName": 1,
-
-  // Regex to detect path for 'tags' in SVN URL, 'null' to disable. Subpath use 'tags/[^/]+/([^/]+)(/.*)?'. (Ex.: 'tags/...', 'stamps/...')
-  "svn.layout.tagsRegex": "tags/([^/]+)(/.*)?",
-
-  // Regex to detect path for 'trunk' in SVN URL, 'null' to disable. (Ex.: '(trunk)', '(main)')
-  "svn.layout.trunkRegex": "(trunk)(/.*)?",
-
-  // Regex group position for name of trunk
-  "svn.layout.trunkRegexName": 1,
-
-  // Number of commit messages to log
-  "svn.log.length": 50,
-
-  // Maximum depth to find subfolders using SVN
-  "svn.multipleFolders.depth": 4,
-
-  // Allow to find subfolders using SVN
-  "svn.multipleFolders.enabled": null,
-
-  // Folders to ignore using SVN
-  "svn.multipleFolders.ignore": ["**/.git","**/.hg","**/vendor","**/node_modules"],
-
-  // Path to the svn executable
-  "svn.path": null,
-
-  // Only show previous commits for a given user. Requires svn >= 1.8
-  "svn.previousCommitsUser": null,
-
-  // Refresh remote changes on refresh command
-  "svn.refresh.remoteChanges": null,
-
-  // Set the interval in seconds to check changed files on remote repository and show in statusbar. 0 to disable
-  "svn.remoteChanges.checkFrequency": 300,
-
-  // Show the output window when the extension starts
-  "svn.showOutput": null,
-
-  // Show the update message when update is run
-  "svn.showUpdateMessage": true,
-
-  // Set left click functionality on changes resource state
-  "svn.sourceControl.changesLeftClick": "open diff"  // values: ["open","open diff"],
-
-  // Combine the svn external in the main if is from the same server.
-  "svn.sourceControl.combineExternalIfSameServer": null,
-
-  // Allow to count unversioned files in status count
-  "svn.sourceControl.countUnversioned": true,
-
-  // Hide unversioned files in Source Control UI
-  "svn.sourceControl.hideUnversioned": null,
-
-  // Ignore unversioned files like .gitignore, Configuring this will overlook the default ignore rule
-  "svn.sourceControl.ignore": [],
-
-  // Changelists to ignore on commit
-  "svn.sourceControl.ignoreOnCommit": ["ignore-on-commit"],
-
-  // Changelists to ignore on status count
-  "svn.sourceControl.ignoreOnStatusCount": ["ignore-on-commit"],
-
-  // Set to ignore externals definitions on update (add --ignore-externals)
-  "svn.update.ignoreExternals": true
-}
-```
-<!--end-settings-->
+**Credit:** Forked from [JohnstonCode/svn-scm](https://github.com/JohnstonCode/svn-scm)

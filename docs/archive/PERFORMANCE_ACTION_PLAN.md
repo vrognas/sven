@@ -14,12 +14,14 @@
 **Estimated Real Impact:** < 0.5% total latency reduction
 
 **RECOMMENDATION:** ❌ NO - Skip this optimization
+
 - Effort: 15 minutes
 - Real benefit: < 0.5% of total system latency
 - Risk: Medium (needs validation that pre-compiled regexes work identically)
 - ROI: Poor - effort not justified by benefit
 
 **Alternative:** If you want to improve error handling, focus on:
+
 - Adding better error messages
 - Improving error recovery
 - Not micro-optimizing already-rare error paths
@@ -32,25 +34,28 @@
 **Actual Reality:** Only branch operations, estimated 2-5% improvement
 
 **RECOMMENDATION:** ⚠️ MAYBE - Only if cache invalidation is handled correctly
+
 - Effort: 20 minutes + 10 minutes for cache invalidation
 - Real benefit: 2-5% in branch operations only
 - Risk: Low, but requires careful configuration change detection
 - ROI: Moderate - better than Item 10
 
 **Action:** Profile first, then decide
+
 1. Measure current getBranchName time (baseline)
 2. Count cache hits in typical branch workflow
 3. Validate improvement matches estimate
 4. Only implement if profiling shows >2% benefit
 
 **Implementation steps:**
+
 ```typescript
 // 1. Create cache with config-dependent keys
 const branchRegexCache = new Map<string, RegExp>();
 
 // 2. Add invalidation on config change
 configuration.onDidChange(event => {
-  if (event.affectsConfiguration('svn.layout.')) {
+  if (event.affectsConfiguration("svn.layout.")) {
     branchRegexCache.clear();
   }
 });
@@ -63,16 +68,19 @@ configuration.onDidChange(event => {
 ### Question 3: Should we implement Items 12-14 (other performance optimizations)?
 
 **Item 12 (File Watcher Regex):** ❌ NO
+
 - Already throttled at 100ms
 - Benefit: <1% due to throttling
 - Skip this one
 
 **Item 13 (String vs Regex Logging):** ❌ NO
+
 - Logging context only
 - Impact: <0.01% of total latency
 - Don't waste time on this
 
 **Item 14 (XML Sanitization):** ⚠️ MAYBE
+
 - Depends on % of XML with control chars
 - Need to profile actual SVN responses
 - Only implement if >50% of responses have control chars
@@ -82,6 +90,7 @@ configuration.onDidChange(event => {
 ## Tier 1: Implementation (Do This Week)
 
 ### Items 1-4: Security Fixes [45 min]
+
 - ❌ Status: UNVALIDATED in this report
 - See SAFE_QUICK_WINS.md for details
 - These are NOT performance optimizations
@@ -92,8 +101,9 @@ configuration.onDidChange(event => {
 **Impact:** Critical (security)
 
 ### Items 5-9: Code Quality [90 min]
+
 - Extract regex pattern constants
-- Remove dead code  
+- Remove dead code
 - Extract magic numbers
 - Extract show/showBuffer duplication
 - Extract exec/execBuffer duplication
@@ -111,15 +121,17 @@ configuration.onDidChange(event => {
 ### Item 11: getBranchName Regex Caching
 
 **Prerequisites:**
+
 1. ✅ Read: `docs/PERFORMANCE_VALIDATION_REPORT.md`
 2. ✅ Review: Code in `src/helpers/branch.ts` (lines 9-35)
 3. ⏳ Profile: Run benchmark on branch operations
 4. ⏳ Measure: Cache hit rate and latency improvement
 
 **Profiling Steps:**
+
 ```bash
 # 1. Baseline measurement
-npm run test -- --grep "branch" 
+npm run test -- --grep "branch"
 
 # 2. Add profiling markers (temporary)
 # In branch.ts:
@@ -135,6 +147,7 @@ performance.measure('getBranchName', 'getBranchName-start', 'getBranchName-end')
 ```
 
 **Implementation Checklist:**
+
 - [ ] Run baseline profiling
 - [ ] Measure cache hit rate
 - [ ] Validate improvement >2%
@@ -151,16 +164,19 @@ performance.measure('getBranchName', 'getBranchName-start', 'getBranchName-end')
 ### Items 10, 12, 13: Premature Optimizations
 
 **Item 10 - getSvnErrorCode Regex Pre-compilation:**
+
 - Skip reason: Error path only, <0.5% impact
 - Alternative: Focus on reducing error rate instead
 - Effort: 15 min | Benefit: <0.5% | ROI: Bad
 
 **Item 12 - File Watcher Regex Pre-compilation:**
+
 - Skip reason: Already throttled, <1% impact
 - Alternative: Throttling is already the optimization
 - Effort: 5 min | Benefit: <1% | ROI: Bad
 
 **Item 13 - String vs Regex for Logging:**
+
 - Skip reason: Logging only, <0.01% impact
 - Alternative: Focus on reducing log calls instead
 - Effort: 5 min | Benefit: <0.01% | ROI: Bad
@@ -172,6 +188,7 @@ performance.measure('getBranchName', 'getBranchName-start', 'getBranchName-end')
 ### Item 14 - Conditional XML Sanitization
 
 **Decision Tree:**
+
 ```
 Profile SVN responses for control characters
 ├─ If > 50% have control chars
@@ -183,6 +200,7 @@ Profile SVN responses for control characters
 ```
 
 **Profiling Script Needed:**
+
 ```typescript
 // /src/common/xmlSanitizationAnalysis.ts
 // Analyze 1000 actual SVN responses for control chars
@@ -195,6 +213,7 @@ Profile SVN responses for control characters
 ## Complete Implementation Roadmap
 
 ### Week 1: Security & Code Quality
+
 **Time:** 2-3 hours
 **Effort Type:** Security fixes + refactoring
 
@@ -211,6 +230,7 @@ Day 2: Code Quality (90 min)
 ```
 
 **Success Criteria:**
+
 - All tests pass
 - No new warnings
 - Code review approved
@@ -218,6 +238,7 @@ Day 2: Code Quality (90 min)
 ---
 
 ### Week 2: Conditional Performance (If Profiling Supports)
+
 **Time:** 1-2 hours (if pursuing)
 **Effort Type:** Profiling + optimization
 
@@ -234,6 +255,7 @@ Day 2: Implementation (if approved)
 ```
 
 **Success Criteria:**
+
 - Profiling data shows >2% improvement
 - Cache invalidation tested
 - All tests pass
@@ -241,6 +263,7 @@ Day 2: Implementation (if approved)
 ---
 
 ### Week 3+: Future Optimizations
+
 **Time:** As needed
 **Effort Type:** Data-driven
 
@@ -254,32 +277,34 @@ Day 2: Implementation (if approved)
 
 ### Implementation Risks
 
-| Item | Risk | Mitigation |
-|------|------|-----------|
-| Security fixes | Low | Well-tested pattern |
-| Code quality | Very Low | Refactoring only |
-| Branch regex cache | Low | Config change listener required |
-| XML sanitization | Low | Profile first |
+| Item               | Risk     | Mitigation                      |
+| ------------------ | -------- | ------------------------------- |
+| Security fixes     | Low      | Well-tested pattern             |
+| Code quality       | Very Low | Refactoring only                |
+| Branch regex cache | Low      | Config change listener required |
+| XML sanitization   | Low      | Profile first                   |
 
 ### Measurement Risks
 
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Profiling overhead | High | Use performance.mark/measure API |
-| Cache invalidation bugs | Medium | Add unit tests for cache |
-| False positive improvements | High | Run 3+ iterations, check variance |
+| Risk                        | Impact | Mitigation                        |
+| --------------------------- | ------ | --------------------------------- |
+| Profiling overhead          | High   | Use performance.mark/measure API  |
+| Cache invalidation bugs     | Medium | Add unit tests for cache          |
+| False positive improvements | High   | Run 3+ iterations, check variance |
 
 ---
 
 ## Dependencies & Blockers
 
 ### Required Before Implementation
+
 - ❌ Profiling framework (not yet implemented)
 - ❌ Performance baseline (not yet measured)
 - ✅ Code review process (exists)
 - ✅ Test infrastructure (exists)
 
 ### Blockers
+
 - **Blocker 1:** No profiling data for getSvnErrorCode
   - Status: Blocks Item 10 decision
   - Resolution: Skip Item 10 (low ROI anyway)
@@ -297,17 +322,20 @@ Day 2: Implementation (if approved)
 ## Success Metrics
 
 ### For Week 1 (Code Quality)
+
 - ✅ All tests pass
 - ✅ Code coverage maintained
 - ✅ Maintainability improved (DRY principle)
 
 ### For Week 2 (Performance)
+
 - ✅ Profiling data collected
 - ✅ Baseline measurements established
 - ✅ Cache hit rate >80% (if implementing Item 11)
 - ✅ Measured improvement >2% (if implementing Item 11)
 
 ### Overall Performance Goals
+
 - Establish baseline first
 - Improve P0 bottlenecks (from LESSONS_LEARNED.md)
 - Don't waste effort on <1% improvements
@@ -317,6 +345,7 @@ Day 2: Implementation (if approved)
 ## Comparison to LESSONS_LEARNED.md
 
 ### What This Validation Adds
+
 1. **Bottleneck verification** - Questions the 5-15% claims
 2. **Code path analysis** - Shows getSvnErrorCode only on error paths
 3. **Scope analysis** - Shows getBranchName only in branch operations
@@ -324,6 +353,7 @@ Day 2: Implementation (if approved)
 5. **Profiling strategy** - Outlines measurement approach
 
 ### What LESSONS_LEARNED.md Already Teaches
+
 - Focus on user-perceptible improvements (60-80% debounce, 10ms cache)
 - Profile real usage before optimizing
 - Skip refactoring if no user benefit
@@ -374,18 +404,21 @@ START
 ## Timeline
 
 **Week 1 (Start Immediately)**
+
 - [ ] Review this validation report
 - [ ] Implement security fixes
 - [ ] Implement code quality improvements
 - [ ] Commit and test
 
 **Week 2 (If Pursuing Performance)**
+
 - [ ] Set up profiling framework
 - [ ] Profile branch operations
 - [ ] Decide on Item 11 based on data
 - [ ] Implement cache if warranted
 
 **Week 3+ (Future Work)**
+
 - [ ] Analyze XML sanitization (Item 14)
 - [ ] Establish performance budgets
 - [ ] Monitor for regressions
@@ -397,6 +430,7 @@ START
 **Status:** Ready for architecture review
 
 **Next Steps:**
+
 1. Review validation findings
 2. Approve Tier 1 implementation (security + quality)
 3. Approve Tier 2 profiling plan
@@ -404,6 +438,7 @@ START
 5. Plan Tier 4 future work
 
 **Questions for Review:**
+
 - Do the code path analyses make sense?
 - Do you agree that Item 10 has <0.5% impact?
 - Should we pursue Item 11 profiling?
@@ -415,4 +450,3 @@ START
 **Analysis Scope:** 7 files, 600+ lines analyzed
 **Recommendations:** 3 Tiers (Do, Conditional, Skip)
 **Expected Implementation Time:** 2-3 hours (Week 1), 1-2 hours (Week 2 if pursuing)
-

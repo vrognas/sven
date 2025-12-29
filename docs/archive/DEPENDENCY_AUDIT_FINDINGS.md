@@ -27,11 +27,13 @@
 **Description**: Command injection via -c/--cmd flag executes matches with shell:true
 
 **Impact Assessment**:
+
 - **Extension**: None (glob only used in dev dependencies)
 - **Users**: No exposure
 - **Developers**: Low risk (would require malicious package.json)
 
 **Affected Locations** (6 instances):
+
 ```
 node_modules/@vscode/test-cli/node_modules/glob
 node_modules/glob (direct)
@@ -48,16 +50,19 @@ node_modules/test-exclude/node_modules/glob
 **Chain**: glob → npm (package) → @semantic-release/npm → semantic-release
 
 **Current State**:
+
 - semantic-release: 25.0.2 (latest stable)
 - @semantic-release/npm: 13.x (depends on npm package)
 - npm package: Depends on vulnerable glob
 
 **Why npm audit suggests downgrade**:
+
 - semantic-release 24.2.9 uses @semantic-release/npm 12.x
 - Version 12.x doesn't depend on npm package
 - Version 13.x (in semantic-release 25) introduced npm package dependency
 
 **Problem with downgrade**:
+
 - 25.0.2 → 24.2.9 is MAJOR version downgrade
 - May have breaking changes in release workflow
 - No newer 25.x version exists (25.0.2 is latest)
@@ -72,6 +77,7 @@ node_modules/test-exclude/node_modules/glob
 **Vulnerable Range**: <3.14.2 || >=4.0.0 <4.1.1
 
 **Status**: ❌ FALSE POSITIVE
+
 - Current version 4.1.0 is NOT in vulnerable range
 - npm audit may be detecting older transitive version
 - Can be fixed with `npm audit fix`
@@ -107,12 +113,14 @@ npm audit
 ```
 
 **Pros**:
+
 - ✅ Fixes HIGH severity glob vulnerability
 - ✅ No breaking changes
 - ✅ semantic-release stays on latest (25.0.2)
 - ✅ Safe, quick fix
 
 **Cons**:
+
 - ⚠️ Transitive glob in semantic-release chain remains
 - ⚠️ npm may still show semantic-release warning
 
@@ -136,10 +144,12 @@ npm audit
 ```
 
 **Pros**:
+
 - ✅ Eliminates all glob vulnerabilities
 - ✅ Clean audit report
 
 **Cons**:
+
 - ❌ MAJOR version downgrade (25 → 24)
 - ❌ May break CI release workflow
 - ❌ Requires release workflow testing
@@ -162,11 +172,13 @@ npm install --save-dev glob@11.1.0
 ```
 
 **Pros**:
+
 - ✅ Fixes direct glob usage
 - ✅ Stays on latest semantic-release
 - ✅ No breaking changes
 
 **Cons**:
+
 - ⚠️ Partial fix (transitive glob remains)
 - ⚠️ Unknown timeline for upstream fix
 - ⚠️ npm audit still shows warnings
@@ -188,10 +200,12 @@ npm audit fix
 ```
 
 **Pros**:
+
 - ✅ Latest version, future-proof
 - ✅ All security patches
 
 **Cons**:
+
 - ⚠️ MAJOR version jump (11 → 13)
 - ⚠️ May have breaking API changes
 - ⚠️ Need to verify test suite compatibility
@@ -218,6 +232,7 @@ npm audit
 ```
 
 **Expected Result**:
+
 - Direct glob vulnerability: FIXED ✅
 - js-yaml: FIXED ✅
 - Transitive glob (via semantic-release): Remains ⚠️
@@ -246,6 +261,7 @@ git log --grep="chore(release)" | head -20
 ### Phase 3: Comprehensive Fix (Optional, 1 hour)
 
 **Only if**:
+
 - Release automation is critical
 - Transitive vulnerability is unacceptable
 - Have time to test release workflow
@@ -265,16 +281,19 @@ npm install --save-dev semantic-release@24.2.9
 ## Impact Analysis
 
 ### User Impact: NONE
+
 - All vulnerabilities are in devDependencies
 - Production bundle unaffected
 - Users have zero exposure
 
 ### Developer Impact: LOW
+
 - glob CLI vulnerability requires specific attack vector
 - Unlikely to be exploited in development environment
 - Standard precautions (don't run untrusted scripts) sufficient
 
 ### CI/CD Impact: LOW
+
 - CI environment is sandboxed
 - glob not used in production builds
 - semantic-release only runs on tagged commits
@@ -283,18 +302,19 @@ npm install --save-dev semantic-release@24.2.9
 
 ## Decision Matrix
 
-| Scenario | Recommended Fix | Effort | Risk |
-|----------|----------------|--------|------|
-| **Release not used** | Option A (glob 11.1.0) | 5 min | None |
-| **Release occasionally** | Option A + monitor | 15 min | None |
-| **Release critical** | Option A → test → Option D | 1 hour | Low |
-| **Zero tolerance** | Option B (downgrade) | 1 hour | High |
+| Scenario                 | Recommended Fix            | Effort | Risk |
+| ------------------------ | -------------------------- | ------ | ---- |
+| **Release not used**     | Option A (glob 11.1.0)     | 5 min  | None |
+| **Release occasionally** | Option A + monitor         | 15 min | None |
+| **Release critical**     | Option A → test → Option D | 1 hour | Low  |
+| **Zero tolerance**       | Option B (downgrade)       | 1 hour | High |
 
 ---
 
 ## Commit Strategy
 
 ### Commit 1: Direct Fix (Minimal)
+
 ```bash
 npm install --save-dev glob@11.1.0
 npm audit fix
@@ -308,6 +328,7 @@ git commit -m "Security: Fix glob vulnerability (GHSA-5j98-mcp5-4vw2)
 ```
 
 ### Commit 2: Comprehensive Fix (If Needed)
+
 ```bash
 # After testing release workflow
 npm install --save-dev semantic-release@24.2.9
@@ -325,11 +346,13 @@ git commit -m "Security: Eliminate remaining glob vulnerabilities
 ## Monitoring Plan
 
 ### Short-term (Next 7 days)
+
 - Monitor semantic-release releases: https://github.com/semantic-release/semantic-release/releases
 - Check if @semantic-release/npm updates to safe glob version
 - Re-run `npm audit` weekly
 
 ### Long-term (Ongoing)
+
 - Enable Dependabot (or renovatebot) for automated security updates
 - Add `npm audit` to CI pipeline (fail on high severity)
 - Monthly dependency review
@@ -357,6 +380,7 @@ git commit -m "Security: Eliminate remaining glob vulnerabilities
 ---
 
 **Recommendation**: Proceed with **Option A (Minimal Fix)**
+
 - Effort: 5 minutes
 - Risk: None
 - Result: Fixes direct HIGH vulnerability, acceptable transitive risk

@@ -202,23 +202,23 @@ From the analysis, these decisions need confirmation:
 
 1. **Is 70% command coverage a firm goal or can we target 60% initially?**
    - Recommendation: Firm goal = 60% by Week 2, stretch to 70% Week 4
-   - Answer: ******\_\_\_******
+   - Answer: **\*\***\_\_\_**\*\***
 
 2. **Should we add buffer week (3-4 weeks total) or stay exactly 3 weeks?**
    - Recommendation: Add buffer week for code review and debugging
-   - Answer: ******\_\_\_******
+   - Answer: **\*\***\_\_\_**\*\***
 
 3. **Which 6 commands are highest priority to test first?**
    - Recommendation: merge, switch, resolve, cleanup, patch, ignore
-   - Answer: ******\_\_\_******
+   - Answer: **\*\***\_\_\_**\*\***
 
 4. **Is fixing weak assertions a separate task or paired with Sinon adoption?**
    - Recommendation: Paired (combined effort, better efficiency)
-   - Answer: ******\_\_\_******
+   - Answer: **\*\***\_\_\_**\*\***
 
 5. **Are performance baselines required or optional?**
    - Recommendation: Optional (nice to have, P3)
-   - Answer: ******\_\_\_******
+   - Answer: **\*\***\_\_\_**\*\***
 
 ---
 

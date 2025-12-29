@@ -11,11 +11,11 @@
 
 Analysis of 35 recommended refactorings across 8 categories. **Risk distribution:**
 
-| Severity | Count | Effort | Pattern | Recommendation |
-|----------|-------|--------|---------|-----------------|
-| **Safe** | 19 | 2-3h | Constants, dead code, type safety | Implement immediately |
-| **Risky** | 12 | 4-6h | Duplication extraction, performance | Implement with TDD + testing |
-| **Dangerous** | 4 | 8-12h | Architectural changes, dependencies | Plan carefully, incremental steps |
+| Severity      | Count | Effort | Pattern                             | Recommendation                    |
+| ------------- | ----- | ------ | ----------------------------------- | --------------------------------- |
+| **Safe**      | 19    | 2-3h   | Constants, dead code, type safety   | Implement immediately             |
+| **Risky**     | 12    | 4-6h   | Duplication extraction, performance | Implement with TDD + testing      |
+| **Dangerous** | 4     | 8-12h  | Architectural changes, dependencies | Plan carefully, incremental steps |
 
 **Key principle from LESSONS_LEARNED.md**: Multiple small extractions beat one big refactor.
 
@@ -36,6 +36,7 @@ Analysis of 35 recommended refactorings across 8 categories. **Risk distribution
 **What**: Replace `/[\\\/]+/` (path separator regex, 4+ occurrences) with `const SEPARATOR_PATTERN`.
 
 **Why Safe**:
+
 - Simple string replacement, no logic change
 - Same regex pattern, no behavior modification
 - Can verify with automated refactoring tools
@@ -43,11 +44,13 @@ Analysis of 35 recommended refactorings across 8 categories. **Risk distribution
 - One-liner constant addition
 
 **Test Strategy**:
+
 - Existing tests continue to pass (behavior unchanged)
 - No new tests needed
 - Regex matching semantics identical
 
 **Implementation**:
+
 ```typescript
 // At module level, after imports
 const SEPARATOR_PATTERN = /[\\\/]+/;
@@ -69,16 +72,19 @@ const SEPARATOR_PATTERN = /[\\\/]+/;
 **What**: Delete unreachable code block after early return.
 
 **Why Safe**:
+
 - Dead code by definition unreachable
 - No execution path affected
 - Static analysis can verify no references
 - Zero behavior impact
 
 **Test Strategy**:
+
 - Full test suite must pass (validates no hidden references)
 - Dead code removal = no new test cases
 
 **Implementation**:
+
 ```bash
 # 1. Examine the code block context
 sed -n '75,90p' src/commands/command.ts
@@ -102,17 +108,20 @@ npm test
 **What**: Replace hardcoded `30000` (timeout), `"en_US.UTF-8"` (locale) with named constants.
 
 **Why Safe**:
+
 - Same numeric/string values, no change to behavior
 - Improves readability, enables centralized configuration
 - No conditional logic affected
 - Can validate by grep before/after
 
 **Test Strategy**:
+
 - Behavioral tests unchanged (same timeout, same locale)
 - Performance tests unaffected (constant still compiles to same value)
 - No new tests needed
 
 **Implementation**:
+
 ```typescript
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_LOCALE_ENV = {
@@ -122,7 +131,12 @@ const DEFAULT_LOCALE_ENV = {
 
 // Usage:
 const timeoutMs = options.timeout || DEFAULT_TIMEOUT_MS;
-defaults.env = Object.assign({}, proc.env, options.env || {}, DEFAULT_LOCALE_ENV);
+defaults.env = Object.assign(
+  {},
+  proc.env,
+  options.env || {},
+  DEFAULT_LOCALE_ENV
+);
 ```
 
 **Rollback**: Remove constants, restore inline values
@@ -138,24 +152,31 @@ defaults.env = Object.assign({}, proc.env, options.env || {}, DEFAULT_LOCALE_ENV
 **What**: Replace `any` types in event functions with specific generic types.
 
 **Why Safe**:
+
 - TypeScript strictly validates generics
 - No runtime behavior change
 - Existing tests validate type constraints
 - Type guards prevent invalid uses
 
 **Test Strategy**:
+
 - Compile-time validation (TypeScript check)
 - All existing tests continue to pass
 - No runtime changes
 
 **Implementation Example**:
+
 ```typescript
 // Before
-export function anyEvent(...events: Event<any>[]): Event<any> { }
+export function anyEvent(...events: Event<any>[]): Event<any> {}
 
 // After
 export function anyEvent<T>(...events: Event<T>[]): Event<T> {
-  return (listener: (e: T) => void, thisArgs?: unknown, disposables?: IDisposable[]) => {
+  return (
+    listener: (e: T) => void,
+    thisArgs?: unknown,
+    disposables?: IDisposable[]
+  ) => {
     // implementation
   };
 }
@@ -174,16 +195,22 @@ export function anyEvent<T>(...events: Event<T>[]): Event<T> {
 **What**: Create type guard function instead of `as any` casts.
 
 **Why Safe**:
+
 - No behavior change (same error handling)
 - Type safety improves, doesn't reduce functionality
 - Existing error handling logic unchanged
 - Type guard validates at compile time
 
 **Pattern**:
+
 ```typescript
 function isErrorWithStderr(err: unknown): err is { stderr: string } {
-  return typeof err === 'object' && err !== null &&
-    'stderr' in err && typeof (err as any).stderr === 'string';
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "stderr" in err &&
+    typeof (err as any).stderr === "string"
+  );
 }
 
 // Usage
@@ -193,6 +220,7 @@ if (isErrorWithStderr(err)) {
 ```
 
 **Test Strategy**:
+
 - Existing error handling tests validate type guard
 - No new test logic needed
 - Type checking validates guard correctness
@@ -210,12 +238,14 @@ if (isErrorWithStderr(err)) {
 **What**: Change `const icons = { light: {...}, dark: {...} }` to typed `Record<'light' | 'dark', Record<string, Uri>>`.
 
 **Why Safe**:
+
 - Same structure, explicit types added
 - No behavioral impact
 - TypeScript validates structure matches type
 - Compile-time only change
 
 **Test Strategy**:
+
 - TypeScript compilation validates types
 - Icon access behavior unchanged
 - No test changes needed
@@ -231,6 +261,7 @@ if (isErrorWithStderr(err)) {
 **What**: Add explicit return type `IDisposable[]` to dispose function.
 
 **Why Safe**:
+
 - Pure type annotation, no code change
 - Function behavior identical
 - TypeScript validates implementation matches return type
@@ -247,12 +278,14 @@ if (isErrorWithStderr(err)) {
 **What**: Replace all `catch (err)` with `catch (err: unknown)`.
 
 **Why Safe**:
+
 - Type safety improvement, no behavior change
 - Error handling logic identical
 - TypeScript strictly validates `unknown` before use
 - Existing tests validate error handling
 
 **Pattern**:
+
 ```typescript
 // Before
 catch (err) {
@@ -266,6 +299,7 @@ catch (err: unknown) {
 ```
 
 **Test Strategy**:
+
 - Existing error tests validate handling
 - TypeScript compilation ensures safety
 - No new tests needed
@@ -285,6 +319,7 @@ catch (err: unknown) {
 **What**: Move regex compilation from `getSvnErrorCode()` (called 100+ times) to module initialization.
 
 **Current Code**:
+
 ```typescript
 function getSvnErrorCode(stderr: string): string | undefined {
   for (const name in svnErrorCodes) {
@@ -298,12 +333,14 @@ function getSvnErrorCode(stderr: string): string | undefined {
 ```
 
 **Why Risky**:
+
 - Performance-sensitive: Called for every failed SVN command
 - Regex pattern depends on error codes (compile-time validation needed)
 - If error codes change at runtime, pre-compiled regexes stale
 - Edge case: Error code string escaping (e.g., `$`, `^` in codes)
 
 **Test Strategy - BEFORE CHANGE**:
+
 ```typescript
 // Test 1: Error code detection still works
 const stderr1 = "svn: E170001: authorization";
@@ -319,17 +356,18 @@ assert.equal(getSvnErrorCode(stderr3), undefined);
 ```
 
 **Test Strategy - AFTER CHANGE**:
+
 - Same tests must pass (identical behavior)
 - Performance benchmark: Measure regex.test() calls per command
 - Expected: 5-10% latency reduction on error paths
 
 **Implementation**:
+
 ```typescript
-const SVN_ERROR_REGEXES = Object.entries(svnErrorCodes)
-  .map(([name, code]) => ({
-    name,
-    regex: new RegExp(`svn: ${code}`) // Pre-compiled once
-  }));
+const SVN_ERROR_REGEXES = Object.entries(svnErrorCodes).map(([name, code]) => ({
+  name,
+  regex: new RegExp(`svn: ${code}`) // Pre-compiled once
+}));
 
 function getSvnErrorCode(stderr: string): string | undefined {
   for (const { regex, name } of SVN_ERROR_REGEXES) {
@@ -341,6 +379,7 @@ function getSvnErrorCode(stderr: string): string | undefined {
 ```
 
 **Edge Cases to Test**:
+
 - Error codes with special regex chars (unlikely but possible)
 - stderr with multiple error codes (first match wins)
 - Empty/null stderr handling
@@ -359,6 +398,7 @@ function getSvnErrorCode(stderr: string): string | undefined {
 **What**: Add Map cache for branch regex patterns (keyed by layout).
 
 **Current Issue**:
+
 ```typescript
 // Called 100+ times per status refresh
 export function getBranchName(path: string, ...): string | undefined {
@@ -369,12 +409,14 @@ export function getBranchName(path: string, ...): string | undefined {
 ```
 
 **Why Risky**:
+
 - Branch patterns are user-configurable
 - Cache invalidation: When does cache expire?
 - Memory risk: Unbounded cache if many layouts
 - Thread-safety (if concurrent calls)
 
 **Test Strategy - BEFORE**:
+
 ```typescript
 // Test 1: Correct branch name extraction
 assert.equal(getBranchName("path/trunk/file.txt", layout), "trunk");
@@ -387,12 +429,14 @@ assert.equal(getBranchName("path/other/file.txt", layout), undefined);
 ```
 
 **Test Strategy - AFTER**:
+
 - Same tests must pass (identical results)
 - Cache hit rate measurable: 80-90% expected
 - Performance: 10-15% reduction in branch detection time
 - Test cache boundary: 5+ layouts in sequence
 
 **Implementation**:
+
 ```typescript
 const branchRegexCache = new Map<string, RegExp>();
 
@@ -411,6 +455,7 @@ function getBranchName(path: string, layout: BranchLayout): string | undefined {
 ```
 
 **Edge Cases**:
+
 - Layout changes (cache becomes invalid)
 - 100+ simultaneous branch detections
 - Memory pressure (cache grows unbounded)
@@ -429,17 +474,22 @@ function getBranchName(path: string, layout: BranchLayout): string | undefined {
 **What**: Move file watcher regex patterns to constants.
 
 **Current**:
+
 ```typescript
-if (path.match(/[\\\/](\.svn|_svn)[\\\/]tmp/)) { } // ❌ Per-call
-if (path.match(/[\\\/](\.svn|_svn)[\\\/]/)) { } // ❌ Per-call
+if (path.match(/[\\\/](\.svn|_svn)[\\\/]tmp/)) {
+} // ❌ Per-call
+if (path.match(/[\\\/](\.svn|_svn)[\\\/]/)) {
+} // ❌ Per-call
 ```
 
 **Why Risky**:
+
 - File watchers fire 100+ times/second on large repos
 - Regex compilation adds per-event overhead
 - If file count grows, impact magnifies
 
 **Test Strategy**:
+
 ```typescript
 // Test 1: Identify SVN temp files
 const tmpPath = "/repo/.svn/tmp/file";
@@ -457,13 +507,16 @@ assert(!normalPath.match(SVN_PATTERN));
 ```
 
 **Implementation**:
+
 ```typescript
 const TMP_PATTERN = /[\\\/](\.svn|_svn)[\\\/]tmp/;
 const SVN_PATTERN = /[\\\/](\.svn|_svn)[\\\/]/;
 
 // Usage
-if (TMP_PATTERN.test(path)) { }
-if (SVN_PATTERN.test(path)) { }
+if (TMP_PATTERN.test(path)) {
+}
+if (SVN_PATTERN.test(path)) {
+}
 ```
 
 **Rollback**: Inline patterns back into watchers
@@ -479,17 +532,20 @@ if (SVN_PATTERN.test(path)) { }
 **What**: Replace `/ |^$/.test(arg)` with `arg.includes(' ') || arg === ''`.
 
 **Current**:
+
 ```typescript
 const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
 // Appears twice (exec + execBuffer)
 ```
 
 **Why Risky**:
+
 - Simple but affects command logging on every SVN call
 - Need to verify behavior equivalence
 - String method may behave differently with whitespace edge cases
 
 **Equivalence Check**:
+
 ```typescript
 // Old: / |^$/.test(arg)
 // Tests if arg contains space OR is completely empty
@@ -506,11 +562,13 @@ const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
 ```
 
 **EQUIVALENCE ISSUE**:
+
 - `/ |^$/.test(" ")` = true (regex sees space)
 - `" ".includes(' ')` = true (string includes space)
 - Both result in quoting - SAFE ✓
 
 **Test Strategy**:
+
 ```typescript
 // Test 1: Normal arg unquoted
 assert.equal(formatArg("hello"), "hello");
@@ -538,23 +596,27 @@ assert.equal(formatArg(" "), "' '");
 **What**: Only sanitize XML if control characters present.
 
 **Current**:
+
 ```typescript
-return xml.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+return xml.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
 // Applied to ALL XML, even if clean
 ```
 
 **Optimized**:
+
 ```typescript
 const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
-return CONTROL_CHARS.test(xml) ? xml.replace(CONTROL_CHARS, '') : xml;
+return CONTROL_CHARS.test(xml) ? xml.replace(CONTROL_CHARS, "") : xml;
 ```
 
 **Why Risky**:
+
 - Sanitization is security-critical
 - Test regex only (non-greedy) then full replace
 - Edge case: Pattern difference between test and replace?
 
 **Safety Verification**:
+
 ```typescript
 // Both regexes must be identical
 const testRegex = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
@@ -565,6 +627,7 @@ const replaceRegex = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
 ```
 
 **Test Strategy**:
+
 ```typescript
 // Test 1: Clean XML unchanged
 const cleanXml = "<?xml version='1.0'><root>test</root>";
@@ -584,6 +647,7 @@ assert.equal(sanitize(valid), valid); // \n \r \t are NOT in char range
 ```
 
 **Edge Cases**:
+
 - Regex ranges: `\x00-\x08` (chars 0-8), `\x0B-\x0C` (11-12), `\x0E-\x1F` (14-31)
 - Valid chars NOT removed: `\t` (0x09), `\n` (0x0A), space (0x20), etc.
 - Performance: 3-5% improvement on large XML
@@ -604,6 +668,7 @@ assert.equal(sanitize(valid), valid); // \n \r \t are NOT in char range
 **Risk**: **DANGEROUS** 🔴
 
 **Duplicated Sections**:
+
 1. Lines 95-98 vs 278-281: cwd setup (identical)
 2. Lines 100-105 vs 283-288: log output (identical)
 3. Lines 107-123 vs 290-306: auth setup (identical)
@@ -614,12 +679,14 @@ assert.equal(sanitize(valid), valid); // \n \r \t are NOT in char range
 8. Exit code checking + error construction: lines 256-267 missing in execBuffer
 
 **Key Differences**:
+
 - **Return type**: `IExecutionResult` vs `BufferResult`
 - **Encoding handling**: exec() decodes with iconv, execBuffer() returns raw Buffer
 - **Cancellation token**: exec() handles it (lines 185-199), execBuffer() does NOT (line 381)
 - **Error handling**: exec() rejects on non-zero exit, execBuffer() silently returns
 
 **Why DANGEROUS**:
+
 1. **Behavioral Divergence Risk**: Fixing bug in one method might not propagate to other
 2. **Encoding Complexity**: iconv detection + fallback logic is intricate
 3. **Cancellation Token Bug**: execBuffer missing cancellation support - extraction fixes or hides bug?
@@ -627,6 +694,7 @@ assert.equal(sanitize(valid), valid); // \n \r \t are NOT in char range
 5. **Command Logging**: stderr logging appears in both but return value differs
 
 **Critical Questions**:
+
 - Why doesn't execBuffer support cancellation tokens? Intentional or oversight?
 - What if execBuffer is called with `token` in options - should it be ignored?
 - Are there callers relying on execBuffer NOT throwing on error?
@@ -635,6 +703,7 @@ assert.equal(sanitize(valid), valid); // \n \r \t are NOT in char range
 **Test Strategy - BEFORE REFACTORING**:
 
 **Step 1: Characterization Tests (Document Existing Behavior)**
+
 ```typescript
 describe("exec vs execBuffer behavior parity", () => {
   // Test 1: Both handle normal output
@@ -775,6 +844,7 @@ describe("exec vs execBuffer behavior parity", () => {
 ```
 
 **Step 2: Understand Caller Dependencies**
+
 ```bash
 # Find all callers of exec()
 grep -r "\.exec(" src/ --include="*.ts" | grep -v test | wc -l
@@ -792,6 +862,7 @@ grep -r "execBuffer.*token\|execBuffer.*{.*token" src/ --include="*.ts"
 **Step 3: Risk Mitigation Plan**
 
 **Option A: Separate Methods (RECOMMENDED for safety)**
+
 ```typescript
 // Keep exec() and execBuffer() separate but extract shared setup
 private async _setupSpawnedProcess(
@@ -817,6 +888,7 @@ public async execBuffer(...) {
 ```
 
 **Option B: Extract with Feature Flags (SAFER if unifying behavior)**
+
 ```typescript
 private async _executeInternal(
   cwd: string,
@@ -866,11 +938,13 @@ public async execBuffer(cwd: string, args: any[], options: ICpOptions) {
    - If slower: extraction inefficient
 
 **Rollback Plan**:
+
 - Each commit reversible independently
 - Keep git history clean for bisecting
 - Branch at start, merge only after full validation
 
 **Edge Cases to Verify**:
+
 - execBuffer with cancellation token (current behavior unclear)
 - execBuffer error semantics (swallows errors?)
 - Large stdout handling (buffer concatenation)
@@ -887,17 +961,20 @@ public async execBuffer(cwd: string, args: any[], options: ICpOptions) {
 **Risk**: **DANGEROUS** 🔴
 
 **Duplicated Sections**:
+
 1. Lines 517-550 vs 616-650: Argument setup (35 lines, IDENTICAL)
 2. Lines 553-605 (show only): Encoding detection (53 lines, UNIQUE to show)
 3. Line 607 vs 652: Command execution (exec vs execBuffer)
 
 **Why DANGEROUS**:
+
 1. **Different return types**: show() decodes to string, showBuffer() returns Buffer
 2. **Encoding logic complexity**: Only in show(), not showBuffer()
 3. **Callers expect different semantics**: Some need string, some need Buffer
 4. **Risk of merge after extraction**: If encoding logic needed for showBuffer later
 
 **Critical Questions**:
+
 - Should showBuffer() ever support encoding detection?
 - Is the encoding logic in show() tested?
 - What if file has invalid encoding - does show() handle gracefully?
@@ -909,22 +986,26 @@ public async execBuffer(cwd: string, args: any[], options: ICpOptions) {
 describe("show vs showBuffer", () => {
   // Test 1: Basic functionality
   test("show returns decoded string", async () => {
-    stubExec.returns(Promise.resolve({
-      exitCode: 0,
-      stdout: "file contents",
-      stderr: ""
-    }));
+    stubExec.returns(
+      Promise.resolve({
+        exitCode: 0,
+        stdout: "file contents",
+        stderr: ""
+      })
+    );
 
     const result = await repo.show("path/to/file.txt");
     assert.equal(typeof result, "string");
   });
 
   test("showBuffer returns Buffer", async () => {
-    stubExecBuffer.returns(Promise.resolve({
-      exitCode: 0,
-      stdout: Buffer.from("file contents"),
-      stderr: ""
-    }));
+    stubExecBuffer.returns(
+      Promise.resolve({
+        exitCode: 0,
+        stdout: Buffer.from("file contents"),
+        stderr: ""
+      })
+    );
 
     const result = await repo.showBuffer("path/to/file.txt");
     assert.ok(Buffer.isBuffer(result));
@@ -933,11 +1014,13 @@ describe("show vs showBuffer", () => {
   // Test 2: Encoding handling
   test("show applies encoding configuration", async () => {
     // Mock exec with UTF-8 encoded content
-    stubExec.returns(Promise.resolve({
-      exitCode: 0,
-      stdout: "café",
-      stderr: ""
-    }));
+    stubExec.returns(
+      Promise.resolve({
+        exitCode: 0,
+        stdout: "café",
+        stderr: ""
+      })
+    );
 
     const result = await repo.show("path/to/file.txt");
     assert.equal(result.includes("café"), true);
@@ -945,32 +1028,42 @@ describe("show vs showBuffer", () => {
 
   // Test 3: Revision handling
   test("both handle revision parameter", async () => {
-    stubExec.returns(Promise.resolve({
-      exitCode: 0,
-      stdout: "content",
-      stderr: ""
-    }));
+    stubExec.returns(
+      Promise.resolve({
+        exitCode: 0,
+        stdout: "content",
+        stderr: ""
+      })
+    );
 
-    stubExecBuffer.returns(Promise.resolve({
-      exitCode: 0,
-      stdout: Buffer.from("content"),
-      stderr: ""
-    }));
+    stubExecBuffer.returns(
+      Promise.resolve({
+        exitCode: 0,
+        stdout: Buffer.from("content"),
+        stderr: ""
+      })
+    );
 
     await repo.show("path/file.txt", "123");
-    assert.ok(stubExec.calledWithMatch(sinon.match.array.contains(["-r", "123"])));
+    assert.ok(
+      stubExec.calledWithMatch(sinon.match.array.contains(["-r", "123"]))
+    );
 
     await repo.showBuffer("path/file.txt", "123");
-    assert.ok(stubExecBuffer.calledWithMatch(sinon.match.array.contains(["-r", "123"])));
+    assert.ok(
+      stubExecBuffer.calledWithMatch(sinon.match.array.contains(["-r", "123"]))
+    );
   });
 
   // Test 4: URI vs string handling
   test("both handle Uri input", async () => {
-    stubExec.returns(Promise.resolve({
-      exitCode: 0,
-      stdout: "content",
-      stderr: ""
-    }));
+    stubExec.returns(
+      Promise.resolve({
+        exitCode: 0,
+        stdout: "content",
+        stderr: ""
+      })
+    );
 
     const uri = Uri.file("path/to/file.txt");
     const result = await repo.show(uri);
@@ -985,7 +1078,7 @@ describe("show vs showBuffer", () => {
     let showArgs: string[] | undefined;
     let showBufferArgs: string[] | undefined;
 
-    stubExec.callsFake((args) => {
+    stubExec.callsFake(args => {
       showArgs = args;
       return Promise.resolve({
         exitCode: 0,
@@ -994,7 +1087,7 @@ describe("show vs showBuffer", () => {
       });
     });
 
-    stubExecBuffer.callsFake((args) => {
+    stubExecBuffer.callsFake(args => {
       showBufferArgs = args;
       return Promise.resolve({
         exitCode: 0,
@@ -1152,26 +1245,31 @@ public async showBuffer(file: string | Uri, revision?: string): Promise<Buffer> 
 **Issue**: Uses `cp.exec()` which spawns shell, allowing command injection.
 
 **Current Code**:
+
 ```typescript
-cp.exec("which svn", (err, svnPathBuffer) => { }); // ❌ VULNERABLE
+cp.exec("which svn", (err, svnPathBuffer) => {}); // ❌ VULNERABLE
 ```
 
 **Risk**:
+
 - Shell interprets special characters: `$`, `;`, `|`, `&&`, backticks
 - If svn path contains `; rm -rf /`, it executes
 - User-controlled input could inject commands
 
 **Fix**:
+
 ```typescript
-cp.execFile("which", ["svn"], (err, svnPathBuffer) => { }); // ✅ SAFE
+cp.execFile("which", ["svn"], (err, svnPathBuffer) => {}); // ✅ SAFE
 ```
 
 **Why This is Safe**:
+
 - execFile doesn't spawn shell
 - Arguments passed directly to binary
 - No shell metacharacter interpretation
 
 **Test Strategy**:
+
 ```typescript
 test("svnFinder uses execFile not exec", async () => {
   const stubExec = sinon.stub(cp, "exec");
@@ -1201,6 +1299,7 @@ test("svnFinder uses execFile not exec", async () => {
 **Issue**: `--password` argument visible in `ps`, `top`, `/proc/[pid]/cmdline`.
 
 **Current**:
+
 ```typescript
 if (options.password) {
   args.push("--password", options.password); // ❌ Visible to other users
@@ -1208,6 +1307,7 @@ if (options.password) {
 ```
 
 **Options**:
+
 1. **Documentation (Low effort, medium safety)**: Warn users, recommend SSH
 2. **Config file (Medium effort, good safety)**: Write password to SVN config
 3. **Stdin input (High effort, best safety)**: Pass password via stdin
@@ -1215,6 +1315,7 @@ if (options.password) {
 **Recommendation**: Start with Option 1 (documentation) while planning Option 2.
 
 **Test Strategy**:
+
 - Security: Verify password doesn't appear in error messages
 - Functionality: Verify SVN commands work without visible password
 
@@ -1229,17 +1330,20 @@ if (options.password) {
 **Risk**: **DANGEROUS** 🔴 (Dependency Changes)
 
 **Fixes**:
+
 ```bash
 npm install glob@^11.1.0 --save-dev
 npm install semantic-release@^24.2.9 --save-dev
 ```
 
 **Risk**:
+
 - semantic-release version change could affect release pipeline
 - Must test release process after update
 - Potential breaking changes in major version
 
 **Test Strategy**:
+
 ```bash
 # 1. Verify glob fix
 npm audit  # Should show no high-severity glob issues
@@ -1260,6 +1364,7 @@ npx semantic-release --dry-run
 ### SAFE REFACTORINGS (Week 1 - 4 hours)
 
 **Commit 1**: Extract regex constants
+
 ```bash
 # 5 minutes
 # Changes: 4 regex patterns → 1 SEPARATOR_PATTERN constant
@@ -1267,6 +1372,7 @@ npx semantic-release --dry-run
 ```
 
 **Commit 2**: Remove dead code
+
 ```bash
 # 2 minutes
 # Changes: Delete 8 unreachable lines
@@ -1274,6 +1380,7 @@ npx semantic-release --dry-run
 ```
 
 **Commit 3**: Extract magic numbers
+
 ```bash
 # 10 minutes
 # Changes: DEFAULT_TIMEOUT_MS, DEFAULT_LOCALE_ENV constants
@@ -1281,6 +1388,7 @@ npx semantic-release --dry-run
 ```
 
 **Commit 4**: Type annotations (bulk)
+
 ```bash
 # 1 hour (19, 15, 16, 17, 18)
 # Changes: Add explicit types, type guards, generics
@@ -1292,23 +1400,27 @@ npx semantic-release --dry-run
 **Prerequisite**: Write characterization tests for performance-sensitive methods.
 
 **Commit 5**: Pre-compile error detection regex
+
 - Characterization tests (3 tests)
 - Extract SVN_ERROR_REGEXES constant
 - Update getSvnErrorCode()
 - Benchmark: verify no regression
 
 **Commit 6**: Cache branch regex
+
 - Characterization tests (3 tests)
 - Add branchRegexCache Map
 - Update getBranchName()
 - Benchmark: verify 10% improvement
 
 **Commit 7**: Pre-compile file watcher regex
+
 - Extract TMP_PATTERN, SVN_PATTERN
 - Update file watcher checks
 - Benchmark: verify no regression
 
 **Commit 8**: Optimize XML sanitization
+
 - Characterization tests (3 tests)
 - Two-step sanitization (test then replace)
 - Benchmark: verify 3-5% improvement
@@ -1318,6 +1430,7 @@ npx semantic-release --dry-run
 **Must precede other refactorings:**
 
 **Commit 9-12**: Extract exec/execBuffer
+
 - Comprehensive characterization tests (8 tests)
 - Decide on Option A vs B
 - Extract setup helper
@@ -1326,15 +1439,18 @@ npx semantic-release --dry-run
 - Performance validation
 
 **Commit 13-14**: (Skip or do manually) show/showBuffer
+
 - Consider doing after exec/execBuffer
 - Or accept small duplication trade-off
 
 **Commit 15**: Security - Command injection fix
+
 - cp.exec() → cp.execFile()
 - No behavior change
 - Same test results
 
 **Commit 16**: Security - Dependencies
+
 - npm install glob@^11.1.0
 - npm install semantic-release@^24.2.9
 - Run full test + release dry-run
@@ -1376,21 +1492,22 @@ npx semantic-release --dry-run
 
 ## Success Metrics
 
-| Metric | Target | Validation |
-|--------|--------|-----------|
-| **Code Quality** | 100 lines removed (duplication) | Git diff --stat |
-| **Type Safety** | All `any` in scope removed | grep "any" in changed files |
-| **Performance** | No regression on baseline | Benchmark comparison |
-| **Test Coverage** | 50%+ maintained | npm test report |
-| **Security** | 0 CRITICAL vulns | npm audit |
-| **Commits** | 1 per logical change | git log --oneline |
-| **Documentation** | LESSONS_LEARNED updated | Review docs |
+| Metric            | Target                          | Validation                  |
+| ----------------- | ------------------------------- | --------------------------- |
+| **Code Quality**  | 100 lines removed (duplication) | Git diff --stat             |
+| **Type Safety**   | All `any` in scope removed      | grep "any" in changed files |
+| **Performance**   | No regression on baseline       | Benchmark comparison        |
+| **Test Coverage** | 50%+ maintained                 | npm test report             |
+| **Security**      | 0 CRITICAL vulns                | npm audit                   |
+| **Commits**       | 1 per logical change            | git log --oneline           |
+| **Documentation** | LESSONS_LEARNED updated         | Review docs                 |
 
 ---
 
 ## Conclusion
 
 ### Safe to Implement Immediately (19 refactorings)
+
 - Constants extraction (7, 9)
 - Dead code removal (8)
 - Type safety (15-19)
@@ -1401,6 +1518,7 @@ npx semantic-release --dry-run
 **Recommendation**: GREEN LIGHT ✅
 
 ### Risky but Manageable (12 refactorings)
+
 - Regex compilation/caching (10, 11)
 - XML sanitization optimization (14)
 - Performance tweaks (13)
@@ -1411,6 +1529,7 @@ npx semantic-release --dry-run
 **Prerequisite**: Write 3-4 behavioral tests per refactoring before changes
 
 ### Dangerous, Requires Planning (4 refactorings)
+
 - exec/execBuffer extraction (5)
 - show/showBuffer extraction (6)
 - Security fixes (1, 2)
@@ -1420,6 +1539,7 @@ npx semantic-release --dry-run
 **Risk**: High
 **Recommendation**: PLAN CAREFULLY, EXECUTE INCREMENTALLY
 **Requirements**:
+
 1. Comprehensive characterization tests (existing behavior)
 2. Small, reversible commits (each standalone)
 3. Full regression testing (every commit)
