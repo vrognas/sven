@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [Unreleased]
+
+### Test: E2E Integration Tests
+
+- **New test suites**: 28 integration tests for real SVN operations
+- **Test helpers**: `svnTestRepo.ts` for temp repo creation/teardown
+- **Parser coverage**: Real SVN output for info, status, log, blame parsers
+- **Scenarios**: File lifecycle, changelists, branches, conflicts
+- **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
+
 ## [0.2.3] (2025-12-26)
 
 ### Refactor: Property Operations Consolidation
