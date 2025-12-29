@@ -11,7 +11,8 @@ export function parseSvnLog(content: string): Promise<ISvnLogEntry[]> {
     (parsed: unknown) => {
       const result = parsed as { logentry?: unknown };
       if (!result.logentry) {
-        throw new Error("Invalid log XML: missing logentry elements");
+        // Empty log (no commits in range) is valid - return empty array
+        return [];
       }
 
       const entries = ensureArray(result.logentry) as ISvnLogEntry[];
