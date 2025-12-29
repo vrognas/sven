@@ -37,25 +37,27 @@ TOTAL: 35 refactorings
 
 ### PHASE 1: SAFE WINS (Go First - 3-4 hours)
 
-| # | Refactoring | File | Effort | Risk | Action |
-|---|-------------|------|--------|------|--------|
-| 7 | Regex constants | svn.ts | 5 min | ✅ Safe | Immediate |
-| 8 | Dead code | command.ts | 2 min | ✅ Safe | Immediate |
-| 9 | Magic numbers | svn.ts | 10 min | ✅ Safe | Immediate |
-| 15 | Type events | util.ts | 30 min | ✅ Safe | Immediate |
-| 16 | Type guards | svnFileSystemProvider.ts | 20 min | ✅ Safe | Immediate |
-| 17 | Type icons | resource.ts | 5 min | ✅ Safe | Immediate |
-| 18 | Type dispose | util.ts | 2 min | ✅ Safe | Immediate |
-| 19 | Catch types | Codebase | 1 hr | ✅ Safe | Immediate |
-| 12 | Watcher regex | repositoryFilesWatcher.ts | 5 min | ✅ Safe | Immediate |
-| 13 | String methods | svn.ts | 5 min | ✅ Safe | Immediate |
+| #   | Refactoring     | File                      | Effort | Risk    | Action    |
+| --- | --------------- | ------------------------- | ------ | ------- | --------- |
+| 7   | Regex constants | svn.ts                    | 5 min  | ✅ Safe | Immediate |
+| 8   | Dead code       | command.ts                | 2 min  | ✅ Safe | Immediate |
+| 9   | Magic numbers   | svn.ts                    | 10 min | ✅ Safe | Immediate |
+| 15  | Type events     | util.ts                   | 30 min | ✅ Safe | Immediate |
+| 16  | Type guards     | svnFileSystemProvider.ts  | 20 min | ✅ Safe | Immediate |
+| 17  | Type icons      | resource.ts               | 5 min  | ✅ Safe | Immediate |
+| 18  | Type dispose    | util.ts                   | 2 min  | ✅ Safe | Immediate |
+| 19  | Catch types     | Codebase                  | 1 hr   | ✅ Safe | Immediate |
+| 12  | Watcher regex   | repositoryFilesWatcher.ts | 5 min  | ✅ Safe | Immediate |
+| 13  | String methods  | svn.ts                    | 5 min  | ✅ Safe | Immediate |
 
 **First Commit Wave**: 1 hour
+
 - Bundle 7, 8, 9, 12, 13 (all simple constants/patterns)
 - Run full test suite
 - Zero behavior changes
 
 **Second Commit Wave**: 2-3 hours
+
 - Type safety (15-19)
 - TypeScript validates all changes
 - No runtime behavior change
@@ -66,13 +68,14 @@ TOTAL: 35 refactorings
 
 ### PHASE 2: RISKY REFACTORINGS (After Phase 1 - 4-6 hours)
 
-| # | Refactoring | File | Effort | Risk | Prerequisite |
-|---|-------------|------|--------|------|--------------|
-| 10 | Error regex compile | svn.ts | 15 min | ⚠️ Risky | Write 3 characterization tests |
-| 11 | Branch regex cache | branch.ts | 20 min | ⚠️ Risky | Write 3 characterization tests |
-| 14 | XML sanitization | xmlParserAdapter.ts | 15 min | ⚠️ Risky | Write 3 characterization tests |
+| #   | Refactoring         | File                | Effort | Risk     | Prerequisite                   |
+| --- | ------------------- | ------------------- | ------ | -------- | ------------------------------ |
+| 10  | Error regex compile | svn.ts              | 15 min | ⚠️ Risky | Write 3 characterization tests |
+| 11  | Branch regex cache  | branch.ts           | 20 min | ⚠️ Risky | Write 3 characterization tests |
+| 14  | XML sanitization    | xmlParserAdapter.ts | 15 min | ⚠️ Risky | Write 3 characterization tests |
 
 **Per-Refactoring Pattern**:
+
 1. Write characterization tests (3 tests, document current behavior)
 2. Run baseline performance benchmark
 3. Implement refactoring
@@ -87,11 +90,13 @@ TOTAL: 35 refactorings
 ### PHASE 3: DANGEROUS REFACTORINGS (Plan Carefully - 10-15 hours)
 
 #### #5: exec/execBuffer Extraction (CRITICAL)
+
 **Files**: src/svn.ts (308 lines, 160 duplicated)
 **Risk**: 🔴 DANGEROUS - Impacts command execution, error handling
 **Complexity**: HIGH - Behavior divergence (error semantics, cancellation token)
 
 **Must Do Before Implementation**:
+
 1. Write 8 characterization tests documenting exact current behavior
 2. Identify all callers (30-50+ uses of exec, 5-10 uses of execBuffer)
 3. Test execBuffer with cancellation token (currently undefined behavior)
@@ -99,6 +104,7 @@ TOTAL: 35 refactorings
 5. Benchmark baseline performance
 
 **Implementation Steps**:
+
 - Commit 1: Extract `_setupSpawnedProcess` (setup logic only)
 - Commit 2: Update exec() to use helper (no behavior change)
 - Commit 3: Update execBuffer() to use helper (no behavior change)
@@ -112,6 +118,7 @@ TOTAL: 35 refactorings
 ---
 
 #### #6: show/showBuffer Extraction (SKIP OR MANUAL)
+
 **Files**: src/svnRepository.ts (140 lines, 95 duplicated)
 **Risk**: 🔴 DANGEROUS - Async `getInfo()` complicates extraction
 **Benefit**: Small (20 lines saved) vs complexity added
@@ -124,11 +131,13 @@ TOTAL: 35 refactorings
 ---
 
 #### #1: Command Injection Fix (SECURITY)
+
 **File**: src/svnFinder.ts
 **Risk**: 🔴 DANGEROUS - Security critical, must not regress
 **Pattern**: cp.exec() → cp.execFile()
 
 **Must Do**:
+
 1. Write test validating execFile used, not exec
 2. Verify SVN finding still works
 3. Test with special characters in SVN path (if possible)
@@ -138,9 +147,11 @@ TOTAL: 35 refactorings
 ---
 
 #### #2: Password Exposure (SECURITY)
+
 **File**: src/svn.ts
 **Risk**: 🔴 DANGEROUS - Can't easily revert, affects auth flow
 **Options**:
+
 1. Document warning (quick, partial fix)
 2. Use config file auth (medium, good fix)
 3. Stdin password input (complex, best fix)
@@ -152,13 +163,16 @@ TOTAL: 35 refactorings
 ---
 
 #### #3-4: Dependencies (SECURITY)
+
 **Files**: package.json
 **Risk**: 🔴 DANGEROUS - Could break release pipeline
 **Fixes**:
+
 - `npm install glob@^11.1.0 --save-dev`
 - `npm install semantic-release@^24.2.9 --save-dev`
 
 **Must Do**:
+
 1. Run `npm audit` (verify vulnerabilities fixed)
 2. Run `npm test` (full suite passes)
 3. Test release pipeline: `npx semantic-release --dry-run`
@@ -200,17 +214,20 @@ Still unsure?
 ## Testing Requirements by Risk Level
 
 ### SAFE Refactorings
+
 - Existing tests pass (behavior unchanged)
 - No new tests needed
 - Static analysis sufficient
 
 ### RISKY Refactorings
+
 - 3 characterization tests (document current behavior)
 - Baseline performance benchmark
 - Post-implementation validation
 - Verify no regression
 
 ### DANGEROUS Refactorings
+
 - 3-8 characterization tests
 - Identify all callers/dependencies
 - Edge case analysis
@@ -223,33 +240,37 @@ Still unsure?
 
 ## Rollback Procedures
 
-| Scenario | Time | Steps |
-|----------|------|-------|
-| **Safe refactoring failed tests** | 2 min | `git revert <commit>`, `npm test` |
-| **Risky refactoring perf regressed** | 5 min | `git revert <commit>`, benchmark |
+| Scenario                                   | Time   | Steps                                        |
+| ------------------------------------------ | ------ | -------------------------------------------- |
+| **Safe refactoring failed tests**          | 2 min  | `git revert <commit>`, `npm test`            |
+| **Risky refactoring perf regressed**       | 5 min  | `git revert <commit>`, benchmark             |
 | **Dangerous refactoring behavior changed** | 10 min | `git log --oneline`, revert specific commits |
-| **Dependency broke release** | 15 min | `npm install <pkg>@<old>`, test release |
+| **Dependency broke release**               | 15 min | `npm install <pkg>@<old>`, test release      |
 
 ---
 
 ## Metrics to Track
 
 ### Code Quality
+
 - Lines removed (duplication)
 - Cyclomatic complexity reduction
 - Type coverage improvement
 
 ### Performance
+
 - Baseline vs. post-refactoring
 - Per-call overhead changes
 - Memory usage patterns
 
 ### Testing
+
 - Test pass rate (should be 100%)
 - Coverage change (should maintain >50%)
 - New test count (characterization tests)
 
 ### Safety
+
 - Behavior equivalence (characterization tests)
 - Error handling validation
 - Security vulnerability status
@@ -259,12 +280,14 @@ Still unsure?
 ## Recommended Sequence
 
 **Week 1: SAFE (3-4h)** ✅
+
 1. Phase 1 Commit 1: Constants + dead code
 2. Phase 1 Commit 2: Type safety (bulk)
 3. Run full test suite
 4. Update CHANGELOG
 
 **Week 2: RISKY (4-6h)** ⚠️
+
 1. Characterization tests for #10, #11, #14
 2. Performance baselines
 3. Phase 2 Commit 1-3 (error regex, branch cache, XML)
@@ -272,6 +295,7 @@ Still unsure?
 5. Update docs
 
 **Week 3-4: DANGEROUS (10-15h)** 🔴
+
 1. Plan exec/execBuffer extraction carefully
 2. Write comprehensive tests
 3. Implement in small commits (4-5 per extraction)
@@ -284,17 +308,20 @@ Still unsure?
 ## Key Insights from Codebase Analysis
 
 ### From LESSONS_LEARNED.md
+
 - Service extraction pattern: Multiple small extractions > one big refactor
 - TDD approach: Write 3 tests before implementation
 - Small commits: Enable easy review, revert, cherry-pick
 
 ### From ARCHITECTURE_ANALYSIS.md
+
 - Codebase matured through careful, incremental improvements
 - P0/P1 performance fixes completed (4-5x improvements)
 - Security sanitization 100% complete
 - Test coverage target: 50-55% ✅ REACHED
 
 ### Risk Patterns
+
 - Duplication extraction risky (behavior parity must be verified)
 - Performance optimizations need baseline + benchmarking
 - Security fixes need thorough testing (no regressions)
@@ -317,11 +344,13 @@ Still unsure?
 ## Final Recommendation
 
 **Implement in Phases**:
+
 1. **Phase 1 (Week 1)**: All SAFE refactorings → 100% confidence
 2. **Phase 2 (Week 2)**: RISKY refactorings with TDD → 85% confidence
 3. **Phase 3 (Week 3-4)**: DANGEROUS refactorings with planning → 70% confidence
 
 **Expected Impact**:
+
 - 100 lines of code removed (duplication)
 - 5-15% performance improvement (regex + cache optimizations)
 - 0 security vulnerabilities (all fixed)

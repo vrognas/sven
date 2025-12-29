@@ -11,6 +11,7 @@
 **Current State:** NO username validation exists. Usernames flow from UI input → memory → SVN command args without sanitization.
 
 **Risk Level:** MEDIUM
+
 - Main SVN commands use `cp.spawn()` without shell (mitigates shell injection)
 - But: No validation allows argument injection, newline injection, and edge cases
 - Username appears in credential cache filenames and SVN args
@@ -24,6 +25,7 @@
 ### 1.1 Entry Points (Where Usernames Come From)
 
 **Source 1: UI Input (Primary)**
+
 ```
 File: src/commands/promptAuth.ts:11-16
 Flow: window.showInputBox() → IAuth.username → return to caller
@@ -31,6 +33,7 @@ Validation: NONE
 ```
 
 **Source 2: Stored Credentials (SecretStorage)**
+
 ```
 File: src/services/authService.ts:103-105
 Flow: storage.load() → IStoredAuth.account → setCredentials()
@@ -38,6 +41,7 @@ Validation: NONE (trusted from VS Code SecretStorage)
 ```
 
 **Source 3: Previously Used Credentials**
+
 ```
 File: src/services/authService.ts:172-175
 Flow: storedAccounts[index].account → setCredentials()
@@ -47,6 +51,7 @@ Validation: NONE (cached from previous session)
 ### 1.2 Storage Locations (Where Usernames Are Stored)
 
 **Memory Storage:**
+
 ```
 File: src/svnRepository.ts
 Storage: Repository.username (string property)
@@ -55,6 +60,7 @@ Access: AuthService via getCredentials/setCredentials
 ```
 
 **Persistent Storage:**
+
 ```
 File: VS Code SecretStorage API
 Format: IStoredAuth { account: string, password: string }
@@ -63,6 +69,7 @@ Retrieval: authService.loadStoredCredentials()
 ```
 
 **Credential Cache Files:**
+
 ```
 File: ~/.subversion/auth/svn.simple/<MD5_HASH>
 Format: SVN K-V format
@@ -75,6 +82,7 @@ Username usage: Written to cache file content + used in hash computation
 ### 1.3 Username Usage (Where Usernames Are Used)
 
 **Usage 1: SVN Command Arguments**
+
 ```
 File: src/svn.ts:140-142, 364
 Code: args.push("--username", options.username);
@@ -84,10 +92,11 @@ Risk: Argument injection (if username starts with --)
 ```
 
 **Usage 2: Credential Cache File Creation**
+
 ```
 File: src/services/svnAuthCache.ts:44-48
 Code: writeCredential(username, password, realmUrl)
-Usage: 
+Usage:
   - Filename: MD5(realm) - username NOT in filename
   - File content: K-V format with username value
 Format: K 8\nusername\nV ${username.length}\n${username}\n
@@ -95,6 +104,7 @@ Risk: None (file content, not parsed as command)
 ```
 
 **Usage 3: Logging/Display**
+
 ```
 File: Multiple (error messages, status display)
 Risk: Information disclosure if username contains sensitive data
@@ -110,7 +120,9 @@ Mitigation: Error sanitization already implemented (v2.17.129)
 **Finding: LOW RISK (but not zero)**
 
 **Why Low Risk:**
+
 1. `cp.spawn()` used WITHOUT shell option
+
    ```typescript
    // src/svn.ts:191
    const process = cp.spawn(this.svnPath, args, defaults);
@@ -118,13 +130,14 @@ Mitigation: Error sanitization already implemented (v2.17.129)
    ```
 
 2. Arguments passed as array (not shell string)
+
    ```typescript
    // Safe pattern:
-   args = ["update", "--username", userInput, "--password", "..."]
-   cp.spawn("svn", args) // Each arg is separate process argument
-   
+   args = ["update", "--username", userInput, "--password", "..."];
+   cp.spawn("svn", args); // Each arg is separate process argument
+
    // NOT this (vulnerable):
-   cp.exec(`svn update --username ${userInput}`) // Shell interprets
+   cp.exec(`svn update --username ${userInput}`); // Shell interprets
    ```
 
 3. No shell metacharacter interpretation
@@ -136,7 +149,9 @@ Mitigation: Error sanitization already implemented (v2.17.129)
    ```
 
 **Why NOT Zero Risk:**
+
 1. Argument injection possible
+
    ```
    Username: "--config-option=dangerous=value"
    Result: args = ["--username", "--config-option=dangerous=value"]
@@ -144,6 +159,7 @@ Mitigation: Error sanitization already implemented (v2.17.129)
    ```
 
 2. Newline injection
+
    ```
    Username: "alice\n--password=stolen"
    Result: May break arg parsing depending on SVN implementation
@@ -161,12 +177,14 @@ Mitigation: Error sanitization already implemented (v2.17.129)
 **Result: ZERO VALIDATION**
 
 Files checked:
+
 - ✗ src/commands/promptAuth.ts - No validation on input
 - ✗ src/services/authService.ts - No validation on setCredentials
 - ✗ src/services/svnAuthCache.ts - No validation on writeCredential
 - ✗ src/svn.ts - No validation before args.push
 
 Search results:
+
 ```bash
 # No username validation found:
 grep -r "validate.*username" src/ → 0 results
@@ -175,6 +193,7 @@ grep -r "sanitize.*username" src/ → 0 results
 ```
 
 **Contrast with password handling:**
+
 - Password: Has sanitization in error logging (logError utility)
 - Username: No sanitization anywhere
 
@@ -189,9 +208,10 @@ grep -r "sanitize.*username" src/ → 0 results
 1. **No explicit character restrictions in SVN core**
    - SVN accepts any UTF-8 string as username
    - Repository admin can enforce restrictions
-   - Common practice: alphanumeric + @.-_
+   - Common practice: alphanumeric + @.-\_
 
 2. **Common patterns observed:**
+
    ```
    alice                  → Simple username
    alice@example.com      → Email-style username
@@ -204,7 +224,7 @@ grep -r "sanitize.*username" src/ → 0 results
 3. **Characters known to work:**
    - Letters: a-z, A-Z
    - Numbers: 0-9
-   - Special: @ . - _ (universally safe)
+   - Special: @ . - \_ (universally safe)
 
 4. **Characters that MAY cause issues:**
    - Whitespace: " " (works but unusual)
@@ -222,6 +242,7 @@ grep -r "sanitize.*username" src/ → 0 results
 ### 3.2 Real-World Username Patterns
 
 **Analysis of test usernames in codebase:**
+
 ```typescript
 // From src/test/unit/services/svnAuthCache.test.ts:
 "alice"              → Simple
@@ -230,6 +251,7 @@ grep -r "sanitize.*username" src/ → 0 results
 ```
 
 **Common enterprise patterns:**
+
 - Active Directory: `DOMAIN\username` or `username@domain.com`
 - LDAP: `cn=alice,ou=users,dc=example,dc=com` (rare for SVN)
 - Email: `alice@example.com`
@@ -242,6 +264,7 @@ grep -r "sanitize.*username" src/ → 0 results
 ### 4.1 Argument Injection Attack
 
 **Attack Vector:**
+
 ```typescript
 // Attacker enters username:
 "--config-option=servers:global:http-auth-types=none"
@@ -259,6 +282,7 @@ svn update \
 ```
 
 **Impact:**
+
 - SVN command fails (DoS)
 - SVN config options injected (security bypass)
 - Username validation bypassed
@@ -268,6 +292,7 @@ svn update \
 ### 4.2 Newline Injection Attack
 
 **Attack Vector:**
+
 ```typescript
 // Attacker enters username with embedded newline:
 "alice\n--password=attacker_password"
@@ -282,6 +307,7 @@ svn update \
 ```
 
 **Result:**
+
 ```
 SVN error: "No such user: alice<newline>--password=attacker_password"
 Command fails, no injection occurs
@@ -294,9 +320,10 @@ Command fails, no injection occurs
 ### 4.3 Filename Injection (Cache Files)
 
 **Attack Vector:**
+
 ```typescript
 // Attacker username:
-"../../.bashrc"
+"../../.bashrc";
 
 // Cache file creation:
 const realm = computeRealm(realmUrl); // "<https://svn.example.com> Auth Realm"
@@ -306,6 +333,7 @@ const filePath = path.join(this.cacheDir, hash);
 ```
 
 **Analysis:**
+
 - Username NOT used in filename calculation
 - Filename = MD5(realm) where realm = computed from URL
 - Path traversal not possible
@@ -315,6 +343,7 @@ const filePath = path.join(this.cacheDir, hash);
 ### 4.4 Content Injection (Cache Files)
 
 **Attack Vector:**
+
 ```typescript
 // Attacker username:
 "alice\nK 8\npassword\nV 6\nhacked\nEND\n"
@@ -342,6 +371,7 @@ END
 ```
 
 **SVN Parser Behavior:**
+
 ```python
 # SVN reads K-V format line by line:
 # 1. Read "K <length>"
@@ -360,6 +390,7 @@ END
 ```
 
 **Result:**
+
 ```
 Username stored: "alice\nK 8\npassword\nV 6\nhacked\nEND\n" (literal)
 SVN auth fails: "No such user" (username doesn't match server)
@@ -371,6 +402,7 @@ No injection occurs
 ### 4.5 icacls Shell Injection (Windows)
 
 **Attack Vector:**
+
 ```typescript
 // In svnAuthCache.ts:319-330:
 const username = process.env.USERNAME || process.env.USER || "%USERNAME%";
@@ -379,6 +411,7 @@ const proc = spawn("icacls", args, { shell: true });
 ```
 
 **Analysis:**
+
 - Uses SYSTEM username (process.env.USERNAME), NOT SVN username
 - SVN username never reaches this code path
 - System username controlled by OS, not attacker
@@ -401,6 +434,7 @@ const proc = spawn("icacls", args, { shell: true });
 **Strategy: Allowlist + Length + No-Leading-Dash**
 
 **Rationale:**
+
 - Allowlist: Only permit known-safe characters
 - Length: Prevent buffer overflows, filesystem limits
 - No leading dash: Prevent argument injection
@@ -410,19 +444,19 @@ const proc = spawn("icacls", args, { shell: true });
 ```typescript
 /**
  * Validate SVN username for security and compatibility
- * 
+ *
  * Allowed patterns:
  * - Alphanumeric: a-z A-Z 0-9
  * - Email-safe: @ . - _
  * - UTF-8 letters: \p{L} (Unicode letters)
  * - UTF-8 numbers: \p{N} (Unicode numbers)
- * 
+ *
  * Restrictions:
  * - Length: 1-255 characters
  * - No leading dash (prevents argument injection)
  * - No control characters (prevents newline injection)
  * - No null bytes (prevents C-string issues)
- * 
+ *
  * @param username - Username to validate
  * @returns true if valid, false otherwise
  * @throws Error with descriptive message if invalid
@@ -458,7 +492,7 @@ function validateUsername(username: string): boolean {
   //   $                   - End of string
   //   u flag              - Unicode mode
   const allowedPattern = /^[a-zA-Z0-9@._\-\p{L}\p{N}]+$/u;
-  
+
   if (!allowedPattern.test(username)) {
     throw new Error(
       "Username can only contain letters, numbers, and @.-_ characters"
@@ -481,6 +515,7 @@ try {
 ### 5.3 Alternative Patterns (Trade-offs)
 
 **Option A: Strict ASCII-only (More Secure, Less Compatible)**
+
 ```typescript
 // Pattern: Only a-zA-Z0-9@.-_
 const pattern = /^[a-zA-Z0-9@._\-]+$/;
@@ -496,6 +531,7 @@ Cons:
 ```
 
 **Option B: Relaxed (More Compatible, Less Secure)**
+
 ```typescript
 // Pattern: Block only dangerous chars
 const dangerousPattern = /[\x00-\x1F\x7F;|&$`()<>\\'"]/;
@@ -514,6 +550,7 @@ Cons:
 ```
 
 **Option C: SVN-Specific (Query SVN for Allowed Chars)**
+
 ```typescript
 // No validation - let SVN reject
 // Rely on SVN's own username parsing
@@ -529,6 +566,7 @@ Cons:
 ```
 
 **Recommendation: Use Option (Recommended Pattern)**
+
 - Good security/compatibility balance
 - Blocks known attack vectors
 - Accepts international usernames
@@ -539,10 +577,11 @@ Cons:
 **Validation Points (in order of execution):**
 
 1. **UI Input (promptAuth.ts)** ✅ RECOMMENDED
+
    ```typescript
    const username = await window.showInputBox({
      placeHolder: "SVN username",
-     validateInput: (value) => {
+     validateInput: value => {
        try {
          validateUsername(value);
          return null; // Valid
@@ -552,11 +591,12 @@ Cons:
      }
    });
    ```
-   
+
    **Pros:** Immediate user feedback, prevents bad input early
    **Cons:** Doesn't validate stored/cached credentials
 
 2. **AuthService.setCredentials()** ✅ RECOMMENDED
+
    ```typescript
    public setCredentials(auth: IAuth | null): void {
      if (auth) {
@@ -565,33 +605,36 @@ Cons:
      }
    }
    ```
-   
+
    **Pros:** Validates ALL username sources (UI, cache, storage)
    **Cons:** May reject previously-valid stored credentials
 
 3. **SvnAuthCache.writeCredential()** ⚠️ OPTIONAL
+
    ```typescript
    async writeCredential(username: string, password: string, realmUrl: string) {
      validateUsername(username);
      // ... rest of function
    }
    ```
-   
+
    **Pros:** Defense in depth
    **Cons:** Redundant if validated earlier
 
 4. **Svn.exec()** ❌ NOT RECOMMENDED
+
    ```typescript
    if (options.username) {
      validateUsername(options.username);
      args.push("--username", options.username);
    }
    ```
-   
+
    **Pros:** Last line of defense
    **Cons:** Too late, poor error UX, performance overhead
 
 **Recommendation:**
+
 - Validate at UI input (immediate feedback)
 - Validate at AuthService.setCredentials (catch all sources)
 - Skip validation at execution layer (performance)
@@ -627,9 +670,7 @@ export function validateUsername(username: string): void {
   }
 
   if (username.startsWith("-")) {
-    throw new UsernameValidationError(
-      "Username cannot start with dash (-)"
-    );
+    throw new UsernameValidationError("Username cannot start with dash (-)");
   }
 
   if (/[\x00-\x1F\x7F]/.test(username)) {
@@ -684,7 +725,7 @@ public async execute(prevUsername?: string, prevPassword?: string) {
       }
     }
   });
-  
+
   if (username === undefined) {
     return; // User cancelled
   }
@@ -721,7 +762,7 @@ public setCredentials(auth: IAuth | null): void {
       }
       throw err;
     }
-    
+
     this.svnRepository.username = auth.username;
     this.svnRepository.password = auth.password;
   }
@@ -734,7 +775,11 @@ public setCredentials(auth: IAuth | null): void {
 
 ```typescript
 import * as assert from "assert";
-import { validateUsername, UsernameValidationError, isValidUsername } from "../../../util/usernameValidator";
+import {
+  validateUsername,
+  UsernameValidationError,
+  isValidUsername
+} from "../../../util/usernameValidator";
 
 suite("Username Validator", () => {
   suite("Valid usernames", () => {
@@ -770,10 +815,7 @@ suite("Username Validator", () => {
 
   suite("Invalid usernames", () => {
     test("should reject empty username", () => {
-      assert.throws(
-        () => validateUsername(""),
-        UsernameValidationError
-      );
+      assert.throws(() => validateUsername(""), UsernameValidationError);
     });
 
     test("should reject null username", () => {
@@ -784,10 +826,7 @@ suite("Username Validator", () => {
     });
 
     test("should reject username starting with dash", () => {
-      assert.throws(
-        () => validateUsername("-alice"),
-        /cannot start with dash/
-      );
+      assert.throws(() => validateUsername("-alice"), /cannot start with dash/);
     });
 
     test("should reject username with newline", () => {
@@ -813,10 +852,7 @@ suite("Username Validator", () => {
 
     test("should reject username over 255 chars", () => {
       const tooLong = "a".repeat(256);
-      assert.throws(
-        () => validateUsername(tooLong),
-        /1-255 characters/
-      );
+      assert.throws(() => validateUsername(tooLong), /1-255 characters/);
     });
 
     test("should reject username with pipe", () => {
@@ -890,8 +926,21 @@ suite("Username Injection Prevention", () => {
   });
 
   suite("Shell metacharacter injection", () => {
-    const shellChars = [";", "|", "&", "$", "`", "(", ")", "<", ">", "\\", "'", '"'];
-    
+    const shellChars = [
+      ";",
+      "|",
+      "&",
+      "$",
+      "`",
+      "(",
+      ")",
+      "<",
+      ">",
+      "\\",
+      "'",
+      '"'
+    ];
+
     shellChars.forEach(char => {
       test(`should reject shell metacharacter: ${char}`, () => {
         const payload = `alice${char}malicious`;
@@ -923,7 +972,7 @@ suite("Username Injection Prevention", () => {
 
 4. **SVN Username Spec:**
    - No official restrictions
-   - Common: alphanumeric + @.-_
+   - Common: alphanumeric + @.-\_
    - Enterprise: email, AD usernames
 
 ### Recommended Validation Strategy
@@ -938,11 +987,13 @@ const pattern = /^[a-zA-Z0-9@._\-\p{L}\p{N}]+$/u;
 ```
 
 **Validation Points:**
+
 1. ✅ UI input (promptAuth.ts) - Immediate feedback
 2. ✅ AuthService.setCredentials() - Catch all sources
 3. ❌ Svn.exec() - Skip (performance, late)
 
 **Implementation Effort:** 2-3 hours
+
 - 30 min: Create validator utility
 - 30 min: Apply to UI + AuthService
 - 60 min: Write comprehensive tests
@@ -951,6 +1002,7 @@ const pattern = /^[a-zA-Z0-9@._\-\p{L}\p{N}]+$/u;
 ### Action Items
 
 **Priority P0 (Security):**
+
 - [ ] Create username validator utility
 - [ ] Apply validation to promptAuth.ts
 - [ ] Apply validation to AuthService.setCredentials
@@ -958,12 +1010,14 @@ const pattern = /^[a-zA-Z0-9@._\-\p{L}\p{N}]+$/u;
 - [ ] Add security tests (injection prevention)
 
 **Priority P1 (Documentation):**
+
 - [ ] Document username format in README
 - [ ] Add validation section to SECURITY.md
 - [ ] Update CHANGELOG with security fix
 - [ ] Add code comments explaining validation
 
 **Priority P2 (Monitoring):**
+
 - [ ] Log rejected usernames (sanitized)
 - [ ] Track validation failures (metrics)
 - [ ] Review rejected patterns quarterly

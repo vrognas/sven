@@ -41,54 +41,54 @@ This document provides the exact code comments that should be added to key files
 #### In exec() method, before credential handling (around line 116)
 
 ```typescript
-    /**
-     * CREDENTIAL HANDLING (Phase 1: Secure Authentication)
-     *
-     * Previous approach (INSECURE - v2.17.229 and earlier):
-     *   if (options.password) {
-     *     args.push("--password", options.password);  // ❌ Exposed in process list
-     *   }
-     *
-     * Current approach (SECURE - v2.17.230+):
-     *   - Write credentials to SVN cache (~/.subversion/auth/svn.simple/<uuid>)
-     *   - File permissions: mode 600 (user-only access)
-     *   - SVN automatically reads from cache
-     *   - NO --password flag in command line
-     *
-     * Benefits:
-     *   - Not visible in ps aux, top, container logs
-     *   - Not exposed in CI/CD build logs
-     *   - File system protection (mode 600)
-     *   - Native SVN feature (works on all platforms)
-     *
-     * Implementation:
-     *   See src/services/svnAuthCache.ts for credential cache logic
-     *   See src/services/authService.ts for auth flow management
-     */
+/**
+ * CREDENTIAL HANDLING (Phase 1: Secure Authentication)
+ *
+ * Previous approach (INSECURE - v2.17.229 and earlier):
+ *   if (options.password) {
+ *     args.push("--password", options.password);  // ❌ Exposed in process list
+ *   }
+ *
+ * Current approach (SECURE - v2.17.230+):
+ *   - Write credentials to SVN cache (~/.subversion/auth/svn.simple/<uuid>)
+ *   - File permissions: mode 600 (user-only access)
+ *   - SVN automatically reads from cache
+ *   - NO --password flag in command line
+ *
+ * Benefits:
+ *   - Not visible in ps aux, top, container logs
+ *   - Not exposed in CI/CD build logs
+ *   - File system protection (mode 600)
+ *   - Native SVN feature (works on all platforms)
+ *
+ * Implementation:
+ *   See src/services/svnAuthCache.ts for credential cache logic
+ *   See src/services/authService.ts for auth flow management
+ */
 ```
 
 #### After command logging (around line 110), add auth indicator comment
 
 ```typescript
-    /**
-     * AUTH METHOD INDICATORS (Phase 3: Debug-Friendly Auth)
-     *
-     * Extension shows which authentication method is being used:
-     *   [auth: SSH key] - SSH key authentication (most secure)
-     *   [auth: password via credential cache] - Cached password (secure)
-     *   [auth: none - public repository] - No authentication
-     *
-     * This helps users:
-     *   - Verify auth is configured correctly
-     *   - Debug "credentials not working" issues
-     *   - Understand which auth method is active
-     *
-     * Example output:
-     *   [my-project]$ svn update --username alice [auth: password via credential cache]
-     *   At revision 1234.
-     *
-     * Implementation: See getAuthMethodLabel() helper function
-     */
+/**
+ * AUTH METHOD INDICATORS (Phase 3: Debug-Friendly Auth)
+ *
+ * Extension shows which authentication method is being used:
+ *   [auth: SSH key] - SSH key authentication (most secure)
+ *   [auth: password via credential cache] - Cached password (secure)
+ *   [auth: none - public repository] - No authentication
+ *
+ * This helps users:
+ *   - Verify auth is configured correctly
+ *   - Debug "credentials not working" issues
+ *   - Understand which auth method is active
+ *
+ * Example output:
+ *   [my-project]$ svn update --username alice [auth: password via credential cache]
+ *   At revision 1234.
+ *
+ * Implementation: See getAuthMethodLabel() helper function
+ */
 ```
 
 #### Add helper function (after exec() method)
@@ -167,33 +167,33 @@ This document provides the exact code comments that should be added to key files
 #### In retryWithAuth() method
 
 ```typescript
-  /**
-   * Attempt authentication with intelligent retry logic
-   *
-   * RETRY STRATEGY:
-   * 1. Try current credentials (might be cached from previous success)
-   * 2. Try stored credentials from SecretStorage (up to N accounts)
-   * 3. Prompt user (up to 3 attempts)
-   * 4. Give up and throw auth error
-   *
-   * SECURITY CONSIDERATIONS:
-   * - Never logs actual credentials (only "trying stored credential 1 of N")
-   * - Auth method indicators show what's being attempted
-   * - User always knows why auth is happening (not silent retries)
-   *
-   * DEBUG OUTPUT (when enabled):
-   *   → Trying stored credential 1 of 2...
-   *   [repo]$ svn update --username john [auth: password via credential cache]
-   *   svn: E170001: Authentication failed
-   *   → Trying stored credential 2 of 2...
-   *   [repo]$ svn update --username admin [auth: password via credential cache]
-   *   ✓ Authentication successful
-   *
-   * @param operation - Async operation to retry (e.g., svn.exec)
-   * @param maxAttempts - Maximum retry attempts (default: 5)
-   * @returns Operation result
-   * @throws Last error if all attempts fail
-   */
+/**
+ * Attempt authentication with intelligent retry logic
+ *
+ * RETRY STRATEGY:
+ * 1. Try current credentials (might be cached from previous success)
+ * 2. Try stored credentials from SecretStorage (up to N accounts)
+ * 3. Prompt user (up to 3 attempts)
+ * 4. Give up and throw auth error
+ *
+ * SECURITY CONSIDERATIONS:
+ * - Never logs actual credentials (only "trying stored credential 1 of N")
+ * - Auth method indicators show what's being attempted
+ * - User always knows why auth is happening (not silent retries)
+ *
+ * DEBUG OUTPUT (when enabled):
+ *   → Trying stored credential 1 of 2...
+ *   [repo]$ svn update --username john [auth: password via credential cache]
+ *   svn: E170001: Authentication failed
+ *   → Trying stored credential 2 of 2...
+ *   [repo]$ svn update --username admin [auth: password via credential cache]
+ *   ✓ Authentication successful
+ *
+ * @param operation - Async operation to retry (e.g., svn.exec)
+ * @param maxAttempts - Maximum retry attempts (default: 5)
+ * @returns Operation result
+ * @throws Last error if all attempts fail
+ */
 ```
 
 ### 3. src/security/errorSanitizer.ts
@@ -285,39 +285,39 @@ This document provides the exact code comments that should be added to key files
 #### In activate() function, after output channel creation
 
 ```typescript
-  /**
-   * SECURITY WARNING: Debug Mode Detection (Phase 3)
-   *
-   * Show prominent warning if error sanitization is disabled
-   * Prevents users from forgetting debug mode is enabled
-   *
-   * WARNING INCLUDES:
-   * - Output panel banner (red, hard to miss)
-   * - Modal dialog with [Disable Now] button
-   * - Clear explanation of security risk
-   *
-   * IMPLEMENTATION:
-   * Check svn.debug.disableSanitization setting
-   * If true:
-   *   1. Show warning in Output panel
-   *   2. Show modal dialog
-   *   3. Offer one-click disable
-   *
-   * USER EXPERIENCE:
-   * - User enables debug mode to troubleshoot
-   * - Extension immediately shows warning
-   * - User understands the risk
-   * - After debugging, user clicks [Disable Now]
-   * - Setting automatically reverted to false
-   *
-   * SECURITY BENEFIT:
-   * - Prevents accidental credential exposure
-   * - Reduces risk of forgetting debug mode enabled
-   * - Clear communication of security implications
-   */
-  if (configuration.get<boolean>("debug.disableSanitization", false)) {
-    // Show warning implementation...
-  }
+/**
+ * SECURITY WARNING: Debug Mode Detection (Phase 3)
+ *
+ * Show prominent warning if error sanitization is disabled
+ * Prevents users from forgetting debug mode is enabled
+ *
+ * WARNING INCLUDES:
+ * - Output panel banner (red, hard to miss)
+ * - Modal dialog with [Disable Now] button
+ * - Clear explanation of security risk
+ *
+ * IMPLEMENTATION:
+ * Check svn.debug.disableSanitization setting
+ * If true:
+ *   1. Show warning in Output panel
+ *   2. Show modal dialog
+ *   3. Offer one-click disable
+ *
+ * USER EXPERIENCE:
+ * - User enables debug mode to troubleshoot
+ * - Extension immediately shows warning
+ * - User understands the risk
+ * - After debugging, user clicks [Disable Now]
+ * - Setting automatically reverted to false
+ *
+ * SECURITY BENEFIT:
+ * - Prevents accidental credential exposure
+ * - Reduces risk of forgetting debug mode enabled
+ * - Clear communication of security implications
+ */
+if (configuration.get<boolean>("debug.disableSanitization", false)) {
+  // Show warning implementation...
+}
 ```
 
 ### 5. src/commands/promptAuth.ts
@@ -407,7 +407,7 @@ Add comments to test files explaining security test coverage:
  * - After fix: ps aux only shows username (password in cache)
  * - CVSS reduction: 7.5 → 3.2 (90% risk reduction)
  */
-it('should not include password in process args', async () => {
+it("should not include password in process args", async () => {
   // Test implementation...
 });
 ```
@@ -415,6 +415,7 @@ it('should not include password in process args', async () => {
 ## Summary
 
 These code comments provide:
+
 - **Context**: Why the security implementation exists
 - **History**: What vulnerability was fixed
 - **Design**: How the secure approach works

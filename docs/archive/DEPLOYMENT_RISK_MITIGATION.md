@@ -30,6 +30,7 @@ git log -1  # Verify target commit for reference
 ### Phase-Specific Pre-Deployment
 
 **Before Week 1 Deployment:**
+
 ```bash
 # Ensure SVN is available for testing
 which svn  # Should find SVN executable
@@ -40,6 +41,7 @@ npm test -- --grep "svn.*(discover|find|path)"  # SVN finder tests
 ```
 
 **Before Week 2 Refactoring:**
+
 ```bash
 # Ensure test infrastructure is solid
 npm test  # All 65+ tests passing
@@ -54,6 +56,7 @@ time npm test  # Execution time baseline
 ## Phase 1: P0 Critical (Week 1)
 
 ### Items to Deploy
+
 1. Command injection fix (svnFinder.ts)
 2. Password exposure documentation
 3. semantic-release downgrade
@@ -62,6 +65,7 @@ time npm test  # Execution time baseline
 ### Pre-Deployment
 
 **✓ Validation Steps:**
+
 ```bash
 # 1. Verify no test regressions
 npm test  # All tests must pass
@@ -120,12 +124,14 @@ git push -u origin fix/p0-critical-week1
 ### Post-Deployment Monitoring (24-48 hours)
 
 **✓ Success Criteria:**
+
 - All 65+ tests continue passing
 - No error rate increase in logs
 - SVN commands execute successfully
 - No user-reported issues
 
 **Monitoring Commands:**
+
 ```bash
 # Check for runtime errors
 npm test  # Re-run full suite in deployed environment
@@ -163,11 +169,13 @@ npm run build  # Verify build succeeds
 ## Phase 2: Test Infrastructure (Week 1-2)
 
 ### Item to Deploy
+
 1. Adopt Sinon stub pattern (#20)
 
 ### Why This Phase is Critical
 
 **Sinon pattern adoption is a PREREQUISITE for:**
+
 - Complex refactoring (exec/show extraction)
 - New test additions
 - Preventing test pollution
@@ -213,12 +221,14 @@ npm test -- --reporter json > test-results.json  # Record baseline
 ### Post-Deployment Monitoring
 
 **✓ Success Criteria:**
+
 - All 65+ tests passing
 - No increase in test execution time
 - No test pollution (tests independent)
 - Test teardown happening correctly
 
 **Verification Steps:**
+
 ```bash
 # Run tests multiple times - should always pass
 npm test
@@ -250,6 +260,7 @@ git push origin
 ## Phase 3: Core Refactoring (Week 2)
 
 ### Items to Deploy (SEQUENTIAL)
+
 1. Strengthen weak assertions (#22)
 2. Extract exec/execBuffer (#5)
 3. Extract show/showBuffer (#6)
@@ -257,6 +268,7 @@ git push origin
 ### Critical Prerequisites
 
 **MUST be complete before refactoring:**
+
 ```bash
 # ✓ Sinon pattern adopted
 npm test -- --grep "command"  # Verify Sinon usage
@@ -323,6 +335,7 @@ git push -u origin refactor/extract-exec-logic
 ### Post-Deployment Monitoring: exec/execBuffer
 
 **Critical Monitoring (48 hours):**
+
 ```bash
 # Day 1:
 # - Monitor all SVN command executions
@@ -362,6 +375,7 @@ git push origin
 ### Pre-Deployment: show/showBuffer Extraction
 
 **Prerequisites:**
+
 ```bash
 # ✓ exec/execBuffer stable for 24+ hours
 # ✓ All tests passing
@@ -411,6 +425,7 @@ git push origin
 ## Phase 4: Type Safety & Error Handling (Week 2)
 
 ### Items to Deploy
+
 1. Type annotations (#15-19)
 2. Error handling improvements (#31-35)
 
@@ -489,6 +504,7 @@ git push origin
 ## Phase 5: Test Additions (Week 3-4)
 
 ### Items to Deploy
+
 1. Sinon pattern in test suite (#20) - PREREQUISITE
 2. Parser error tests (#21)
 3. Strengthen assertions (#22)
@@ -560,6 +576,7 @@ git revert <test-addition-commits>
 ## Phase 6: Documentation (Week 3-4)
 
 ### Items to Deploy
+
 1. CONTRIBUTING.md (#26)
 2. Developer Setup Guide (#27)
 3. JSDoc public APIs (#28)
@@ -625,6 +642,7 @@ git revert <documentation-commits>
 **Action Items (in order):**
 
 1. **Immediate Stop** (within 5 minutes)
+
    ```bash
    # Identify issue
    # Notify team
@@ -635,6 +653,7 @@ git revert <documentation-commits>
    ```
 
 2. **Revert Recent Changes** (5-15 minutes)
+
    ```bash
    # Find problematic commit
    git log --oneline -10
@@ -658,12 +677,12 @@ git revert <documentation-commits>
 
 ## Phased Rollback Strategy
 
-| Issue Severity | Response Time | Rollback Type | Risk |
-|---------------|---------------|--------------|------|
-| Critical (app broken) | 5 min | Single commit revert | None |
-| High (major regression) | 15 min | Revert to stable commit | Low |
-| Medium (feature broken) | 30 min | Selective revert | Low |
-| Low (minor issue) | Next sprint | Fix forward | N/A |
+| Issue Severity          | Response Time | Rollback Type           | Risk |
+| ----------------------- | ------------- | ----------------------- | ---- |
+| Critical (app broken)   | 5 min         | Single commit revert    | None |
+| High (major regression) | 15 min        | Revert to stable commit | Low  |
+| Medium (feature broken) | 30 min        | Selective revert        | Low  |
+| Low (minor issue)       | Next sprint   | Fix forward             | N/A  |
 
 ---
 
@@ -702,13 +721,13 @@ After any rollback, verify:
 
 ### Real-Time Metrics (Post-Deployment)
 
-| Metric | Normal Range | Alert Threshold | Action |
-|--------|--------------|-----------------|--------|
-| Test Pass Rate | 100% | <95% | STOP, investigate |
-| Build Success Rate | 100% | <100% | STOP, investigate |
-| Error Log Rate | Baseline | +50% | INVESTIGATE |
-| Command Latency | Baseline | +20% | MONITOR |
-| Memory Usage | Baseline | +30% | MONITOR |
+| Metric             | Normal Range | Alert Threshold | Action            |
+| ------------------ | ------------ | --------------- | ----------------- |
+| Test Pass Rate     | 100%         | <95%            | STOP, investigate |
+| Build Success Rate | 100%         | <100%           | STOP, investigate |
+| Error Log Rate     | Baseline     | +50%            | INVESTIGATE       |
+| Command Latency    | Baseline     | +20%            | MONITOR           |
+| Memory Usage       | Baseline     | +30%            | MONITOR           |
 
 ### Weekly Metrics Review
 
@@ -779,6 +798,7 @@ Remediation Plan: [Planned timeline]
 # Success Criteria by Phase
 
 ## Phase 1: P0 Critical
+
 - [ ] All tests passing (100%)
 - [ ] SVN discovery verified working
 - [ ] No performance regression
@@ -786,6 +806,7 @@ Remediation Plan: [Planned timeline]
 - [ ] 24 hours monitoring complete with no issues
 
 ## Phase 2: Test Infrastructure
+
 - [ ] Sinon pattern adopted across test suite
 - [ ] No test pollution detected
 - [ ] All tests still passing
@@ -793,6 +814,7 @@ Remediation Plan: [Planned timeline]
 - [ ] 24 hours monitoring complete with no issues
 
 ## Phase 3: Core Refactoring
+
 - [ ] exec/execBuffer extraction passing all tests
 - [ ] show/showBuffer extraction passing all tests
 - [ ] No command latency regression
@@ -800,6 +822,7 @@ Remediation Plan: [Planned timeline]
 - [ ] 48 hours monitoring complete with no issues
 
 ## Phase 4: Type Safety & Error Handling
+
 - [ ] TypeScript compilation clean
 - [ ] All tests passing
 - [ ] Better error logging
@@ -807,6 +830,7 @@ Remediation Plan: [Planned timeline]
 - [ ] 24 hours monitoring complete with no issues
 
 ## Phase 5: Test Additions
+
 - [ ] New tests passing
 - [ ] Coverage increased (target: 70%+)
 - [ ] No test pollution
@@ -814,6 +838,7 @@ Remediation Plan: [Planned timeline]
 - [ ] 24 hours monitoring complete with no issues
 
 ## Phase 6: Documentation
+
 - [ ] All documentation files created
 - [ ] Links verified working
 - [ ] Code examples accurate

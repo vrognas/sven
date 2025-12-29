@@ -10,6 +10,7 @@
 ## Problem Statement
 
 **Current vulnerability:** Passwords passed via `--password` flag visible in:
+
 - Process listings (`ps aux`)
 - System audit logs (auditd)
 - Container logs (docker/kubectl)
@@ -17,12 +18,14 @@
 - Monitoring tools (Datadog, New Relic)
 
 **Example exposure:**
+
 ```bash
 $ ps aux | grep svn
 user 12345 svn update --password "MySecretPassword123"
 ```
 
 **Impact:**
+
 - Any user on system can see password (2-30 second window)
 - Logs persist forever (audit trails, container logs)
 - High risk in: shared dev servers, CI/CD, Kubernetes
@@ -34,14 +37,17 @@ user 12345 svn update --password "MySecretPassword123"
 **3-Tier Implementation Strategy:**
 
 ### Tier 1: Documentation (1 hour) - IMMEDIATE
+
 - Warn about current risks
 - Recommend SSH keys for svn+ssh://
 - Document secure practices
 
 ### Tier 2: SVN Credential Cache (3-4 hours) - NEXT SPRINT ⭐
+
 **RECOMMENDED FOR v2.17.231**
 
 **How it works:**
+
 1. User enters password in VS Code UI
 2. Extension writes to `~/.subversion/auth/svn.simple/<uuid>` (mode 600)
 3. SVN command executed WITHOUT --password flag
@@ -49,6 +55,7 @@ user 12345 svn update --password "MySecretPassword123"
 5. ✅ No process exposure
 
 **Benefits:**
+
 - Eliminates command-line exposure
 - Uses native SVN feature (no custom code)
 - Works on all platforms (Linux/macOS/Windows)
@@ -56,6 +63,7 @@ user 12345 svn update --password "MySecretPassword123"
 - 90% risk reduction
 
 **Implementation:**
+
 ```typescript
 // NEW: Write to cache
 if (options.password && options.username) {
@@ -69,12 +77,15 @@ if (options.password && options.username) {
 ```
 
 **Files to create:**
+
 - `src/services/svnAuthCache.ts` (~100 lines)
 
 **Files to modify:**
+
 - `src/svn.ts` (remove --password, add cache call)
 
 ### Tier 3: SecretStorage Integration (6-8 hours) - FUTURE
+
 - Store password in OS keychain (encrypted)
 - Auto-sync to SVN cache
 - Best security, most complex
@@ -83,12 +94,12 @@ if (options.password && options.username) {
 
 ## Security Comparison
 
-| Method | Process Exposure | Storage | CVSS Score | Effort |
-|--------|-----------------|---------|------------|--------|
-| **Current (--password)** | ❌ VISIBLE | N/A | **7.5 HIGH** | N/A |
-| **Tier 2 (SVN Cache)** | ✅ HIDDEN | Plaintext (600) | **3.2 LOW** | 3-4 hrs |
-| **Tier 3 (SecretStorage)** | ✅ HIDDEN | Encrypted | **2.1 LOW** | 6-8 hrs |
-| **SSH Keys** | ✅ HIDDEN | Encrypted | **1.5 LOW** | 0 hrs* |
+| Method                     | Process Exposure | Storage         | CVSS Score   | Effort  |
+| -------------------------- | ---------------- | --------------- | ------------ | ------- |
+| **Current (--password)**   | ❌ VISIBLE       | N/A             | **7.5 HIGH** | N/A     |
+| **Tier 2 (SVN Cache)**     | ✅ HIDDEN        | Plaintext (600) | **3.2 LOW**  | 3-4 hrs |
+| **Tier 3 (SecretStorage)** | ✅ HIDDEN        | Encrypted       | **2.1 LOW**  | 6-8 hrs |
+| **SSH Keys**               | ✅ HIDDEN        | Encrypted       | **1.5 LOW**  | 0 hrs\* |
 
 \* User setup, not code change
 
@@ -97,6 +108,7 @@ if (options.password && options.username) {
 ## Attack Surface Analysis
 
 ### Before Fix
+
 ```
 User on shared system:
   ps aux | grep svn
@@ -112,6 +124,7 @@ Container environment:
 ```
 
 ### After Tier 2 Fix
+
 ```
 User on shared system:
   ps aux | grep svn
@@ -168,6 +181,7 @@ Container environment:
 ## Implementation Plan
 
 **Step 1: Create SvnAuthCache service (1 hour)**
+
 ```typescript
 class SvnAuthCache {
   async writeCredential(username: string, password: string, realmUrl: string) {
@@ -180,21 +194,25 @@ class SvnAuthCache {
 ```
 
 **Step 2: Modify Svn.exec() (30 min)**
+
 - Remove: `args.push("--password", options.password)`
 - Add: `await authCache.writeCredential(...)`
 - Remove credential store disabling flags
 
 **Step 3: Add unit tests (1 hour)**
+
 - Test cache file creation
 - Test file permissions
 - Test SVN format correctness
 
 **Step 4: Integration testing (30 min)**
+
 - Verify no --password in ps output
 - Verify SVN operations work
 - Test all platforms
 
 **Step 5: Documentation (30 min)**
+
 - Update README.md
 - Create SECURITY.md
 - Update CHANGELOG.md
@@ -206,6 +224,7 @@ class SvnAuthCache {
 ## Testing Verification
 
 **Security test (most important):**
+
 ```bash
 # Terminal 1: Run SVN operation via VS Code
 svn update
@@ -221,14 +240,15 @@ ls ~/.subversion/auth/svn.simple/
 ```
 
 **Functional tests:**
+
 ```typescript
-it('should not include password in process args', async () => {
-  const spawnSpy = sinon.spy(cp, 'spawn');
-  await svn.exec('/repo', ['update'], { password: 'secret' });
+it("should not include password in process args", async () => {
+  const spawnSpy = sinon.spy(cp, "spawn");
+  await svn.exec("/repo", ["update"], { password: "secret" });
 
   const args = spawnSpy.lastCall.args[1];
-  expect(args.join(' ')).not.toContain('secret');
-  expect(args).not.toContain('--password');
+  expect(args.join(" ")).not.toContain("secret");
+  expect(args).not.toContain("--password");
 });
 ```
 
@@ -237,17 +257,20 @@ it('should not include password in process args', async () => {
 ## Migration & Compatibility
 
 **Breaking changes:** NONE
+
 - Existing auth flow unchanged (UI prompt)
 - Password storage location different (VS Code → SVN cache)
 - All SVN versions supported (1.6+)
 - All platforms supported (Linux/macOS/Windows)
 
 **Rollback plan:**
+
 - Keep --password code as fallback
 - Add config option: `svn.auth.legacyMode`
 - Single git revert if issues
 
 **User migration:**
+
 - Automatic (transparent)
 - First auth after upgrade writes to new location
 - Old cached credentials still work
@@ -258,23 +281,23 @@ it('should not include password in process args', async () => {
 
 ### Current Risk: HIGH
 
-| Factor | Assessment |
-|--------|-----------|
-| Exploitability | EASY (ps command) |
-| Attack Surface | HIGH (all users + logs) |
-| Impact | HIGH (credential theft) |
-| Likelihood | MEDIUM (requires timing or logs) |
-| **CVSS Score** | **7.5 HIGH** |
+| Factor         | Assessment                       |
+| -------------- | -------------------------------- |
+| Exploitability | EASY (ps command)                |
+| Attack Surface | HIGH (all users + logs)          |
+| Impact         | HIGH (credential theft)          |
+| Likelihood     | MEDIUM (requires timing or logs) |
+| **CVSS Score** | **7.5 HIGH**                     |
 
 ### After Tier 2: LOW
 
-| Factor | Assessment |
-|--------|-----------|
+| Factor         | Assessment                  |
+| -------------- | --------------------------- |
 | Exploitability | HARD (file access required) |
-| Attack Surface | LOW (file system only) |
-| Impact | MEDIUM (file read needed) |
-| Likelihood | LOW (requires escalation) |
-| **CVSS Score** | **3.2 LOW** |
+| Attack Surface | LOW (file system only)      |
+| Impact         | MEDIUM (file read needed)   |
+| Likelihood     | LOW (requires escalation)   |
+| **CVSS Score** | **3.2 LOW**                 |
 
 **Risk Reduction: 90%** (7.5 → 3.2)
 
@@ -283,12 +306,14 @@ it('should not include password in process args', async () => {
 ## Approval Checklist
 
 Before implementing:
+
 - [ ] Security team review of design
 - [ ] Product team approval (UX impact)
 - [ ] Platform testing plan confirmed
 - [ ] Rollback plan documented
 
 Before release:
+
 - [ ] All tests passing
 - [ ] Manual security verification (ps check)
 - [ ] Documentation updated
@@ -321,6 +346,7 @@ A: Minimal. Cache write adds ~5ms (one file write). Cache read by SVN is same as
 **IMPLEMENT TIER 2 FOR v2.17.231**
 
 **Rationale:**
+
 - 90% risk reduction (7.5 → 3.2 CVSS)
 - Low implementation effort (3-4 hours)
 - Zero breaking changes
@@ -329,6 +355,7 @@ A: Minimal. Cache write adds ~5ms (one file write). Cache read by SVN is same as
 - Easy to rollback if issues
 
 **Timeline:**
+
 - Analysis: ✅ Complete
 - Implementation: 3-4 hours
 - Testing: 1 hour
@@ -336,6 +363,7 @@ A: Minimal. Cache write adds ~5ms (one file write). Cache read by SVN is same as
 - Total: 1 working day
 
 **Next steps:**
+
 1. Get security team approval
 2. Implement Tier 2 in next sprint
 3. Plan Tier 3 for future hardening

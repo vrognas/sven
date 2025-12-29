@@ -22,6 +22,7 @@ const name = this.lastCwd.split(/[\\\/]+/).pop(); // Line 387
 ```
 
 **AFTER**:
+
 ```typescript
 // At module level (after imports, line 46)
 const SEPARATOR_PATTERN = /[\\\/]+/;
@@ -31,6 +32,7 @@ const name = this.lastCwd.split(SEPARATOR_PATTERN).pop();
 ```
 
 **Verification Checklist**:
+
 - [ ] Constant added at module level
 - [ ] All occurrences replaced with constant reference
 - [ ] No behavior change (same regex, same matching)
@@ -39,6 +41,7 @@ const name = this.lastCwd.split(SEPARATOR_PATTERN).pop();
 - [ ] No performance regression (regex compiled once now)
 
 **Rollback Command**:
+
 ```bash
 git revert <commit-sha>
 ```
@@ -70,6 +73,7 @@ constructor(...) {
 ```
 
 **AFTER**:
+
 ```typescript
 constructor(...) {
   if (!path) {
@@ -80,6 +84,7 @@ constructor(...) {
 ```
 
 **Verification Checklist**:
+
 - [ ] Confirm code is truly unreachable (trace control flow)
 - [ ] No references to removed code exist (grep -r)
 - [ ] All tests pass (validates no hidden dependencies)
@@ -87,6 +92,7 @@ constructor(...) {
 - [ ] Git diff shows only deletions, no modifications
 
 **Rollback Command**:
+
 ```bash
 git show <commit-sha> | git apply -R
 ```
@@ -112,6 +118,7 @@ export function anyEvent(...events: Event<any>[]): Event<any> {
 ```
 
 **AFTER**:
+
 ```typescript
 export function anyEvent<T>(...events: Event<T>[]): Event<T> {
   return (listener: (e: T) => void, thisArgs?: unknown) => {
@@ -121,6 +128,7 @@ export function anyEvent<T>(...events: Event<T>[]): Event<T> {
 ```
 
 **Verification Checklist**:
+
 - [ ] Generic type parameter added and used consistently
 - [ ] TypeScript compilation succeeds: `npm run build:ts`
 - [ ] No `any` types remain in changed code
@@ -128,6 +136,7 @@ export function anyEvent<T>(...events: Event<T>[]): Event<T> {
 - [ ] Type-aware editors can provide better completions
 
 **Rollback Command**:
+
 ```bash
 git revert <commit-sha>
 ```
@@ -204,6 +213,7 @@ npm test -- --grep "SVN Error Detection"
 ```
 
 **Implementation Code**:
+
 ```typescript
 // File: src/svn.ts
 
@@ -212,7 +222,7 @@ function getSvnErrorCode(stderr: string): string | undefined {
   for (const name in svnErrorCodes) {
     if (svnErrorCodes.hasOwnProperty(name)) {
       const code = svnErrorCodes[name];
-      const regex = new RegExp(`svn: ${code}`);  // ← Recompiled every call
+      const regex = new RegExp(`svn: ${code}`); // ← Recompiled every call
       if (regex.test(stderr)) {
         return code;
       }
@@ -235,7 +245,8 @@ const SVN_ERROR_REGEXES: Array<{
   regex: new RegExp(`svn: ${code}`) // Compiled once at module load
 }));
 
-const CREDENTIALS_ERROR_REGEX = /No more credentials or we tried too many times/;
+const CREDENTIALS_ERROR_REGEX =
+  /No more credentials or we tried too many times/;
 
 function getSvnErrorCode(stderr: string): string | undefined {
   // Use pre-compiled regexes
@@ -297,6 +308,7 @@ git commit -m "Perf: Pre-compile SVN error detection regexes
 ```
 
 **Verification Checklist**:
+
 - [ ] Characterization tests written and passing (before implementation)
 - [ ] Performance baseline recorded
 - [ ] Code changes preserve exact behavior (same regex matching)
@@ -380,9 +392,9 @@ suite("exec() and execBuffer() behavior parity", () => {
     process.nextTick(() => {
       mockProcess.once.withArgs("error").args[0][1]?.(); // No error
       mockProcess.once.withArgs("exit").args[0][1]?.(0); // Exit code 0
-      mockProcess.stdout.once.withArgs("close").args[0][1]?.(
-        Buffer.isBuffer(stdout) ? stdout : Buffer.from(stdout)
-      );
+      mockProcess.stdout.once
+        .withArgs("close")
+        .args[0][1]?.(Buffer.isBuffer(stdout) ? stdout : Buffer.from(stdout));
       mockProcess.stderr.once.withArgs("close").args[0][1]?.(stderr);
     });
 
@@ -417,7 +429,9 @@ suite("exec() and execBuffer() behavior parity", () => {
     process.nextTick(() => {
       mockProcess.once.withArgs("exit").args[0][1]?.(1); // Exit code 1
       mockProcess.stdout.once.withArgs("close").args[0][1]?.(Buffer.alloc(0));
-      mockProcess.stderr.once.withArgs("close").args[0][1]?.("svn: E155004: locked");
+      mockProcess.stderr.once
+        .withArgs("close")
+        .args[0][1]?.("svn: E155004: locked");
     });
 
     spawnStub.returns(mockProcess);
@@ -443,7 +457,9 @@ suite("exec() and execBuffer() behavior parity", () => {
     process.nextTick(() => {
       mockProcess.once.withArgs("exit").args[0][1]?.(1);
       mockProcess.stdout.once.withArgs("close").args[0][1]?.(Buffer.alloc(0));
-      mockProcess.stderr.once.withArgs("close").args[0][1]?.("svn: E155004: locked");
+      mockProcess.stderr.once
+        .withArgs("close")
+        .args[0][1]?.("svn: E155004: locked");
     });
 
     spawnStub.returns(mockProcess);
@@ -486,21 +502,24 @@ suite("exec() and execBuffer() behavior parity", () => {
 ## exec() vs execBuffer() Behavior Summary
 
 ### Similarities
+
 - Input: cwd, args[], ICpOptions
 - Process: cp.spawn() with auth/env/timeout
 - Logging: stderr logged to onOutput
 
 ### Differences
-| Aspect | exec() | execBuffer() |
-|--------|--------|-------------|
-| Return type | IExecutionResult | BufferResult |
-| stdout | Decoded string | Raw Buffer |
-| Exit code 0 | Success, return result | Success, return result |
-| Exit code != 0 | THROWS SvnError | Returns with exitCode |
-| Cancellation token | SUPPORTED | NOT SUPPORTED (?) |
-| Encoding handling | Detects + converts | Returns raw |
+
+| Aspect             | exec()                 | execBuffer()           |
+| ------------------ | ---------------------- | ---------------------- |
+| Return type        | IExecutionResult       | BufferResult           |
+| stdout             | Decoded string         | Raw Buffer             |
+| Exit code 0        | Success, return result | Success, return result |
+| Exit code != 0     | THROWS SvnError        | Returns with exitCode  |
+| Cancellation token | SUPPORTED              | NOT SUPPORTED (?)      |
+| Encoding handling  | Detects + converts     | Returns raw            |
 
 ### Questions Requiring Answers Before Refactoring
+
 1. Does execBuffer need cancellation token support?
 2. Should exitCode != 0 throw in both methods?
 3. Can we safely unify error handling?
@@ -512,33 +531,39 @@ suite("exec() and execBuffer() behavior parity", () => {
 ## Option A: Separate Helpers (RECOMMENDED)
 
 Benefits:
+
 - Each method keeps current behavior exactly
 - No risk of unintended unification
 - Easy to validate no behavior change
 - Simple rollback (revert commits)
 
 Risks:
+
 - More duplication in setup code
 - Separate encoding logic (OK, not duplicated)
 
 Implementation:
-1. Extract _setupSpawnedProcess() → returns args, defaults
-2. Extract _executeProcess() → handles spawn/stdio setup
+
+1. Extract \_setupSpawnedProcess() → returns args, defaults
+2. Extract \_executeProcess() → handles spawn/stdio setup
 3. Both exec() and execBuffer() call helpers
 4. Each retains unique encoding/error handling
 
 ## Option B: Unified with Flags (NOT RECOMMENDED NOW)
 
 Benefits:
+
 - Maximum code reuse
 - Single process execution logic
 
 Risks:
+
 - Must reconcile exec/execBuffer behavior differences first
 - Higher chance of unintended behavior change
 - Harder to validate equivalence
 
 Deferral:
+
 - Consider only after Option A stabilizes
 - Requires separate security review
 ```
@@ -607,6 +632,7 @@ private async _setupSpawnCommand(
 ```
 
 **Commit 1 Checklist**:
+
 - [ ] New helper added to Svn class
 - [ ] No other changes
 - [ ] TypeScript compiles: `npm run build:ts`
@@ -614,6 +640,7 @@ private async _setupSpawnCommand(
 - [ ] Characterization tests still pass
 
 **Commit Command**:
+
 ```bash
 git add src/svn.ts
 git commit -m "Refactor: Extract _setupSpawnCommand helper (pure setup)
@@ -641,12 +668,14 @@ public async exec(
 ```
 
 **Commit 2 Checklist**:
+
 - [ ] exec() calls helper for setup
 - [ ] Behavior identical (same args, same defaults)
 - [ ] All tests pass: `npm test`
 - [ ] Characterization tests verify behavior unchanged
 
 **Commit Command**:
+
 ```bash
 git add src/svn.ts
 git commit -m "Refactor: exec() uses _setupSpawnCommand helper
@@ -673,6 +702,7 @@ public async execBuffer(
 ```
 
 **Commit 3 Checklist**:
+
 - [ ] execBuffer() calls helper for setup
 - [ ] Behavior identical
 - [ ] All tests pass
@@ -688,6 +718,7 @@ At this point, the original duplicated setup code can be removed from both metho
 ```
 
 **Commit 4 Checklist**:
+
 - [ ] Only duplicate code removed
 - [ ] Behavior verified unchanged via tests
 - [ ] Performance equivalent (helper inlined by JS engine)
@@ -722,6 +753,7 @@ time npm test -- --grep "exec.*success"
 - [ ] Security implications reviewed
 
 **Verification Checklist - FINAL**:
+
 - [ ] All 8 characterization tests pass (behavior identical)
 - [ ] Full test suite passes (npm test)
 - [ ] No TypeScript errors (npm run build:ts)
@@ -731,6 +763,7 @@ time npm test -- --grep "exec.*success"
 - [ ] Commit messages describe "why"
 
 **Time Estimate**: 5-6 hours total
+
 - Planning: 2-3 hours (understanding behavior, tests, decision)
 - Implementation: 2-3 hours (commits 1-4, validation)
 - Risk: DANGEROUS 🔴 (but manageable with this process)
@@ -758,6 +791,7 @@ cp.execFile("which", ["svn"], (err, svnPathBuffer) => {
 ```
 
 **Verification Checklist**:
+
 - [ ] No shell spawning (verified: cp.execFile used)
 - [ ] Arguments passed as array (prevents shell metacharacter injection)
 - [ ] Error handling identical
@@ -767,6 +801,7 @@ cp.execFile("which", ["svn"], (err, svnPathBuffer) => {
 - [ ] Commit message mentions security fix
 
 **Test**:
+
 ```typescript
 test("svnFinder uses execFile (not exec)", () => {
   const execSpy = sinon.spy(cp, "exec");
@@ -784,6 +819,7 @@ test("svnFinder uses execFile (not exec)", () => {
 ```
 
 **Commit Command**:
+
 ```bash
 git add src/svnFinder.ts
 git commit -m "Security: Replace cp.exec with cp.execFile in SVN finding
@@ -921,6 +957,7 @@ function getSvnErrorCode(stderr: string) {
 ```
 
 **DO THIS INSTEAD**:
+
 ```typescript
 // Write tests FIRST
 test("detects AuthorizationFailed", () => {
@@ -985,12 +1022,14 @@ console.log("Time: " + (Date.now() - before) + "ms");
 ## Quick Checklist for Any Refactoring
 
 Before you start:
+
 - [ ] Understand current behavior (read code, not just skim)
 - [ ] Identify all affected code paths
 - [ ] Find all callers (grep for usages)
 - [ ] Understand why refactoring matters (benefit > effort?)
 
 During implementation:
+
 - [ ] Write tests BEFORE changing code
 - [ ] Small, logical commits (one per idea)
 - [ ] Run tests after each commit
@@ -998,6 +1037,7 @@ During implementation:
 - [ ] Check performance (no regressions)
 
 Before merging:
+
 - [ ] All tests pass (npm test)
 - [ ] No TypeScript errors (npm run build:ts)
 - [ ] No lint errors (npm run lint)
