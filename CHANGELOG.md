@@ -17,6 +17,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Scenarios**: File lifecycle, changelists, branches, conflicts
 - **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
+## [0.2.4] (2025-12-30)
+
+### Performance: Memory Leaks & File Watcher
+
+- **Fixed config listener leak**: `authConfigDisposable` now cleaned up on deactivation
+- **Cache cleanup**: Repository.dispose() clears needsLock/eol/mime/lock caches
+- **Narrowed file watcher**: Changed from `**` to `**/.svn/{wc.db,entries}` for repo discovery
+- **Deduplicated code**: Removed duplicate `getParentFolderStatus()` in decorator (-13 lines)
+
 ## [0.2.3] (2025-12-26)
 
 ### Refactor: Property Operations Consolidation
