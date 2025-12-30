@@ -31,6 +31,11 @@ describe("Integration: SVN Operations", () => {
     await createFile(repo.wcDir, "file1.txt", "initial content");
     repo.svn('add "file1.txt"');
     repo.svn('commit -m "Initial commit"');
+
+    // Setup: add second file for log tests
+    await createFile(repo.wcDir, "file2.txt", "second file");
+    repo.svn('add "file2.txt"');
+    repo.svn('commit -m "Add second file"');
   }, 30000);
 
   afterAll(async () => {
@@ -116,8 +121,8 @@ describe("Integration: SVN Operations", () => {
       expect(added).toBeDefined();
       expect(added?.status).toBe("added");
 
-      // Commit for log tests
-      repo.svn('commit -m "Add newfile"');
+      // Revert to clean state
+      repo.svn('revert "newfile.txt"');
     });
   });
 
