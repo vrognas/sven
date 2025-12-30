@@ -57,6 +57,8 @@ describe("Integration: File Lifecycle", () => {
       // Verify in log
       const logXml = repo.svn("log --xml -l 1 -v");
       const entries = await parseSvnLog(logXml);
+      expect(entries.length).toBeGreaterThan(0);
+      expect(entries[0].paths).toBeDefined();
       expect(
         entries[0].paths.some(
           p => p._ && p._.includes("added.txt") && p.action === "A"
