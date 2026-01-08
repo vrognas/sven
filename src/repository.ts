@@ -15,6 +15,7 @@ import {
   SecretStorage,
   SourceControl,
   SourceControlInputBox,
+  SourceControlResourceGroup,
   TextDocument,
   Uri,
   window,
