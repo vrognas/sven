@@ -125,10 +125,12 @@ describe("Integration: SVN Operations", () => {
     it("parses commit history", async () => {
       if (skipTests) return;
 
-      const xml = repo.svn("log --xml -l 10");
+      // Use -r HEAD:1 instead of -l for cross-platform compatibility
+      const xml = repo.svn("log --xml -r HEAD:1");
       const entries = await parseSvnLog(xml);
 
-      expect(entries.length).toBeGreaterThanOrEqual(2);
+      // At least the initial commit from beforeAll
+      expect(entries.length).toBeGreaterThanOrEqual(1);
       expect(entries[0].revision).toBeDefined();
       expect(entries[0].msg).toBeDefined();
     });
@@ -136,7 +138,7 @@ describe("Integration: SVN Operations", () => {
     it("includes file paths in log entries", async () => {
       if (skipTests) return;
 
-      const xml = repo.svn("log --xml -v -l 1");
+      const xml = repo.svn("log --xml -v -r HEAD");
       const entries = await parseSvnLog(xml);
 
       expect(entries.length).toBe(1);

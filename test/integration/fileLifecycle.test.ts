@@ -54,8 +54,8 @@ describe("Integration: File Lifecycle", () => {
 
       repo.svn('commit -m "Add file"');
 
-      // Verify in log
-      const logXml = repo.svn("log --xml -l 1 -v");
+      // Verify in log (use -r HEAD for cross-platform compatibility)
+      const logXml = repo.svn("log --xml -r HEAD -v");
       const entries = await parseSvnLog(logXml);
       expect(
         entries[0].paths.some(

@@ -50,9 +50,9 @@ describe("Integration: Branch Operations", () => {
         `copy "${repo.repoUrl}" "${repo.repoUrl}/branches/feature" -m "Create feature branch"`
       );
 
-      // Verify branch exists via log
+      // Verify branch exists via log (use -r HEAD for cross-platform compatibility)
       const output = repo.svn(
-        `log "${repo.repoUrl}/branches/feature" --xml -l 1`
+        `log "${repo.repoUrl}/branches/feature" --xml -r HEAD`
       );
       expect(output).toContain("feature branch");
     });
