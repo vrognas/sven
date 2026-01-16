@@ -1,6 +1,6 @@
 # Sven - Subversion for VS Code & Positron
 
-[![Version](https://img.shields.io/badge/version-0.2.3-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.4-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Git-like SVN experience with staging, inline blame, file locking, and sparse checkout. Zero telemetry.
@@ -58,13 +58,36 @@ Toggle: `Ctrl+Shift+P` → **SVN: Toggle Annotations**
 ### File Locking
 Prevent conflicts on binary files (CSVs, images, models).
 
+**Setup:** Set `svn:needs-lock` property on files that require locking:
+```bash
+svn propset svn:needs-lock '*' path/to/file.xlsx
+```
+Or right-click file → **Set Needs-Lock Property**
+
+**Workflow:**
+1. Files with `needs-lock` start read-only
+2. Lock before editing → file becomes writable
+3. Unlock when done → others can lock
+
+**Commands:**
 | Command | Use Case |
 |---------|----------|
 | **Lock** | Claim exclusive edit rights |
 | **Unlock** | Release when done |
+| **Manage Locks** | View all locked files |
+| **Manage Needs-Lock** | View files requiring lock |
 | **Break Lock** | Admin override |
 
-Visual: 🔒 = locked, 🔓 = needs lock (read-only)
+**Visual indicators:**
+| Badge | Meaning |
+|-------|---------|
+| 🔒 `K` | Locked by you (you hold token) |
+| 🔐 `O` | Locked by someone else |
+| 🔓 `L` | Needs lock (read-only until locked) |
+
+**Status bar:** When locks exist, status bar shows counts:
+- `$(lock) 3` = 3 files locked
+- `$(unlock) 5` = 5 files need lock
 
 ### Sparse Checkout
 Download only specific folders from large repos.
