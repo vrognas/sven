@@ -11,34 +11,30 @@ Git-like SVN experience with staging, inline blame, file locking, and sparse che
 
 | Pain Point | Sven Solution |
 |------------|---------------|
-| SVN has no staging | ✅ Git-like stage → commit workflow |
-| "Who wrote this line?" | ✅ Inline blame annotations (GitLens-style) |
-| Binary file conflicts | ✅ File locking with visual indicators |
-| Giant repos are slow | ✅ Sparse checkout - download only what you need |
-| Clunky diff tools | ✅ Beyond Compare, Meld, any external tool |
+| SVN has no staging | Git-like stage → commit workflow |
+| "Who wrote this line?" | Inline blame annotations (GitLens-style) |
+| Binary file conflicts | File locking with visual indicators |
+| Giant repos are slow | Sparse checkout - download only what you need |
+| Clunky diff tools | Beyond Compare, Meld, any external tool |
 
 ## Quick Start
 
-### Open Existing Repository
-1. **File → Open Folder** → select folder with `.svn`
-2. SVN panel appears in Source Control sidebar
+**Open existing repo:** File → Open Folder → select folder with `.svn`
 
-### Checkout New Repository
-1. `Ctrl+Shift+P` → **SVN: Checkout**
-2. Enter repository URL
-3. Choose local folder
+**Checkout new repo:** `Ctrl+Shift+P` → **SVN: Checkout** → enter URL → choose folder
 
-### Daily Workflow
+**Daily workflow:**
 ```
 1. Make changes        → Files appear in "Changes"
 2. Click + to stage    → Files move to "Staged"
 3. Ctrl+Enter          → Commit staged files
 ```
 
-## Key Features
+## Features
 
-### Staging (Git-like)
-Stage files before commit. No more accidental commits.
+### Staging
+
+Stage files before commit - no more accidental commits.
 
 | Action | How |
 |--------|-----|
@@ -47,6 +43,7 @@ Stage files before commit. No more accidental commits.
 | Commit | `Ctrl+Enter` |
 
 ### Blame Annotations
+
 See who changed each line, when, and why.
 
 - **Gutter**: Colored revision indicators
@@ -55,67 +52,62 @@ See who changed each line, when, and why.
 
 Toggle: `Ctrl+Shift+P` → **SVN: Toggle Annotations**
 
+### Repository History
+
+Browse commits with file changes and diffs.
+
+- **Repo History** view: Full commit log with filtering (author, date, text)
+- **File History** view: Per-file revisions (right-click file → **Show Log**)
+- **B badge**: Your BASE revision
+- Explorer rename/delete auto-converts to `svn move`/`svn delete` (preserves history)
+
 ### File Locking
+
 Prevent conflicts on binary files (CSVs, images, models).
 
-**Setup:** Set `svn:needs-lock` property on files that require locking:
-```bash
-svn propset svn:needs-lock '*' path/to/file.xlsx
-```
-Or right-click file → **Set Needs-Lock Property**
-
-**Workflow:**
-1. Files with `needs-lock` start read-only
-2. Lock before editing → file becomes writable
-3. Unlock when done → others can lock
-
-**Commands:**
-| Command | Use Case |
-|---------|----------|
-| **Lock** | Claim exclusive edit rights |
-| **Unlock** | Release when done |
-| **Manage Locks** | View all locked files |
-| **Manage Needs-Lock** | View files requiring lock |
-| **Break Lock** | Admin override |
-
-**Visual indicators:**
 | Badge | Meaning |
 |-------|---------|
-| 🔒 `K` | Locked by you (you hold token) |
-| 🔐 `O` | Locked by someone else |
-| 🔓 `L` | Needs lock (read-only until locked) |
+| `K` | Locked by you |
+| `O` | Locked by someone else |
+| `L` | Needs lock (read-only) |
 
-**Status bar:** When locks exist, status bar shows counts:
-- `$(lock) 3` = 3 files locked
-- `$(unlock) 5` = 5 files need lock
+Setup: right-click file → **Set Needs-Lock Property**
+
+Commands: **Lock**, **Unlock**, **Manage Locks**, **Break Lock**
+
+[Full locking guide →](docs/FILE_LOCKING.md)
 
 ### Sparse Checkout
+
 Download only specific folders from large repos.
 
 1. Open **Selective Download** panel in SCM sidebar
-2. Click ☁️ ghost folders to download
+2. Click ghost folders to download
 3. Choose depth: Full, Shallow, Files Only, Empty
 
-### Repository History
-Browse commits with file changes, diffs, and filtering.
+## How To
 
-- **B badge** = your BASE revision
-- **↻ Refresh** / **↓ Fetch** / **↓↓ Pull**
-- Filter by author, date, text
+| Task | How |
+|------|-----|
+| Compare with server | Right-click → **Open Changes with HEAD** |
+| Resolve conflicts | Fix markers in file → right-click → **Resolve** |
+| Switch branches | `Ctrl+Shift+P` → **SVN: Switch Branch** |
+| Create patch | Right-click files → **Show Changes (Patch)** |
+| Set line endings | Right-click → **Set Line Ending Style (EOL)** |
+| Ignore files | Right-click → **Add to Ignore List** |
+| External diff | Set `sven.diff.tool` to tool path |
+| Merge branches | `Ctrl+Shift+P` → **SVN: Merge** |
+| Cleanup | `Ctrl+Shift+P` → **SVN: Cleanup** |
 
-### Smart Operations
-Explorer actions auto-convert to SVN commands:
-- **Rename** → `svn move` (preserves history)
-- **Delete** → `svn delete` (proper removal)
+## Configuration
 
-## Essential Settings
+### Settings
 
 Open Settings (`Ctrl+,`) and search `sven`.
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | `sven.blame.autoBlame` | `true` | Show blame when opening files |
-| `sven.commit.conventionalCommits` | `false` | Conventional commit format |
 | `sven.commit.autoUpdate` | `none` | Run update before/after commit |
 | `sven.diff.tool` | `null` | External diff tool path |
 | `sven.remoteChanges.checkFrequency` | `300` | Remote check interval (seconds) |
@@ -124,55 +116,29 @@ Open Settings (`Ctrl+,`) and search `sven`.
 
 [All 70+ settings →](docs/SETTINGS.md)
 
-## Common Tasks
+### Troubleshooting
 
-### Compare with server
-Right-click file → **Open Changes with HEAD**
+**"SVN not found"** → Set `sven.path` to full SVN path (e.g., `/usr/bin/svn`)
 
-### Resolve conflicts
-1. Fix conflict markers in file
-2. Right-click → **Resolve**
+**Password prompts loop** → Set `sven.auth.credentialMode` to `extensionStorage`, restart
 
-### Switch branches
-`Ctrl+Shift+P` → **SVN: Switch Branch**
-
-### Create patch
-Right-click files → **Show Changes (Patch)**
-
-### Set line endings
-Right-click file → **Set Line Ending Style (EOL)**
-
-## Troubleshooting
-
-**"SVN not found"**
-- Set `sven.path` to full SVN path (e.g., `/usr/bin/svn`)
-
-**Password prompts loop**
-- Try `sven.auth.credentialMode`: `extensionStorage`
-- Then restart extension host
-
-**Slow on large repos**
-- Enable sparse checkout
-- Reduce `sven.log.length`
+**Slow on large repos** → Enable sparse checkout, reduce `sven.log.length`
 
 [Full troubleshooting →](docs/SECURITY_QUICK_REFERENCE.md)
 
-## Positron IDE
+## More Info
 
-Works automatically in [Positron](https://posit.co/products/ide/positron/):
-- Connections pane integration
-- Optimized for data science workflows
-- All operations local (zero telemetry)
+**Positron IDE:** Works automatically with Connections pane integration.
 
-## Links
-
-- [Full Settings Reference](docs/SETTINGS.md)
-- [Security & Authentication](docs/SECURITY_QUICK_REFERENCE.md)
-- [Privacy Policy](PRIVACY.md)
-- [Contributing](CONTRIBUTING.md)
-- [Changelog](CHANGELOG.md)
-- [Report Issue](https://github.com/vrognas/sven/issues)
+**Links:**
+[Settings](docs/SETTINGS.md) ·
+[Security](docs/SECURITY_QUICK_REFERENCE.md) ·
+[File Locking](docs/FILE_LOCKING.md) ·
+[Privacy](PRIVACY.md) ·
+[Contributing](CONTRIBUTING.md) ·
+[Changelog](CHANGELOG.md) ·
+[Issues](https://github.com/vrognas/sven/issues)
 
 ---
 
-**Credit:** Forked from [JohnstonCode/svn-scm](https://github.com/JohnstonCode/svn-scm)
+Forked from [JohnstonCode/svn-scm](https://github.com/JohnstonCode/svn-scm)
