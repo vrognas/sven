@@ -236,7 +236,7 @@
           {
             "id": "sven.gettingStarted.tour",
             "title": "Tour the SCM Panel",
-            "description": "The Source Control panel has 5 views:\n\n- **Incoming Changes**: Updates from the server\n- **Repo History**: Commit log\n- **File History**: Per-file revisions\n- **Branch Changes**: Your branch vs trunk\n- **Selective Download**: Sparse checkout\n\n[Open Source Control](command:workbench.view.scm)",
+            "description": "The Source Control panel has 4 views:\n\n- **Repo History**: Commit log\n- **File History**: Per-file revisions\n- **Branch Changes**: Your branch vs trunk\n- **Selective Download**: Sparse checkout\n\n**Remote Changes** appear in the main SCM panel when updates are available.\n\n[Open Source Control](command:workbench.view.scm)",
             "media": {
               "markdown": "media/walkthroughs/tour-scm.md"
             },
