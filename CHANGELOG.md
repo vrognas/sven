@@ -7,6 +7,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.5] (2025-01-29)
+
+### Fix: Antigravity IDE Compatibility
+
+- **Engine downgrade**: vscode ^1.104.0 for Antigravity IDE support
+
 ## [Unreleased]
 
 ### Test: E2E Integration Tests
