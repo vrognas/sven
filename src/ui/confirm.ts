@@ -4,19 +4,18 @@
 import { window } from "vscode";
 
 /**
- * Show modal confirmation with custom button labels.
+ * Show modal confirmation with custom button label.
+ * VS Code modal dialogs automatically include a Cancel button.
  * @returns true if confirmed, false if cancelled
  */
 export async function confirm(
   message: string,
-  confirmLabel = "Yes",
-  cancelLabel = "Cancel"
+  confirmLabel = "Yes"
 ): Promise<boolean> {
   const answer = await window.showWarningMessage(
     message,
     { modal: true },
-    confirmLabel,
-    cancelLabel
+    confirmLabel
   );
   return answer === confirmLabel;
 }
