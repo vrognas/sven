@@ -902,8 +902,7 @@ export default class SparseCheckoutProvider
             `${totalLabel}` +
             `Large files (>${thresholdMb} MB):\n${fileList}${more}`,
           { modal: true },
-          "Download",
-          "Cancel"
+          "Download"
         );
 
         if (proceed !== "Download") return;
