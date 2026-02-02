@@ -7,6 +7,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.7] (2025-02-02)
+
+### Fix: Theia IDE Compatibility
+
+- **Bundle iconv-lite**: Direct import instead of dynamic require from VS Code's node_modules
+- Fixes "Missing dependency: iconv-lite" error in Theia IDE and other VS Code forks
+
 ## [0.2.6] (2025-02-02)
 
 ### Performance: File Watcher CPU Optimization
