@@ -82,17 +82,18 @@ export class RepositoryFilesWatcher implements IDisposable {
     const isRelevant = (uri: Uri) => !isTmp(uri);
 
     // Phase 8.3 perf fix - throttle events to prevent flooding on bulk file changes
+    // Increased from 100ms to 300ms to reduce CPU spikes during bulk operations
     this.onDidChange = throttleEvent(
       filterEvent(fsWatcher.onDidChange, isRelevant),
-      100
+      300
     );
     this.onDidCreate = throttleEvent(
       filterEvent(fsWatcher.onDidCreate, isRelevant),
-      100
+      300
     );
     this.onDidDelete = throttleEvent(
       filterEvent(fsWatcher.onDidDelete, isRelevant),
-      100
+      300
     );
 
     this.onDidAny = anyEvent(

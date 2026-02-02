@@ -730,6 +730,16 @@ export class Repository implements IRemoteRepository {
       return;
     }
 
+    // Skip watcher during bulk operations to reduce CPU spikes
+    // These operations trigger many file changes but refresh when complete
+    if (
+      this.operations.isRunning(Operation.Update) ||
+      this.operations.isRunning(Operation.SwitchBranch) ||
+      this.operations.isRunning(Operation.Merge)
+    ) {
+      return;
+    }
+
     // Check grace period after force refresh (Update, Commit, etc.)
     // to avoid redundant status calls from file watcher
     if (this.isInGracePeriod()) {

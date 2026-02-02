@@ -7,6 +7,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.6] (2025-02-02)
+
+### Performance: File Watcher CPU Optimization
+
+- **Increased throttle delay**: 100ms → 300ms for file watcher events (3x reduction in callback overhead)
+- **Bulk operation guard**: Skip file watcher during Update/SwitchBranch/Merge operations (zero watcher overhead during bulk ops)
+
 ## [0.2.5] (2025-01-29)
 
 ### Fix: Antigravity IDE Compatibility
