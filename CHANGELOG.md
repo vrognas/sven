@@ -7,6 +7,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.8] (2025-02-03)
+
+### Fix: History Filter for Sparse Commits
+
+- **SVN --limit bug**: Text search filters (author/message/path) now search entire history
+- Previously, `--limit` restricted commits _searched_, not results returned
+- If author had no commits in first 50, filter returned nothing
+- Now: Search full history without limit, apply client-side truncation
+
+### Fix: Blame Cache Staleness After External Changes
+
+- **Document version tracking**: Blame cache now validates against VS Code document version
+- Previously, blame annotations showed stale line numbers after `svn update` or external changes
+- Now: Cache invalidates automatically when document version changes
+
 ## [0.2.7] (2025-02-02)
 
 ### Fix: Theia IDE Compatibility

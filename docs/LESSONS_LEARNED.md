@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: 0.2.3
-**Updated**: 2025-12-29
+**Version**: 0.2.8
+**Updated**: 2025-02-03
 
 ---
 
@@ -673,8 +673,8 @@ dispose(): void {
 
 ---
 
-**Document Version**: 0.2.3
-**Last Updated**: 2025-12-29
+**Document Version**: 0.2.8
+**Last Updated**: 2025-02-03
 
 ### 23. VS Code TreeView Providers: Listen for Repository Open/Close Events
 
@@ -1134,5 +1134,89 @@ await this.runByRepository(this.toUris(selection), async (repo, resources) => {
 - Consistent: All commands use same patterns
 
 **Rule**: When you see the same pattern 3+ times across commands, extract to base class helper.
+
+---
+
+### 29. SVN --limit Applies BEFORE --search Filter
+
+**Lesson**: SVN `--limit` restricts commits _searched_, not results _returned_.
+
+**Issue** (v0.2.8):
+
+- Author filter returned nothing if author had no commits in first 50
+- Root cause: `svn log --limit=50 --search john` only searches first 50 commits
+- If john's commits are older than those 50, search finds nothing
+
+**SVN Documentation**:
+
+> "if `--limit` is used, it restricts the number of log messages searched,
+> rather than restricting the output to a particular number of matching log messages."
+
+**Fix**:
+
+```typescript
+// BAD: --limit applied before --search
+const args = ["log", `--limit=${limit}`, "--search", author];
+// Searches only first 50, filters those
+
+// GOOD: No --limit with text search, apply client-side
+const args = hasTextSearchFilter(filter)
+  ? ["log", "--search", author] // Search full history
+  : ["log", `--limit=${limit}`]; // Use --limit when no text search
+
+// After fetch, apply client-side limit
+if (useTextSearch && entries.length > limit) {
+  entries = entries.slice(0, limit);
+}
+```
+
+**When to omit --limit**:
+
+- ✅ Text search filters: `--search` (author, message, path)
+- ❌ Revision/date range: `-r 100:200` (OK to use --limit)
+- ❌ No filter: (OK to use --limit)
+
+**Rule**: Never combine SVN `--limit` with `--search`. Search full history, truncate client-side.
+
+---
+
+### 30. Cache Validation: Use Document Version for Staleness Detection
+
+**Lesson**: Caches tied to file content must validate against document version, not just URI.
+
+**Issue** (v0.2.8):
+
+- Blame annotations showed wrong line numbers after `svn update`
+- Cache key was URI only - no version tracking
+- External file changes (svn update, git pull) didn't invalidate cache
+- Stale blame data had old line numbers that no longer matched
+
+**Fix**:
+
+```typescript
+// BAD: Cache keyed by URI only
+const cached = this.blameCache.get(uri.toString());
+if (cached) {
+  return cached.data; // Might be stale!
+}
+
+// GOOD: Validate document version
+const currentVersion = editor.document.version;
+const cached = this.blameCache.get(key);
+if (cached && cached.version === currentVersion) {
+  return cached.data; // Guaranteed fresh
+}
+
+// When caching, store version
+this.blameCache.set(key, { data, version: currentVersion });
+```
+
+**VS Code document.version**:
+
+- Increments on every change (edits, undo, external reload)
+- Reset when document is closed and reopened
+- Reliable indicator of content changes
+
+**Rule**: For caches tied to file content, always store and validate `document.version`.
 
 ---

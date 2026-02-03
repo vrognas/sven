@@ -31,7 +31,8 @@ import * as encodeUtil from "./encoding";
 import {
   IHistoryFilter,
   buildSvnLogArgs,
-  filterEntriesByAction
+  filterEntriesByAction,
+  hasTextSearchFilter
 } from "./historyView/historyFilter";
 import { exists, writeFile, stat, readdir } from "./fs";
 import { getBranchName } from "./helpers/branch";
@@ -1409,7 +1410,13 @@ export class Repository {
     }
 
     // Build base args
-    const args = ["log", `--limit=${limit}`, "--xml", "-v"];
+    // IMPORTANT: SVN --limit restricts commits SEARCHED, not results returned.
+    // So with --search filters, we CANNOT use --limit or we miss matches outside
+    // the first N commits. Instead, search full history and limit results client-side.
+    const useTextSearch = hasTextSearchFilter(filter);
+    const args = useTextSearch
+      ? ["log", "--xml", "-v"]
+      : ["log", `--limit=${limit}`, "--xml", "-v"];
 
     // Add filter-based args (--search, -r)
     const filterArgs = buildSvnLogArgs(filter);
@@ -1437,6 +1444,11 @@ export class Repository {
     // Apply client-side action filter (SVN doesn't support server-side action filtering)
     if (filter.actions?.length) {
       entries = filterEntriesByAction(entries, filter.actions);
+    }
+
+    // Apply client-side limit for text search (since we didn't use --limit in SVN command)
+    if (useTextSearch && entries.length > limit) {
+      entries = entries.slice(0, limit);
     }
 
     this._logCache.set(cacheKey, entries);

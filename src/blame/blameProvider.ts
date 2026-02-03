@@ -720,9 +720,14 @@ export class BlameProvider implements Disposable {
   private async getBlameData(uri: Uri): Promise<ISvnBlameLine[] | undefined> {
     const key = uri.toString();
 
-    // Check cache
+    // Get current document version (changes on every edit/reload)
+    const editor = window.activeTextEditor;
+    const currentVersion =
+      editor?.document.uri.toString() === key ? editor.document.version : -1;
+
+    // Check cache - validate version to detect external changes (svn update, etc.)
     const cached = this.blameCache.get(key);
-    if (cached) {
+    if (cached && cached.version === currentVersion && currentVersion !== -1) {
       // Update access time for LRU
       this.cacheAccessOrder.set(key, Date.now());
       return cached.data;
@@ -753,8 +758,8 @@ export class BlameProvider implements Disposable {
     try {
       const data = await this.repository.blame(uri.fsPath);
 
-      // Cache with document version
-      this.blameCache.set(key, { data, version: 0 });
+      // Cache with document version (for staleness detection on external changes)
+      this.blameCache.set(key, { data, version: currentVersion });
 
       // Track access time for LRU
       this.cacheAccessOrder.set(key, Date.now());

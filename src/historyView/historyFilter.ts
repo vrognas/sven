@@ -168,6 +168,19 @@ export class HistoryFilterService implements Disposable {
 }
 
 /**
+ * Check if filter uses text search (--search) which has special limit behavior.
+ * SVN's --limit restricts commits SEARCHED, not results returned.
+ * So with --search, we must NOT use --limit or text filters won't find matches
+ * outside the first N commits.
+ */
+export function hasTextSearchFilter(
+  filter: IHistoryFilter | undefined
+): boolean {
+  if (!filter) return false;
+  return !!(filter.message || filter.author || filter.path);
+}
+
+/**
  * Build SVN log command arguments from filter criteria
  * Returns only server-side filterable args (not action filter)
  */

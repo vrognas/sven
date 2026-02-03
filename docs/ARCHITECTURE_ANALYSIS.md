@@ -1,7 +1,7 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.3
-**Updated**: 2025-12-29
+**Version**: 0.2.8
+**Updated**: 2025-02-03
 
 ---
 

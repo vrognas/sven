@@ -3,7 +3,8 @@ import {
   HistoryFilterService,
   IHistoryFilter,
   buildSvnLogArgs,
-  filterEntriesByAction
+  filterEntriesByAction,
+  hasTextSearchFilter
 } from "../../../src/historyView/historyFilter";
 import { ISvnLogEntry, ISvnLogEntryPath } from "../../../src/common/types";
 
@@ -103,6 +104,53 @@ describe("HistoryFilterService", () => {
       service.setFilter({ revisionFrom: 100, revisionTo: 200 });
       expect(service.getShortDescription()).toBe("rev:100-200");
     });
+  });
+});
+
+describe("hasTextSearchFilter", () => {
+  it("returns false for empty filter", () => {
+    expect(hasTextSearchFilter({})).toBe(false);
+  });
+
+  it("returns false for undefined filter", () => {
+    expect(hasTextSearchFilter(undefined)).toBe(false);
+  });
+
+  it("returns true for author filter", () => {
+    expect(hasTextSearchFilter({ author: "john" })).toBe(true);
+  });
+
+  it("returns true for message filter", () => {
+    expect(hasTextSearchFilter({ message: "bugfix" })).toBe(true);
+  });
+
+  it("returns true for path filter", () => {
+    expect(hasTextSearchFilter({ path: "src/" })).toBe(true);
+  });
+
+  it("returns false for revision-only filter", () => {
+    expect(hasTextSearchFilter({ revisionFrom: 100, revisionTo: 200 })).toBe(
+      false
+    );
+  });
+
+  it("returns false for date-only filter", () => {
+    expect(
+      hasTextSearchFilter({
+        dateFrom: new Date("2024-01-01"),
+        dateTo: new Date("2024-12-31")
+      })
+    ).toBe(false);
+  });
+
+  it("returns false for action-only filter (client-side)", () => {
+    expect(hasTextSearchFilter({ actions: ["A", "M"] })).toBe(false);
+  });
+
+  it("returns true when mixed with revision filter", () => {
+    expect(hasTextSearchFilter({ author: "john", revisionFrom: 100 })).toBe(
+      true
+    );
   });
 });
 
