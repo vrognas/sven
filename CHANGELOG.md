@@ -17,6 +17,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Deleted lines: Blame info hidden (no longer exists in working copy)
 - Modified lines: Context anchoring preserves blame through content changes
 
+### Changed: Blame Code Quality
+
+- **DRY**: Extract `mapBlameLineNumber()` helper (eliminates 4× duplicate code blocks)
+- **DRY**: Move date formatting to shared `util/formatting.ts`
+- **Performance**: Add LCS index structures for O(1) lookups (vs O(n) array.find)
+
 ## [0.2.8] (2025-02-03)
 
 ### Fix: History Filter for Sparse Commits
