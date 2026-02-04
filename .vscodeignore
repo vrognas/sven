@@ -1,5 +1,4 @@
 .*
-!.vscodeignore
 .github/**
 node_modules/**
 .vscode-test/**
