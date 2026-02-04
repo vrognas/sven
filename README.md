@@ -3,6 +3,11 @@
 [![Version](https://img.shields.io/badge/version-0.2.4-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+> [!NOTE]
+> This extension is currently in active development.
+> While stable for daily use, expect occasional breaking changes.
+> Please report any issues to help improve the extension.
+
 Git-like SVN experience with staging, inline blame, file locking, and sparse checkout. Zero telemetry.
 
 > **Requires:** [SVN](https://subversion.apache.org) installed. Windows users: enable **Command Line Tools** when installing [TortoiseSVN](https://tortoisesvn.net/).
