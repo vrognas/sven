@@ -31,6 +31,7 @@ import {
 import { getErrorMessage, logError } from "../util/errorLogger";
 import { Status } from "../common/types";
 import { isDescendant } from "../util";
+import { computeLineMapping, LineMapping } from "../util/lineMapper";
 
 /**
  * BlameProvider manages gutter decorations for SVN blame
@@ -47,6 +48,10 @@ export class BlameProvider implements Disposable {
     string,
     { data: ISvnBlameLine[]; version: number }
   >();
+  private lineMappingCache = new Map<
+    string,
+    { mapping: LineMapping; version: number }
+  >(); // uri → line mapping for modified files
   private revisionColors = new Map<string, string>(); // revision → gradient color
   private svgCache = new Map<string, Uri>(); // color → SVG data URI
   private messageCache = new Map<string, string>(); // revision → commit message
@@ -217,9 +222,16 @@ export class BlameProvider implements Disposable {
         return;
       }
 
+      // Compute line mapping for modified files (maps BASE line numbers to working copy)
+      const lineMapping = await this.getLineMapping(
+        target.document.uri,
+        target
+      );
+
       // PROGRESSIVE RENDERING: Create decorations without waiting for messages
       const decorations = await this.createAllDecorations(blameData, target, {
-        skipMessagePrefetch: true // Don't block on message fetching
+        skipMessagePrefetch: true, // Don't block on message fetching
+        lineMapping
       });
 
       // Calculate revision range for icon colors
@@ -232,7 +244,7 @@ export class BlameProvider implements Disposable {
       );
 
       // Apply icon decorations (separate method using multiple decoration types)
-      this.applyIconDecorations(target, blameData, revisionRange);
+      this.applyIconDecorations(target, blameData, revisionRange, lineMapping);
 
       // OPTIMIZATION: Skip first inline render if progressive message fetch will happen
       // Prevents duplicate setDecorations() call (first without messages, second with messages)
@@ -254,7 +266,9 @@ export class BlameProvider implements Disposable {
         this.prefetchMessagesProgressively(
           target.document.uri,
           blameData,
-          target
+          target,
+          undefined,
+          lineMapping
         ).catch(err => {
           logError("BlameProvider: Progressive message fetch failed", err);
         });
@@ -289,6 +303,7 @@ export class BlameProvider implements Disposable {
   public clearCache(uri: Uri): void {
     const key = uri.toString();
     this.blameCache.delete(key);
+    this.lineMappingCache.delete(key); // Clear line mapping too
     this.cacheAccessOrder.delete(key); // Clean up access tracking
     // Cancel any in-flight message fetches for this URI
     this.inFlightMessageFetches.delete(key);
@@ -350,7 +365,8 @@ export class BlameProvider implements Disposable {
     uri: Uri,
     blameData: ISvnBlameLine[],
     editor: TextEditor,
-    precomputedUniqueRevisions?: string[]
+    precomputedUniqueRevisions?: string[],
+    lineMapping?: LineMapping
   ): Promise<void> {
     const uriKey = uri.toString();
 
@@ -391,7 +407,11 @@ export class BlameProvider implements Disposable {
         }
 
         // Re-create inline decorations with messages
-        await this.updateInlineDecorationsWithMessages(blameData, editor);
+        await this.updateInlineDecorationsWithMessages(
+          blameData,
+          editor,
+          lineMapping
+        );
       } finally {
         // Remove from in-flight map when done
         this.inFlightMessageFetches.delete(uriKey);
@@ -410,13 +430,24 @@ export class BlameProvider implements Disposable {
    */
   private async updateInlineDecorationsWithMessages(
     blameData: ISvnBlameLine[],
-    editor: TextEditor
+    editor: TextEditor,
+    lineMapping?: LineMapping
   ): Promise<void> {
     const inlineDecorations: DecorationOptions[] = [];
     const currentLineOnly = blameConfiguration.isInlineCurrentLineOnly();
 
     for (const blameLine of blameData) {
-      const lineIndex = blameLine.lineNumber - 1;
+      // Apply line mapping if available (for modified files)
+      let lineIndex: number;
+      if (lineMapping) {
+        const mappedLine = lineMapping.get(blameLine.lineNumber);
+        if (mappedLine === undefined) {
+          continue; // Line was deleted
+        }
+        lineIndex = mappedLine - 1;
+      } else {
+        lineIndex = blameLine.lineNumber - 1;
+      }
 
       // Skip invalid lines or uncommitted
       if (lineIndex < 0 || lineIndex >= editor.document.lineCount) {
@@ -496,12 +527,25 @@ export class BlameProvider implements Disposable {
       return;
     }
 
+    // Get line mapping for modified files
+    const lineMapping = await this.getLineMapping(editor.document.uri, editor);
+
     const currentLine = editor.selection.active.line;
     const inlineDecorations: DecorationOptions[] = [];
 
     // Find blame info for current line only
     for (const blameLine of blameData) {
-      const lineIndex = blameLine.lineNumber - 1;
+      // Apply line mapping if available
+      let lineIndex: number;
+      if (lineMapping) {
+        const mappedLine = lineMapping.get(blameLine.lineNumber);
+        if (mappedLine === undefined) {
+          continue; // Line was deleted
+        }
+        lineIndex = mappedLine - 1;
+      } else {
+        lineIndex = blameLine.lineNumber - 1;
+      }
 
       // Skip if not current line
       if (lineIndex !== currentLine) {
@@ -554,6 +598,7 @@ export class BlameProvider implements Disposable {
     this.iconTypes.forEach(type => type.dispose());
     this.iconTypes.clear();
     this.blameCache.clear();
+    this.lineMappingCache.clear();
     this.revisionColors.clear();
     this.svgCache.clear();
     this.messageCache.clear();
@@ -827,13 +872,63 @@ export class BlameProvider implements Disposable {
   }
 
   /**
+   * Get line mapping for modified files.
+   * Maps BASE revision line numbers to working copy line numbers.
+   * Returns undefined if file is not modified or mapping cannot be computed.
+   */
+  private async getLineMapping(
+    uri: Uri,
+    editor: TextEditor
+  ): Promise<LineMapping | undefined> {
+    const key = uri.toString();
+    const currentVersion = editor.document.version;
+
+    // Check cache
+    const cached = this.lineMappingCache.get(key);
+    if (cached && cached.version === currentVersion) {
+      return cached.mapping;
+    }
+
+    // Check if file is modified
+    const resource = this.repository.getResourceFromFile(uri);
+    if (!resource || resource.type !== Status.MODIFIED) {
+      // File not modified - no mapping needed (identity mapping)
+      return undefined;
+    }
+
+    try {
+      // Get BASE content (committed version)
+      const baseContent = await this.repository.repository.show(
+        uri.fsPath,
+        "BASE"
+      );
+      const baseLines = baseContent.split(/\r?\n/);
+
+      // Get working copy content (current editor)
+      const workingContent = editor.document.getText();
+      const workingLines = workingContent.split(/\r?\n/);
+
+      // Compute mapping
+      const mapping = computeLineMapping(baseLines, workingLines);
+
+      // Cache the mapping
+      this.lineMappingCache.set(key, { mapping, version: currentVersion });
+
+      return mapping;
+    } catch (err) {
+      logError("BlameProvider: Failed to compute line mapping", err);
+      return undefined;
+    }
+  }
+
+  /**
    * Create gutter and inline decoration arrays from blame data
    * (icons handled separately via applyIconDecorations)
    */
   private async createAllDecorations(
     blameData: ISvnBlameLine[],
     editor: TextEditor,
-    options: { skipMessagePrefetch?: boolean } = {}
+    options: { skipMessagePrefetch?: boolean; lineMapping?: LineMapping } = {}
   ): Promise<{
     gutter: DecorationOptions[];
     icon: DecorationOptions[];
@@ -844,6 +939,7 @@ export class BlameProvider implements Disposable {
 
     const template = blameConfiguration.getGutterTemplate();
     const dateFormat = blameConfiguration.getDateFormat();
+    const { lineMapping } = options;
 
     // Prefetch messages if inline enabled (unless skipped for progressive rendering)
     if (
@@ -861,7 +957,18 @@ export class BlameProvider implements Disposable {
     }
 
     for (const blameLine of blameData) {
-      const lineIndex = blameLine.lineNumber - 1; // 1-indexed to 0-indexed
+      // Apply line mapping if available (for modified files)
+      let lineIndex: number;
+      if (lineMapping) {
+        const mappedLine = lineMapping.get(blameLine.lineNumber);
+        if (mappedLine === undefined) {
+          // Line was deleted in working copy - skip
+          continue;
+        }
+        lineIndex = mappedLine - 1; // 1-indexed to 0-indexed
+      } else {
+        lineIndex = blameLine.lineNumber - 1; // 1-indexed to 0-indexed
+      }
 
       // Skip if line doesn't exist in document
       if (lineIndex < 0 || lineIndex >= editor.document.lineCount) {
@@ -1187,7 +1294,8 @@ export class BlameProvider implements Disposable {
   private applyIconDecorations(
     editor: TextEditor,
     blameData: ISvnBlameLine[],
-    revisionRange: { min: number; max: number; uniqueRevisions: number[] }
+    revisionRange: { min: number; max: number; uniqueRevisions: number[] },
+    lineMapping?: LineMapping
   ): void {
     // Dispose previous file's icon types to prevent memory leak
     // Each file creates ~16 color-based types; without this, types accumulate unbounded
@@ -1208,7 +1316,18 @@ export class BlameProvider implements Disposable {
     for (const blameLine of blameData) {
       if (!blameLine.revision) continue;
 
-      const lineIndex = blameLine.lineNumber - 1;
+      // Apply line mapping if available (for modified files)
+      let lineIndex: number;
+      if (lineMapping) {
+        const mappedLine = lineMapping.get(blameLine.lineNumber);
+        if (mappedLine === undefined) {
+          // Line was deleted in working copy - skip
+          continue;
+        }
+        lineIndex = mappedLine - 1;
+      } else {
+        lineIndex = blameLine.lineNumber - 1;
+      }
       if (lineIndex < 0 || lineIndex >= editor.document.lineCount) continue;
 
       const color = this.getRevisionColor(blameLine.revision, revisionRange);

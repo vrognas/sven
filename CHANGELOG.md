@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.9] (2025-02-04)
+
+### Feature: Blame Line Mapping for Modified Files
+
+- **LCS-based line mapping**: Blame annotations now align with working copy content even when file is modified
+- Previously, blame decorations appeared on wrong lines if local changes added/removed lines
+- Uses Longest Common Subsequence algorithm to map BASE line numbers to working copy
+- Deleted lines: Blame info hidden (no longer exists in working copy)
+- Modified lines: Context anchoring preserves blame through content changes
+
 ## [0.2.8] (2025-02-03)
 
 ### Fix: History Filter for Sparse Commits

@@ -1,7 +1,7 @@
 # Lessons Learned
 
-**Version**: 0.2.8
-**Updated**: 2025-02-03
+**Version**: 0.2.9
+**Updated**: 2025-02-04
 
 ---
 
@@ -1218,5 +1218,49 @@ this.blameCache.set(key, { data, version: currentVersion });
 - Reliable indicator of content changes
 
 **Rule**: For caches tied to file content, always store and validate `document.version`.
+
+---
+
+### 31. Line Mapping for Modified Files: LCS Algorithm
+
+**Lesson**: When displaying per-line annotations for modified files, use diff-based line mapping.
+
+**Issue** (v0.2.8):
+
+- Blame decorations appeared on wrong lines when file had local modifications
+- SVN blame returns line numbers for BASE (committed) version
+- Working copy has different line numbers due to added/removed lines
+- User sees blame info on content that doesn't match
+
+**Solution**: LCS (Longest Common Subsequence) based line mapping
+
+```typescript
+// Compute mapping from BASE line numbers to working copy line numbers
+const baseLines = await svn.cat(file, "BASE").split("\n");
+const workingLines = editor.document.getText().split("\n");
+const mapping = computeLineMapping(baseLines, workingLines);
+
+// Apply mapping when creating decorations
+for (const blameLine of blameData) {
+  const mappedLine = mapping.get(blameLine.lineNumber);
+  if (mappedLine === undefined) continue; // Line deleted
+  const lineIndex = mappedLine - 1; // Apply decoration here
+}
+```
+
+**Algorithm details**:
+
+1. LCS finds exact line matches (unchanged lines)
+2. Lines not in LCS checked for similarity (modified lines)
+3. Context anchoring: if surrounding lines match, treat as modified
+4. Deleted lines: mapping returns undefined, skip decoration
+
+**Performance**:
+
+- O(m\*n) for LCS where m,n are line counts
+- Cached per document version
+- Negligible for typical file sizes (<10ms for 1000 lines)
+
+**Rule**: For annotations on committed data displayed in working copy, compute line mapping between BASE and working copy.
 
 ---

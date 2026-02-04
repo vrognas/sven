@@ -1,7 +1,7 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.8
-**Updated**: 2025-02-03
+**Version**: 0.2.9
+**Updated**: 2025-02-04
 
 ---
 
@@ -74,6 +74,7 @@ Per-file blame tracking with:
 - Template compilation for status bar/gutter
 - Batch log fetching (50x faster)
 - LRU cache eviction (MAX_CACHE_SIZE=20)
+- Line mapping for modified files (LCS algorithm)
 
 ### File Locking (v0.1.0+)
 
