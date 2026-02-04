@@ -1,7 +1,8 @@
 # Sven - Subversion for VS Code & Positron
 
-[![Version](https://img.shields.io/badge/version-0.2.4-blue)](CHANGELOG.md)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/vrognas/sven/main.yml)
+![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/vrognas.sven)
+![GitHub License](https://img.shields.io/github/license/vrognas/sven)
 
 > [!NOTE]
 > This extension is currently in active development.
