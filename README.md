@@ -4,10 +4,7 @@
 ![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/vrognas.sven)
 ![GitHub License](https://img.shields.io/github/license/vrognas/sven)
 
-> [!NOTE]
-> This extension is currently in active development.
-> While stable for daily use, expect occasional breaking changes.
-> Please report any issues to help improve the extension.
+**Note:** This extension is currently in active development. While stable for daily use, expect occasional breaking changes. Please report any issues to help improve the extension.
 
 Git-like SVN experience with staging, inline blame, file locking, and sparse checkout. Zero telemetry.
 
