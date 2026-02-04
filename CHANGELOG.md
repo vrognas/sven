@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.10] (2025-02-04)
+
+### Chore
+
+- Exclude `.vscodeignore` from VSIX package (reduces package size)
+- Update README badges (CI status, marketplace downloads, license)
+- Add active development notice to README
+
 ## [0.2.9] (2025-02-04)
 
 ### Feature: Blame Line Mapping for Modified Files
