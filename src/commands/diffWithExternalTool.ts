@@ -30,11 +30,22 @@ export class DiffWithExternalTool extends Command {
       filePath = arg.resourceUri.fsPath;
     } else if (arg instanceof Uri) {
       filePath = arg.fsPath;
+    } else if (arg && typeof arg === "object" && "resourceUri" in arg) {
+      // Handle SourceControlResourceState that isn't a Resource instance
+      filePath = (arg as SourceControlResourceState).resourceUri.fsPath;
     }
 
     // If no file provided, try to get from resource states
     if (!filePath && resourceStates.length > 0) {
       filePath = resourceStates[0]!.resourceUri.fsPath;
+    }
+
+    // Final fallback: try to get from active editor via SCM
+    if (!filePath) {
+      const resource = await this.getSCMResource();
+      if (resource) {
+        filePath = resource.resourceUri.fsPath;
+      }
     }
 
     if (!filePath) {
