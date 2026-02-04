@@ -92,3 +92,50 @@ export function capitalize(str: string): string {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+/**
+ * Get relative time string (e.g., "2 days ago").
+ * Used by blame annotations.
+ */
+export function getRelativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 2592000) return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 31536000) return `${Math.floor(seconds / 2592000)}mo ago`;
+  return `${Math.floor(seconds / 31536000)}y ago`;
+}
+
+/**
+ * Format date for blame annotations (relative or absolute).
+ * Used by BlameProvider and BlameStatusBar.
+ */
+export function formatBlameDate(
+  dateStr: string | undefined,
+  format: "relative" | "absolute"
+): string {
+  if (!dateStr) {
+    return "unknown";
+  }
+
+  try {
+    const date = new Date(dateStr);
+
+    if (format === "relative") {
+      return getRelativeTime(date);
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year:
+          date.getFullYear() !== new Date().getFullYear()
+            ? "numeric"
+            : undefined
+      });
+    }
+  } catch {
+    return dateStr; // Fallback to raw string
+  }
+}

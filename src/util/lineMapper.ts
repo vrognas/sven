@@ -30,6 +30,9 @@ export function computeLineMapping(
   // Compute LCS to find matching lines
   const lcs = computeLCS(baseLines, workingLines);
 
+  // Build indexed structures for O(1) lookups (instead of O(n) array.find())
+  const lcsIndex = buildLCSIndex(lcs);
+
   // Build mapping using LCS matches
   // For each BASE line, find where it appears in working copy
   let workingIdx = 0;
@@ -38,12 +41,10 @@ export function computeLineMapping(
     const baseLine = baseLines[baseIdx]!;
     const baseLineNum = baseIdx + 1; // 1-indexed
 
-    // Check if this line is in LCS (unchanged)
-    const lcsMatch = lcs.find(
-      m => m.baseIdx === baseIdx && m.workingIdx >= workingIdx
-    );
+    // Check if this line is in LCS (unchanged) - O(1) lookup
+    const lcsMatch = lcsIndex.byBaseIdx.get(baseIdx);
 
-    if (lcsMatch) {
+    if (lcsMatch && lcsMatch.workingIdx >= workingIdx) {
       // Line found in LCS - direct mapping
       mapping.set(baseLineNum, lcsMatch.workingIdx + 1);
       workingIdx = lcsMatch.workingIdx + 1;
@@ -56,7 +57,7 @@ export function computeLineMapping(
         workingIdx,
         baseIdx,
         baseLines,
-        lcs
+        lcsIndex
       );
 
       if (foundIdx !== -1) {
@@ -73,11 +74,65 @@ export function computeLineMapping(
 }
 
 /**
+ * Map a blame line number to working copy line number.
+ * Returns undefined if line was deleted, or the 0-indexed line number.
+ * Use this helper to avoid repeating the mapping logic.
+ */
+export function mapBlameLineNumber(
+  blameLineNumber: number,
+  lineMapping: LineMapping | undefined
+): number | undefined {
+  if (!lineMapping) {
+    return blameLineNumber - 1; // Simple 1-indexed to 0-indexed
+  }
+  const mappedLine = lineMapping.get(blameLineNumber);
+  if (mappedLine === undefined) {
+    return undefined; // Line was deleted
+  }
+  return mappedLine - 1; // 1-indexed to 0-indexed
+}
+
+/**
  * LCS match entry
  */
 interface LCSMatch {
   baseIdx: number;
   workingIdx: number;
+}
+
+/**
+ * Indexed LCS for O(1) lookups instead of O(n) array.find()
+ */
+interface LCSIndex {
+  byBaseIdx: Map<number, LCSMatch>;
+  workingIdxInLCS: Set<number>;
+  // For context anchoring: sorted arrays for binary search
+  sortedBaseIndices: number[];
+  sortedWorkingIndices: number[];
+}
+
+/**
+ * Build indexed structures from LCS matches for O(1) lookups
+ */
+function buildLCSIndex(lcs: LCSMatch[]): LCSIndex {
+  const byBaseIdx = new Map<number, LCSMatch>();
+  const workingIdxInLCS = new Set<number>();
+  const sortedBaseIndices: number[] = [];
+  const sortedWorkingIndices: number[] = [];
+
+  for (const match of lcs) {
+    byBaseIdx.set(match.baseIdx, match);
+    workingIdxInLCS.add(match.workingIdx);
+    sortedBaseIndices.push(match.baseIdx);
+    sortedWorkingIndices.push(match.workingIdx);
+  }
+
+  return {
+    byBaseIdx,
+    workingIdxInLCS,
+    sortedBaseIndices,
+    sortedWorkingIndices
+  };
 }
 
 /**
@@ -135,15 +190,15 @@ function findModifiedLine(
   startIdx: number,
   baseIdx: number,
   base: string[],
-  lcs: LCSMatch[]
+  lcsIndex: LCSIndex
 ): number {
   // Strategy 1: Check if line at same relative position exists and isn't in LCS
   // (meaning it's a modification, not an insertion)
   if (startIdx < working.length) {
     const workingLine = working[startIdx]!;
 
-    // Check if this working line is claimed by LCS (is an exact match with some base line)
-    const isInLCS = lcs.some(m => m.workingIdx === startIdx);
+    // Check if this working line is claimed by LCS - O(1) lookup
+    const isInLCS = lcsIndex.workingIdxInLCS.has(startIdx);
 
     if (!isInLCS) {
       // This working line isn't an exact match with any base line
@@ -154,25 +209,31 @@ function findModifiedLine(
 
       // Strategy 2: Context anchoring - if surrounding lines match, this is likely a modification
       // Check if there are LCS matches before and after that bracket this position
-      const prevMatch = lcs.find(
-        m => m.baseIdx < baseIdx && m.workingIdx < startIdx
+      const hasPrevMatch = hasMatchBefore(
+        lcsIndex.sortedBaseIndices,
+        lcsIndex.sortedWorkingIndices,
+        baseIdx,
+        startIdx
       );
-      const nextMatch = lcs.find(
-        m => m.baseIdx > baseIdx && m.workingIdx > startIdx
+      const hasNextMatch = hasMatchAfter(
+        lcsIndex.sortedBaseIndices,
+        lcsIndex.sortedWorkingIndices,
+        baseIdx,
+        startIdx
       );
 
       // If we're between two anchored matches, treat as modified line
-      if (prevMatch && nextMatch) {
+      if (hasPrevMatch && hasNextMatch) {
         return startIdx;
       }
 
       // Also handle edge cases: first/last line with context
-      if (baseIdx === 0 && nextMatch && startIdx === 0) {
+      if (baseIdx === 0 && hasNextMatch && startIdx === 0) {
         return startIdx;
       }
       if (
         baseIdx === base.length - 1 &&
-        prevMatch &&
+        hasPrevMatch &&
         startIdx === working.length - 1
       ) {
         return startIdx;
@@ -181,6 +242,46 @@ function findModifiedLine(
   }
 
   return -1;
+}
+
+/**
+ * Check if there's an LCS match before the given indices
+ */
+function hasMatchBefore(
+  sortedBaseIndices: number[],
+  sortedWorkingIndices: number[],
+  baseIdx: number,
+  workingIdx: number
+): boolean {
+  for (let i = 0; i < sortedBaseIndices.length; i++) {
+    if (
+      sortedBaseIndices[i]! < baseIdx &&
+      sortedWorkingIndices[i]! < workingIdx
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if there's an LCS match after the given indices
+ */
+function hasMatchAfter(
+  sortedBaseIndices: number[],
+  sortedWorkingIndices: number[],
+  baseIdx: number,
+  workingIdx: number
+): boolean {
+  for (let i = sortedBaseIndices.length - 1; i >= 0; i--) {
+    if (
+      sortedBaseIndices[i]! > baseIdx &&
+      sortedWorkingIndices[i]! > workingIdx
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

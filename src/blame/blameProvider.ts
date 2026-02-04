@@ -31,7 +31,12 @@ import {
 import { getErrorMessage, logError } from "../util/errorLogger";
 import { Status } from "../common/types";
 import { isDescendant } from "../util";
-import { computeLineMapping, LineMapping } from "../util/lineMapper";
+import {
+  computeLineMapping,
+  LineMapping,
+  mapBlameLineNumber
+} from "../util/lineMapper";
+import { formatBlameDate } from "../util/formatting";
 
 /**
  * BlameProvider manages gutter decorations for SVN blame
@@ -437,17 +442,9 @@ export class BlameProvider implements Disposable {
     const currentLineOnly = blameConfiguration.isInlineCurrentLineOnly();
 
     for (const blameLine of blameData) {
-      // Apply line mapping if available (for modified files)
-      let lineIndex: number;
-      if (lineMapping) {
-        const mappedLine = lineMapping.get(blameLine.lineNumber);
-        if (mappedLine === undefined) {
-          continue; // Line was deleted
-        }
-        lineIndex = mappedLine - 1;
-      } else {
-        lineIndex = blameLine.lineNumber - 1;
-      }
+      // Apply line mapping (handles modified files)
+      const lineIndex = mapBlameLineNumber(blameLine.lineNumber, lineMapping);
+      if (lineIndex === undefined) continue; // Line was deleted
 
       // Skip invalid lines or uncommitted
       if (lineIndex < 0 || lineIndex >= editor.document.lineCount) {
@@ -535,17 +532,9 @@ export class BlameProvider implements Disposable {
 
     // Find blame info for current line only
     for (const blameLine of blameData) {
-      // Apply line mapping if available
-      let lineIndex: number;
-      if (lineMapping) {
-        const mappedLine = lineMapping.get(blameLine.lineNumber);
-        if (mappedLine === undefined) {
-          continue; // Line was deleted
-        }
-        lineIndex = mappedLine - 1;
-      } else {
-        lineIndex = blameLine.lineNumber - 1;
-      }
+      // Apply line mapping (handles modified files)
+      const lineIndex = mapBlameLineNumber(blameLine.lineNumber, lineMapping);
+      if (lineIndex === undefined) continue; // Line was deleted
 
       // Skip if not current line
       if (lineIndex !== currentLine) {
@@ -957,18 +946,9 @@ export class BlameProvider implements Disposable {
     }
 
     for (const blameLine of blameData) {
-      // Apply line mapping if available (for modified files)
-      let lineIndex: number;
-      if (lineMapping) {
-        const mappedLine = lineMapping.get(blameLine.lineNumber);
-        if (mappedLine === undefined) {
-          // Line was deleted in working copy - skip
-          continue;
-        }
-        lineIndex = mappedLine - 1; // 1-indexed to 0-indexed
-      } else {
-        lineIndex = blameLine.lineNumber - 1; // 1-indexed to 0-indexed
-      }
+      // Apply line mapping (handles modified files)
+      const lineIndex = mapBlameLineNumber(blameLine.lineNumber, lineMapping);
+      if (lineIndex === undefined) continue; // Line was deleted
 
       // Skip if line doesn't exist in document
       if (lineIndex < 0 || lineIndex >= editor.document.lineCount) {
@@ -1048,7 +1028,7 @@ export class BlameProvider implements Disposable {
   ): string {
     const revision = line.revision || "???";
     const author = line.author || "unknown";
-    const date = this.formatDate(line.date, dateFormat);
+    const date = formatBlameDate(line.date, dateFormat);
 
     // Compile template once, cache and reuse (eliminates 3 regex ops per line)
     if (
@@ -1063,51 +1043,6 @@ export class BlameProvider implements Disposable {
 
     const result = this.compiledGutterTemplate.fn({ revision, author, date });
     return result.padEnd(30); // Ensure consistent spacing
-  }
-
-  /**
-   * Format date (relative or absolute)
-   */
-  private formatDate(
-    dateStr: string | undefined,
-    format: "relative" | "absolute"
-  ): string {
-    if (!dateStr) {
-      return "unknown";
-    }
-
-    try {
-      const date = new Date(dateStr);
-
-      if (format === "relative") {
-        return this.getRelativeTime(date);
-      } else {
-        return date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year:
-            date.getFullYear() !== new Date().getFullYear()
-              ? "numeric"
-              : undefined
-        });
-      }
-    } catch {
-      return dateStr; // Fallback to raw string
-    }
-  }
-
-  /**
-   * Get relative time string (e.g., "2 days ago")
-   */
-  private getRelativeTime(date: Date): string {
-    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-
-    if (seconds < 60) return "just now";
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 2592000) return `${Math.floor(seconds / 86400)}d ago`;
-    if (seconds < 31536000) return `${Math.floor(seconds / 2592000)}mo ago`;
-    return `${Math.floor(seconds / 31536000)}y ago`;
   }
 
   // ===== Phase 2.5: Revision Gradient Coloring =====
@@ -1316,18 +1251,9 @@ export class BlameProvider implements Disposable {
     for (const blameLine of blameData) {
       if (!blameLine.revision) continue;
 
-      // Apply line mapping if available (for modified files)
-      let lineIndex: number;
-      if (lineMapping) {
-        const mappedLine = lineMapping.get(blameLine.lineNumber);
-        if (mappedLine === undefined) {
-          // Line was deleted in working copy - skip
-          continue;
-        }
-        lineIndex = mappedLine - 1;
-      } else {
-        lineIndex = blameLine.lineNumber - 1;
-      }
+      // Apply line mapping (handles modified files)
+      const lineIndex = mapBlameLineNumber(blameLine.lineNumber, lineMapping);
+      if (lineIndex === undefined) continue; // Line was deleted
       if (lineIndex < 0 || lineIndex >= editor.document.lineCount) continue;
 
       const color = this.getRevisionColor(blameLine.revision, revisionRange);
@@ -1491,7 +1417,7 @@ export class BlameProvider implements Disposable {
     const revision = line.revision || "???";
     const author = line.author || "unknown";
     const dateFormat = blameConfiguration.getDateFormat();
-    const date = this.formatDate(line.date, dateFormat);
+    const date = formatBlameDate(line.date, dateFormat);
 
     const truncatedMessage = this.truncateMessage(message);
 

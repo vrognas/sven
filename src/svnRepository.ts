@@ -558,7 +558,7 @@ export class Repository {
   @sequentialize
   public async blame(
     file: string,
-    revision: string = "HEAD",
+    revision: string = "BASE",
     skipCache: boolean = false
   ): Promise<ISvnBlameLine[]> {
     // Convert to relative path
@@ -585,8 +585,13 @@ export class Repository {
       revision
     ];
 
-    // Add peg revision for non-HEAD revisions to handle renamed/moved/deleted files
-    if (revision.toUpperCase() !== "HEAD") {
+    // Add peg revision for specific revisions to handle renamed/moved/deleted files
+    // BASE = working copy revision (matches what's in editor)
+    // HEAD = server's latest (might not match working copy)
+    if (
+      revision.toUpperCase() !== "HEAD" &&
+      revision.toUpperCase() !== "BASE"
+    ) {
       args.push(fixPegRevision(relativePath) + "@" + revision);
     } else {
       args.push(fixPegRevision(relativePath));
