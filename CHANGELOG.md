@@ -7,6 +7,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.11] (2025-02-04)
+
+### Chore
+
+- Use standard markdown for development notice (Positron compatibility)
+
 ## [0.2.10] (2025-02-04)
 
 ### Chore
