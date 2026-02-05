@@ -53,8 +53,6 @@ export class ItemLogProvider
   private isRollingBack = false;
   private refreshDebounceTimer?: ReturnType<typeof setTimeout>;
   private treeView?: TreeView<ILogTreeItem>;
-  // Parent item reference for getParent (needed for reveal)
-  private fileRootItem?: ILogTreeItem;
 
   constructor(private sourceControlManager: SourceControlManager) {
     try {
@@ -411,8 +409,6 @@ export class ItemLogProvider
         kind: LogTreeItemKind.TItem,
         data: ti
       };
-      // Store for getParent lookup
-      this.fileRootItem = item;
       return [item];
     } else {
       const entries = this.currentItem.entries;
