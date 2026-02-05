@@ -5,7 +5,7 @@
   "version": "0.2.11",
   "publisher": "vrognas",
   "engines": {
-    "vscode": "^1.104.0",
+    "vscode": "^1.105.0",
     "positron": "^2025.11.0"
   },
   "icon": "images/sven.png",
@@ -109,7 +109,7 @@
     "@types/semver": "^7.5.8",
     "@types/sinon": "^21.0.0",
     "@types/tmp": "^0.2.6",
-    "@types/vscode": "^1.108.1",
+    "@types/vscode": "^1.105.0",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.51.0",
     "@vitest/coverage-v8": "^4.0.16",
