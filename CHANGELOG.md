@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.12] (2025-02-05)
+
+### Fix
+
+- **SCM context menu**: "Diff with External Tool" now works from SCM Changes view
+- **File History highlight**: Viewed revision now selected/highlighted when using "Open this revision"
+- **Broken command links**: Fix all `command:svn.*` → `command:sven.*` in walkthroughs and welcome messages
+- **Welcome messages**: File History pane now correctly describes auto-update behavior
+- **Version alignment**: Align `@types/vscode` with `engines.vscode` (fixes CI packaging)
+
 ## [0.2.11] (2025-02-04)
 
 ### Chore
