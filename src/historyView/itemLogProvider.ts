@@ -13,6 +13,7 @@ import {
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  TreeView,
   Uri,
   window
 } from "vscode";
@@ -51,10 +52,16 @@ export class ItemLogProvider
   private _dispose: Disposable[] = [];
   private isRollingBack = false;
   private refreshDebounceTimer?: ReturnType<typeof setTimeout>;
+  private treeView?: TreeView<ILogTreeItem>;
+  // Parent item reference for getParent (needed for reveal)
+  private fileRootItem?: ILogTreeItem;
 
   constructor(private sourceControlManager: SourceControlManager) {
     try {
-      this._dispose.push(window.registerTreeDataProvider("sven.itemlog", this));
+      this.treeView = window.createTreeView("sven.itemlog", {
+        treeDataProvider: this
+      });
+      this._dispose.push(this.treeView);
     } catch (err) {
       // Handle dev reload race condition where previous provider wasn't yet disposed
       logError(
@@ -197,11 +204,23 @@ export class ItemLogProvider
       return;
     }
     const commit = element.data as ISvnLogEntry;
-    return openFileRemote(
+    await openFileRemote(
       this.currentItem.repo,
       this.currentItem.svnTarget,
       commit.revision
     );
+    // Reveal and select the item to highlight it
+    if (this.treeView) {
+      try {
+        await this.treeView.reveal(element, {
+          select: true,
+          focus: false,
+          expand: false
+        });
+      } catch {
+        // Ignore reveal errors (item may not be visible)
+      }
+    }
   }
 
   public async openDiffBaseCmd(element: ILogTreeItem) {
@@ -388,17 +407,20 @@ export class ItemLogProvider
       ti.tooltip = path.dirname(this.currentItem.svnTarget.fsPath);
       ti.description = path.dirname(this.currentItem.svnTarget.fsPath);
       ti.iconPath = new ThemeIcon("history");
-      const item = {
+      const item: ILogTreeItem = {
         kind: LogTreeItemKind.TItem,
         data: ti
       };
+      // Store for getParent lookup
+      this.fileRootItem = item;
       return [item];
     } else {
       const entries = this.currentItem.entries;
       if (entries.length === 0) {
         await fetchMore(this.currentItem);
       }
-      const result = transform(entries, LogTreeItemKind.Commit);
+      // Pass parent (the file root item) for getParent support
+      const result = transform(entries, LogTreeItemKind.Commit, element);
       insertBaseMarker(this.currentItem, entries, result);
       if (!this.currentItem.isComplete) {
         result.push(
@@ -407,5 +429,10 @@ export class ItemLogProvider
       }
       return result;
     }
+  }
+
+  public getParent(element: ILogTreeItem): ILogTreeItem | undefined {
+    // Commits have parent set to the file root item
+    return element.parent;
   }
 }

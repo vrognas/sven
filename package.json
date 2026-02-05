@@ -186,12 +186,12 @@
     "viewsWelcome": [
       {
         "view": "sven.repolog",
-        "contents": "View the commit history of your repository.\n\n[Show Log](command:svn.log)\n\nTip: Use the log to browse commits, view changes, and understand project history.",
+        "contents": "View the commit history of your repository.\n\n[Show Log](command:sven.log)\n\nTip: Use the log to browse commits, view changes, and understand project history.",
         "when": "svnOpenRepositoryCount != 0"
       },
       {
         "view": "sven.itemlog",
-        "contents": "Select a file in the explorer to view its revision history.\n\nRight-click any file and choose **SVN: Show Log** to see its history here.",
+        "contents": "Open a versioned file to view its revision history.\n\nThe history updates automatically when you switch files in the editor.",
         "when": "svnOpenRepositoryCount != 0"
       },
       {
@@ -201,7 +201,7 @@
       },
       {
         "view": "sparseCheckout",
-        "contents": "Choose which folders and files to download from the repository.\n\nExpand folders to browse server contents. De-emphasized items are on the server but not downloaded locally.\n\n[Refresh](command:svn.sparse.refresh)",
+        "contents": "Choose which folders and files to download from the repository.\n\nExpand folders to browse server contents. De-emphasized items are on the server but not downloaded locally.\n\n[Refresh](command:sven.sparse.refresh)",
         "when": "svnOpenRepositoryCount != 0"
       }
     ],
@@ -225,7 +225,7 @@
           {
             "id": "sven.gettingStarted.open",
             "title": "Open a Repository",
-            "description": "Open an existing working copy or checkout a new repository.\n\n[Checkout Repository](command:svn.checkout)\n\nOr simply open a folder that contains a `.svn` directory.",
+            "description": "Open an existing working copy or checkout a new repository.\n\n[Checkout Repository](command:sven.checkout)\n\nOr simply open a folder that contains a `.svn` directory.",
             "media": {
               "markdown": "media/walkthroughs/open-repo.md"
             },
@@ -254,47 +254,47 @@
           {
             "id": "sven.dailyWorkflow.check",
             "title": "Check for Updates",
-            "description": "See what others have committed before you start working.\n\n[Check for Incoming Changes](command:svn.refreshRemoteChanges)\n\nTip: Enable `svn.sourceControl.checkForIncomingChanges` for automatic checks.",
+            "description": "See what others have committed before you start working.\n\n[Check for Incoming Changes](command:sven.refreshRemoteChanges)\n\nTip: Enable `sven.refresh.remoteChanges` to include remote checks with every refresh.",
             "media": {
               "markdown": "media/walkthroughs/check-updates.md"
             },
             "completionEvents": [
-              "onCommand:svn.refreshRemoteChanges"
+              "onCommand:sven.refreshRemoteChanges"
             ]
           },
           {
             "id": "sven.dailyWorkflow.update",
             "title": "Update Working Copy",
-            "description": "Pull the latest changes from the server.\n\n[Update](command:svn.update)\n\nThis merges remote changes into your local files.",
+            "description": "Pull the latest changes from the server.\n\n[Update](command:sven.update)\n\nThis merges remote changes into your local files.",
             "media": {
               "markdown": "media/walkthroughs/update.md"
             },
             "completionEvents": [
-              "onCommand:svn.update"
+              "onCommand:sven.update"
             ]
           },
           {
             "id": "sven.dailyWorkflow.stage",
             "title": "Stage Your Changes",
-            "description": "After editing files, stage them for commit.\n\n[Stage All Changes](command:svn.stageAll)\n\nOr click the **+** icon next to individual files in the Source Control view.",
+            "description": "After editing files, stage them for commit.\n\n[Stage All Changes](command:sven.stageAll)\n\nOr click the **+** icon next to individual files in the Source Control view.",
             "media": {
               "markdown": "media/walkthroughs/stage.md"
             },
             "completionEvents": [
-              "onCommand:svn.stage",
-              "onCommand:svn.stageAll"
+              "onCommand:sven.stage",
+              "onCommand:sven.stageAll"
             ]
           },
           {
             "id": "sven.dailyWorkflow.commit",
             "title": "Commit Changes",
-            "description": "Save your staged changes to the repository.\n\n[Commit](command:svn.commit)\n\nWrite a clear commit message describing what you changed and why.",
+            "description": "Save your staged changes to the repository.\n\n[Commit](command:sven.commit)\n\nWrite a clear commit message describing what you changed and why.",
             "media": {
               "markdown": "media/walkthroughs/commit.md"
             },
             "completionEvents": [
-              "onCommand:svn.commit",
-              "onCommand:svn.commitWithMessage"
+              "onCommand:sven.commit",
+              "onCommand:sven.commitWithMessage"
             ]
           }
         ]
@@ -307,24 +307,24 @@
           {
             "id": "sven.investigateHistory.log",
             "title": "View File History",
-            "description": "See all revisions of a file.\n\nRight-click any file in Explorer and select **SVN: Show Log**.\n\n[Show Repository Log](command:svn.log)",
+            "description": "See all revisions of a file.\n\nOpen any versioned file and check the **File History** pane in the Source Control sidebar. It updates automatically as you switch files.",
             "media": {
               "markdown": "media/walkthroughs/file-history.md"
             },
             "completionEvents": [
-              "onCommand:svn.log"
+              "onView:sven.itemlog"
             ]
           },
           {
             "id": "sven.investigateHistory.blame",
             "title": "Toggle Blame Annotations",
-            "description": "See who last modified each line of code.\n\n[Toggle Blame](command:svn.blame.toggleBlame)\n\nHover over annotations to see commit details.",
+            "description": "See who last modified each line of code.\n\n[Toggle Blame](command:sven.blame.toggleBlame)\n\nHover over annotations to see commit details.",
             "media": {
               "markdown": "media/walkthroughs/blame.md"
             },
             "completionEvents": [
-              "onCommand:svn.blame.toggleBlame",
-              "onCommand:svn.blame.showBlame"
+              "onCommand:sven.blame.toggleBlame",
+              "onCommand:sven.blame.showBlame"
             ]
           },
           {
@@ -335,7 +335,7 @@
               "markdown": "media/walkthroughs/compare-revisions.md"
             },
             "completionEvents": [
-              "onCommand:svn.itemlog.openDiff"
+              "onCommand:sven.itemlog.openDiff"
             ]
           }
         ]
@@ -347,25 +347,25 @@
         "steps": [
           {
             "id": "sven.sparseCheckout.enable",
-            "title": "Enable Sparse Mode",
-            "description": "For large repositories, download only the folders you need.\n\n[Open Settings](command:workbench.action.openSettings?%22svn.sparse%22)\n\nEnable `svn.sparse.enabled` to activate the Selective Download view.",
+            "title": "Open Selective Download",
+            "description": "For large repositories, download only the folders you need.\n\nOpen the **Selective Download** view in the Source Control sidebar to browse and select folders.",
             "media": {
               "markdown": "media/walkthroughs/sparse-enable.md"
             },
             "completionEvents": [
-              "onSettingChanged:svn.sparse.enabled"
+              "onView:sven.sparseCheckout"
             ]
           },
           {
             "id": "sven.sparseCheckout.select",
             "title": "Select Folders",
-            "description": "Use the **Selective Download** view to choose which folders to download.\n\n- Expand folders to browse server contents\n- Check/uncheck to include/exclude\n- De-emphasized items are on server only\n\n[Refresh Sparse View](command:svn.sparse.refresh)",
+            "description": "Use the **Selective Download** view to choose which folders to download.\n\n- Expand folders to browse server contents\n- Check/uncheck to include/exclude\n- De-emphasized items are on server only\n\n[Refresh Sparse View](command:sven.sparse.refresh)",
             "media": {
               "markdown": "media/walkthroughs/sparse-select.md"
             },
             "completionEvents": [
-              "onCommand:svn.sparse.checkout",
-              "onCommand:svn.sparse.exclude"
+              "onCommand:sven.sparse.checkout",
+              "onCommand:sven.sparse.exclude"
             ]
           }
         ]
@@ -378,35 +378,35 @@
           {
             "id": "sven.fileLocking.lock",
             "title": "Lock a File",
-            "description": "Prevent others from editing while you work.\n\n[Lock File](command:svn.lock)\n\nRight-click a file in Explorer or Source Control and select **SVN: Lock**.\n\nIdeal for binary files (images, docs) that can't be merged.",
+            "description": "Prevent others from editing while you work.\n\n[Lock File](command:sven.lock)\n\nRight-click a file in Explorer or Source Control and select **SVN: Lock**.\n\nIdeal for binary files (images, docs) that can't be merged.",
             "media": {
               "markdown": "media/walkthroughs/lock-file.md"
             },
             "completionEvents": [
-              "onCommand:svn.lock"
+              "onCommand:sven.lock"
             ]
           },
           {
             "id": "sven.fileLocking.unlock",
             "title": "Commit & Unlock",
-            "description": "Committing automatically releases locks.\n\nOr manually unlock without committing:\n\n[Unlock File](command:svn.unlock)\n\nNote: Admins can break others' locks with **SVN: Break Lock**.",
+            "description": "Committing automatically releases locks.\n\nOr manually unlock without committing:\n\n[Unlock File](command:sven.unlock)\n\nNote: Admins can break others' locks with **SVN: Break Lock**.",
             "media": {
               "markdown": "media/walkthroughs/unlock-file.md"
             },
             "completionEvents": [
-              "onCommand:svn.unlock",
-              "onCommand:svn.commit"
+              "onCommand:sven.unlock",
+              "onCommand:sven.commit"
             ]
           },
           {
             "id": "sven.fileLocking.needsLock",
             "title": "Set Auto-Lock Property",
-            "description": "Mark files that should always require locking.\n\n[Toggle Needs-Lock](command:svn.toggleNeedsLock)\n\nSets `svn:needs-lock` property. File becomes read-only until locked.",
+            "description": "Mark files that should always require locking.\n\n[Toggle Needs-Lock](command:sven.toggleNeedsLock)\n\nSets `svn:needs-lock` property. File becomes read-only until locked.",
             "media": {
               "markdown": "media/walkthroughs/needs-lock.md"
             },
             "completionEvents": [
-              "onCommand:svn.toggleNeedsLock"
+              "onCommand:sven.toggleNeedsLock"
             ]
           }
         ]
