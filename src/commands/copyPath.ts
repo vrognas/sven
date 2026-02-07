@@ -7,13 +7,18 @@
  * Copies relative or absolute path of files from SCM changes view to clipboard
  */
 
-import { env, SourceControlResourceState, window, workspace } from "vscode";
+import {
+  env,
+  SourceControlResourceState,
+  Uri,
+  window,
+  workspace
+} from "vscode";
 import { Command } from "./command";
 
-export class CopyRelativePath extends Command {
-  constructor() {
-    super("sven.copyRelativePath");
-  }
+abstract class BaseCopyPathCommand extends Command {
+  protected abstract pathTypeLabel: string;
+  protected abstract mapPath(uri: Uri): string;
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
     if (resourceStates.length === 0) {
@@ -21,8 +26,9 @@ export class CopyRelativePath extends Command {
     }
 
     const paths = resourceStates
-      .filter(r => r.resourceUri)
-      .map(r => workspace.asRelativePath(r.resourceUri));
+      .map(r => r.resourceUri)
+      .filter((uri): uri is Uri => uri instanceof Uri)
+      .map(uri => this.mapPath(uri));
 
     if (paths.length === 0) {
       return;
@@ -33,37 +39,32 @@ export class CopyRelativePath extends Command {
 
     const count = paths.length;
     window.setStatusBarMessage(
-      `Copied ${count} relative path${count > 1 ? "s" : ""} to clipboard`,
+      `Copied ${count} ${this.pathTypeLabel} path${count > 1 ? "s" : ""} to clipboard`,
       3000
     );
   }
 }
 
-export class CopyAbsolutePath extends Command {
+export class CopyRelativePath extends BaseCopyPathCommand {
+  constructor() {
+    super("sven.copyRelativePath");
+  }
+
+  protected pathTypeLabel = "relative";
+
+  protected mapPath(uri: Uri): string {
+    return workspace.asRelativePath(uri);
+  }
+}
+
+export class CopyAbsolutePath extends BaseCopyPathCommand {
   constructor() {
     super("sven.copyAbsolutePath");
   }
 
-  public async execute(...resourceStates: SourceControlResourceState[]) {
-    if (resourceStates.length === 0) {
-      return;
-    }
+  protected pathTypeLabel = "absolute";
 
-    const paths = resourceStates
-      .filter(r => r.resourceUri)
-      .map(r => r.resourceUri.fsPath);
-
-    if (paths.length === 0) {
-      return;
-    }
-
-    const text = paths.join("\n");
-    await env.clipboard.writeText(text);
-
-    const count = paths.length;
-    window.setStatusBarMessage(
-      `Copied ${count} absolute path${count > 1 ? "s" : ""} to clipboard`,
-      3000
-    );
+  protected mapPath(uri: Uri): string {
+    return uri.fsPath;
   }
 }
