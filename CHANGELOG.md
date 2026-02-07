@@ -17,6 +17,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Scenarios**: File lifecycle, changelists, branches, conflicts
 - **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
+## [0.2.20] (2026-02-07)
+
+### Fix
+
+- Fix Linux/macOS `svnAuthCache` cross-platform assertion flake by validating stable cache-dir suffix/absolute path instead of mocked-home prefix.
+
+### Test
+
+- `npx vitest run src/test/unit/services/svnAuthCache.test.ts`
+- `CI=true npm test`
+
 ## [0.2.19] (2026-02-07)
 
 ### Fix

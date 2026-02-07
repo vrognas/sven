@@ -30,3 +30,4 @@
 - Use SVN canonical auth cache folder naming in code/tests: `auth/svn.simple`.
 - In path validation, reject Windows-absolute forms on all platforms (`C:\`, `\\server\share`, `\rooted`).
 - For VS Code E2E in CI, keep `.vscode-test.mjs` target list explicit and stable; skip suite early when binaries/commands unavailable.
+- In cross-platform unit tests, avoid `startsWith(mockHome)` assertions; assert invariant path suffix + absolute path instead.

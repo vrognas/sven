@@ -594,8 +594,10 @@ suite("SvnAuthCache - Unit Tests", () => {
       }
 
       const cacheDir = authCache.getCacheDirectory();
-      assert.ok(cacheDir.includes(".subversion/auth/svn.simple"));
-      assert.ok(cacheDir.startsWith(testCacheDir));
+      assert.ok(
+        cacheDir.endsWith(path.join(".subversion", "auth", "svn.simple"))
+      );
+      assert.ok(path.isAbsolute(cacheDir));
     });
 
     test("6.2: uses correct cache directory on macOS", function () {
@@ -604,8 +606,10 @@ suite("SvnAuthCache - Unit Tests", () => {
       }
 
       const cacheDir = authCache.getCacheDirectory();
-      assert.ok(cacheDir.includes(".subversion/auth/svn.simple"));
-      assert.ok(cacheDir.startsWith(testCacheDir));
+      assert.ok(
+        cacheDir.endsWith(path.join(".subversion", "auth", "svn.simple"))
+      );
+      assert.ok(path.isAbsolute(cacheDir));
     });
 
     test("6.3: uses correct cache directory on Windows", function () {

@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.19
+**Version**: 0.2.20
 **Updated**: 2026-02-07
 
 ---
@@ -176,6 +176,7 @@ External: vscode, @posit-dev/positron
   - command helper contract awareness (`runByRepositoryPaths` handles URI→path conversion)
   - suite preflight checks for required binaries and extension command registration before E2E setup
   - explicit stable test file allowlist in `.vscode-test.mjs` for CI-hosted VS Code runs
+  - cross-platform path assertions based on invariant suffixes, not runner-specific home directory prefixes
 - Coverage runs can intermittently report external flake noise:
   - `remoteChangeService` timing-sensitive poll assertion
   - `phase10` transient `svn` spawn/repository temp path failures

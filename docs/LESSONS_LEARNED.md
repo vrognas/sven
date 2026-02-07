@@ -1,7 +1,20 @@
 # Lessons Learned
 
-**Version**: 0.2.19
+**Version**: 0.2.20
 **Updated**: 2026-02-07
+
+---
+
+### 53. Cross-Platform Unit Tests: Avoid Mocked-Home Prefix Assumptions
+
+**Lesson**: `os.homedir` monkey-patching may not reliably drive imported module behavior across all runners; prefix assertions can become CI-only flakes.
+
+**Fix**:
+
+- For cache-dir assertions, validate invariant suffix (`.subversion/auth/svn.simple`) + absolute path.
+- Avoid strict `startsWith(testCacheDir)` checks for default-home constructors.
+
+**Rule**: In platform tests, assert stable invariants; avoid runner-dependent home-path assumptions.
 
 ---
 
