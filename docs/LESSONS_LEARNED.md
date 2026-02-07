@@ -1,6 +1,6 @@
 # Lessons Learned
 
-**Version**: 0.2.22
+**Version**: 0.2.23
 **Updated**: 2026-02-07
 
 ---
@@ -12,7 +12,7 @@
 **Fix**:
 
 - Add `suiteReady = false` by default.
-- Add per-test `setup(function () { if (!suiteReady) this.skip(); })`.
+- Wrap each test with `testIfReady(...)` and run `this.skip()` inside the test context when not ready.
 - Set `suiteReady = true` only after full preflight/setup success.
 
 **Rule**: For binary/extension preflight in legacy E2E suites, guard each test via readiness flag; do not rely on `suiteSetup` skip alone.

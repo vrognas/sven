@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.22
+**Version**: 0.2.23
 **Updated**: 2026-02-07
 
 ---
@@ -175,7 +175,7 @@ External: vscode, @posit-dev/positron
   - parser fixture parity with adapter defaults (`explicitRoot: false` root-stripped outputs)
   - command helper contract awareness (`runByRepositoryPaths` handles URI→path conversion)
   - suite preflight checks for required binaries and extension command registration before E2E setup
-  - suite readiness guards (`suiteReady`) in legacy E2E suites to prevent execution with uninitialized fixtures when preflight fails
+  - per-test readiness wrappers (`testIfReady` + `suiteReady`) in legacy E2E suites to prevent execution with uninitialized fixtures when preflight fails
   - explicit stable test file allowlist in `.vscode-test.mjs` for CI-hosted VS Code runs
   - cross-platform path assertions based on invariant suffixes, not runner-specific home directory prefixes
   - signal-based timer assertions (promise+timeout) for polling tests instead of fixed sleeps

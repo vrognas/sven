@@ -13,12 +13,17 @@ suite("Commands Tests", () => {
   let checkoutDir: Uri;
   let sourceControlManager: SourceControlManager;
   let suiteReady = false;
-
-  setup(function () {
-    if (!suiteReady) {
-      this.skip();
-    }
-  });
+  function testIfReady(
+    title: string,
+    fn: (this: Mocha.Context) => Promise<void> | void
+  ): void {
+    test(title, function (this: Mocha.Context) {
+      if (!suiteReady) {
+        this.skip();
+      }
+      return fn.call(this);
+    });
+  }
 
   suiteSetup(async function () {
     suiteReady = false;
@@ -61,14 +66,14 @@ suite("Commands Tests", () => {
     testUtil.destroyAllTempPaths();
   });
 
-  test("File Open", async function () {
+  testIfReady("File Open", async function () {
     const file = path.join(checkoutDir.fsPath, "new.txt");
     fs.writeFileSync(file, "test");
 
     await commands.executeCommand("sven.fileOpen", Uri.file(file));
   });
 
-  test("Add File", async function () {
+  testIfReady("Add File", async function () {
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
@@ -85,7 +90,7 @@ suite("Commands Tests", () => {
     assert.equal(repository.changes.resourceStates.length, 1);
   });
 
-  test("Commit Single File", async function () {
+  testIfReady("Commit Single File", async function () {
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
@@ -94,15 +99,15 @@ suite("Commands Tests", () => {
     await commands.executeCommand("sven.commitWithMessage");
   });
 
-  test("Update", async function () {
+  testIfReady("Update", async function () {
     await commands.executeCommand("sven.update");
   });
 
-  test("Show Log", async function () {
+  testIfReady("Show Log", async function () {
     await commands.executeCommand("sven.log");
   });
 
-  test("Open Changes", async function () {
+  testIfReady("Open Changes", async function () {
     const file = path.join(checkoutDir.fsPath, "new.txt");
     fs.writeFileSync(file, "test 2");
     const uri = Uri.file(file);
@@ -112,7 +117,7 @@ suite("Commands Tests", () => {
     await commands.executeCommand("sven.openChangeHead", uri);
   });
 
-  test("Open File", async function () {
+  testIfReady("Open File", async function () {
     const file = path.join(checkoutDir.fsPath, "new.txt");
     const uri = Uri.file(file);
 
@@ -120,7 +125,7 @@ suite("Commands Tests", () => {
     await commands.executeCommand("sven.openHEADFile", uri);
   });
 
-  test("Open Diff (Double click o source control)", async function () {
+  testIfReady("Open Diff (Double click o source control)", async function () {
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
@@ -134,7 +139,7 @@ suite("Commands Tests", () => {
     await commands.executeCommand("sven.openResourceHead", resource);
   });
 
-  test("Add Changelist", async function () {
+  testIfReady("Add Changelist", async function () {
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
@@ -151,7 +156,7 @@ suite("Commands Tests", () => {
     assert.ok(repository.changelists.has("changelist-test"));
   });
 
-  test("Remove Changelist", async function () {
+  testIfReady("Remove Changelist", async function () {
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
@@ -167,11 +172,11 @@ suite("Commands Tests", () => {
     assert.equal(group.resourceStates.length, 0);
   });
 
-  test("Show Patch", async function () {
+  testIfReady("Show Patch", async function () {
     await commands.executeCommand("sven.patch");
   });
 
-  test("Commit Selected File", async function () {
+  testIfReady("Commit Selected File", async function () {
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
@@ -191,7 +196,7 @@ suite("Commands Tests", () => {
     assert.equal(repository.changes.resourceStates.length, 0);
   });
 
-  test("Commit Multiple", async function () {
+  testIfReady("Commit Multiple", async function () {
     const file1 = path.join(checkoutDir.fsPath, "file1.txt");
     fs.writeFileSync(file1, "test");
 
@@ -215,7 +220,7 @@ suite("Commands Tests", () => {
     assert.equal(repository.unversioned.resourceStates.length, 0);
   });
 
-  test("New Branch", async function () {
+  testIfReady("New Branch", async function () {
     testUtil.overrideNextShowQuickPick(0);
     testUtil.overrideNextShowQuickPick(1);
     testUtil.overrideNextShowInputBox("test");
@@ -231,7 +236,7 @@ suite("Commands Tests", () => {
     assert.equal(await repository.getCurrentBranch(), "branches/test");
   });
 
-  test("Switch Branch", async function () {
+  testIfReady("Switch Branch", async function () {
     this.timeout(5000);
     testUtil.overrideNextShowQuickPick(2);
     await commands.executeCommand("sven.switchBranch");

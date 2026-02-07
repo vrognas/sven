@@ -11,12 +11,17 @@ suite("Repository Tests", () => {
   let checkoutDir: Uri;
   let sourceControlManager: SourceControlManager;
   let suiteReady = false;
-
-  setup(function () {
-    if (!suiteReady) {
-      this.skip();
-    }
-  });
+  function testIfReady(
+    title: string,
+    fn: (this: Mocha.Context) => Promise<void> | void
+  ): void {
+    test(title, function (this: Mocha.Context) {
+      if (!suiteReady) {
+        this.skip();
+      }
+      return fn.call(this);
+    });
+  }
 
   suiteSetup(async function () {
     suiteReady = false;
@@ -57,38 +62,38 @@ suite("Repository Tests", () => {
     testUtil.destroyAllTempPaths();
   });
 
-  test("Empty Open Repository", async function () {
+  testIfReady("Empty Open Repository", async function () {
     assert.equal(sourceControlManager.repositories.length, 0);
   });
 
-  test("Try Open Repository", async function () {
+  testIfReady("Try Open Repository", async function () {
     await sourceControlManager.tryOpenRepository(checkoutDir.fsPath);
     assert.equal(sourceControlManager.repositories.length, 1);
   });
 
-  test("Try Open Repository Again", async () => {
+  testIfReady("Try Open Repository Again", async () => {
     await sourceControlManager.tryOpenRepository(checkoutDir.fsPath);
     assert.equal(sourceControlManager.repositories.length, 1);
   });
 
-  test("Try get repository from Uri", () => {
+  testIfReady("Try get repository from Uri", () => {
     const repository = sourceControlManager.getRepository(checkoutDir);
     assert.ok(repository);
   });
 
-  test("Try get repository from string", () => {
+  testIfReady("Try get repository from string", () => {
     const repository = sourceControlManager.getRepository(checkoutDir.fsPath);
     assert.ok(repository);
   });
 
-  test("Try get repository from repository", () => {
+  testIfReady("Try get repository from repository", () => {
     const repository = sourceControlManager.getRepository(checkoutDir.fsPath);
     const repository2 = sourceControlManager.getRepository(repository);
     assert.ok(repository2);
     assert.equal(repository, repository2);
   });
 
-  test("Try get current branch name", async () => {
+  testIfReady("Try get current branch name", async () => {
     const repository: Repository | null = sourceControlManager.getRepository(
       checkoutDir.fsPath
     );
@@ -100,7 +105,7 @@ suite("Repository Tests", () => {
     assert.equal(name, "trunk");
   });
 
-  test("Try commit file", async function () {
+  testIfReady("Try commit file", async function () {
     this.timeout(60000);
     const repository: Repository | null = sourceControlManager.getRepository(
       checkoutDir.fsPath
@@ -131,7 +136,7 @@ suite("Repository Tests", () => {
     assert.equal(remoteContent, "test");
   });
 
-  test("Try switch branch", async function () {
+  testIfReady("Try switch branch", async function () {
     this.timeout(60000);
     const newCheckoutDir = await testUtil.createRepoCheckout(
       testUtil.getSvnUrl(repoUri) + "/trunk"

@@ -10,12 +10,17 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
   let sourceControlManager: SourceControlManager;
   let repository: Repository;
   let suiteReady = false;
-
-  setup(function () {
-    if (!suiteReady) {
-      this.skip();
-    }
-  });
+  function testIfReady(
+    title: string,
+    fn: (this: Mocha.Context) => Promise<void> | void
+  ): void {
+    test(title, function (this: Mocha.Context) {
+      if (!suiteReady) {
+        this.skip();
+      }
+      return fn.call(this);
+    });
+  }
 
   suiteSetup(async function () {
     suiteReady = false;
@@ -58,13 +63,16 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
     testUtil.destroyAllTempPaths();
   });
 
-  test("10.1: Workspace scan completes without freeze", async function () {
-    this.timeout(30000);
-    await sourceControlManager.tryOpenRepository(checkoutDir.fsPath, 0);
-    assert.ok(true, "Scan completed successfully");
-  });
+  testIfReady(
+    "10.1: Workspace scan completes without freeze",
+    async function () {
+      this.timeout(30000);
+      await sourceControlManager.tryOpenRepository(checkoutDir.fsPath, 0);
+      assert.ok(true, "Scan completed successfully");
+    }
+  );
 
-  test("10.2: Command execution overhead under 5ms", async function () {
+  testIfReady("10.2: Command execution overhead under 5ms", async function () {
     this.timeout(10000);
     const iterations = 100;
     const start = Date.now();
@@ -80,13 +88,13 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
     assert.ok(avgPerCall < 5, msg);
   });
 
-  test("10.2: Repository lookup works without IPC", async function () {
+  testIfReady("10.2: Repository lookup works without IPC", async function () {
     const repo = sourceControlManager.getRepository(checkoutDir);
     assert.ok(repo);
     assert.strictEqual(repo, repository);
   });
 
-  test("10.3: updateInfo skipped when cache fresh", async function () {
+  testIfReady("10.3: updateInfo skipped when cache fresh", async function () {
     this.timeout(10000);
     // Note: updateInfo is private, testing via info property
     const info1 = repository.info;
