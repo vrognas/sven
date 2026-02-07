@@ -30,7 +30,7 @@ suite("UI Wrappers", () => {
     test("returns true when confirm label chosen", async () => {
       const spy = vi
         .spyOn(window, "showWarningMessage")
-        .mockResolvedValue("Yes");
+        .mockResolvedValue("Yes" as any);
 
       const ok = await confirm("Proceed?");
 
@@ -49,7 +49,7 @@ suite("UI Wrappers", () => {
     test("confirmRevert/confirmRollback pass expected labels", async () => {
       const spy = vi
         .spyOn(window, "showWarningMessage")
-        .mockResolvedValue("Yes, revert");
+        .mockResolvedValue("Yes, revert" as any);
 
       await confirmRevert();
       await confirmRollback("123");

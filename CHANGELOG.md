@@ -17,6 +17,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Scenarios**: File lifecycle, changelists, branches, conflicts
 - **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
+## [0.2.18] (2026-02-07)
+
+### Fix
+
+- Resolve TypeScript fail set in command, blame, security, and harness suites.
+- Restore sinon stub compatibility for `child_process`/`fs.watch` mocking under Vitest.
+- Make `npm test` cross-platform by replacing POSIX-only CI shell check with Node runtime check.
+
+### Test
+
+- Full gate green: `npm run build:ts`, `npm run lint`, `npm test` (1747/1747).
+
 ## [0.2.17] (2026-02-07)
 
 ### Test

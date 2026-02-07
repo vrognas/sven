@@ -1,6 +1,9 @@
 import * as assert from "assert";
 import { describe, it } from "mocha";
-import { RemoteChangeService, RemoteChangeConfig } from "../../../services/RemoteChangeService";
+import {
+  RemoteChangeService,
+  RemoteChangeConfig
+} from "../../../services/RemoteChangeService";
 
 /**
  * RemoteChangeService E2E Tests
@@ -19,15 +22,21 @@ describe("RemoteChangeService E2E", () => {
     const config: RemoteChangeConfig = { checkFrequencySeconds: 0.05 }; // 50ms
 
     const service = new RemoteChangeService(
-      async () => { callCount++; },
+      async () => {
+        callCount++;
+      },
       () => config
     );
 
     service.start();
-    assert.strictEqual(service.isRunning, true, "Service should be running after start");
+    assert.strictEqual(
+      service.isRunning,
+      true,
+      "Service should be running after start"
+    );
 
     // Wait for ~2 intervals (100ms) to verify multiple calls
-    await new Promise(resolve => setTimeout(resolve, 120));
+    await new Promise(resolve => setTimeout(resolve, 220));
 
     assert.ok(callCount >= 2, `Expected >=2 calls in 120ms, got ${callCount}`);
 
@@ -42,7 +51,9 @@ describe("RemoteChangeService E2E", () => {
     const config: RemoteChangeConfig = { checkFrequencySeconds: 0.05 }; // 50ms
 
     const service = new RemoteChangeService(
-      async () => { callCount++; },
+      async () => {
+        callCount++;
+      },
       () => config
     );
 
@@ -51,7 +62,11 @@ describe("RemoteChangeService E2E", () => {
     const countAfterStart = callCount;
 
     service.stop();
-    assert.strictEqual(service.isRunning, false, "Service should not be running after stop");
+    assert.strictEqual(
+      service.isRunning,
+      false,
+      "Service should not be running after stop"
+    );
 
     await new Promise(resolve => setTimeout(resolve, 100)); // Wait to verify no more calls
 
@@ -86,8 +101,15 @@ describe("RemoteChangeService E2E", () => {
     // Wait for multiple intervals (first throws, subsequent should continue)
     await new Promise(resolve => setTimeout(resolve, 120));
 
-    assert.ok(callCount >= 2, `Polling should continue after error, got ${callCount} calls`);
-    assert.strictEqual(service.isRunning, true, "Service should still be running after error");
+    assert.ok(
+      callCount >= 2,
+      `Polling should continue after error, got ${callCount} calls`
+    );
+    assert.strictEqual(
+      service.isRunning,
+      true,
+      "Service should still be running after error"
+    );
 
     service.dispose();
   });

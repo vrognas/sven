@@ -9,7 +9,27 @@ import {
 } from "vitest";
 
 type MochaContext = { timeout: (ms: number) => void };
-type Runnable = ((this: MochaContext) => unknown) | ((this: MochaContext, done: (err?: unknown) => void) => void);
+type Runnable =
+  | ((this: MochaContext) => unknown)
+  | ((this: MochaContext, done: (err?: unknown) => void) => void);
+type WrappedTestFn = ((
+  name: string,
+  fn?: () => unknown,
+  timeout?: number
+) => unknown) &
+  Record<string, unknown>;
+type WrappedSuiteFn = ((name: string, fn?: () => unknown) => unknown) &
+  Record<string, unknown>;
+type MochaCompatGlobals = {
+  setup: (hook: Runnable) => void;
+  teardown: (hook: Runnable) => void;
+  suiteSetup: (hook: Runnable) => void;
+  suiteTeardown: (hook: Runnable) => void;
+  test: (name: string, fn?: Runnable, timeout?: number) => unknown;
+  it: (name: string, fn?: Runnable, timeout?: number) => unknown;
+  suite: (name: string, fn?: Runnable) => unknown;
+  describe: (name: string, fn?: Runnable) => unknown;
+};
 
 const timeoutNoop = () => {
   // Mocha-style timeout API compatibility
@@ -32,7 +52,9 @@ const callWithContext = (fn: Runnable) => {
     return new Promise<void>((resolve, reject) => {
       const done = (err?: unknown) => (err ? reject(err) : resolve());
       try {
-        (fn as (this: MochaContext, done: (err?: unknown) => void) => void).call(context, done);
+        (
+          fn as (this: MochaContext, done: (err?: unknown) => void) => void
+        ).call(context, done);
       } catch (err) {
         if (err === SKIP) {
           resolve();
@@ -62,33 +84,39 @@ const callWithContext = (fn: Runnable) => {
   }
 };
 
-const wrapHook = (register: (cb: () => unknown) => void) => (hook: Runnable) => {
-  register(() => callWithContext(hook));
-};
+const wrapHook =
+  (register: (cb: () => unknown) => void) => (hook: Runnable) => {
+    register(() => callWithContext(hook));
+  };
 
-const wrapTestFunction = (base: any) => {
+const wrapTestFunction = (base: WrappedTestFn) => {
   const wrapped = ((name: string, fn?: Runnable, timeout?: number) =>
-    base(name, fn ? () => callWithContext(fn) : undefined, timeout)) as any;
+    base(
+      name,
+      fn ? () => callWithContext(fn) : undefined,
+      timeout
+    )) as WrappedTestFn;
   Object.assign(wrapped, base);
   return wrapped;
 };
 
-const wrapSuiteFunction = (base: any) => {
+const wrapSuiteFunction = (base: WrappedSuiteFn) => {
   const wrapped = ((name: string, fn?: Runnable) =>
-    base(name, fn ? () => callWithContext(fn) : undefined)) as any;
+    base(name, fn ? () => callWithContext(fn) : undefined)) as WrappedSuiteFn;
   Object.assign(wrapped, base);
   return wrapped;
 };
 
-const wrappedTest = wrapTestFunction(vitestTest);
-const wrappedIt = wrapTestFunction(vitestIt);
-const wrappedSuite = wrapSuiteFunction(vitestDescribe);
+const wrappedTest = wrapTestFunction(vitestTest as WrappedTestFn);
+const wrappedIt = wrapTestFunction(vitestIt as WrappedTestFn);
+const wrappedSuite = wrapSuiteFunction(vitestDescribe as WrappedSuiteFn);
 
-(globalThis as any).setup = wrapHook(beforeEach);
-(globalThis as any).teardown = wrapHook(afterEach);
-(globalThis as any).suiteSetup = wrapHook(beforeAll);
-(globalThis as any).suiteTeardown = wrapHook(afterAll);
-(globalThis as any).test = wrappedTest;
-(globalThis as any).it = wrappedIt;
-(globalThis as any).suite = wrappedSuite;
-(globalThis as any).describe = wrappedSuite;
+const mochaGlobals = globalThis as typeof globalThis & MochaCompatGlobals;
+mochaGlobals.setup = wrapHook(beforeEach);
+mochaGlobals.teardown = wrapHook(afterEach);
+mochaGlobals.suiteSetup = wrapHook(beforeAll);
+mochaGlobals.suiteTeardown = wrapHook(afterAll);
+mochaGlobals.test = wrappedTest;
+mochaGlobals.it = wrappedIt;
+mochaGlobals.suite = wrappedSuite;
+mochaGlobals.describe = wrappedSuite;

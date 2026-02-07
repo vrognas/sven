@@ -18,6 +18,7 @@ import {
 } from "../util";
 import { logError } from "../util/errorLogger";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const nodeFs: typeof import("fs") = require("fs");
 
 export class RepositoryFilesWatcher implements IDisposable {
@@ -187,7 +188,10 @@ export class RepositoryFilesWatcher implements IDisposable {
   public dispose(): void {
     // Close native fs.watch watcher to prevent file handle leak
     if (this.nativeWatcher) {
-      if (typeof (this.nativeWatcher as { close?: () => void }).close === "function") {
+      if (
+        typeof (this.nativeWatcher as { close?: () => void }).close ===
+        "function"
+      ) {
         this.nativeWatcher.close();
       }
       this.nativeWatcher = undefined;

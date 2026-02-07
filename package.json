@@ -2,7 +2,7 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -62,7 +62,7 @@
     "size": "size-limit",
     "style-check": "prettier --check 'src/**/*.ts'",
     "style-fix": "prettier --write \"src/**/*.ts\"",
-    "test": "npm run test:unit && if [ \"$CI\" = \"true\" ]; then npm run test:e2e; fi",
+    "test": "npm run test:unit && node -e \"if (process.env.CI === 'true') { require('child_process').execSync('npm run test:e2e', { stdio: 'inherit' }); }\"",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",

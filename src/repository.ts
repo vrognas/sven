@@ -9,7 +9,6 @@ import {
   env,
   Event,
   EventEmitter,
-  FileDecoration,
   ProgressLocation,
   scm,
   SecretStorage,
@@ -151,11 +150,7 @@ export class Repository implements IRemoteRepository {
   private statusService: StatusService;
   private groupManager: ResourceGroupManager;
   private remoteChangeService: RemoteChangeService;
-  private fileDecorationProvider: {
-    provideFileDecoration(uri: Uri): FileDecoration | undefined;
-    refresh(uris?: Uri | Uri[]): void;
-    dispose(): void;
-  };
+  private fileDecorationProvider: SvnFileDecorationProvider;
   private _configCache: RepositoryConfig | undefined;
 
   // Property accessors for backward compatibility

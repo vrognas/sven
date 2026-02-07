@@ -83,16 +83,20 @@ suite("Open Commands Tests", () => {
     };
 
     // Mock fs.exists
-    existsSpy = vi.spyOn(fs, "exists").mockImplementation(async (path: string) => {
-      mockState.existsCalls.push({ path });
-      return mockState.existsResult;
-    });
+    existsSpy = vi
+      .spyOn(fs, "exists")
+      .mockImplementation(async (path: string) => {
+        mockState.existsCalls.push({ path });
+        return mockState.existsResult;
+      });
 
     // Mock fs.stat
-    statSpy = vi.spyOn(fs, "stat").mockImplementation(async (path: string) => {
-      mockState.statCalls.push({ path });
-      return { isDirectory: () => mockState.statIsDirectory } as any;
-    });
+    statSpy = vi
+      .spyOn(fs, "stat")
+      .mockImplementation(async (path: Parameters<typeof fs.stat>[0]) => {
+        mockState.statCalls.push({ path: String(path) });
+        return { isDirectory: () => mockState.statIsDirectory } as any;
+      });
   });
 
   teardown(() => {

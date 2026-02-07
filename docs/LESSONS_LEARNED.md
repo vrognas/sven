@@ -1,7 +1,20 @@
 # Lessons Learned
 
-**Version**: 0.2.17
+**Version**: 0.2.18
 **Updated**: 2026-02-07
+
+---
+
+### 51. Vitest+Sinon Stubs: Keep CommonJS Boundary for Stub Targets
+
+**Lesson**: For modules stubbing built-in APIs (`child_process.spawn`, `fs.watch`) with sinon, ESM import shape can break stubs.
+
+**Fix**:
+
+- Keep local CommonJS require binding for stubbed module targets in runtime/tests.
+- Use local lint suppression only on those boundary lines.
+
+**Rule**: Prefer ESM generally, but keep require-boundary where sinon stub target identity must stay mutable.
 
 ---
 

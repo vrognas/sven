@@ -33,10 +33,12 @@ suite("Cleanup and Upgrade Commands Tests", () => {
     const cleanupAdvanced = vi.fn().mockResolvedValue(undefined);
     const repository = { cleanupAdvanced } as unknown as Repository;
 
-    vi.spyOn(window, "showQuickPick").mockResolvedValue([]);
-    vi.spyOn(window, "withProgress").mockImplementation(async (_o: any, task: any) => {
-      return task();
-    });
+    vi.spyOn(window, "showQuickPick").mockImplementation(async () => [] as any);
+    vi.spyOn(window, "withProgress").mockImplementation(
+      async (_o: any, task: any) => {
+        return task();
+      }
+    );
     const infoSpy = vi
       .spyOn(window, "showInformationMessage")
       .mockResolvedValue(undefined);
@@ -95,7 +97,9 @@ suite("Cleanup and Upgrade Commands Tests", () => {
     assert.strictEqual(manager.upgradeWorkingCopy.mock.calls.length, 1);
     assert.strictEqual(manager.tryOpenRepository.mock.calls.length, 0);
     assert.ok(errorSpy.mock.calls.length > 0);
-    assert.ok(String(errorSpy.mock.calls[0]![0]).includes("Error on upgrading"));
+    assert.ok(
+      String(errorSpy.mock.calls[0]![0]).includes("Error on upgrading")
+    );
     command.dispose();
   });
 
@@ -118,7 +122,10 @@ suite("Cleanup and Upgrade Commands Tests", () => {
     await command.execute("/test/path");
 
     assert.strictEqual(updateSpy.mock.calls.length, 1);
-    assert.strictEqual(updateSpy.mock.calls[0]![0], "ignoreWorkingCopyIsTooOld");
+    assert.strictEqual(
+      updateSpy.mock.calls[0]![0],
+      "ignoreWorkingCopyIsTooOld"
+    );
     assert.strictEqual(updateSpy.mock.calls[0]![1], true);
     command.dispose();
   });

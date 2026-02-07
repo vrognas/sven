@@ -62,11 +62,12 @@ suite("Merge Command Tests", () => {
       return folder === "trunk" || folder.includes("/trunk");
     });
 
-    vi.spyOn(window, "showErrorMessage").mockImplementation(
-      async (_message: string, ..._items: string[]) => {
-        return mockState.showErrorMessageResult as any;
-      }
-    );
+    vi.spyOn(window, "showErrorMessage").mockImplementation((async (
+      _message: string,
+      ..._args: any[]
+    ) => {
+      return mockState.showErrorMessageResult as any;
+    }) as any);
 
     vi.spyOn(commands, "executeCommand").mockImplementation(
       async (command: string, ..._args: any[]) => {

@@ -2,6 +2,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const cp = require("child_process") as typeof import("child_process");
 import { EventEmitter } from "events";
 import * as proc from "process";
@@ -260,7 +261,8 @@ export class Svn {
     // Determine credential mode based on setting and environment (cached)
     const authConfig = getAuthConfig();
     const useSystemKeyring = authConfig.useSystemKeyring;
-    const useLegacyAuth = (this as { useLegacyAuth?: boolean }).useLegacyAuth === true;
+    const useLegacyAuth =
+      (this as { useLegacyAuth?: boolean }).useLegacyAuth === true;
 
     const envPassword = proc.env.SVN_PASSWORD;
     const effectivePassword = options.password || envPassword;
@@ -328,7 +330,9 @@ export class Svn {
           safeArgs[i + 1] = "[REDACTED]";
         }
       }
-      const argsOut = safeArgs.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
+      const argsOut = safeArgs.map(arg =>
+        / |^$/.test(arg) ? `'${arg}'` : arg
+      );
       this.logOutput(
         `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
       );
@@ -340,10 +344,12 @@ export class Svn {
 
     // Log auth mode (controlled by svn.output.authLogging setting)
     if (options.log !== false && shouldLogAuthMode()) {
-      this.logOutput(`[auth: ${authMethod}; mode: ${authConfig.modeDescription}]\n`);
+      this.logOutput(
+        `[auth: ${authMethod}; mode: ${authConfig.modeDescription}]\n`
+      );
     }
 
-    const defaults: cp.SpawnOptions = {
+    const defaults: import("child_process").SpawnOptions = {
       env: proc.env
     };
     if (cwd) {
@@ -380,7 +386,10 @@ export class Svn {
       fn: (...args: unknown[]) => void
     ) => {
       const target = ee as unknown as {
-        removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
+        removeListener?: (
+          event: string,
+          listener: (...args: unknown[]) => void
+        ) => void;
         off?: (event: string, listener: (...args: unknown[]) => void) => void;
       };
       if (typeof target.removeListener === "function") {
@@ -397,8 +406,11 @@ export class Svn {
       name: string,
       fn: (...args: T) => void
     ) => {
-      ee.once(name, fn);
-      disposables.push(toDisposable(() => removeEventListener(ee, name, fn)));
+      const listener = fn as (...args: unknown[]) => void;
+      ee.once(name, listener);
+      disposables.push(
+        toDisposable(() => removeEventListener(ee, name, listener))
+      );
     };
 
     const on = <T extends unknown[]>(
@@ -406,8 +418,11 @@ export class Svn {
       name: string,
       fn: (...args: T) => void
     ) => {
-      ee.on(name, fn);
-      disposables.push(toDisposable(() => removeEventListener(ee, name, fn)));
+      const listener = fn as (...args: unknown[]) => void;
+      ee.on(name, listener);
+      disposables.push(
+        toDisposable(() => removeEventListener(ee, name, listener))
+      );
     };
 
     // Phase 12 perf fix - Add timeout to prevent hanging SVN commands

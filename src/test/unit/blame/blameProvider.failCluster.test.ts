@@ -60,15 +60,22 @@ suite("BlameProvider - Fail Cluster", () => {
     const editor = createEditor(uri);
     sandbox.stub(window, "activeTextEditor").value(editor);
 
-    const activeChangeSpy = sandbox.spy(provider as any, "onActiveEditorChange");
-    const beforeWindow = (window.onDidChangeActiveTextEditor as any).mock.calls.length;
-    const beforeWorkspace = (workspace.onDidChangeTextDocument as any).mock.calls.length;
+    const activeChangeSpy = sandbox.spy(
+      provider as any,
+      "onActiveEditorChange"
+    );
+    const beforeWindow = (window.onDidChangeActiveTextEditor as any).mock.calls
+      .length;
+    const beforeWorkspace = (workspace.onDidChangeTextDocument as any).mock
+      .calls.length;
 
     provider.activate();
     provider.activate();
 
-    const afterWindow = (window.onDidChangeActiveTextEditor as any).mock.calls.length;
-    const afterWorkspace = (workspace.onDidChangeTextDocument as any).mock.calls.length;
+    const afterWindow = (window.onDidChangeActiveTextEditor as any).mock.calls
+      .length;
+    const afterWorkspace = (workspace.onDidChangeTextDocument as any).mock.calls
+      .length;
 
     assert.strictEqual(afterWindow - beforeWindow, 1);
     assert.strictEqual(afterWorkspace - beforeWorkspace, 1);
@@ -77,13 +84,11 @@ suite("BlameProvider - Fail Cluster", () => {
 
   test("onConfigurationChange clears old decorations, disposes old types, and refreshes", async () => {
     const createdTypes: Array<{ dispose: sinon.SinonStub }> = [];
-    sandbox
-      .stub(window, "createTextEditorDecorationType")
-      .callsFake(() => {
-        const type = { dispose: sandbox.stub() };
-        createdTypes.push(type);
-        return type as any;
-      });
+    sandbox.stub(window, "createTextEditorDecorationType").callsFake(() => {
+      const type = { dispose: sandbox.stub() };
+      createdTypes.push(type);
+      return type as any;
+    });
 
     provider.dispose();
     provider = new BlameProvider(mockRepository as any);
@@ -111,9 +116,9 @@ suite("BlameProvider - Fail Cluster", () => {
     await (provider as any).onConfigurationChange({} as any);
 
     assert.strictEqual(createdTypes.length, 6);
-    assert.ok(createdTypes[0].dispose.calledOnce);
-    assert.ok(createdTypes[1].dispose.calledOnce);
-    assert.ok(createdTypes[2].dispose.calledOnce);
+    assert.ok(createdTypes[0]!.dispose.calledOnce);
+    assert.ok(createdTypes[1]!.dispose.calledOnce);
+    assert.ok(createdTypes[2]!.dispose.calledOnce);
     assert.ok(oldIconType.dispose.calledOnce);
     assert.strictEqual((provider as any).revisionColors.size, 0);
     assert.strictEqual((provider as any).svgCache.size, 0);
@@ -134,7 +139,10 @@ suite("BlameProvider - Fail Cluster", () => {
       }
     ];
 
-    (provider as any).blameCache.set(uri.toString(), { data: cachedData, version: 7 });
+    (provider as any).blameCache.set(uri.toString(), {
+      data: cachedData,
+      version: 7
+    });
     sandbox.stub(window, "activeTextEditor").value(createEditor(uri, 1, 7));
 
     const result = await (provider as any).getBlameData(uri);
@@ -150,13 +158,17 @@ suite("BlameProvider - Fail Cluster", () => {
 
     mockRepository.getResourceFromFile.returns(undefined as any);
     mockRepository.getInfo.resolves({} as any);
-    mockRepository.blame.rejects(new Error("svn: E170001: Authentication failed"));
+    mockRepository.blame.rejects(
+      new Error("svn: E170001: Authentication failed")
+    );
 
     const warningStub = sandbox
       .stub(window, "showWarningMessage")
       .resolves("Authenticate" as any);
     const errorStub = sandbox.stub(window, "showErrorMessage");
-    const executeStub = sandbox.stub(commands, "executeCommand").resolves(undefined);
+    const executeStub = sandbox
+      .stub(commands, "executeCommand")
+      .resolves(undefined);
 
     const result = await (provider as any).getBlameData(uri);
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -166,7 +178,10 @@ suite("BlameProvider - Fail Cluster", () => {
     assert.ok(errorStub.notCalled);
     assert.ok(executeStub.calledOnce);
     assert.strictEqual(executeStub.firstCall.args[0], "sven.promptAuth");
-    assert.strictEqual(executeStub.firstCall.args[3], "http://svn.example/repo");
+    assert.strictEqual(
+      executeStub.firstCall.args[3],
+      "http://svn.example/repo"
+    );
   });
 
   test("getBlameData network failure shows connection error", async () => {
@@ -428,7 +443,10 @@ suite("BlameProvider - Fail Cluster", () => {
       max: 10,
       uniqueRevisions: [10, 9, 8, 7, 6, 5, 4]
     };
-    const gradientColor = (provider as any).getRevisionColor("4", gradientRange);
+    const gradientColor = (provider as any).getRevisionColor(
+      "4",
+      gradientRange
+    );
     assert.ok(/^#[0-9a-f]{6}$/i.test(gradientColor));
 
     const hueColor = (provider as any).hslToHex(330, 45, 60);
@@ -436,7 +454,10 @@ suite("BlameProvider - Fail Cluster", () => {
 
     const iconType = { dispose: sandbox.stub() };
     (provider as any).iconTypes.set("#112233", iconType);
-    assert.strictEqual((provider as any).getIconDecorationType("#112233"), iconType);
+    assert.strictEqual(
+      (provider as any).getIconDecorationType("#112233"),
+      iconType
+    );
 
     sandbox.stub(blameConfiguration, "getInlineMaxLength").returns(10);
     const truncated = (provider as any).truncateMessage(
@@ -460,12 +481,10 @@ suite("BlameProvider - Fail Cluster", () => {
     );
 
     sandbox.stub(provider as any, "shouldDecorate").returns(true);
-    sandbox
-      .stub(provider as any, "getBlameData")
-      .resolves([
-        { lineNumber: 3, revision: "1", author: "a", date: "2026-01-01" },
-        { lineNumber: 1, revision: "", author: "", date: "2026-01-01" }
-      ]);
+    sandbox.stub(provider as any, "getBlameData").resolves([
+      { lineNumber: 3, revision: "1", author: "a", date: "2026-01-01" },
+      { lineNumber: 1, revision: "", author: "", date: "2026-01-01" }
+    ]);
     sandbox.stub(provider as any, "getLineMapping").resolves(undefined);
 
     await (provider as any).updateInlineDecorationsForCursor(editor);

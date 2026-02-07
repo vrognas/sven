@@ -13,8 +13,7 @@ export class Uri {
     const nextScheme = change.scheme ?? this.scheme;
     const nextPath = change.path ?? this.path;
     const nextFsPath =
-      change.fsPath ??
-      (nextScheme === "file" ? nextPath : this.fsPath);
+      change.fsPath ?? (nextScheme === "file" ? nextPath : this.fsPath);
     return new Uri(nextScheme, nextPath, nextFsPath);
   }
 
@@ -24,7 +23,9 @@ export class Uri {
     }
 
     if (this.scheme === "file") {
-      const normalized = this.path.startsWith("/") ? this.path : `/${this.path}`;
+      const normalized = this.path.startsWith("/")
+        ? this.path
+        : `/${this.path}`;
       return `file://${normalized}`;
     }
 
@@ -63,7 +64,10 @@ export class Uri {
   ): Uri {
     const scheme = base.scheme ?? "file";
     const basePath = base.path ?? base.fsPath ?? "";
-    const joinedPath = path.posix.join(toPosix(basePath), ...segments.map(toPosix));
+    const joinedPath = path.posix.join(
+      toPosix(basePath),
+      ...segments.map(toPosix)
+    );
     const fsPath = scheme === "file" ? joinedPath : "";
     return new Uri(scheme, joinedPath, fsPath);
   }
@@ -125,9 +129,7 @@ export class EventEmitter<T> {
   private listeners: Array<{ raw: (e: T) => void; wrapped: (e: T) => void }> =
     [];
   event: Event<T> = (listener, thisArgs, disposables) => {
-    const wrapped = thisArgs
-      ? (e: T) => listener.call(thisArgs, e)
-      : listener;
+    const wrapped = thisArgs ? (e: T) => listener.call(thisArgs, e) : listener;
     this.listeners.push({ raw: listener, wrapped });
     const disposable = new Disposable(() => {
       const idx = this.listeners.findIndex(
@@ -167,7 +169,10 @@ export class RelativePattern {
 }
 
 export class Position {
-  constructor(public line: number, public character: number) {}
+  constructor(
+    public line: number,
+    public character: number
+  ) {}
 }
 
 export class Range {
@@ -206,7 +211,9 @@ const createSourceControl = () => {
       placeholder: "",
       visible: true,
       enabled: true,
-      validateInput: undefined as ((text: string) => string | null | undefined) | undefined
+      validateInput: undefined as
+        | ((text: string) => string | null | undefined)
+        | undefined
     },
     count: 0,
     commitTemplate: "",
@@ -255,13 +262,17 @@ export const window = {
     command: undefined
   })),
   registerFileDecorationProvider: vi.fn(() => new Disposable(() => {})),
-  registerTreeDataProvider: vi.fn(
-    (_viewId: string, _provider: unknown) => new Disposable(() => {})
-  ),
-  createTreeView: vi.fn((_viewId: string, _options?: unknown) => ({
-    reveal: vi.fn(async () => undefined),
-    dispose: vi.fn()
-  })),
+  registerTreeDataProvider: vi.fn((...args: unknown[]) => {
+    void args;
+    return new Disposable(() => {});
+  }),
+  createTreeView: vi.fn((...args: unknown[]) => {
+    void args;
+    return {
+      reveal: vi.fn(async () => undefined),
+      dispose: vi.fn()
+    };
+  }),
   withProgress: vi.fn((_options, task) => task({ report: vi.fn() }))
 };
 
@@ -320,10 +331,10 @@ export const workspace = {
   onDidRenameFiles: vi.fn(() => new Disposable(() => {})),
   onDidDeleteFiles: vi.fn(() => new Disposable(() => {})),
   onDidChangeWorkspaceFolders: vi.fn(() => new Disposable(() => {})),
-  registerFileSystemProvider: vi.fn(
-    (_scheme: string, _provider: unknown, _options?: unknown) =>
-      new Disposable(() => {})
-  ),
+  registerFileSystemProvider: vi.fn((...args: unknown[]) => {
+    void args;
+    return new Disposable(() => {});
+  }),
   createFileSystemWatcher: vi.fn(() => ({
     onDidCreate: vi.fn(() => new Disposable(() => {})),
     onDidChange: vi.fn(() => new Disposable(() => {})),
@@ -427,7 +438,9 @@ const extensionMock = {
   packageJSON: { extensionKind: ["workspace"] },
   activate: vi.fn(async () => {
     const extensionModule = await import("../../src/extension");
-    const api = await extensionModule.activate(extensionContext as any);
+    const api = await extensionModule.activate(
+      extensionContext as Parameters<typeof extensionModule.activate>[0]
+    );
     extensionMock.isActive = true;
     return api;
   })

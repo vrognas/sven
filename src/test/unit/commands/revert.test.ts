@@ -31,8 +31,12 @@ suite("Revert Command Tests", () => {
 
     mockRepository = {
       workspaceRoot,
-      revert: async (paths: string[], depth: string) => {
-        revertCalls.push({ paths, depth });
+      revert: async (
+        paths: string[],
+        depth?: "empty" | "files" | "exclude" | "immediates" | "infinity"
+      ) => {
+        revertCalls.push({ paths, depth: depth ?? "infinity" });
+        return "";
       },
       refreshNeedsLockCache: async () => {
         refreshedNeedsLock = true;
@@ -113,7 +117,10 @@ suite("Revert Command Tests", () => {
 
     await revert.execute();
 
-    assert.strictEqual((confirmModule.confirmRevert as any).mock.calls.length, 0);
+    assert.strictEqual(
+      (confirmModule.confirmRevert as any).mock.calls.length,
+      0
+    );
     assert.ok(!runBySelectionPathsCalled);
     assert.strictEqual(revertCalls.length, 0);
   });

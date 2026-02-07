@@ -8,6 +8,31 @@ import {
   EventEmitter
 } from "vscode";
 
+type TreeWindowMock = {
+  registerTreeDataProvider: (viewId: string, provider: unknown) => Disposable;
+  createTreeView: (
+    viewId: string,
+    options?: { treeDataProvider?: unknown }
+  ) => { dispose: () => void };
+};
+
+type WorkspaceMock = {
+  registerFileSystemProvider: (
+    scheme: string,
+    provider: unknown,
+    options?: { isCaseSensitive?: boolean; isReadonly?: boolean }
+  ) => Disposable;
+  onDidOpenTextDocument: (
+    listener: (...args: unknown[]) => unknown
+  ) => Disposable;
+  textDocuments: unknown[];
+};
+
+type ConfigMock = {
+  get: (setting: string) => unknown;
+  update: (setting: string, value: unknown) => Promise<void>;
+};
+
 suite("VSCode Mock API Harness", () => {
   test("command registry executes registered callback", async () => {
     let calledWith: unknown[] = [];
@@ -44,18 +69,13 @@ suite("VSCode Mock API Harness", () => {
 
   test("tree registration APIs return disposables/views", () => {
     const provider = { getTreeItem: () => ({}), getChildren: () => [] };
+    const treeWindow = window as unknown as TreeWindowMock;
 
-    assert.strictEqual(
-      typeof (window as any).registerTreeDataProvider,
-      "function"
-    );
-    assert.strictEqual(typeof (window as any).createTreeView, "function");
+    assert.strictEqual(typeof treeWindow.registerTreeDataProvider, "function");
+    assert.strictEqual(typeof treeWindow.createTreeView, "function");
 
-    const reg = (window as any).registerTreeDataProvider(
-      "sven.tree",
-      provider
-    ) as Disposable;
-    const view = (window as any).createTreeView("sven.tree", {
+    const reg = treeWindow.registerTreeDataProvider("sven.tree", provider);
+    const view = treeWindow.createTreeView("sven.tree", {
       treeDataProvider: provider
     });
 
@@ -68,6 +88,7 @@ suite("VSCode Mock API Harness", () => {
   });
 
   test("file system provider registration API returns disposable", () => {
+    const workspaceMock = workspace as unknown as WorkspaceMock;
     const provider = {
       stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
       readDirectory: async () => [] as [string, number][],
@@ -80,14 +101,14 @@ suite("VSCode Mock API Harness", () => {
     };
 
     assert.strictEqual(
-      typeof (workspace as any).registerFileSystemProvider,
+      typeof workspaceMock.registerFileSystemProvider,
       "function"
     );
-    const disposable = (workspace as any).registerFileSystemProvider(
+    const disposable = workspaceMock.registerFileSystemProvider(
       "svn",
       provider,
       { isCaseSensitive: true, isReadonly: false }
-    ) as Disposable;
+    );
 
     assert.ok(disposable);
     assert.strictEqual(typeof disposable.dispose, "function");
@@ -96,25 +117,24 @@ suite("VSCode Mock API Harness", () => {
   });
 
   test("workspace open-text event API exists", () => {
-    assert.strictEqual(
-      typeof (workspace as any).onDidOpenTextDocument,
-      "function"
-    );
-    const disposable = (workspace as any).onDidOpenTextDocument(() => {});
+    const workspaceMock = workspace as unknown as WorkspaceMock;
+    assert.strictEqual(typeof workspaceMock.onDidOpenTextDocument, "function");
+    const disposable = workspaceMock.onDidOpenTextDocument(() => {});
     assert.ok(disposable);
     assert.strictEqual(typeof disposable.dispose, "function");
     disposable.dispose();
   });
 
   test("workspace tracks opened text documents", async () => {
+    const workspaceMock = workspace as unknown as WorkspaceMock;
     const doc = await workspace.openTextDocument(Uri.file("/tmp/file.txt"));
-    const docs = (workspace as any).textDocuments as unknown[];
+    const docs = workspaceMock.textDocuments;
     assert.ok(Array.isArray(docs));
     assert.ok(docs.includes(doc));
   });
 
   test("workspace configuration returns extension defaults", () => {
-    const config = workspace.getConfiguration("sven") as any;
+    const config = workspace.getConfiguration("sven") as unknown as ConfigMock;
     assert.deepStrictEqual(config.get("sourceControl.ignoreOnCommit"), [
       "ignore-on-commit"
     ]);
@@ -123,7 +143,7 @@ suite("VSCode Mock API Harness", () => {
   });
 
   test("workspace configuration update persists override values", async () => {
-    const config = workspace.getConfiguration("sven") as any;
+    const config = workspace.getConfiguration("sven") as unknown as ConfigMock;
     await config.update("sourceControl.ignoreOnCommit", ["ci-ignore"]);
 
     assert.deepStrictEqual(config.get("sourceControl.ignoreOnCommit"), [

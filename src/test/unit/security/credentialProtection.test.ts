@@ -1,4 +1,5 @@
 import * as assert from "assert";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const cp = require("child_process") as typeof import("child_process");
 import * as sinon from "sinon";
 import { Svn } from "../../../svn";
@@ -56,12 +57,21 @@ suite("Credential Protection - Security Tests", () => {
       const spawnArgs = spawnStub.firstCall.args[1] as string[];
 
       // Verify password is nowhere in args
-      assert.ok(!spawnArgs.includes(password), "Password should NOT be in args array");
-      assert.ok(!spawnArgs.includes("--password"), "--password flag should NOT be in args");
+      assert.ok(
+        !spawnArgs.includes(password),
+        "Password should NOT be in args array"
+      );
+      assert.ok(
+        !spawnArgs.includes("--password"),
+        "--password flag should NOT be in args"
+      );
 
       // Also check joined args (as it would appear in ps)
       const argsString = spawnArgs.join(" ");
-      assert.ok(!argsString.includes(password), "Password should NOT appear in joined args");
+      assert.ok(
+        !argsString.includes(password),
+        "Password should NOT appear in joined args"
+      );
     });
 
     test("1.2: special characters in password not leaked", async () => {
@@ -75,7 +85,10 @@ suite("Credential Protection - Security Tests", () => {
       const spawnArgs = spawnStub.firstCall.args[1] as string[];
       const argsString = spawnArgs.join(" ");
 
-      assert.ok(!argsString.includes(password), "Special char password should NOT be in args");
+      assert.ok(
+        !argsString.includes(password),
+        "Special char password should NOT be in args"
+      );
     });
 
     test("1.3: long password not truncated in args", async () => {
@@ -89,8 +102,14 @@ suite("Credential Protection - Security Tests", () => {
       const spawnArgs = spawnStub.firstCall.args[1] as string[];
       const argsString = spawnArgs.join(" ");
 
-      assert.ok(!argsString.includes(password), "Long password should NOT be in args");
-      assert.ok(!argsString.includes("x".repeat(50)), "No part of long password should leak");
+      assert.ok(
+        !argsString.includes(password),
+        "Long password should NOT be in args"
+      );
+      assert.ok(
+        !argsString.includes("x".repeat(50)),
+        "No part of long password should leak"
+      );
     });
 
     test("1.4: password with spaces not leaked", async () => {
@@ -187,14 +206,17 @@ suite("Credential Protection - Security Tests", () => {
         // Check logs even after error
         for (const call of logOutputSpy.getCalls()) {
           const loggedText = call.args[0] as string;
-          assert.ok(!loggedText.includes(password), "Password should NOT be in error logs");
+          assert.ok(
+            !loggedText.includes(password),
+            "Password should NOT be in error logs"
+          );
         }
       }
     });
   });
 
   suite("Credential File Protection", () => {
-    test("3.1: credential file has mode 600 on Unix", async function() {
+    test("3.1: credential file has mode 600 on Unix", async function () {
       if (process.platform === "win32") {
         return this.skip();
       }
@@ -213,7 +235,7 @@ suite("Credential Protection - Security Tests", () => {
       assert.strictEqual(call.args[1], "secret123");
     });
 
-    test("3.2: credential file has restricted ACL on Windows", async function() {
+    test("3.2: credential file has restricted ACL on Windows", async function () {
       if (process.platform !== "win32") {
         return this.skip();
       }
@@ -294,7 +316,8 @@ suite("Credential Protection - Security Tests", () => {
         password: "secret"
       });
 
-      const spawnOptions = spawnStub.firstCall.args[2] as cp.SpawnOptions;
+      const spawnOptions = spawnStub.firstCall
+        .args[2] as import("child_process").SpawnOptions;
 
       // Check spawned process env doesn't have password
       if (spawnOptions.env) {
@@ -310,7 +333,9 @@ suite("Credential Protection - Security Tests", () => {
     test("5.1: error messages do not expose credentials", async () => {
       const password = "ErrorPass123";
 
-      const stderr = Buffer.from(`svn: E170001: Authentication failed for user 'alice'`);
+      const stderr = Buffer.from(
+        `svn: E170001: Authentication failed for user 'alice'`
+      );
       mockProcess.stderr.on.withArgs("data").callsArgWith(1, stderr);
       mockProcess.once.withArgs("exit").callsArgWith(1, 1);
 
@@ -322,18 +347,30 @@ suite("Credential Protection - Security Tests", () => {
         assert.fail("Should throw error");
       } catch (err: any) {
         const errorString = JSON.stringify(err);
-        assert.ok(!errorString.includes(password), "Error object should not contain password");
+        assert.ok(
+          !errorString.includes(password),
+          "Error object should not contain password"
+        );
 
         if (err.message) {
-          assert.ok(!err.message.includes(password), "Error message should not contain password");
+          assert.ok(
+            !err.message.includes(password),
+            "Error message should not contain password"
+          );
         }
 
         if (err.stdout) {
-          assert.ok(!err.stdout.includes(password), "Error stdout should not contain password");
+          assert.ok(
+            !err.stdout.includes(password),
+            "Error stdout should not contain password"
+          );
         }
 
         if (err.stderr) {
-          assert.ok(!err.stderr.includes(password), "Error stderr should not contain password");
+          assert.ok(
+            !err.stderr.includes(password),
+            "Error stderr should not contain password"
+          );
         }
       }
     });
@@ -342,7 +379,9 @@ suite("Credential Protection - Security Tests", () => {
       const repoUrl = "https://alice:secret@svn.example.com/repo";
 
       // This tests that if repo URL has embedded creds, they are sanitized
-      const stderr = Buffer.from(`svn: E170013: Unable to connect to ${repoUrl}`);
+      const stderr = Buffer.from(
+        `svn: E170013: Unable to connect to ${repoUrl}`
+      );
       mockProcess.stderr.on.withArgs("data").callsArgWith(1, stderr);
       mockProcess.once.withArgs("exit").callsArgWith(1, 1);
 
@@ -353,7 +392,10 @@ suite("Credential Protection - Security Tests", () => {
         if (err.stderr) {
           // Should either sanitize URL or not include it
           // Exact behavior depends on errorSanitizer implementation
-          assert.ok(true, "Error thrown, sanitization tested in errorSanitizer.test.ts");
+          assert.ok(
+            true,
+            "Error thrown, sanitization tested in errorSanitizer.test.ts"
+          );
         }
       }
     });
@@ -376,7 +418,10 @@ suite("Credential Protection - Security Tests", () => {
         // Check all logged output during error handling
         for (const call of logOutputSpy.getCalls()) {
           const loggedText = call.args[0] as string;
-          assert.ok(!loggedText.includes(password), "Auth error context should not expose password");
+          assert.ok(
+            !loggedText.includes(password),
+            "Auth error context should not expose password"
+          );
         }
       }
     });
@@ -393,7 +438,10 @@ suite("Credential Protection - Security Tests", () => {
 
       // Check SVN instance doesn't store password
       const svnString = JSON.stringify(svn);
-      assert.ok(!svnString.includes(password), "Svn instance should not store password");
+      assert.ok(
+        !svnString.includes(password),
+        "Svn instance should not store password"
+      );
     });
 
     test("6.2: password cleared from options after use", async () => {
@@ -434,11 +482,11 @@ suite("Credential Protection - Security Tests", () => {
       const getStub = sinon
         .stub(configuration.configuration, "get")
         .callsFake((key: string) => {
-        if (key === "debug.disableSanitization") {
-          return false; // Debug mode OFF
-        }
-        return origGet.call(configuration.configuration, key as any);
-      });
+          if (key === "debug.disableSanitization") {
+            return false; // Debug mode OFF
+          }
+          return origGet.call(configuration.configuration, key as any);
+        });
 
       await svn.exec("/repo", ["update"], {
         username: "alice",
@@ -448,7 +496,10 @@ suite("Credential Protection - Security Tests", () => {
 
       for (const call of logOutputSpy.getCalls()) {
         const loggedText = call.args[0] as string;
-        assert.ok(!loggedText.includes(password), "Password should be sanitized in normal mode");
+        assert.ok(
+          !loggedText.includes(password),
+          "Password should be sanitized in normal mode"
+        );
       }
 
       getStub.restore();
@@ -462,11 +513,11 @@ suite("Credential Protection - Security Tests", () => {
       const getStub = sinon
         .stub(configuration.configuration, "get")
         .callsFake((key: string) => {
-        if (key === "debug.disableSanitization") {
-          return true; // Debug mode ON
-        }
-        return origGet.call(configuration.configuration, key as any);
-      });
+          if (key === "debug.disableSanitization") {
+            return true; // Debug mode ON
+          }
+          return origGet.call(configuration.configuration, key as any);
+        });
 
       // In debug mode, password MAY be visible (by user choice)
       // But warning should be shown (tested in extension.test.ts)

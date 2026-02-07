@@ -19,7 +19,7 @@ suite("ChangeList Command Tests", () => {
   let inputSwitchChangelistImpl: (
     repo: Repository,
     canRemove?: boolean
-  ) => Promise<string | false | null | undefined>;
+  ) => Promise<string | false | undefined>;
 
   // Call tracking
   let addChangelistCalls: Array<{ paths: string[]; name: string }>;
@@ -82,8 +82,11 @@ suite("ChangeList Command Tests", () => {
       return undefined; // Default to undefined (cancelled)
     };
     vi.spyOn(changelistItems, "inputSwitchChangelist").mockImplementation(
-      (repo: Repository, canRemove: boolean = false) => {
-        inputSwitchChangelistCalls.push({ repo, canRemove });
+      (repo: Repository, canRemove?: boolean) => {
+        inputSwitchChangelistCalls.push({
+          repo,
+          canRemove: canRemove ?? false
+        });
         return inputSwitchChangelistImpl(repo, canRemove);
       }
     );
@@ -121,8 +124,7 @@ suite("ChangeList Command Tests", () => {
         Status.MODIFIED
       );
 
-      inputSwitchChangelistImpl = async () =>
-        "my-changelist";
+      inputSwitchChangelistImpl = async () => "my-changelist";
 
       await changeListCmd.execute(resource);
 
@@ -138,8 +140,7 @@ suite("ChangeList Command Tests", () => {
       );
       const resource2 = new Resource(Uri.file("/repo/file2.txt"), Status.ADDED);
 
-      inputSwitchChangelistImpl = async () =>
-        "feature-123";
+      inputSwitchChangelistImpl = async () => "feature-123";
 
       await changeListCmd.execute(resource1, resource2);
 
@@ -300,8 +301,7 @@ suite("ChangeList Command Tests", () => {
         Status.MODIFIED
       );
 
-      inputSwitchChangelistImpl = async () =>
-        "new-feature";
+      inputSwitchChangelistImpl = async () => "new-feature";
 
       await changeListCmd.execute(resource);
 
@@ -329,8 +329,7 @@ suite("ChangeList Command Tests", () => {
         ]
       ]);
 
-      inputSwitchChangelistImpl = async () =>
-        "existing-list";
+      inputSwitchChangelistImpl = async () => "existing-list";
 
       await changeListCmd.execute(resource);
 
@@ -380,7 +379,7 @@ suite("ChangeList Command Tests", () => {
       // Return false to indicate removal
       inputSwitchChangelistImpl = async (
         _repo: Repository,
-        canRemove: boolean
+        canRemove?: boolean
       ) => {
         assert.strictEqual(canRemove, true, "Should allow removal");
         return false;
@@ -412,7 +411,7 @@ suite("ChangeList Command Tests", () => {
 
       inputSwitchChangelistImpl = async (
         _repo: Repository,
-        canRemove: boolean
+        canRemove?: boolean
       ) => {
         assert.strictEqual(canRemove, true);
         return "other-list";
@@ -434,7 +433,7 @@ suite("ChangeList Command Tests", () => {
 
       inputSwitchChangelistImpl = async (
         _repo: Repository,
-        canRemove: boolean
+        canRemove?: boolean
       ) => {
         assert.strictEqual(canRemove, false);
         return "new-list";
@@ -489,17 +488,17 @@ suite("ChangeList Command Tests", () => {
       assert.strictEqual(showInfoCalls.length, 0);
     });
 
-    test("5.2: Null changelist value treated as add", async () => {
+    test("5.2: undefined changelist value cancels operation", async () => {
       const resource = new Resource(
         Uri.file("/repo/file.txt"),
         Status.MODIFIED
       );
 
-      inputSwitchChangelistImpl = async () => null;
+      inputSwitchChangelistImpl = async () => undefined;
 
       await changeListCmd.execute(resource);
 
-      assert.strictEqual(addChangelistCalls.length, 1);
+      assert.strictEqual(addChangelistCalls.length, 0);
       assert.strictEqual(removeChangelistCalls.length, 0);
     });
 
@@ -631,7 +630,7 @@ suite("ChangeList Command Tests", () => {
 
       inputSwitchChangelistImpl = async (
         _repo: Repository,
-        canRemove: boolean
+        canRemove?: boolean
       ) => {
         assert.strictEqual(canRemove, true);
         return "other-list";
@@ -662,8 +661,7 @@ suite("ChangeList Command Tests", () => {
         Status.MODIFIED
       );
 
-      inputSwitchChangelistImpl = async () =>
-        "special-chars";
+      inputSwitchChangelistImpl = async () => "special-chars";
 
       await changeListCmd.execute(resource);
 
@@ -759,7 +757,7 @@ suite("ChangeList Command Tests", () => {
 
       inputSwitchChangelistImpl = async (
         _repo: Repository,
-        canRemove: boolean
+        canRemove?: boolean
       ) => {
         assert.strictEqual(canRemove, true);
         return "unified-list";
@@ -805,4 +803,3 @@ suite("ChangeList Command Tests", () => {
     });
   });
 });
-

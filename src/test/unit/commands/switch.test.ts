@@ -43,8 +43,8 @@ suite("SwitchBranch Command Tests", () => {
     // Mock selectBranch
     selectBranchSpy = vi
       .spyOn(branchHelper, "selectBranch")
-      .mockImplementation(async (repo: Repository, allowNew: boolean) => {
-        selectBranchCalls.push({ repo, allowNew });
+      .mockImplementation(async (repo: Repository, allowNew?: boolean) => {
+        selectBranchCalls.push({ repo, allowNew: allowNew ?? false });
         return selectBranchResult;
       });
 
@@ -434,9 +434,7 @@ suite("SwitchBranch Command Tests", () => {
       await command.execute(mockRepository as Repository);
 
       assert.strictEqual(errorMessageCalls.length, 1);
-      assert.ok(
-        errorMessageCalls[0].message.includes("ignore-ancestry")
-      );
+      assert.ok(errorMessageCalls[0].message.includes("ignore-ancestry"));
       assert.deepStrictEqual(errorMessageCalls[0].items, ["Yes", "No"]);
       assert.strictEqual(switchBranchCalls.length, 1);
       assert.strictEqual(switchBranchCalls[0].force, true);
@@ -709,7 +707,9 @@ suite("SwitchBranch Command Tests", () => {
 
       await command.execute(mockRepository as Repository);
       assert.strictEqual(errorMessageCalls.length, 1);
-      assert.ok(errorMessageCalls[0].message.includes("Unable to switch branch"));
+      assert.ok(
+        errorMessageCalls[0].message.includes("Unable to switch branch")
+      );
     });
 
     test("5.10: Multiple errors handled separately", async () => {
