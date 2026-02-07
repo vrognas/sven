@@ -1,7 +1,21 @@
 # Lessons Learned
 
-**Version**: 0.2.20
+**Version**: 0.2.21
 **Updated**: 2026-02-07
+
+---
+
+### 54. Background Polls: Teardown Must Wait Before Repo Deletion
+
+**Lesson**: Tests can pass yet CI still fail when Vitest sees unhandled rejections from in-flight background SVN polls during teardown.
+
+**Fix**:
+
+- Dispose repositories first.
+- Wait briefly for in-flight poll/status promises to settle.
+- Remove temp repos after the settle delay.
+
+**Rule**: In suites with polling/watchers, cleanup order is dispose → settle → delete temp resources.
 
 ---
 

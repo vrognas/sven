@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.20
+**Version**: 0.2.21
 **Updated**: 2026-02-07
 
 ---
@@ -177,6 +177,7 @@ External: vscode, @posit-dev/positron
   - suite preflight checks for required binaries and extension command registration before E2E setup
   - explicit stable test file allowlist in `.vscode-test.mjs` for CI-hosted VS Code runs
   - cross-platform path assertions based on invariant suffixes, not runner-specific home directory prefixes
+  - teardown settle window before temp-repo deletion for suites with background poll/status tasks
 - Coverage runs can intermittently report external flake noise:
   - `remoteChangeService` timing-sensitive poll assertion
   - `phase10` transient `svn` spawn/repository temp path failures

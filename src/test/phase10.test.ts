@@ -42,8 +42,10 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
     repository = sourceControlManager.getRepository(checkoutDir)!;
   });
 
-  suiteTeardown(() => {
+  suiteTeardown(async () => {
     sourceControlManager?.openRepositories.forEach(r => r.dispose());
+    // Allow in-flight background poll/status tasks to settle before removing temp repos.
+    await new Promise(resolve => setTimeout(resolve, 750));
     testUtil.destroyAllTempPaths();
   });
 
