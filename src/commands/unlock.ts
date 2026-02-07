@@ -1,41 +1,30 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { Command } from "./command";
+import { BaseFileLockCommand } from "./baseFileLockCommand";
 import { confirmDestructive } from "../ui";
-import {
-  handleSvnResult,
-  makeFilesReadOnlyIfNeeded
-} from "../util/lockHelpers";
+import { makeFilesReadOnlyIfNeeded } from "../util/lockHelpers";
 
-export class Unlock extends Command {
+export class Unlock extends BaseFileLockCommand {
   constructor() {
     super("sven.unlock");
   }
 
   public async execute(...args: unknown[]) {
-    await this.executeOnUrisOrResources(
+    await this.executeFileLockOperation({
       args,
-      async (repository, paths) => {
-        const result = await repository.unlock(paths);
-        if (
-          handleSvnResult(
-            result,
-            `Unlocked ${paths.length} file(s)`,
-            "Unlock failed"
-          )
-        ) {
-          await makeFilesReadOnlyIfNeeded(paths, p =>
-            repository.hasNeedsLock(p)
-          );
-        }
-      },
-      "Unable to unlock files"
-    );
+      operation: (repository, paths) => repository.unlock(paths),
+      successMessage: count => `Unlocked ${count} file(s)`,
+      resultErrorPrefix: "Unlock failed",
+      executeErrorMessage: "Unable to unlock files",
+      onSuccess: async (repository, paths) => {
+        await makeFilesReadOnlyIfNeeded(paths, p => repository.hasNeedsLock(p));
+      }
+    });
   }
 }
 
-export class BreakLock extends Command {
+export class BreakLock extends BaseFileLockCommand {
   constructor() {
     super("sven.breakLock");
   }
@@ -47,23 +36,16 @@ export class BreakLock extends Command {
     );
     if (!confirmed) return;
 
-    await this.executeOnUrisOrResources(
+    await this.executeFileLockOperation({
       args,
-      async (repository, paths) => {
-        const result = await repository.unlock(paths, { force: true });
-        if (
-          handleSvnResult(
-            result,
-            `Broke lock on ${paths.length} file(s)`,
-            "Break lock failed"
-          )
-        ) {
-          await makeFilesReadOnlyIfNeeded(paths, p =>
-            repository.hasNeedsLock(p)
-          );
-        }
-      },
-      "Unable to break lock"
-    );
+      operation: (repository, paths) =>
+        repository.unlock(paths, { force: true }),
+      successMessage: count => `Broke lock on ${count} file(s)`,
+      resultErrorPrefix: "Break lock failed",
+      executeErrorMessage: "Unable to break lock",
+      onSuccess: async (repository, paths) => {
+        await makeFilesReadOnlyIfNeeded(paths, p => repository.hasNeedsLock(p));
+      }
+    });
   }
 }

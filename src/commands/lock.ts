@@ -2,12 +2,12 @@
 // Licensed under MIT License
 
 import { window } from "vscode";
-import { Command } from "./command";
+import { BaseFileLockCommand } from "./baseFileLockCommand";
 import { confirmDestructive } from "../ui";
-import { handleSvnResult, makeFilesWritable } from "../util/lockHelpers";
+import { makeFilesWritable } from "../util/lockHelpers";
 import { validateLockComment } from "../validation";
 
-export class Lock extends Command {
+export class Lock extends BaseFileLockCommand {
   constructor() {
     super("sven.lock");
   }
@@ -26,27 +26,22 @@ export class Lock extends Command {
       return;
     }
 
-    await this.executeOnUrisOrResources(
+    await this.executeFileLockOperation({
       args,
-      async (repository, paths) => {
-        const result = await repository.lock(paths, comment ? { comment } : {});
-        if (
-          handleSvnResult(
-            result,
-            `Locked ${paths.length} file(s)`,
-            "Lock failed"
-          )
-        ) {
-          await makeFilesWritable(paths);
-        }
-      },
-      "Unable to lock files"
-    );
+      operation: (repository, paths) =>
+        repository.lock(paths, comment ? { comment } : {}),
+      successMessage: count => `Locked ${count} file(s)`,
+      resultErrorPrefix: "Lock failed",
+      executeErrorMessage: "Unable to lock files",
+      onSuccess: async (_repository, paths) => {
+        await makeFilesWritable(paths);
+      }
+    });
   }
 }
 
 /** Steal lock from another user (svn lock --force) */
-export class StealLock extends Command {
+export class StealLock extends BaseFileLockCommand {
   constructor() {
     super("sven.stealLock");
   }
@@ -58,21 +53,15 @@ export class StealLock extends Command {
     );
     if (!confirmed) return;
 
-    await this.executeOnUrisOrResources(
+    await this.executeFileLockOperation({
       args,
-      async (repository, paths) => {
-        const result = await repository.lock(paths, { force: true });
-        if (
-          handleSvnResult(
-            result,
-            `Stole lock on ${paths.length} file(s)`,
-            "Steal lock failed"
-          )
-        ) {
-          await makeFilesWritable(paths);
-        }
-      },
-      "Unable to steal lock"
-    );
+      operation: (repository, paths) => repository.lock(paths, { force: true }),
+      successMessage: count => `Stole lock on ${count} file(s)`,
+      resultErrorPrefix: "Steal lock failed",
+      executeErrorMessage: "Unable to steal lock",
+      onSuccess: async (_repository, paths) => {
+        await makeFilesWritable(paths);
+      }
+    });
   }
 }
