@@ -4,8 +4,9 @@
 
 import * as path from "path";
 import { commands, Uri, ViewColumn, WebviewPanel, window } from "vscode";
-import { SourceControlManager } from "./source_control_manager";
+import { Repository } from "./repository";
 import { configuration } from "./helpers/configuration";
+import { fetchSourceControlManager } from "./helpers/sourceControlManager";
 
 let panel: WebviewPanel;
 
@@ -189,16 +190,14 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
     });
 
     const pickCommitMessage = async () => {
-      let repository;
+      let repository: Repository | undefined;
 
       if (filePaths && filePaths[0]) {
-        const sourceControlManager = (await commands.executeCommand(
-          "sven.getSourceControlManager",
-          ""
-        )) as SourceControlManager;
-        repository = await sourceControlManager.getRepositoryFromUri(
-          Uri.file(filePaths[0])
-        );
+        const sourceControlManager = await fetchSourceControlManager();
+        repository =
+          (await sourceControlManager.getRepositoryFromUri(
+            Uri.file(filePaths[0])
+          )) ?? undefined;
       }
 
       const message = await commands.executeCommand(
