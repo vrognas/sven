@@ -75,16 +75,16 @@ suite("SVN URLs parsing", () => {
 
     const p2 = nm2.parse("drupal/sites", ResourceKind.LocalRelative);
     assert.equal(
-      p2.remoteFullPath.path,
-      "//rootdomain.com/foo/drupal-7/trunk/drupal/sites"
+      p2.remoteFullPath.toString(),
+      "svn://rootdomain.com/foo/drupal-7/trunk/drupal/sites"
     );
     const p3 = nm2.parse(
       "/home/dev-mi/projects/drupal/foo/drupal",
       ResourceKind.LocalFull
     );
     assert.equal(
-      p3.remoteFullPath.path,
-      "//rootdomain.com/foo/drupal-7/trunk/drupal"
+      p3.remoteFullPath.toString(),
+      "svn://rootdomain.com/foo/drupal-7/trunk/drupal"
     );
   });
 

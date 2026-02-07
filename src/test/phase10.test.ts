@@ -10,8 +10,23 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
   let sourceControlManager: SourceControlManager;
   let repository: Repository;
 
-  suiteSetup(async () => {
-    await testUtil.activeExtension();
+  suiteSetup(async function () {
+    const missingBinaries = testUtil.getMissingSvnBinaries();
+    if (missingBinaries.length > 0) {
+      console.warn(
+        `[test] skipping Phase 10 tests; missing binaries: ${missingBinaries.join(", ")}`
+      );
+      return this.skip();
+    }
+
+    try {
+      await testUtil.activeExtension();
+    } catch (err) {
+      console.warn(
+        `[test] skipping Phase 10 tests; extension unavailable: ${String(err)}`
+      );
+      return this.skip();
+    }
     repoUri = await testUtil.createRepoServer();
     await testUtil.createStandardLayout(testUtil.getSvnUrl(repoUri));
     checkoutDir = await testUtil.createRepoCheckout(

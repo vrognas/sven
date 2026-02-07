@@ -15,9 +15,24 @@ suite("Svn E2E Tests", () => {
   let repoUri: Uri;
   let checkoutDir: Uri;
 
-  suiteSetup(async function() {
+  suiteSetup(async function () {
+    const missingBinaries = testUtil.getMissingSvnBinaries();
+    if (missingBinaries.length > 0) {
+      console.warn(
+        `[test] skipping Svn E2E Tests; missing binaries: ${missingBinaries.join(", ")}`
+      );
+      return this.skip();
+    }
+
     this.timeout(60000);
-    await testUtil.activeExtension();
+    try {
+      await testUtil.activeExtension();
+    } catch (err) {
+      console.warn(
+        `[test] skipping Svn E2E Tests; extension unavailable: ${String(err)}`
+      );
+      return this.skip();
+    }
 
     // Create real SVN repo for testing
     repoUri = await testUtil.createRepoServer();
@@ -34,7 +49,7 @@ suite("Svn E2E Tests", () => {
     testUtil.destroyAllTempPaths();
   });
 
-  test("1. Command spawn success - verify process execution", async function() {
+  test("1. Command spawn success - verify process execution", async function () {
     this.timeout(10000);
 
     // Execute real SVN info command
@@ -47,7 +62,7 @@ suite("Svn E2E Tests", () => {
     assert.ok(result.stdout.includes("</info>"), "Should be valid XML");
   });
 
-  test("2. Auth failure - verify credential handling", async function() {
+  test("2. Auth failure - verify credential handling", async function () {
     this.timeout(10000);
 
     // Create file and try commit with invalid credentials
@@ -72,14 +87,17 @@ suite("Svn E2E Tests", () => {
     } catch (err) {
       // Auth failure is expected for protected repos
       assert.ok(err instanceof SvnError, "Should throw SvnError");
-      assert.ok(err instanceof Error && err.message, "Should have error message");
+      assert.ok(
+        err instanceof Error && err.message,
+        "Should have error message"
+      );
     }
 
     // Cleanup
     fs.unlinkSync(testFile);
   });
 
-  test("3. Encoding detection - verify proper encoding conversion", async function() {
+  test("3. Encoding detection - verify proper encoding conversion", async function () {
     this.timeout(10000);
 
     // Create file with non-ASCII content

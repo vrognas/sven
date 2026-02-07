@@ -7,7 +7,7 @@ import { ChildProcess, SpawnOptions } from "child_process";
 import * as fs from "original-fs";
 import * as path from "path";
 import * as tmp from "tmp";
-import { extensions, Uri, window } from "vscode";
+import { commands, extensions, Uri, window } from "vscode";
 import { timeout } from "../util";
 import { logError } from "../util/errorLogger";
 
@@ -28,6 +28,21 @@ export function spawn(
 ): ChildProcess {
   const proc = cp.spawn(command, args, options);
   return proc;
+}
+
+export function hasExecutable(
+  command: string,
+  args: string[] = ["--version"]
+): boolean {
+  const result = cp.spawnSync(command, args, { stdio: "ignore" });
+  const error = result.error as NodeJS.ErrnoException | undefined;
+  return error?.code !== "ENOENT";
+}
+
+export function getMissingSvnBinaries(
+  required: string[] = ["svn", "svnadmin"]
+): string[] {
+  return required.filter(binary => !hasExecutable(binary));
 }
 
 export function newTempDir(prefix: string) {
@@ -54,11 +69,16 @@ export function createRepoServer() {
       cwd: path.dirname(fullpath)
     });
 
+    proc.once("error", err => {
+      reject(err);
+    });
+
     proc.once("exit", exitCode => {
       if (exitCode === 0) {
         resolve(Uri.file(fullpath));
+        return;
       }
-      reject();
+      reject(new Error(`svnadmin create failed with exit code: ${exitCode}`));
     });
   });
 }
@@ -74,11 +94,16 @@ export function importToRepoServer(
       cwd
     });
 
+    proc.once("error", err => {
+      reject(err);
+    });
+
     proc.once("exit", exitCode => {
       if (exitCode === 0) {
         resolve();
+        return;
       }
-      reject();
+      reject(new Error(`svn import failed with exit code: ${exitCode}`));
     });
   });
 }
@@ -108,11 +133,16 @@ export function createRepoCheckout(url: string) {
       cwd: path.dirname(fullpath)
     });
 
+    proc.once("error", err => {
+      reject(err);
+    });
+
     proc.once("exit", exitCode => {
       if (exitCode === 0) {
         resolve(Uri.file(fullpath));
+        return;
       }
-      reject();
+      reject(new Error(`svn checkout failed with exit code: ${exitCode}`));
     });
   });
 }
@@ -167,18 +197,27 @@ export function activeExtension() {
   return new Promise<void>((resolve, reject) => {
     const extension = extensions.getExtension("vrognas.sven");
     if (!extension) {
-      reject();
+      reject(new Error("Extension not found: vrognas.sven"));
       return;
     }
 
-    if (!extension.isActive) {
-      extension.activate().then(
-        () => resolve(),
-        () => reject()
-      );
-    } else {
-      resolve();
+    const ensureCommands = async () => {
+      const availableCommands = await commands.getCommands(true);
+      if (!availableCommands.includes("sven.getSourceControlManager")) {
+        throw new Error("Extension activated but commands not registered");
+      }
+    };
+
+    const finish = () => {
+      ensureCommands().then(resolve, reject);
+    };
+
+    if (extension.isActive) {
+      finish();
+      return;
     }
+
+    extension.activate().then(finish, reject);
   });
 }
 

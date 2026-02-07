@@ -17,6 +17,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Scenarios**: File lifecycle, changelists, branches, conflicts
 - **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
+## [0.2.19] (2026-02-07)
+
+### Fix
+
+- Fix cross-platform unit failures: use canonical SVN auth cache path (`auth/svn.simple`) and reject Windows-absolute path forms in `validateFilePath` on all platforms.
+- Harden SCM input-box setup to tolerate proposal-gated properties in stable VS Code hosts.
+- Stabilize VS Code harness activation with explicit binary/command preflight checks and actionable spawn failures.
+
+### Test
+
+- Stabilize path/auth/svn-finder suites and narrow `.vscode-test.mjs` to stable E2E targets.
+- Full local CI gate green: `npm run lint`, `npm run security:validate-errors`, `npm run build`, `CI=true npm test`.
+
 ## [0.2.18] (2026-02-07)
 
 ### Fix

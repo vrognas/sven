@@ -1,6 +1,6 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.18
+**Version**: 0.2.19
 **Updated**: 2026-02-07
 
 ---
@@ -174,6 +174,8 @@ External: vscode, @posit-dev/positron
   - ESM-safe mocking style in tests (`vi.spyOn` instead of export reassignment)
   - parser fixture parity with adapter defaults (`explicitRoot: false` root-stripped outputs)
   - command helper contract awareness (`runByRepositoryPaths` handles URI→path conversion)
+  - suite preflight checks for required binaries and extension command registration before E2E setup
+  - explicit stable test file allowlist in `.vscode-test.mjs` for CI-hosted VS Code runs
 - Coverage runs can intermittently report external flake noise:
   - `remoteChangeService` timing-sensitive poll assertion
   - `phase10` transient `svn` spawn/repository temp path failures

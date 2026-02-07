@@ -386,7 +386,7 @@ suite("SvnAuthCache - Unit Tests", () => {
         testCacheDir,
         ".subversion",
         "auth",
-        "sven.simple"
+        "svn.simple"
       );
       fs.mkdirSync(cacheDir, { recursive: true });
       fs.chmodSync(cacheDir, 0o444); // Read-only
@@ -616,8 +616,8 @@ suite("SvnAuthCache - Unit Tests", () => {
       const cacheDir = authCache.getCacheDirectory();
       // Windows may use %APPDATA% or %USERPROFILE%
       assert.ok(
-        cacheDir.includes("Subversion\\auth\\sven.simple") ||
-          cacheDir.includes(".subversion\\auth\\sven.simple")
+        cacheDir.includes("Subversion\\auth\\svn.simple") ||
+          cacheDir.includes(".subversion\\auth\\svn.simple")
       );
     });
 

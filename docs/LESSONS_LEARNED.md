@@ -1,7 +1,21 @@
 # Lessons Learned
 
-**Version**: 0.2.18
+**Version**: 0.2.19
 **Updated**: 2026-02-07
+
+---
+
+### 52. Cross-Platform Paths/Auth: Match Real SVN + Windows Rules
+
+**Lesson**: CI portability breaks when tests/runtime assume extension-specific auth paths or platform-local absolute-path semantics.
+
+**Fix**:
+
+- Use canonical SVN auth cache dir: `auth/svn.simple` (not `sven.simple`).
+- Reject Windows-absolute path forms on all platforms (`C:\...`, `\\server\share`, `\Windows\...`).
+- In integration suites, skip early when required binaries/commands are unavailable.
+
+**Rule**: Path/auth logic must be platform-invariant unless behavior is explicitly OS-specific.
 
 ---
 

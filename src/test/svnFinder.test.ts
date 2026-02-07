@@ -24,14 +24,23 @@ suite("SvnFinder E2E Tests", () => {
     // Then: Returns valid ISvn with path and version
     assert.ok(result.path, "SVN path should be defined");
     assert.ok(result.version, "SVN version should be defined");
-    assert.ok(result.version.match(/^\d+\.\d+\.\d+/), "Version should match semver format");
+    assert.ok(
+      result.version.match(/^\d+\.\d+\.\d+/),
+      "Version should match semver format"
+    );
   });
 
   test("SVN not found - verify error handling", async function () {
     this.timeout(5000);
 
-    // Given: Stub findSpecificSvn to always reject
-    sandbox.stub(finder, "findSpecificSvn").rejects(new Error("Not found"));
+    // Given: Stub platform-specific discovery to always fail
+    if (process.platform === "darwin") {
+      sandbox.stub(finder, "findSvnDarwin").rejects(new Error("Not found"));
+    } else if (process.platform === "win32") {
+      sandbox.stub(finder, "findSvnWin32").rejects(new Error("Not found"));
+    } else {
+      sandbox.stub(finder, "findSpecificSvn").rejects(new Error("Not found"));
+    }
 
     // When/Then: findSvn should reject with expected error
     await assert.rejects(
@@ -61,7 +70,10 @@ suite("SvnFinder E2E Tests", () => {
     );
 
     // Test 3: SlickSVN-style version string (compatibility check)
-    const slickSvn: ISvn = { path: "/usr/bin/svn", version: "1.6.17-SlikSvn-tag-1.6.17@1130898-X64" };
+    const slickSvn: ISvn = {
+      path: "/usr/bin/svn",
+      version: "1.6.17-SlikSvn-tag-1.6.17@1130898-X64"
+    };
     const slickResult = await finder.checkSvnVersion(slickSvn);
     assert.strictEqual(slickResult.path, slickSvn.path);
   });

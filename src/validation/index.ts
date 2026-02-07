@@ -127,6 +127,18 @@ export function validateFilePath(filePath: string): boolean {
     return false;
   }
 
+  // Reject Windows absolute paths on all platforms
+  // - Drive root: C:\foo or C:/foo
+  // - UNC paths: \\server\share
+  // - Rooted Windows-style path: \Windows\System32
+  if (
+    /^[a-zA-Z]:[\\/]/.test(decoded) ||
+    /^\\\\[^\\]/.test(decoded) ||
+    /^\\/.test(decoded)
+  ) {
+    return false;
+  }
+
   const normalized = path.normalize(decoded);
 
   // Reject absolute paths
@@ -164,10 +176,7 @@ export function validateRepositoryUrl(url: string): boolean {
 
     // Reject URLs with shell metacharacters in hostname/path
     const decodedPath = decodeURIComponent(parsed.pathname);
-    if (
-      /[;&|`$()]/.test(parsed.hostname) ||
-      /[;&|`$()]/.test(decodedPath)
-    ) {
+    if (/[;&|`$()]/.test(parsed.hostname) || /[;&|`$()]/.test(decodedPath)) {
       return false;
     }
 

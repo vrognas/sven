@@ -11,8 +11,23 @@ suite("Repository Tests", () => {
   let checkoutDir: Uri;
   let sourceControlManager: SourceControlManager;
 
-  suiteSetup(async () => {
-    await testUtil.activeExtension();
+  suiteSetup(async function () {
+    const missingBinaries = testUtil.getMissingSvnBinaries();
+    if (missingBinaries.length > 0) {
+      console.warn(
+        `[test] skipping Repository Tests; missing binaries: ${missingBinaries.join(", ")}`
+      );
+      return this.skip();
+    }
+
+    try {
+      await testUtil.activeExtension();
+    } catch (err) {
+      console.warn(
+        `[test] skipping Repository Tests; extension unavailable: ${String(err)}`
+      );
+      return this.skip();
+    }
 
     repoUri = await testUtil.createRepoServer();
     await testUtil.createStandardLayout(testUtil.getSvnUrl(repoUri));
@@ -27,7 +42,7 @@ suite("Repository Tests", () => {
   });
 
   suiteTeardown(() => {
-    sourceControlManager.openRepositories.forEach(repository =>
+    sourceControlManager?.openRepositories.forEach(repository =>
       repository.dispose()
     );
     testUtil.destroyAllTempPaths();

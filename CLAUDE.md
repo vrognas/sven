@@ -27,3 +27,6 @@
 - For parser tests using `parseXml`, cover both rooted and root-stripped XML shapes.
 - In command tests, if stubbing `runByRepository`, pass `Uri[]` to callback; path mapping belongs to `runByRepositoryPaths`.
 - For coverage pushes, rank by uncovered lines and execute fail-cluster passes largest bucket first.
+- Use SVN canonical auth cache folder naming in code/tests: `auth/svn.simple`.
+- In path validation, reject Windows-absolute forms on all platforms (`C:\`, `\\server\share`, `\rooted`).
+- For VS Code E2E in CI, keep `.vscode-test.mjs` target list explicit and stable; skip suite early when binaries/commands unavailable.

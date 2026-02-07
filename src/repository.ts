@@ -307,6 +307,20 @@ export class Repository implements IRemoteRepository {
     return this.sourceControl.inputBox;
   }
 
+  private setOptionalInputBoxProperty(
+    property: "visible" | "enabled" | "validateInput",
+    value: unknown
+  ): void {
+    try {
+      (this.sourceControl.inputBox as unknown as Record<string, unknown>)[
+        property
+      ] = value;
+    } catch {
+      // Some SCM inputBox options are proposal-gated in stable VS Code.
+      // Ignore when unavailable to preserve baseline repository functionality.
+    }
+  }
+
   get username(): string | undefined {
     return this.repository.username;
   }
@@ -359,11 +373,11 @@ export class Repository implements IRemoteRepository {
     this.sourceControl.contextValue = "repository";
     this.sourceControl.inputBox.placeholder =
       "Message here or Ctrl+Enter for guided commit";
-    this.sourceControl.inputBox.visible = true;
-    this.sourceControl.inputBox.enabled = true;
-    // @ts-expect-error - validateInput exists at runtime but not in types
-    this.sourceControl.inputBox.validateInput = (text: string) =>
-      this.validateCommitInput(text);
+    this.setOptionalInputBoxProperty("visible", true);
+    this.setOptionalInputBoxProperty("enabled", true);
+    this.setOptionalInputBoxProperty("validateInput", (text: string) =>
+      this.validateCommitInput(text)
+    );
     this.sourceControl.acceptInputCommand = {
       command: "sven.commitFromInputBox",
       title: "Commit",
