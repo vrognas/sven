@@ -4,9 +4,8 @@
 
 import { inputCommitFiles } from "../changelistItems";
 import {
-  buildCommitPaths,
-  executeCommit,
-  expandCommitPaths
+  buildExpandedCommitPaths,
+  executeCommit
 } from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
@@ -39,11 +38,10 @@ export class CommitWithMessage extends Command {
     }
 
     // Build paths including parent dirs and track renames
-    const { displayPaths, renameMap } = buildCommitPaths(resources, repository);
-    const filePaths = expandCommitPaths(displayPaths, renameMap);
+    const { commitPaths } = buildExpandedCommitPaths(resources, repository);
 
     await this.handleRepositoryOperation(
-      () => executeCommit(repository, message, filePaths),
+      () => executeCommit(repository, message, commitPaths),
       "Unable to commit"
     );
   }

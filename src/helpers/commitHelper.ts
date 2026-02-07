@@ -131,6 +131,26 @@ export function expandCommitPaths(
   return commitPaths;
 }
 
+export interface ExpandedCommitPaths extends CommitPaths {
+  commitPaths: string[];
+}
+
+/**
+ * Build display/rename metadata and expanded commit paths in one step.
+ */
+export function buildExpandedCommitPaths(
+  resources: Resource[],
+  repository: Pick<Repository, "getResourceFromFile">
+): ExpandedCommitPaths {
+  const { displayPaths, renameMap } = buildCommitPaths(resources, repository);
+
+  return {
+    displayPaths,
+    renameMap,
+    commitPaths: expandCommitPaths(displayPaths, renameMap)
+  };
+}
+
 export interface CommitFlowResult {
   message?: string;
   commitPaths?: string[];

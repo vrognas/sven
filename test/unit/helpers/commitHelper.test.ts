@@ -4,6 +4,7 @@ import { Status } from "../../../src/common/types";
 import { Resource } from "../../../src/resource";
 import {
   buildCommitPaths,
+  buildExpandedCommitPaths,
   expandCommitPaths
 } from "../../../src/helpers/commitHelper";
 import { Repository } from "../../../src/repository";
@@ -173,6 +174,44 @@ describe("commitHelper", () => {
       expect(result).toContain("/repo/new.txt");
       expect(result).toContain("/repo/old.txt");
       expect(result).toContain("/repo/normal.txt");
+    });
+  });
+
+  describe("buildExpandedCommitPaths", () => {
+    it("includes old rename paths in commit paths", () => {
+      const resources = [
+        new Resource(
+          Uri.file("/repo/new-name.txt"),
+          Status.ADDED,
+          Uri.file("/repo/old-name.txt")
+        )
+      ];
+      const mockRepository = createMockRepository();
+
+      const result = buildExpandedCommitPaths(resources, mockRepository);
+
+      expect(result.displayPaths).toEqual(["/repo/new-name.txt"]);
+      expect(result.commitPaths).toContain("/repo/new-name.txt");
+      expect(result.commitPaths).toContain("/repo/old-name.txt");
+    });
+
+    it("expands added parent directories for commit paths", () => {
+      const resources = [
+        new Resource(Uri.file("/repo/newdir/file.txt"), Status.ADDED)
+      ];
+      const mockRepository = createMockRepository((path: string) => {
+        if (path === "/repo/newdir") {
+          return new Resource(Uri.file(path), Status.ADDED);
+        }
+        return undefined;
+      });
+
+      const result = buildExpandedCommitPaths(resources, mockRepository);
+
+      expect(result.displayPaths).toContain("/repo/newdir/file.txt");
+      expect(result.displayPaths).toContain("/repo/newdir");
+      expect(result.commitPaths).toContain("/repo/newdir/file.txt");
+      expect(result.commitPaths).toContain("/repo/newdir");
     });
   });
 });

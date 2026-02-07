@@ -4,9 +4,8 @@
 
 import { SourceControlResourceState, window } from "vscode";
 import {
-  buildCommitPaths,
-  executeCommit,
-  expandCommitPaths
+  buildExpandedCommitPaths,
+  executeCommit
 } from "../helpers/commitHelper";
 import { inputCommitMessage } from "../messages";
 import { Command } from "./command";
@@ -29,36 +28,32 @@ export class Commit extends Command {
       return;
     }
 
-    await this.runByRepository(
-      this.toUris(selection),
-      async (repository, _resources) => {
-        // Build paths including parent dirs and track renames
-        const repoResources = selection.filter(r =>
-          r.resourceUri.fsPath.startsWith(repository.workspaceRoot)
-        );
-        const { displayPaths, renameMap } = buildCommitPaths(
-          repoResources,
-          repository
-        );
-        const paths = expandCommitPaths(displayPaths, renameMap);
+    await this.runBySelectionPaths(selection, async (repository, paths) => {
+      const selectedPaths = new Set(paths);
+      const repoResources = selection.filter(resource =>
+        selectedPaths.has(resource.resourceUri.fsPath)
+      );
+      const { displayPaths, commitPaths } = buildExpandedCommitPaths(
+        repoResources,
+        repository
+      );
 
-        const message = await inputCommitMessage(
-          repository.inputBox.value,
-          true,
-          displayPaths
-        );
+      const message = await inputCommitMessage(
+        repository.inputBox.value,
+        true,
+        displayPaths
+      );
 
-        if (message === undefined) {
-          return;
-        }
-
-        repository.inputBox.value = message;
-
-        await this.handleRepositoryOperation(
-          () => executeCommit(repository, message, paths),
-          "Unable to commit"
-        );
+      if (message === undefined) {
+        return;
       }
-    );
+
+      repository.inputBox.value = message;
+
+      await this.handleRepositoryOperation(
+        () => executeCommit(repository, message, commitPaths),
+        "Unable to commit"
+      );
+    });
   }
 }

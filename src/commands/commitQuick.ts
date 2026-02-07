@@ -2,37 +2,25 @@
 // Licensed under MIT License
 
 import * as path from "path";
-import { window } from "vscode";
-import {
-  buildCommitPaths,
-  expandCommitPaths,
-  requireStaged
-} from "../helpers/commitHelper";
+import { executeCommit } from "../helpers/commitHelper";
 import { Repository } from "../repository";
-import { Command } from "./command";
+import { BaseStagedCommitCommand } from "./baseStagedCommitCommand";
 
 /**
  * Quick commit without message prompt.
  * Uses input box value if present, otherwise auto-generates message.
  */
-export class CommitQuick extends Command {
+export class CommitQuick extends BaseStagedCommitCommand {
   constructor() {
     super("sven.commitQuick", { repository: true });
   }
 
   public async execute(repository: Repository) {
-    const stagedResources = this.filterResources(
-      repository.staged.resourceStates
-    );
-
-    if (!requireStaged(stagedResources)) return;
-
-    // Build paths including parent dirs and track renames
-    const { displayPaths, renameMap } = buildCommitPaths(
-      stagedResources,
-      repository
-    );
-    const filePaths = expandCommitPaths(displayPaths, renameMap);
+    const context = this.prepareStagedCommit(repository);
+    if (!context) {
+      return;
+    }
+    const { stagedResources, commitPaths: filePaths } = context;
 
     // Use input box value or auto-generate message
     let message = repository.inputBox.value.trim();
@@ -44,11 +32,9 @@ export class CommitQuick extends Command {
         fileCount === 1 ? `Update ${primaryFile}` : `Update ${fileCount} files`;
     }
 
-    await this.handleRepositoryOperation(async () => {
-      const result = await repository.commitFiles(message, filePaths);
-      window.showInformationMessage(result);
-      repository.inputBox.value = "";
-      repository.staging.clearOriginalChangelists(filePaths);
-    }, "Unable to commit");
+    await this.handleRepositoryOperation(
+      () => executeCommit(repository, message, filePaths),
+      "Unable to commit"
+    );
   }
 }
