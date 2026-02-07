@@ -1,8 +1,9 @@
 import * as assert from "assert";
-import * as cp from "child_process";
+const cp = require("child_process") as typeof import("child_process");
 import * as sinon from "sinon";
 import { Svn } from "../../../svn";
 import { SvnAuthCache } from "../../../services/svnAuthCache";
+import * as configuration from "../../../helpers/configuration";
 
 /**
  * Security Tests for Credential Protection
@@ -429,13 +430,15 @@ suite("Credential Protection - Security Tests", () => {
       const password = "DebugPass123";
 
       // Mock configuration
-      const origGet = require("../../../helpers/configuration").configuration.get;
-      require("../../../helpers/configuration").configuration.get = (key: string) => {
+      const origGet = configuration.configuration.get;
+      const getStub = sinon
+        .stub(configuration.configuration, "get")
+        .callsFake((key: string) => {
         if (key === "debug.disableSanitization") {
           return false; // Debug mode OFF
         }
-        return origGet.call(this, key);
-      };
+        return origGet.call(configuration.configuration, key as any);
+      });
 
       await svn.exec("/repo", ["update"], {
         username: "alice",
@@ -448,20 +451,22 @@ suite("Credential Protection - Security Tests", () => {
         assert.ok(!loggedText.includes(password), "Password should be sanitized in normal mode");
       }
 
-      require("../../../helpers/configuration").configuration.get = origGet;
+      getStub.restore();
     });
 
     test("7.2: debug.disableSanitization shows warning when enabled", async () => {
       // This test verifies warning is shown (implementation in extension.ts)
       // Here we just verify the config flag is respected
 
-      const origGet = require("../../../helpers/configuration").configuration.get;
-      require("../../../helpers/configuration").configuration.get = (key: string) => {
+      const origGet = configuration.configuration.get;
+      const getStub = sinon
+        .stub(configuration.configuration, "get")
+        .callsFake((key: string) => {
         if (key === "debug.disableSanitization") {
           return true; // Debug mode ON
         }
-        return origGet.call(this, key);
-      };
+        return origGet.call(configuration.configuration, key as any);
+      });
 
       // In debug mode, password MAY be visible (by user choice)
       // But warning should be shown (tested in extension.test.ts)
@@ -474,7 +479,7 @@ suite("Credential Protection - Security Tests", () => {
 
       assert.ok(true, "Debug mode behavior verified");
 
-      require("../../../helpers/configuration").configuration.get = origGet;
+      getStub.restore();
     });
   });
 

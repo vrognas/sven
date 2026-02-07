@@ -66,22 +66,22 @@ describe("Concurrency Limiting", () => {
    */
   it("processes large arrays with bounded concurrency", async () => {
     const items = Array.from({ length: 100 }, (_, i) => i);
-    const startTime = Date.now();
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
 
     const results = await processConcurrently(
       items,
       async item => {
+        currentConcurrent++;
+        maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
         await new Promise(resolve => setTimeout(resolve, 1));
+        currentConcurrent--;
         return item;
       },
       16 // Concurrency limit
     );
 
-    const duration = Date.now() - startTime;
-
     expect(results.length).toBe(100);
-    // With concurrency 16, should take ~7 batches (~7ms minimum)
-    // Without limit, would take ~1ms (all parallel, but causes issues)
-    expect(duration < 100).toBeTruthy();
+    expect(maxConcurrent <= 16).toBeTruthy();
   });
 });

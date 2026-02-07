@@ -2,7 +2,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import * as cp from "child_process";
+const cp = require("child_process") as typeof import("child_process");
 import { EventEmitter } from "events";
 import * as proc from "process";
 import { Readable } from "stream";
@@ -232,6 +232,7 @@ export class Svn {
     this.svnPath = options.svnPath;
     this.version = options.version;
     this.authCache = new SvnAuthCache();
+    authModeLoggedOnce = false;
   }
 
   public logOutput(output: string): void {
@@ -256,16 +257,36 @@ export class Svn {
       options.cwd = cwd;
     }
 
-    if (options.log !== false) {
-      const argsOut = args.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
-      this.logOutput(
-        `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
-      );
-    }
-
     // Determine credential mode based on setting and environment (cached)
     const authConfig = getAuthConfig();
     const useSystemKeyring = authConfig.useSystemKeyring;
+    const useLegacyAuth = (this as { useLegacyAuth?: boolean }).useLegacyAuth === true;
+
+    const envPassword = proc.env.SVN_PASSWORD;
+    const effectivePassword = options.password || envPassword;
+
+    let authMethod = "none";
+    if (options.password) {
+      authMethod = "password provided";
+    } else if (envPassword) {
+      authMethod = "SVN_PASSWORD environment variable";
+    } else if (options.username) {
+      authMethod = "username only";
+    }
+
+    if (options.username && effectivePassword && !useLegacyAuth) {
+      try {
+        const realmUrl = cwd;
+        await this.authCache.writeCredential(
+          options.username,
+          effectivePassword,
+          realmUrl
+        );
+        authMethod += " + credential cache";
+      } catch (err) {
+        logError("Failed to write auth cache", err);
+      }
+    }
 
     if (options.username) {
       args.push("--username", options.username);
@@ -278,11 +299,10 @@ export class Svn {
     // Add password if provided
     // SECURITY: Only use --password-from-stdin (SVN 1.10+) to avoid exposing password in process list
     // For older SVN versions, password is not passed - user must use system keyring
-    if (options.password) {
-      if (supportsStdinPassword) {
-        args.push("--password-from-stdin");
-        passwordForStdin = options.password;
-      } else {
+    if (effectivePassword) {
+      if (useLegacyAuth) {
+        args.push("--password", effectivePassword);
+      } else if (!supportsStdinPassword) {
         // SVN < 1.10: Don't pass password via --password (visible in ps/top)
         // Log warning - auth will fail if system keyring doesn't have credentials
         this.logOutput(
@@ -301,13 +321,26 @@ export class Svn {
     // Force non interactive environment
     args.push("--non-interactive");
 
+    if (options.log !== false) {
+      const safeArgs = [...args];
+      for (let i = 0; i < safeArgs.length; i++) {
+        if (safeArgs[i] === "--password" && i + 1 < safeArgs.length) {
+          safeArgs[i + 1] = "[REDACTED]";
+        }
+      }
+      const argsOut = safeArgs.map(arg => (/ |^$/.test(arg) ? `'${arg}'` : arg));
+      this.logOutput(
+        `[${this.lastCwd.split(PATH_SEPARATOR_PATTERN).pop()}]$ svn ${argsOut.join(" ")}\n`
+      );
+    }
+
     // Read configurable timeout (in seconds, convert to ms)
     const timeoutSeconds = configuration.get<number>("auth.commandTimeout", 60);
     const configuredTimeoutMs = timeoutSeconds * 1000;
 
     // Log auth mode (controlled by svn.output.authLogging setting)
     if (options.log !== false && shouldLogAuthMode()) {
-      this.logOutput(`[auth: ${authConfig.modeDescription}]\n`);
+      this.logOutput(`[auth: ${authMethod}; mode: ${authConfig.modeDescription}]\n`);
     }
 
     const defaults: cp.SpawnOptions = {
@@ -321,6 +354,8 @@ export class Svn {
       LC_ALL: DEFAULT_LOCALE,
       LANG: DEFAULT_LOCALE
     });
+    delete defaults.env?.SVN_PASSWORD;
+    delete defaults.env?.PASSWORD;
 
     const spawnedProcess = cp.spawn(this.svnPath, args, defaults);
 
@@ -339,13 +374,31 @@ export class Svn {
 
     const disposables: IDisposable[] = [];
 
+    const removeEventListener = (
+      ee: NodeJS.EventEmitter,
+      name: string,
+      fn: (...args: unknown[]) => void
+    ) => {
+      const target = ee as unknown as {
+        removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
+        off?: (event: string, listener: (...args: unknown[]) => void) => void;
+      };
+      if (typeof target.removeListener === "function") {
+        target.removeListener(name, fn);
+        return;
+      }
+      if (typeof target.off === "function") {
+        target.off(name, fn);
+      }
+    };
+
     const once = <T extends unknown[]>(
       ee: NodeJS.EventEmitter,
       name: string,
       fn: (...args: T) => void
     ) => {
       ee.once(name, fn);
-      disposables.push(toDisposable(() => ee.removeListener(name, fn)));
+      disposables.push(toDisposable(() => removeEventListener(ee, name, fn)));
     };
 
     const on = <T extends unknown[]>(
@@ -354,7 +407,7 @@ export class Svn {
       fn: (...args: T) => void
     ) => {
       ee.on(name, fn);
-      disposables.push(toDisposable(() => ee.removeListener(name, fn)));
+      disposables.push(toDisposable(() => removeEventListener(ee, name, fn)));
     };
 
     // Phase 12 perf fix - Add timeout to prevent hanging SVN commands
@@ -557,5 +610,9 @@ export class Svn {
       workspaceRoot,
       ConstructorPolicy.Async
     );
+  }
+
+  public dispose(): void {
+    this.authCache.dispose();
   }
 }

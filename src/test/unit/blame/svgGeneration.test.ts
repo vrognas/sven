@@ -86,11 +86,11 @@ suite("BlameProvider - SVG Generation", () => {
       "base64"
     ).toString();
 
-    // Then: Verify dimensions (4px wide, responsive height)
-    assert.ok(decoded.includes('width="4"'), "Width should be 4px");
+    // Then: Verify dimensions (3px wide, 16px height)
+    assert.ok(decoded.includes('width="3"'), "Width should be 3px");
     assert.ok(
-      decoded.includes('viewBox="0 0 4 20"'),
-      "ViewBox should be 0 0 4 20"
+      decoded.includes('viewBox="0 0 3 16"'),
+      "ViewBox should be 0 0 3 16"
     );
   });
 });

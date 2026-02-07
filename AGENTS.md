@@ -1,3 +1,4 @@
+- This repos has no data migration or legacy maintenance concerns.
 - In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision.
 - Do not write any code until you're fully ready to implement it.
 - It's IMPORTANT for each implementation to begin with writing and reviewing tests BEFORE moving on to implementation (TDD test-driven development).

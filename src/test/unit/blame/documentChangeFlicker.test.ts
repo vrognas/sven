@@ -1,11 +1,20 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Uri } from "vscode";
+import { Uri, window } from "vscode";
 import { BlameProvider } from "../../../blame/blameProvider";
 import { blameConfiguration } from "../../../blame/blameConfiguration";
 import { blameStateManager } from "../../../blame/blameStateManager";
 import { Repository } from "../../../repository";
 import { ISvnBlameLine } from "../../../common/types";
+
+function setupRepositoryMock(
+  mockRepository: sinon.SinonStubbedInstance<Repository>
+): void {
+  (mockRepository as any).repository = {
+    workspaceRoot: "/test",
+    root: "/test"
+  };
+}
 
 suite("BlameProvider - Document Change Flicker Fix", () => {
   let provider: BlameProvider;
@@ -15,6 +24,7 @@ suite("BlameProvider - Document Change Flicker Fix", () => {
   setup(() => {
     sandbox = sinon.createSandbox();
     mockRepository = sandbox.createStubInstance(Repository);
+    setupRepositoryMock(mockRepository);
   });
 
   teardown(() => {
@@ -47,10 +57,17 @@ suite("BlameProvider - Document Change Flicker Fix", () => {
     sandbox.stub(blameConfiguration, "isGutterTextEnabled").returns(true);
 
     const mockEditor = {
-      document: { uri: testUri, lineCount: 1 },
+      document: {
+        uri: testUri,
+        lineCount: 1,
+        version: 1,
+        lineAt: (_index: number) => ({ range: { end: { character: 10 } } })
+      },
+      selection: { active: { line: 0 } },
       setDecorations: sandbox.stub(),
       visibleRanges: [{ start: { line: 0 }, end: { line: 1 } }]
     } as any;
+    sandbox.stub(window, "activeTextEditor").value(mockEditor);
 
     // Act - First call should fetch and cache
     await provider.updateDecorations(mockEditor);
@@ -78,7 +95,13 @@ suite("BlameProvider - Document Change Flicker Fix", () => {
     provider.activate();
 
     const mockEditor = {
-      document: { uri: testUri, lineCount: 1 },
+      document: {
+        uri: testUri,
+        lineCount: 1,
+        version: 1,
+        lineAt: (_index: number) => ({ range: { end: { character: 10 } } })
+      },
+      selection: { active: { line: 0 } },
       setDecorations: sandbox.stub(),
       visibleRanges: [{ start: { line: 0 }, end: { line: 1 } }]
     } as any;
@@ -118,10 +141,17 @@ suite("BlameProvider - Document Change Flicker Fix", () => {
     sandbox.stub(blameConfiguration, "isGutterTextEnabled").returns(true);
 
     const mockEditor = {
-      document: { uri: testUri, lineCount: 1 },
+      document: {
+        uri: testUri,
+        lineCount: 1,
+        version: 1,
+        lineAt: (_index: number) => ({ range: { end: { character: 10 } } })
+      },
+      selection: { active: { line: 0 } },
       setDecorations: sandbox.stub(),
       visibleRanges: [{ start: { line: 0 }, end: { line: 1 } }]
     } as any;
+    sandbox.stub(window, "activeTextEditor").value(mockEditor);
 
     // Act - Initial render
     await provider.updateDecorations(mockEditor);

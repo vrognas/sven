@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { Uri } from "vscode";
 import { tempSvnFs } from "../temp_svn_fs";
-import { join } from "path";
+import { basename, dirname } from "path";
 
 suite("Test temp svn fs", () => {
   test("Temp files matches expected", async () => {
@@ -13,10 +13,8 @@ suite("Test temp svn fs", () => {
       "test content"
     );
 
-    assert.equal(
-      revisionUri.fsPath,
-      join("/", "1181ae15a77d83ac0b077051dfed21ed", "r30_test.js")
-    );
+    assert.equal(basename(revisionUri.fsPath), "r30_test.js");
+    assert.match(dirname(revisionUri.fsPath), /[\\\/][a-f0-9]{32}$/);
   });
 
   test("Temp file is created", async () => {

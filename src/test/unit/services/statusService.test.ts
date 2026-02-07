@@ -133,11 +133,12 @@ suite("StatusService E2E", () => {
     );
 
     // Verify non-descendant files were included
+    const toPosix = (p: string) => p.replace(/\\/g, "/");
     const hasSrcFile1 = result.changes.some((r: any) =>
-      r.resourceUri.fsPath.includes("src/file1.ts")
+      toPosix(r.resourceUri.fsPath).includes("src/file1.ts")
     );
     const hasSrcFile2 = result.changes.some((r: any) =>
-      r.resourceUri.fsPath.includes("src/file2.ts")
+      toPosix(r.resourceUri.fsPath).includes("src/file2.ts")
     );
     assert.strictEqual(
       hasSrcFile1,

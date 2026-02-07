@@ -65,7 +65,7 @@ export function detectEncoding(buffer: Buffer): string | null {
   const encodingPriorities = configuration.get<string[]>(
     "experimental.encoding_priority",
     []
-  );
+  ) || [];
 
   if (encodingPriorities.length > 0) {
     for (const pri of encodingPriorities) {

@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { commands, window } from "vscode";
+import { vi } from "vitest";
 import { Merge } from "../../../commands/merge";
 import { IBranchItem, ISvnErrorData } from "../../../common/types";
 import * as branch from "../../../helpers/branch";
@@ -22,10 +23,6 @@ suite("Merge Command Tests", () => {
   let merge: Merge;
   let mockState: MockState;
   let mockRepository: Partial<Repository>;
-  const originalSelectBranch = branch.selectBranch;
-  const originalIsTrunk = branch.isTrunk;
-  const originalShowErrorMessage = window.showErrorMessage;
-  const originalExecuteCommand = commands.executeCommand;
 
   setup(() => {
     merge = new Merge();
@@ -57,39 +54,30 @@ suite("Merge Command Tests", () => {
       }
     };
 
-    // Mock selectBranch
-    (branch as any).selectBranch = async () => {
+    vi.spyOn(branch, "selectBranch").mockImplementation(async () => {
       return mockState.selectBranchResult;
-    };
+    });
 
-    // Mock isTrunk
-    (branch as any).isTrunk = (folder: string) => {
+    vi.spyOn(branch, "isTrunk").mockImplementation((folder: string) => {
       return folder === "trunk" || folder.includes("/trunk");
-    };
+    });
 
-    // Mock window.showErrorMessage
-    (window as any).showErrorMessage = async (
-      _message: string,
-      ..._items: string[]
-    ) => {
-      return mockState.showErrorMessageResult;
-    };
+    vi.spyOn(window, "showErrorMessage").mockImplementation(
+      async (_message: string, ..._items: string[]) => {
+        return mockState.showErrorMessageResult as any;
+      }
+    );
 
-    // Mock commands.executeCommand
-    (commands as any).executeCommand = async (
-      command: string,
-      ..._args: any[]
-    ) => {
-      mockState.executeCommandCalls.push({ command });
-    };
+    vi.spyOn(commands, "executeCommand").mockImplementation(
+      async (command: string, ..._args: any[]) => {
+        mockState.executeCommandCalls.push({ command });
+      }
+    );
   });
 
   teardown(() => {
     merge.dispose();
-    (branch as any).selectBranch = originalSelectBranch;
-    (branch as any).isTrunk = originalIsTrunk;
-    (window as any).showErrorMessage = originalShowErrorMessage;
-    (commands as any).executeCommand = originalExecuteCommand;
+    vi.restoreAllMocks();
   });
 
   function resetMockCalls() {

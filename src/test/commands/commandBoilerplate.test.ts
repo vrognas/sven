@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { SourceControlResourceState } from "vscode";
+import { SourceControlResourceState, Uri } from "vscode";
 import { Command } from "../../commands/command";
 import { Repository } from "../../repository";
 
@@ -94,14 +94,26 @@ suite("Command Boilerplate Tests", () => {
       assert.strictEqual(result, null, "Should return null for empty selection");
     });
 
-    test("Returns selection when non-empty", async () => {
-      // Create mock resource state
-      const mockResource = {
-        resourceUri: { scheme: "file", fsPath: "/test/file.txt" }
+    test("Returns null for non-Resource state objects", async () => {
+      const mockResourceState = {
+        resourceUri: Uri.file("/test/file.txt")
       } as any;
 
-      const result = await command.testGetResourceStatesOrExit([mockResource]);
-      assert.ok(result !== null, "Should return non-null for non-empty selection");
+      const result = await command.testGetResourceStatesOrExit([
+        mockResourceState
+      ]);
+      assert.strictEqual(
+        result,
+        null,
+        "Should return null when selection is not Resource instances"
+      );
+    });
+
+    test("Returns null when selection contains undefined item", async () => {
+      const result = await command.testGetResourceStatesOrExit([
+        undefined as unknown as SourceControlResourceState
+      ]);
+      assert.strictEqual(result, null, "Should treat undefined item as no selection");
     });
   });
 });

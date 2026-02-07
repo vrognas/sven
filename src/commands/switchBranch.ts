@@ -22,8 +22,9 @@ export class SwitchBranch extends Command {
       return;
     }
 
-    // Validate branch URL to prevent SSRF and command injection
-    if (!validateRepositoryUrl(branch.path)) {
+    // Validate only absolute branch URLs; relative branch paths come from repo layout.
+    const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(branch.path);
+    if (isAbsoluteUrl && !validateRepositoryUrl(branch.path)) {
       window.showErrorMessage(
         `Invalid branch URL. Only http://, https://, svn://, and svn+ssh:// protocols are allowed.`
       );

@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { Uri } from "vscode";
+import { vi } from "vitest";
 import { Patch } from "../../../commands/patch";
 import { PatchAll } from "../../../commands/patchAll";
 import { PatchChangeList } from "../../../commands/patchChangeList";
@@ -10,7 +11,7 @@ import * as changelistItems from "../../../changelistItems";
 
 suite("Patch Commands Tests", () => {
   let mockRepository: Partial<Repository>;
-  let origGetPatchChangelist: typeof changelistItems.getPatchChangelist;
+  let getPatchChangelistSpy: ReturnType<typeof vi.spyOn>;
   let patchCalls: Array<{ files: string[] }>;
   let patchChangelistCalls: Array<{ changelistName: string }>;
   let showDiffPathCalls: Array<{ content: string }>;
@@ -38,16 +39,16 @@ suite("Patch Commands Tests", () => {
       }
     };
 
-    // Mock getPatchChangelist
-    origGetPatchChangelist = changelistItems.getPatchChangelist;
-    (changelistItems as any).getPatchChangelist = async () => {
-      getPatchChangelistCalls++;
-      return getPatchChangelistResult;
-    };
+    getPatchChangelistSpy = vi
+      .spyOn(changelistItems, "getPatchChangelist")
+      .mockImplementation(async () => {
+        getPatchChangelistCalls++;
+        return getPatchChangelistResult;
+      });
   });
 
   teardown(() => {
-    (changelistItems as any).getPatchChangelist = origGetPatchChangelist;
+    vi.restoreAllMocks();
   });
 
   suite("Patch Command", () => {
@@ -549,13 +550,11 @@ suite("Patch Commands Tests", () => {
       getPatchChangelistResult = "my-changelist";
 
       let receivedRepo: any = null;
-      (changelistItems as any).getPatchChangelist = async (
-        repo: Repository
-      ) => {
+      getPatchChangelistSpy.mockImplementation(async (repo: Repository) => {
         receivedRepo = repo;
         getPatchChangelistCalls++;
         return getPatchChangelistResult;
-      };
+      });
 
       (patchChangeList as any).showDiffPath = async (
         _repo: any,

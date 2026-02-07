@@ -3,7 +3,7 @@
 // Licensed under MIT License
 
 import { Event, Uri, workspace, EventEmitter, RelativePattern } from "vscode";
-import { watch, FSWatcher } from "fs";
+import { FSWatcher } from "fs";
 import { exists } from "../fs";
 import { join } from "path";
 import { debounce } from "../decorators";
@@ -17,6 +17,8 @@ import {
   getSvnDir
 } from "../util";
 import { logError } from "../util/errorLogger";
+
+const nodeFs: typeof import("fs") = require("fs");
 
 export class RepositoryFilesWatcher implements IDisposable {
   private disposables: IDisposable[] = [];
@@ -57,21 +59,25 @@ export class RepositoryFilesWatcher implements IDisposable {
       !workspace.workspaceFolders.filter(w => isDescendant(w.uri.fsPath, root))
         .length
     ) {
-      this.nativeWatcher = watch(
-        join(root, getSvnDir()),
-        this.repoWatch.bind(this)
-      );
+      try {
+        this.nativeWatcher = nodeFs.watch(
+          join(root, getSvnDir()),
+          this.repoWatch.bind(this)
+        );
 
-      this.nativeWatcher.on("error", error => {
-        // Phase 20.A fix: Log error gracefully instead of crashing extension
-        // Common errors: ENOENT (.svn deleted), EACCES (permission denied)
-        logError(`SVN repository watcher error for ${root}`, error);
-        // Extension continues functioning - watcher may degrade but won't crash
-      });
+        this.nativeWatcher.on("error", error => {
+          // Phase 20.A fix: Log error gracefully instead of crashing extension
+          // Common errors: ENOENT (.svn deleted), EACCES (permission denied)
+          logError(`SVN repository watcher error for ${root}`, error);
+          // Extension continues functioning - watcher may degrade but won't crash
+        });
 
-      onRepoChange = this._onRepoChange.event;
-      onRepoCreate = this._onRepoCreate.event;
-      onRepoDelete = this._onRepoDelete.event;
+        onRepoChange = this._onRepoChange.event;
+        onRepoCreate = this._onRepoCreate.event;
+        onRepoDelete = this._onRepoDelete.event;
+      } catch (error) {
+        logError(`SVN repository watcher setup error for ${root}`, error);
+      }
     }
 
     this.disposables.push(fsWatcher);
@@ -181,7 +187,9 @@ export class RepositoryFilesWatcher implements IDisposable {
   public dispose(): void {
     // Close native fs.watch watcher to prevent file handle leak
     if (this.nativeWatcher) {
-      this.nativeWatcher.close();
+      if (typeof (this.nativeWatcher as { close?: () => void }).close === "function") {
+        this.nativeWatcher.close();
+      }
       this.nativeWatcher = undefined;
     }
     this.disposables.forEach(d => d.dispose());

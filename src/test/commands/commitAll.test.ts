@@ -2,40 +2,58 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { SourceControlInputBox, Uri, window } from "vscode";
 import { CommitAll } from "../../commands/commitAll";
-import { Repository } from "../../repository";
 import { Status } from "../../common/types";
+import { configuration } from "../../helpers/configuration";
+import { Repository } from "../../repository";
 import { Resource } from "../../resource";
-import * as messages from "../../messages";
+import { CommitFlowService } from "../../services/commitFlowService";
 
 suite("CommitAll Command E2E Tests", () => {
   let commitAllCmd: CommitAll;
   let mockRepository: Partial<Repository>;
   let mockInputBox: Partial<SourceControlInputBox>;
-  let inputCommitMessageStub: sinon.SinonStub;
+  let runCommitFlowStub: sinon.SinonStub;
   let showInfoStub: sinon.SinonStub;
-  let commitFilesCalls: any[] = [];
+  let showErrorStub: sinon.SinonStub;
+  let commitFilesCalls: Array<{ message: string; paths: string[] }>;
 
   setup(() => {
     commitAllCmd = new CommitAll();
+    commitFilesCalls = [];
 
-    mockInputBox = {
-      value: ""
-    };
+    mockInputBox = { value: "" };
 
     mockRepository = {
       root: "/test/workspace",
       workspaceRoot: "/test/workspace",
       inputBox: mockInputBox as SourceControlInputBox,
+      staged: { resourceStates: [] } as any,
+      changes: { resourceStates: [] } as any,
       getResourceFromFile: (_path: string) => undefined,
+      stageOptimistic: async (_paths: string[]) => {},
       commitFiles: async (message: string, paths: string[]) => {
         commitFilesCalls.push({ message, paths });
         return "Revision 42: commit successful";
-      }
+      },
+      staging: {
+        clearOriginalChangelists: (_paths: string[]) => {}
+      } as any
     };
 
-    inputCommitMessageStub = sinon.stub(messages, "inputCommitMessage");
+    runCommitFlowStub = sinon
+      .stub(CommitFlowService.prototype, "runCommitFlow")
+      .callsFake(async (_repository: Repository, filePaths: string[]) => ({
+        cancelled: false,
+        message: "Commit all changes",
+        selectedFiles: filePaths
+      }));
+
     showInfoStub = sinon.stub(window, "showInformationMessage");
-    commitFilesCalls = [];
+    showErrorStub = sinon.stub(window, "showErrorMessage").resolves(undefined);
+
+    sinon.stub(configuration, "commitUseQuickPick").returns(true);
+    sinon.stub(configuration, "commitConventionalCommits").returns(false);
+    sinon.stub(configuration, "commitAutoUpdate").returns("none");
   });
 
   teardown(() => {
@@ -43,17 +61,19 @@ suite("CommitAll Command E2E Tests", () => {
     sinon.restore();
   });
 
-  test("Commit all success - add files, commit all via command", async () => {
-    // Setup: changes with 3 files
+  test("Commit all success - staged files committed", async () => {
     const file1 = new Resource(Uri.file("/test/workspace/file1.txt"), Status.MODIFIED);
     const file2 = new Resource(Uri.file("/test/workspace/file2.txt"), Status.ADDED);
     const file3 = new Resource(Uri.file("/test/workspace/file3.txt"), Status.DELETED);
 
-    (mockRepository as any).changes = {
-      resourceStates: [file1, file2, file3]
-    };
+    (mockRepository as any).staged.resourceStates = [file1, file2, file3];
+    (mockRepository as any).changes.resourceStates = [];
 
-    inputCommitMessageStub.resolves("Commit all changes");
+    const clearOriginalStub = sinon.spy(
+      (mockRepository as any).staging,
+      "clearOriginalChangelists"
+    );
+
     mockRepository.commitFiles = async (message: string, paths: string[]) => {
       commitFilesCalls.push({ message, paths });
       return "Revision 42: 3 files committed";
@@ -61,51 +81,48 @@ suite("CommitAll Command E2E Tests", () => {
 
     await commitAllCmd.execute(mockRepository as Repository);
 
-    assert.ok(inputCommitMessageStub.calledOnce, "Should prompt for commit message");
-    assert.strictEqual(commitFilesCalls.length, 1, "Should call commitFiles");
-
-    const commitCall = commitFilesCalls[0];
-    assert.strictEqual(commitCall.message, "Commit all changes", "Should use provided message");
-    assert.strictEqual(commitCall.paths.length, 3, "Should commit 3 files");
-    assert.ok(commitCall.paths.includes("/test/workspace/file1.txt"), "Should include file1");
-    assert.ok(commitCall.paths.includes("/test/workspace/file2.txt"), "Should include file2");
-    assert.ok(commitCall.paths.includes("/test/workspace/file3.txt"), "Should include file3");
-
-    assert.ok(showInfoStub.calledWith("Revision 42: 3 files committed"), "Should show success message");
+    assert.ok(runCommitFlowStub.calledOnce);
+    assert.strictEqual(commitFilesCalls.length, 1);
+    assert.strictEqual(commitFilesCalls[0]!.message, "Commit all changes");
+    assert.strictEqual(commitFilesCalls[0]!.paths.length, 3);
+    assert.ok(commitFilesCalls[0]!.paths.includes(file1.resourceUri.fsPath));
+    assert.ok(commitFilesCalls[0]!.paths.includes(file2.resourceUri.fsPath));
+    assert.ok(commitFilesCalls[0]!.paths.includes(file3.resourceUri.fsPath));
+    assert.ok(showInfoStub.calledWith("Revision 42: 3 files committed"));
+    assert.strictEqual((mockRepository.inputBox as any).value, "");
+    assert.ok(clearOriginalStub.calledOnce);
   });
 
-  test("Commit empty - verify no-op when no changes", async () => {
-    // Setup: no changes
-    (mockRepository as any).changes = {
-      resourceStates: []
-    };
+  test("Commit empty - no staged and no changes", async () => {
+    (mockRepository as any).staged.resourceStates = [];
+    (mockRepository as any).changes.resourceStates = [];
 
     await commitAllCmd.execute(mockRepository as Repository);
 
-    assert.ok(showInfoStub.calledWith("No changes to commit"), "Should show info message");
-    assert.ok(inputCommitMessageStub.notCalled, "Should not prompt for message");
-    assert.strictEqual(commitFilesCalls.length, 0, "Should not call commitFiles");
+    assert.ok(showInfoStub.calledWith("No changes to commit"));
+    assert.ok(runCommitFlowStub.notCalled);
+    assert.strictEqual(commitFilesCalls.length, 0);
   });
 
-  test("Commit error - verify error handling", async () => {
-    // Setup: changes exist
+  test("Commit error - shows actionable error message", async () => {
     const file = new Resource(Uri.file("/test/workspace/error.txt"), Status.MODIFIED);
-    (mockRepository as any).changes = {
-      resourceStates: [file]
-    };
+    (mockRepository as any).staged.resourceStates = [file];
+    (mockRepository as any).changes.resourceStates = [];
 
-    inputCommitMessageStub.resolves("Commit message");
+    runCommitFlowStub.resolves({
+      cancelled: false,
+      message: "Commit message",
+      selectedFiles: [file.resourceUri.fsPath]
+    });
     mockRepository.commitFiles = async () => {
       throw new Error("svn: E155015: Commit failed");
     };
 
-    const errorStub = sinon.stub();
-    (commitAllCmd as any).showErrorMessage = errorStub;
-
     await commitAllCmd.execute(mockRepository as Repository);
 
-    assert.ok(inputCommitMessageStub.calledOnce, "Should prompt for message");
-    assert.ok(errorStub.calledOnce, "Should show error message");
-    assert.ok(errorStub.firstCall.args[0].includes("Unable to commit"), "Error message should mention commit failure");
+    assert.ok(runCommitFlowStub.calledOnce);
+    assert.ok(showErrorStub.calledOnce);
+    assert.ok(showErrorStub.firstCall.args[0].includes("Unable to commit"));
+    assert.strictEqual(showErrorStub.firstCall.args[1], "Run Cleanup");
   });
 });

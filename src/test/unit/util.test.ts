@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as path from "path";
 import { camelcase, validateSvnPath } from "../../util";
 
 suite("Util - Security Tests", () => {
@@ -30,8 +31,14 @@ suite("Util - Security Tests", () => {
   suite("validateSvnPath", () => {
     test("allows valid relative paths", () => {
       assert.strictEqual(validateSvnPath("file.txt"), "file.txt");
-      assert.strictEqual(validateSvnPath("dir/file.txt"), "dir/file.txt");
-      assert.strictEqual(validateSvnPath("a/b/c/file.txt"), "a/b/c/file.txt");
+      assert.strictEqual(
+        validateSvnPath("dir/file.txt"),
+        path.normalize("dir/file.txt")
+      );
+      assert.strictEqual(
+        validateSvnPath("a/b/c/file.txt"),
+        path.normalize("a/b/c/file.txt")
+      );
     });
 
     test("rejects absolute Unix paths", () => {
@@ -79,7 +86,7 @@ suite("Util - Security Tests", () => {
     test("normalizes paths", () => {
       // Should normalize but not reject valid paths
       const result = validateSvnPath("dir/./file.txt");
-      assert.ok(!result.includes('.'));
+      assert.strictEqual(result, path.normalize("dir/./file.txt"));
     });
   });
 });

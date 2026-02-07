@@ -89,6 +89,12 @@ export function sanitizeString(input: string): string {
 
   let sanitized = input;
 
+  // Strip URLs first so path sanitization does not break URL detection
+  sanitized = sanitized.replace(
+    /https?:\/\/(?:(?:[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=])+)/gi,
+    "[DOMAIN]"
+  );
+
   // Strip Windows paths: C:\path\to\file → [PATH]
   sanitized = sanitized.replace(
     /[A-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*/gi,
@@ -99,12 +105,6 @@ export function sanitizeString(input: string): string {
   sanitized = sanitized.replace(
     /\/(?:[a-zA-Z0-9._\-~]+\/)*[a-zA-Z0-9._\-~]*/g,
     "[PATH]"
-  );
-
-  // Strip URLs: https://example.com/path → [DOMAIN]
-  sanitized = sanitized.replace(
-    /https?:\/\/(?:(?:[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=])+)/gi,
-    "[DOMAIN]"
   );
 
   // Strip IPv4 addresses: 192.168.1.1 → [IP]
@@ -118,8 +118,8 @@ export function sanitizeString(input: string): string {
 
   // Strip credentials in format: key=value (password, token, secret, etc.)
   sanitized = sanitized.replace(
-    /(?:password|passwd|pwd|token|secret|api[_-]?key|auth|credential|apikey)\s*=\s*[^\s,;]+/gi,
-    "$&=[REDACTED]"
+    /((?:password|passwd|pwd|token|secret|api[_-]?key|auth|credential|apikey)\s*=\s*)[^\s,;]+/gi,
+    "$1[REDACTED]"
   );
 
   // Strip credentials in query strings: ?password=abc&token=xyz → ?password=[REDACTED]&token=[REDACTED]

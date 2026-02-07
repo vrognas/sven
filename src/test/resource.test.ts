@@ -35,9 +35,10 @@ suite("Resource Tests", () => {
     // Verify decorations computed correctly
     const decorations = resource.decorations;
     assert.ok(decorations);
-    assert.ok(decorations.light);
-    assert.ok(decorations.dark);
-    assert.strictEqual(decorations.tooltip, "Renamed from " + renameUri.fsPath);
+    assert.strictEqual(
+      decorations.tooltip,
+      "Renamed from oldfile.txt (history preserved)"
+    );
     assert.strictEqual(decorations.strikeThrough, false);
   });
 

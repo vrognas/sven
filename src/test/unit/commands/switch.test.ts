@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { window } from "vscode";
+import { vi } from "vitest";
 import { SwitchBranch } from "../../../commands/switchBranch";
 import { IBranchItem, ISvnErrorData } from "../../../common/types";
 import * as branchHelper from "../../../helpers/branch";
@@ -9,10 +10,10 @@ import { Repository } from "../../../repository";
 suite("SwitchBranch Command Tests", () => {
   // Mock tracking
   let mockRepository: Partial<Repository>;
-  let origSelectBranch: typeof branchHelper.selectBranch;
-  let origValidateRepositoryUrl: typeof validation.validateRepositoryUrl;
   let origShowInputBox: typeof window.showInputBox;
   let origShowErrorMessage: typeof window.showErrorMessage;
+  let selectBranchSpy: ReturnType<typeof vi.spyOn>;
+  let validateRepositoryUrlSpy: ReturnType<typeof vi.spyOn>;
 
   // Call tracking
   let selectBranchCalls: any[] = [];
@@ -40,21 +41,20 @@ suite("SwitchBranch Command Tests", () => {
     };
 
     // Mock selectBranch
-    origSelectBranch = branchHelper.selectBranch;
-    (branchHelper as any).selectBranch = async (
-      repo: Repository,
-      allowNew: boolean
-    ) => {
-      selectBranchCalls.push({ repo, allowNew });
-      return selectBranchResult;
-    };
+    selectBranchSpy = vi
+      .spyOn(branchHelper, "selectBranch")
+      .mockImplementation(async (repo: Repository, allowNew: boolean) => {
+        selectBranchCalls.push({ repo, allowNew });
+        return selectBranchResult;
+      });
 
     // Mock validateRepositoryUrl
-    origValidateRepositoryUrl = validation.validateRepositoryUrl;
-    (validation as any).validateRepositoryUrl = (url: string) => {
-      validateUrlCalls.push({ url });
-      return validateUrlResult;
-    };
+    validateRepositoryUrlSpy = vi
+      .spyOn(validation, "validateRepositoryUrl")
+      .mockImplementation((url: string) => {
+        validateUrlCalls.push({ url });
+        return validateUrlResult;
+      });
 
     // Mock window.showInputBox
     origShowInputBox = window.showInputBox;
@@ -90,8 +90,8 @@ suite("SwitchBranch Command Tests", () => {
 
   teardown(() => {
     // Restore original functions
-    (branchHelper as any).selectBranch = origSelectBranch;
-    (validation as any).validateRepositoryUrl = origValidateRepositoryUrl;
+    selectBranchSpy.mockRestore();
+    validateRepositoryUrlSpy.mockRestore();
     (window as any).showInputBox = origShowInputBox;
     (window as any).showErrorMessage = origShowErrorMessage;
   });
@@ -376,6 +376,20 @@ suite("SwitchBranch Command Tests", () => {
       assert.strictEqual(validateUrlCalls.length, 1);
       assert.strictEqual(newBranchCalls.length, 0);
       assert.strictEqual(errorMessageCalls.length, 1);
+    });
+
+    test("3.8: Relative branch path is accepted", async () => {
+      selectBranchResult = {
+        name: "feature-test",
+        path: "branches/feature-test",
+        isNew: false
+      };
+
+      await command.execute(mockRepository as Repository);
+
+      assert.strictEqual(validateUrlCalls.length, 0);
+      assert.strictEqual(switchBranchCalls.length, 1);
+      assert.strictEqual(switchBranchCalls[0].path, "branches/feature-test");
     });
   });
 
@@ -689,20 +703,13 @@ suite("SwitchBranch Command Tests", () => {
         isNew: false
       };
 
-      let consoleLogCalled = false;
-      const origLog = console.log;
-      console.log = () => {
-        consoleLogCalled = true;
-      };
-
       (mockRepository.switchBranch as any) = async () => {
         throw new Error("Test error");
       };
 
       await command.execute(mockRepository as Repository);
-
-      console.log = origLog;
-      assert.ok(consoleLogCalled);
+      assert.strictEqual(errorMessageCalls.length, 1);
+      assert.ok(errorMessageCalls[0].message.includes("Unable to switch branch"));
     });
 
     test("5.10: Multiple errors handled separately", async () => {

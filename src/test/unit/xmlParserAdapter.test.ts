@@ -25,7 +25,7 @@ suite("XmlParserAdapter", () => {
     const result = XmlParserAdapter.parse(xml, { camelcase: true });
 
     assert.ok(result.wcStatus);
-    assert.strictEqual(result.wcStatus.wcLocked, "true");
+    assert.strictEqual(result.wcStatus.wcLocked, true);
     assert.strictEqual(result.wcStatus.relativeUrl, "^/trunk");
   });
 
@@ -69,7 +69,10 @@ suite("XmlParserAdapter", () => {
   </entry>
 </list>`;
 
-    const result = XmlParserAdapter.parse(xml, { explicitArray: false });
+    const result = XmlParserAdapter.parse(xml, {
+      explicitArray: false,
+      mergeAttrs: true
+    });
 
     // Single entry should be object, not array
     assert.ok(!Array.isArray(result.list.entry));

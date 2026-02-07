@@ -12,10 +12,12 @@ export function parseSvnList(content: string): Promise<ISvnListItem[]> {
       const result = parsed as {
         lists?: { list?: { entry?: unknown } };
         list?: { entry?: unknown };
+        entry?: unknown;
       };
       // SVN outputs <lists><list path="..."><entry>...
       // Handle both <lists><list> and direct <list> formats
-      const listNode = result.lists?.list ?? result.list;
+      const listNode =
+        result.lists?.list ?? result.list ?? ({ entry: result.entry } as const);
       return ensureArray(listNode?.entry) as ISvnListItem[];
     },
     "list"

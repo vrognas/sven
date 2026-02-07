@@ -1,7 +1,81 @@
 # Lessons Learned
 
-**Version**: 0.2.9
-**Updated**: 2025-02-04
+**Version**: 0.2.17
+**Updated**: 2026-02-07
+
+---
+
+### 50. Coverage Fail-Cluster: Hit Biggest Bucket First
+
+**Lesson**: Coverage climbs faster when pass starts with highest uncovered-line file, not easiest file.
+
+**Applied**:
+
+- Pass 1: `src/blame/blameProvider.ts` (largest uncovered in blame/security/auth cluster)
+- Pass 2: `src/security/errorSanitizer.ts`
+
+**Result**:
+
+- `blameProvider` line coverage moved to high-90s.
+- `errorSanitizer` line coverage moved to high-90s.
+
+**Rule**: For aggressive coverage goals, rank uncovered lines first, then test in descending bucket order.
+
+---
+
+### 32. Vitest Migration: Avoid ESM Export Reassignment
+
+**Lesson**: Legacy Mocha tests that assign imported module exports break under ESM.
+
+**Issue**:
+
+- Patterns like `(module as any).fn = ...` fail with readonly namespace exports
+- Typical error: `Cannot set property ... which has only a getter`
+
+**Fix**:
+
+- Replace export reassignment with `vi.spyOn(module, "fn").mockImplementation(...)`
+- For heavy per-test override patterns, route through one mutable local implementation function
+
+**Rule**: In Vitest+ESM suites, mock with spies, never write to imported module exports.
+
+---
+
+### 33. VS Code Mock Fidelity: Bindings + Defaults Matter
+
+**Lesson**: Legacy suite stability depends on mock parity with VS Code APIs.
+
+**Issue**:
+
+- Command callbacks registered with `thisArg` broke when mock ignored binding.
+- Config reads without explicit default returned `undefined` in mock, unlike extension defaults.
+- Missing `workspace.textDocuments` tracking broke runtime code paths that inspect open docs.
+
+**Fix**:
+
+- Implement `registerCommand/registerTextEditorCommand` with `thisArg` application.
+- Add persisted mock config store with key defaults for common `sven.*` settings.
+- Track opened documents in mock workspace (`openTextDocument` + `textDocuments`).
+
+**Rule**: When modernizing harness, prioritize runtime API parity over minimal stubs.
+
+---
+
+### 34. XML Adapter Contract: Root Can Be Stripped
+
+**Lesson**: Parsers using shared XML adapter must accept root-stripped and rooted shapes.
+
+**Issue**:
+
+- `parseXml()` uses `explicitRoot: false` by default.
+- Legacy parser transforms expected only rooted forms (`paths.path`, `list.entry`).
+- Result: diff/list parser regressions on valid SVN XML.
+
+**Fix**:
+
+- In parser transforms, accept both forms (`result.paths?.path ?? result.path`, `result.lists?.list ?? result.list ?? { entry: result.entry }`).
+
+**Rule**: When adapter defaults change, parser tests must include both rooted and root-stripped fixtures.
 
 ---
 
@@ -270,7 +344,7 @@ catch (err) {
 
 ---
 
-### 7. Cache Eviction: LRU Policy
+### 17. Cache Eviction: LRU Policy
 
 **Lesson**: Unbounded caches cause memory leaks; use LRU eviction to cap growth.
 
@@ -813,7 +887,7 @@ void this.updateRemoteChangedFiles(); // Debounced, fires in background
 
 ---
 
-### 21. VS Code UX: Multi-Step QuickPick Patterns
+### 35. VS Code UX: Multi-Step QuickPick Patterns
 
 **Lesson**: Use native VS Code QuickPick/InputBox for wizard-like flows, not webviews.
 
@@ -970,7 +1044,7 @@ disposables.push(
 
 ---
 
-### 14. Proposed APIs: Proceed with Extreme Caution
+### 46. Proposed APIs: Proceed with Extreme Caution
 
 **Lesson**: VS Code proposed APIs can have internal bugs that make them unusable, even with correct implementation.
 
@@ -999,7 +1073,7 @@ But VS Code's internal Graph view threw "Tree input not set" errors due to their
 
 ---
 
-### 15. History Filtering: Hybrid Server/Client Approach
+### 47. History Filtering: Hybrid Server/Client Approach
 
 **Lesson**: Leverage immutable data characteristics for aggressive caching.
 
@@ -1030,7 +1104,7 @@ SVN revision history is immutable and linear. This enables:
 
 ---
 
-### 16. VS Code Native UX: Multi-Step QuickPick
+### 48. VS Code Native UX: Multi-Step QuickPick
 
 **Lesson**: Prefer VS Code native UI patterns over custom solutions.
 

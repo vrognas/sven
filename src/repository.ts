@@ -65,6 +65,7 @@ import { StatusService } from "./services/StatusService";
 import { ResourceGroupManager } from "./services/ResourceGroupManager";
 import { RemoteChangeService } from "./services/RemoteChangeService";
 import { STAGING_CHANGELIST } from "./services/stagingService";
+import { SvnFileDecorationProvider } from "./fileDecorationProvider";
 import {
   IAuth,
   ICleanupOptions,
@@ -410,8 +411,6 @@ export class Repository implements IRemoteRepository {
     );
 
     // Initialize FileDecorationProvider for Explorer view decorations
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { SvnFileDecorationProvider } = require("./fileDecorationProvider");
     this.fileDecorationProvider = new SvnFileDecorationProvider(this);
     this.disposables.push(
       window.registerFileDecorationProvider(this.fileDecorationProvider)

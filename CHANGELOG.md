@@ -17,6 +17,59 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Scenarios**: File lifecycle, changelists, branches, conflicts
 - **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
+## [0.2.17] (2026-02-07)
+
+### Test
+
+- Expand blame fail-cluster tests (`blameProvider`) for lifecycle, event, mapping, and fallback branches.
+- Expand security sanitizer tests (debug timeout flow + sanitized error log extraction).
+- Full unit suite green: 1747/1747 tests.
+
+### Coverage
+
+- `src/blame/blameProvider.ts`: ~85% → ~96% lines.
+- `src/security/errorSanitizer.ts`: ~37% → ~97% lines.
+- Global `src/**` coverage increased to ~47-48% range.
+
+## [0.2.16] (2026-02-07)
+
+### Fix
+
+- Harden validation against decoded path traversal and encoded URL path metacharacters.
+- Support root-stripped XML shapes in diff/list parsers.
+- Correct changelist repository resolution when `null` repositories are returned.
+
+### Test
+
+- Modernize legacy Vitest suites to ESM-safe mocking and current command/parser behavior.
+- Stabilize cross-platform/path-sensitive tests (ResourceGroupManager, add/addRemove, prompt, auth cache, svnRepository).
+- Full unit suite green: 1709/1709 tests.
+
+## [0.2.15] (2026-02-07)
+
+### Fix
+
+- Mock VS Code command registry now supports `thisArg` binding, matching real `registerCommand` behavior.
+- `SwitchBranch` now accepts relative branch paths from branch picker; absolute URLs still validated.
+- Base command resource selection now tolerates undefined entries instead of throwing.
+
+### Test
+
+- Modernize command e2e commit tests for staged/quick-commit flow.
+- Add mock harness tests for config defaults, command binding, and `workspace.textDocuments` tracking.
+
+## [0.2.14] (2026-02-07)
+
+### Test
+
+- Modernize legacy Mocha-style suites for Vitest (`vi.spyOn` over ESM export reassignment) in checkout/ignore/open command tests.
+- Add Mocha-compat harness coverage (done callback, `this.timeout`, sync+async `this.skip`).
+- Expand VS Code test mock for command registry and missing workspace/window/scm APIs used by legacy suites.
+
+### Chore
+
+- Increase unit test and hook timeout defaults for legacy suite parity (`60s`).
+
 ## [0.2.13] (2026-02-07)
 
 ### Refactor

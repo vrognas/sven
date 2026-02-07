@@ -245,7 +245,8 @@ suite("Update Command Tests", () => {
       await update.execute(mockRepository as Repository);
 
       assert.strictEqual(showErrorCalls.length, 1);
-      assert.strictEqual(showErrorCalls[0].message, "Unable to update");
+      assert.ok(showErrorCalls[0].message.includes("E155004"));
+      assert.ok(showErrorCalls[0].message.includes("cleanup"));
       assert.strictEqual(showInfoCalls.length, 0);
     });
 
@@ -257,7 +258,8 @@ suite("Update Command Tests", () => {
       await update.execute(mockRepository as Repository);
 
       assert.strictEqual(showErrorCalls.length, 1);
-      assert.strictEqual(showErrorCalls[0].message, "Unable to update");
+      assert.ok(showErrorCalls[0].message.includes("E170013"));
+      assert.ok(showErrorCalls[0].message.includes("Unable to connect"));
     });
   });
 
@@ -313,8 +315,10 @@ suite("Update Command Tests", () => {
       assert.strictEqual(showErrorCalls.length, 1);
 
       // Reset mock to succeed
-      mockRepository.updateRevision = async () =>
-        makeResult("Updated to revision 500.", 500);
+      mockRepository.updateRevision = async () => {
+        updateRevisionCalls.push({ ignoreExternals: false });
+        return makeResult("Updated to revision 500.", 500);
+      };
       updateRevisionCalls = [];
       showErrorCalls = [];
       showInfoCalls = [];

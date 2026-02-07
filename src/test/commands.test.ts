@@ -156,44 +156,39 @@ suite("Commands Tests", () => {
     assert.equal(repository.changes.resourceStates.length, 1);
 
     const resource = repository.changes.resourceStates[0];
+    await commands.executeCommand("sven.stage", resource);
+    assert.equal(repository.staged.resourceStates.length, 1);
 
-    setTimeout(() => {
-      commands.executeCommand("sven.forceCommitMessageTest", "Second Commit");
-    }, 1000);
-    await commands.executeCommand("sven.commit", resource);
+    repository.inputBox.value = "Second Commit";
+    await commands.executeCommand("sven.commitQuick", repository);
+    await commands.executeCommand("sven.refresh");
 
+    assert.equal(repository.staged.resourceStates.length, 0);
     assert.equal(repository.changes.resourceStates.length, 0);
   });
 
   test("Commit Multiple", async function () {
     const file1 = path.join(checkoutDir.fsPath, "file1.txt");
     fs.writeFileSync(file1, "test");
-    await commands.executeCommand("sven.openFile", Uri.file(file1));
 
     const file2 = path.join(checkoutDir.fsPath, "file2.txt");
     fs.writeFileSync(file2, "test");
-    await commands.executeCommand("sven.openFile", Uri.file(file2));
 
     const repository = sourceControlManager.getRepository(
       checkoutDir
     ) as Repository;
     repository.inputBox.value = "Multiple Files Commit";
 
+    await repository.addFiles([file1, file2]);
     await commands.executeCommand("sven.refresh");
-    await commands.executeCommand(
-      "sven.add",
-      repository.unversioned.resourceStates[0]
-    );
-    await commands.executeCommand("sven.refresh");
-    await commands.executeCommand(
-      "sven.add",
-      repository.unversioned.resourceStates[0]
-    );
-    await commands.executeCommand("sven.refresh");
+    await commands.executeCommand("sven.stageAll");
+    assert.ok(repository.staged.resourceStates.length >= 2);
 
-    testUtil.overrideNextShowQuickPick(0);
-
-    await commands.executeCommand("sven.commitWithMessage");
+    await commands.executeCommand("sven.commitQuick", repository);
+    await commands.executeCommand("sven.refresh");
+    assert.equal(repository.staged.resourceStates.length, 0);
+    assert.equal(repository.changes.resourceStates.length, 0);
+    assert.equal(repository.unversioned.resourceStates.length, 0);
   });
 
   test("New Branch", async function () {

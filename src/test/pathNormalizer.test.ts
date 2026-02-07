@@ -3,6 +3,10 @@ import { PathNormalizer, ResourceKind } from "../pathNormalizer";
 import { Uri } from "vscode";
 import { ISvnInfo } from "../common/types";
 
+function normalizePathForAssert(value: string): string {
+  return value.replace(/\\/g, "/").toLowerCase();
+}
+
 suite("SVN URLs parsing", () => {
   const ri1 = {
     repository: {
@@ -70,12 +74,18 @@ suite("SVN URLs parsing", () => {
     );
 
     const p2 = nm2.parse("drupal/sites", ResourceKind.LocalRelative);
-    assert.equal(p2.remoteFullPath.path, "/foo/drupal-7/trunk/drupal/sites");
+    assert.equal(
+      p2.remoteFullPath.path,
+      "//rootdomain.com/foo/drupal-7/trunk/drupal/sites"
+    );
     const p3 = nm2.parse(
       "/home/dev-mi/projects/drupal/foo/drupal",
       ResourceKind.LocalFull
     );
-    assert.equal(p3.remoteFullPath.path, "/foo/drupal-7/trunk/drupal");
+    assert.equal(
+      p3.remoteFullPath.path,
+      "//rootdomain.com/foo/drupal-7/trunk/drupal"
+    );
   });
 
   const ri3 = {
@@ -108,7 +118,10 @@ suite("SVN URLs parsing", () => {
   if (process.platform == "win32") {
     test("winpath", function () {
       const p4 = nm4.parse("/trunk/file.c");
-      assert.equal(p4.localFullPath!.fsPath, "x:\\work\\rootd\\file.c");
+      assert.equal(
+        normalizePathForAssert(p4.localFullPath!.fsPath),
+        normalizePathForAssert("x:\\work\\rootd\\file.c")
+      );
     });
   }
 });

@@ -35,10 +35,13 @@ suite("BlameStatusBar E2E Tests", () => {
     const mockRepo = {
       blame: sandbox.stub().resolves(blameData),
       root: "/test",
-      workspaceRoot: "/test"
+      workspaceRoot: "/test",
+      statusReady: Promise.resolve(),
+      getResourceFromFile: sandbox.stub().returns(undefined),
+      isInsideUnversionedOrIgnored: sandbox.stub().returns(undefined)
     };
 
-    sandbox.stub(mockSourceControlManager, "getRepository").returns(mockRepo as any);
+    mockSourceControlManager.getRepository.returns(mockRepo as any);
 
     // Enable blame
     blameStateManager.setBlameEnabled(testUri, true);
@@ -57,6 +60,7 @@ suite("BlameStatusBar E2E Tests", () => {
 
     // Act
     await statusBar.updateStatusBar();
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Assert
     assert.ok(mockRepo.blame.calledOnce, "Repository.blame() should be called");
@@ -98,10 +102,13 @@ suite("BlameStatusBar E2E Tests", () => {
     const mockRepo = {
       blame: sandbox.stub().resolves(blameData),
       root: "/test",
-      workspaceRoot: "/test"
+      workspaceRoot: "/test",
+      statusReady: Promise.resolve(),
+      getResourceFromFile: sandbox.stub().returns(undefined),
+      isInsideUnversionedOrIgnored: sandbox.stub().returns(undefined)
     };
 
-    sandbox.stub(mockSourceControlManager, "getRepository").returns(mockRepo as any);
+    mockSourceControlManager.getRepository.returns(mockRepo as any);
 
     blameStateManager.setBlameEnabled(testUri, true);
     sandbox.stub(blameConfiguration, "isStatusBarEnabled").returns(true);
@@ -117,10 +124,12 @@ suite("BlameStatusBar E2E Tests", () => {
 
     // Act - Initial position
     await statusBar.updateStatusBar();
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Change cursor position
     mockEditor.selection.active.line = 1;
     await statusBar.updateStatusBar();
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Assert - should fetch blame data (cached, so only once)
     assert.ok(mockRepo.blame.called, "Should fetch blame data");

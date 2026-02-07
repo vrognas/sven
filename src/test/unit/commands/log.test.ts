@@ -396,7 +396,8 @@ suite("Log Command Tests", () => {
       await log.execute(mockRepository as Repository);
 
       const uri = executeCommandCalls[0].args[0] as Uri;
-      assert.ok(uri.query.includes("action") || uri.toString().includes("LOG"));
+      assert.strictEqual(uri.scheme, "svn");
+      assert.ok(uri.path.endsWith("sven.log"));
     });
 
     test("should create svn scheme URI", async () => {

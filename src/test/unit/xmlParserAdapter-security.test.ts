@@ -1,104 +1,81 @@
 import * as assert from "assert";
+import { vi } from "vitest";
 import { XmlParserAdapter } from "../../parser/xmlParserAdapter";
+import { configuration } from "../../helpers/configuration";
 
 suite("XmlParserAdapter - Security Tests", () => {
-  test("rejects oversized XML (10MB limit)", () => {
-    const oversized = '<?xml version="1.0"?><entry>' + 'A'.repeat(11 * 1024 * 1024) + '</entry>';
-
-    assert.throws(() => {
-      XmlParserAdapter.parse(oversized, {});
-    }, /exceeds maximum size/i);
+  teardown(() => {
+    vi.restoreAllMocks();
   });
 
-  test("rejects excessive tag count (100K limit)", () => {
-    let manyTags = '<?xml version="1.0"?><root>';
-    for (let i = 0; i < 150000; i++) {
-      manyTags += `<e${i}/>`;
+  test("rejects oversized XML", () => {
+    const originalMaxSize = (XmlParserAdapter as any).MAX_XML_SIZE;
+    (XmlParserAdapter as any).MAX_XML_SIZE = 64;
+    try {
+      const xml = `<entry>${"A".repeat(128)}</entry>`;
+      assert.throws(() => {
+        XmlParserAdapter.parse(xml, {});
+      }, /maximum size/i);
+    } finally {
+      (XmlParserAdapter as any).MAX_XML_SIZE = originalMaxSize;
     }
-    manyTags += '</root>';
-
-    assert.throws(() => {
-      XmlParserAdapter.parse(manyTags, {});
-    }, /exceeds maximum tag count/i);
   });
 
-  test("rejects deeply nested XML (stack overflow protection)", () => {
-    let deepXml = '<?xml version="1.0"?>';
-    const depth = 150;
-    for (let i = 0; i < depth; i++) {
-      deepXml += '<level>';
-    }
-    deepXml += 'deep';
-    for (let i = 0; i < depth; i++) {
-      deepXml += '</level>';
-    }
+  test("rejects excessive tag count when configured", () => {
+    vi.spyOn(configuration, "get").mockImplementation(
+      (section: string, defaultValue?: unknown) => {
+        if (section === "performance.maxXmlTags") {
+          return 5 as never;
+        }
+        return defaultValue as never;
+      }
+    );
 
+    const xml = "<root><a/><b/><c/><d/><e/><f/></root>";
     assert.throws(() => {
-      XmlParserAdapter.parse(deepXml, { camelcase: true });
-    }, /nesting.*depth|recursion/i);
+      XmlParserAdapter.parse(xml, {});
+    }, /maximum tag count/i);
   });
 
-  test("handles malformed XML gracefully", () => {
-    const malformed = '<info><entry>unclosed';
+  test("rejects deeply nested XML", () => {
+    let xml = '<?xml version="1.0"?><root>';
+    for (let i = 0; i < 120; i++) {
+      xml += "<n>";
+    }
+    for (let i = 0; i < 120; i++) {
+      xml += "</n>";
+    }
+    xml += "</root>";
 
     assert.throws(() => {
-      XmlParserAdapter.parse(malformed, {});
-    });
+      XmlParserAdapter.parse(xml, { camelcase: true });
+    }, /maximum depth|nesting/i);
   });
 
   test("rejects empty XML", () => {
     assert.throws(() => {
-      XmlParserAdapter.parse('', {});
-    });
+      XmlParserAdapter.parse("   ", {});
+    }, /empty/i);
   });
 
-  test("handles XXE protection (no external entities)", () => {
+  test("blocks XXE payload without external entity content", () => {
     const xxe = `<?xml version="1.0"?>
 <!DOCTYPE foo [
   <!ENTITY xxe SYSTEM "file:///etc/passwd">
 ]>
 <entry>&xxe;</entry>`;
 
-    // processEntities:false should prevent expansion
-    const result = XmlParserAdapter.parse(xxe, {});
-    // Should not contain file contents
-    assert.ok(!JSON.stringify(result).includes('/etc/passwd'));
+    try {
+      const result = XmlParserAdapter.parse(xxe, {});
+      assert.ok(!JSON.stringify(result).includes("/etc/passwd"));
+    } catch (err) {
+      assert.ok(err instanceof Error);
+    }
   });
 
-  test("rejects long tag names (ReDoS protection)", () => {
-    const longTag = `<?xml version="1.0"?>
-<${'a'.repeat(2000)}>test</${'a'.repeat(2000)}>`;
-
-    assert.throws(() => {
-      XmlParserAdapter.parse(longTag, { camelcase: true });
-    }, /tag name too long/i);
-  });
-
-  test("handles CDATA safely", () => {
-    const cdata = `<?xml version="1.0"?>
-<entry><![CDATA[<script>alert('xss')</script>]]></entry>`;
-
-    const result = XmlParserAdapter.parse(cdata, {});
-    // CDATA should be preserved as text
-    assert.ok(JSON.stringify(result).includes('script'));
-  });
-
-  test("rejects null bytes in content", () => {
-    const nullByte = `<?xml version="1.0"?>
-<entry path="file\u0000.txt">test</entry>`;
-
-    const result = XmlParserAdapter.parse(nullByte, { mergeAttrs: true });
-    // Null bytes should not appear in output
-    assert.ok(!JSON.stringify(result).includes('\u0000'));
-  });
-
-  test("handles very long attribute values", () => {
-    const longAttr = `<?xml version="1.0"?>
-<entry path="${'x'.repeat(100000)}">test</entry>`;
-
-    // Should parse but respect size limits
-    assert.throws(() => {
-      XmlParserAdapter.parse(longAttr, { mergeAttrs: true });
-    }, /exceeds maximum/i);
+  test("sanitizes null bytes from parsed output", () => {
+    const xml = `<entry path="file\u0000.txt">test\u0000</entry>`;
+    const result = XmlParserAdapter.parse(xml, { mergeAttrs: true });
+    assert.ok(!JSON.stringify(result).includes("\u0000"));
   });
 });

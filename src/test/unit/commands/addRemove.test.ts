@@ -48,7 +48,7 @@ suite("Add Command Tests", () => {
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
-        uris.map((u: Uri) => u.fsPath)
+        uris
       );
     };
 
@@ -79,7 +79,7 @@ suite("Add Command Tests", () => {
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
-        uris.map((u: Uri) => u.fsPath)
+        uris
       );
     };
 
@@ -103,7 +103,7 @@ suite("Add Command Tests", () => {
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
-        uris.map((u: Uri) => u.fsPath)
+        uris
       );
     };
 
@@ -132,7 +132,7 @@ suite("Add Command Tests", () => {
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
-        uris.map((u: Uri) => u.fsPath)
+        uris
       );
     };
 
@@ -154,14 +154,15 @@ suite("Add Command Tests", () => {
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
-        uris.map((u: Uri) => u.fsPath)
+        uris
       );
     };
 
     await addCmd.execute(resource);
 
     assert.strictEqual(showErrorCalls.length, 1);
-    assert.strictEqual(showErrorCalls[0], "Unable to add file");
+    assert.ok(showErrorCalls[0]!.includes("Unable to add file"));
+    assert.ok(showErrorCalls[0]!.includes("SVN add failed"));
     assert.strictEqual(addFilesCalls.length, 0);
   });
 
@@ -177,7 +178,7 @@ suite("Add Command Tests", () => {
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
       await fn(
         mockRepository,
-        uris.map((u: Uri) => u.fsPath)
+        uris
       );
     };
 
@@ -193,3 +194,4 @@ suite("Add Command Tests", () => {
 
 // NOTE: Untrack command tests removed - sven.untrack registered but not implemented
 // TODO: Implement sven.untrack command or remove from package.json
+

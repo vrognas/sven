@@ -607,7 +607,7 @@ suite("Prompt Commands Tests", () => {
       const result = await promptAuth.execute();
 
       assert.ok(result);
-      assert.strictEqual((result as IAuth).username, " user ");
+      assert.strictEqual((result as IAuth).username, "user");
       assert.strictEqual((result as IAuth).password, " pass ");
     });
 

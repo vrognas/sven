@@ -1,7 +1,7 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.9
-**Updated**: 2025-02-04
+**Version**: 0.2.17
+**Updated**: 2026-02-07
 
 ---
 
@@ -13,7 +13,7 @@ VS Code extension for SVN source control with Positron IDE support. Event-driven
 
 - ~13,200 source lines
 - 54 commands (+3 blame)
-- 930+ tests, 60-65% coverage
+- 1700+ tests, ~50% global coverage
 - Targets: vscode ^1.105.0, positron ^2025.11.0
 
 ---
@@ -159,6 +159,24 @@ External: vscode, @posit-dev/positron
 4. Comprehensive testing (930+ tests)
 5. Security hardened (sanitization, stdin passwords)
 6. Multi-repo support (independent operation queues)
+
+---
+
+## Test Harness Notes
+
+- Vitest runs mixed legacy/new suites through a Mocha-compat setup file.
+- Harness now depends on:
+  - command registry behavior in the VS Code mock (`registerCommand` + `executeCommand`)
+  - `thisArg` binding support in command registration
+  - default-backed configuration reads for `workspace.getConfiguration("sven").get(...)`
+  - workspace lifecycle event mocks (`onDidSaveTextDocument`, `onDidCloseTextDocument`, etc.)
+  - `workspace.textDocuments` tracking for code paths that inspect open documents
+  - ESM-safe mocking style in tests (`vi.spyOn` instead of export reassignment)
+  - parser fixture parity with adapter defaults (`explicitRoot: false` root-stripped outputs)
+  - command helper contract awareness (`runByRepositoryPaths` handles URI→path conversion)
+- Coverage runs can intermittently report external flake noise:
+  - `remoteChangeService` timing-sensitive poll assertion
+  - `phase10` transient `svn` spawn/repository temp path failures
 
 ---
 

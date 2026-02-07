@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { SourceControlResourceGroup, Uri } from "vscode";
+import { vi } from "vitest";
 import { RevertAll } from "../../../commands/revertAll";
 import { RevertExplorer } from "../../../commands/revertExplorer";
 import { Status } from "../../../common/types";
@@ -18,7 +19,6 @@ interface MockState {
 suite("RevertAll & RevertExplorer Commands Tests", () => {
   let mockState: MockState;
   let mockRepository: Partial<Repository>;
-  const originalConfirmRevert = confirmModule.confirmRevert;
 
   setup(() => {
     mockState = {
@@ -38,15 +38,14 @@ suite("RevertAll & RevertExplorer Commands Tests", () => {
       }
     };
 
-    // Mock confirmModule.confirmRevert
-    (confirmModule as any).confirmRevert = async () => {
+    vi.spyOn(confirmModule, "confirmRevert").mockImplementation(async () => {
       mockState.confirmRevertCalled = true;
       return mockState.confirmRevertResult;
-    };
+    });
   });
 
   teardown(() => {
-    (confirmModule as any).confirmRevert = originalConfirmRevert;
+    vi.restoreAllMocks();
   });
 
   function resetMockCalls() {

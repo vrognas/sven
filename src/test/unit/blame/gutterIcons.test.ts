@@ -33,9 +33,9 @@ suite("Gutter Icon Tests", () => {
       const uri = (provider as any).generateColorBarSvg(color);
       const decoded = Buffer.from(uri.toString().split(",")[1], "base64").toString();
 
-      assert.ok(decoded.includes('viewBox="0 0 4 20"'));
-      assert.ok(decoded.includes('width="4"'));
-      assert.ok(decoded.includes('height="100%"'));
+      assert.ok(decoded.includes('viewBox="0 0 3 16"'));
+      assert.ok(decoded.includes('width="3"'));
+      assert.ok(decoded.includes('height="16"'));
     });
 
     test("embeds color correctly in SVG rect", () => {
@@ -118,43 +118,39 @@ suite("Gutter Icon Tests", () => {
     });
   });
 
-  suite("Color Generation for Authors", () => {
-    test("generates distinct colors for different authors", () => {
-      const authors = ["alice", "bob", "charlie"];
-      const colors = authors.map(a => (provider as any).getAuthorColor(a));
+  suite("Color Generation for Revisions", () => {
+    const revisionRange = { min: 1, max: 5, uniqueRevisions: [5, 4, 3, 2, 1] };
+
+    test("generates distinct colors for different recent revisions", () => {
+      const revisions = ["5", "4", "3"];
+      const colors = revisions.map(r =>
+        (provider as any).getRevisionColor(r, revisionRange)
+      );
 
       const uniqueColors = new Set(colors);
       assert.strictEqual(uniqueColors.size, 3);
     });
 
-    test("generates HSL colors in valid range", () => {
-      const author = "test.user";
-      const color = (provider as any).getAuthorColor(author);
-
-      const match = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-      assert.ok(match);
-
-      const [, h, s, l] = match!.map(Number);
-      assert.ok(h >= 0 && h < 360);
-      assert.ok(s >= 60 && s <= 80);
-      assert.ok(l >= 50 && l <= 60);
+    test("generates hex colors", () => {
+      const color = (provider as any).getRevisionColor("4", revisionRange);
+      assert.ok(/^#[0-9a-f]{6}$/i.test(color));
     });
 
-    test("produces consistent color for same author", () => {
-      const author = "consistent.user";
-      const color1 = (provider as any).getAuthorColor(author);
-      const color2 = (provider as any).getAuthorColor(author);
+    test("produces consistent color for same revision", () => {
+      const color1 = (provider as any).getRevisionColor("4", revisionRange);
+      const color2 = (provider as any).getRevisionColor("4", revisionRange);
 
       assert.strictEqual(color1, color2);
     });
   });
 
   suite("Integration", () => {
-    test("generates unique SVG for each author", () => {
-      const authors = ["dev1", "dev2", "dev3"];
+    const revisionRange = { min: 1, max: 6, uniqueRevisions: [6, 5, 4, 3, 2, 1] };
+    test("generates unique SVG for each revision color", () => {
+      const revisions = ["6", "5", "4"];
 
-      const svgUris = authors.map(author => {
-        const color = (provider as any).getAuthorColor(author);
+      const svgUris = revisions.map(revision => {
+        const color = (provider as any).getRevisionColor(revision, revisionRange);
         return (provider as any).generateColorBarSvg(color);
       });
 
@@ -162,21 +158,20 @@ suite("Gutter Icon Tests", () => {
       assert.strictEqual(uniqueUris.size, 3);
     });
 
-    test("caches both author colors and SVGs", () => {
-      const authors = ["user1", "user2", "user1"];
+    test("caches both revision colors and SVGs", () => {
+      const revisions = ["6", "5", "6"];
 
-      authors.forEach(author => {
-        const color = (provider as any).getAuthorColor(author);
+      revisions.forEach(revision => {
+        const color = (provider as any).getRevisionColor(revision, revisionRange);
         (provider as any).generateColorBarSvg(color);
       });
 
-      assert.strictEqual((provider as any).authorColors.size, 2);
+      assert.strictEqual((provider as any).revisionColors.size, 2);
       assert.strictEqual((provider as any).svgCache.size, 2);
     });
 
-    test("generates valid SVG from hashed author color", () => {
-      const author = "integration.test";
-      const color = (provider as any).getAuthorColor(author);
+    test("generates valid SVG from revision color", () => {
+      const color = (provider as any).getRevisionColor("6", revisionRange);
       const uri = (provider as any).generateColorBarSvg(color);
       const decoded = Buffer.from(uri.toString().split(",")[1], "base64").toString();
 

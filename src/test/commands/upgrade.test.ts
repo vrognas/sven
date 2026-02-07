@@ -4,6 +4,10 @@ import { commands, window } from "vscode";
 import { Upgrade } from "../../commands/upgrade";
 import { SourceControlManager } from "../../source_control_manager";
 
+function normalizePathForAssert(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
 suite("Upgrade Command E2E Tests", () => {
   let upgradeCmd: Upgrade;
   let mockSourceControlManager: SourceControlManager;
@@ -39,7 +43,11 @@ suite("Upgrade Command E2E Tests", () => {
     assert.ok(warningStub.calledOnce, "Warning dialog should be shown");
     assert.ok(warningStub.firstCall.args[0].includes("upgrade"), "Warning should mention upgrade");
     assert.ok(upgradeStub.calledOnce, "upgradeWorkingCopy should be called");
-    assert.strictEqual(upgradeStub.firstCall.args[0], "/test/workspace", "Should upgrade correct path");
+    assert.strictEqual(
+      normalizePathForAssert(upgradeStub.firstCall.args[0]),
+      normalizePathForAssert("/test/workspace"),
+      "Should upgrade correct path"
+    );
     assert.ok(infoStub.calledOnce, "Success message should be shown");
     assert.ok(infoStub.firstCall.args[0].includes("upgraded"), "Success message should mention upgraded");
   });

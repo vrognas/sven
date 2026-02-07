@@ -58,7 +58,8 @@ export class ChangeList extends Command {
         uris.map(uri => sourceControlManager.getRepositoryFromUri(uri))
       )
     ).filter(
-      (repository): repository is Repository => repository !== undefined
+      (repository): repository is Repository =>
+        repository !== undefined && repository !== null
     );
 
     if (repositories.length === 0) {

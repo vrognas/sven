@@ -1,11 +1,20 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Uri } from "vscode";
+import { Uri, window } from "vscode";
 import { BlameProvider } from "../../../blame/blameProvider";
 import { blameConfiguration } from "../../../blame/blameConfiguration";
 import { blameStateManager } from "../../../blame/blameStateManager";
 import { Repository } from "../../../repository";
 import { ISvnBlameLine } from "../../../common/types";
+
+function setupRepositoryMock(
+  mockRepository: sinon.SinonStubbedInstance<Repository>
+): void {
+  (mockRepository as any).repository = {
+    workspaceRoot: "/test",
+    root: "/test"
+  };
+}
 
 suite("Inline Blame Cursor Tracking", () => {
   let provider: BlameProvider;
@@ -15,6 +24,7 @@ suite("Inline Blame Cursor Tracking", () => {
   setup(() => {
     sandbox = sinon.createSandbox();
     mockRepository = sandbox.createStubInstance(Repository);
+    setupRepositoryMock(mockRepository);
   });
 
   teardown(() => {
@@ -45,11 +55,17 @@ suite("Inline Blame Cursor Tracking", () => {
     sandbox.stub(blameConfiguration, "isEnabled").returns(true);
 
     const mockEditor = {
-      document: { uri: testUri, lineCount: 3 },
+      document: {
+        uri: testUri,
+        lineCount: 3,
+        version: 1,
+        lineAt: (_index: number) => ({ range: { end: { character: 10 } } })
+      },
       selection: { active: { line: 1 } }, // Cursor on line 2 (0-indexed)
       setDecorations: sandbox.stub(),
       visibleRanges: [{ start: { line: 0 }, end: { line: 3 } }]
     } as any;
+    sandbox.stub(window, "activeTextEditor").value(mockEditor);
 
     // Act
     await provider.updateDecorations(mockEditor);
@@ -63,7 +79,7 @@ suite("Inline Blame Cursor Tracking", () => {
     assert.ok(inlineCalls.length > 0, "Should have inline decorations");
     const decorations = inlineCalls[0].args[1];
     assert.strictEqual(decorations.length, 1, "Should only decorate current line");
-    assert.strictEqual(decorations[0].range.start.line, 1, "Should decorate line 1 (cursor line)");
+    assert.strictEqual(decorations[0].range.startLine, 1, "Should decorate line 1 (cursor line)");
   });
 
   test("shows inline on all lines when currentLineOnly disabled", async () => {
@@ -87,11 +103,17 @@ suite("Inline Blame Cursor Tracking", () => {
     sandbox.stub(blameConfiguration, "isEnabled").returns(true);
 
     const mockEditor = {
-      document: { uri: testUri, lineCount: 3 },
+      document: {
+        uri: testUri,
+        lineCount: 3,
+        version: 1,
+        lineAt: (_index: number) => ({ range: { end: { character: 10 } } })
+      },
       selection: { active: { line: 1 } },
       setDecorations: sandbox.stub(),
       visibleRanges: [{ start: { line: 0 }, end: { line: 3 } }]
     } as any;
+    sandbox.stub(window, "activeTextEditor").value(mockEditor);
 
     // Act
     await provider.updateDecorations(mockEditor);
@@ -127,11 +149,17 @@ suite("Inline Blame Cursor Tracking", () => {
     sandbox.stub(blameConfiguration, "isEnabled").returns(true);
 
     const mockEditor = {
-      document: { uri: testUri, lineCount: 2 },
+      document: {
+        uri: testUri,
+        lineCount: 2,
+        version: 1,
+        lineAt: (_index: number) => ({ range: { end: { character: 10 } } })
+      },
       selection: { active: { line: 0 } }, // Start at line 1
       setDecorations: sandbox.stub(),
       visibleRanges: [{ start: { line: 0 }, end: { line: 2 } }]
     } as any;
+    sandbox.stub(window, "activeTextEditor").value(mockEditor);
 
     // Act - Initial decoration at line 0
     await provider.updateDecorations(mockEditor);
@@ -156,6 +184,6 @@ suite("Inline Blame Cursor Tracking", () => {
 
     assert.ok(lastInlineCall, "Should have inline decoration after cursor move");
     const decorations = lastInlineCall.args[1];
-    assert.strictEqual(decorations[0].range.start.line, 1, "Should now decorate line 1");
+    assert.strictEqual(decorations[0].range.startLine, 1, "Should now decorate line 1");
   });
 });

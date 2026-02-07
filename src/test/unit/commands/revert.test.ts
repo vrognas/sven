@@ -1,159 +1,120 @@
 import * as assert from "assert";
+import * as path from "path";
 import { Uri } from "vscode";
+import { vi } from "vitest";
 import { Status } from "../../../common/types";
 import { Revert } from "../../../commands/revert";
+import { Repository } from "../../../repository";
 import { Resource } from "../../../resource";
 import * as confirmModule from "../../../ui/confirm";
 
-interface MockState {
-  confirmRevertResult: boolean;
-  executeRevertCalls: Array<{ uris: Uri[]; depth: string }>;
-  getResourceStatesOrExitResult: Resource[] | null;
-  confirmRevertCalled: boolean;
-  executeRevertCalled: boolean;
-  getResourceStatesOrExitCalled: boolean;
-  lastExecuteRevertCall?: { uris: Uri[]; depth: string };
-}
-
 suite("Revert Command Tests", () => {
   let revert: Revert;
-  let mockState: MockState;
-  const originalConfirmRevert = confirmModule.confirmRevert;
+  let mockRepository: Partial<Repository>;
+  let selection: Resource[] | null;
+  let confirmResult: boolean;
+  let runBySelectionPathsCalled: boolean;
+  let revertCalls: Array<{ paths: string[]; depth: string }> = [];
+  let refreshedNeedsLock: boolean;
+  let refreshedExplorer: boolean;
+  let workspaceRoot: string;
 
   setup(() => {
     revert = new Revert();
-    mockState = {
-      confirmRevertResult: true,
-      executeRevertCalls: [],
-      getResourceStatesOrExitResult: [],
-      confirmRevertCalled: false,
-      executeRevertCalled: false,
-      getResourceStatesOrExitCalled: false
+    selection = [];
+    confirmResult = true;
+    runBySelectionPathsCalled = false;
+    revertCalls = [];
+    refreshedNeedsLock = false;
+    refreshedExplorer = false;
+    workspaceRoot = path.join(path.sep, "workspace");
+
+    mockRepository = {
+      workspaceRoot,
+      revert: async (paths: string[], depth: string) => {
+        revertCalls.push({ paths, depth });
+      },
+      refreshNeedsLockCache: async () => {
+        refreshedNeedsLock = true;
+      },
+      refreshExplorerDecorations: () => {
+        refreshedExplorer = true;
+      },
+      staging: {
+        clearOriginalChangelists: () => {}
+      } as any
     };
 
-    // Mock confirmModule.confirmRevert
-    (confirmModule as any).confirmRevert = async () => {
-      mockState.confirmRevertCalled = true;
-      return mockState.confirmRevertResult;
-    };
+    vi.spyOn(confirmModule, "confirmRevert").mockImplementation(async () => {
+      return confirmResult;
+    });
 
-    // Mock Command.executeRevert
-    (revert as any).executeRevert = async (uris: Uri[], depth: string) => {
-      mockState.executeRevertCalled = true;
-      mockState.lastExecuteRevertCall = { uris, depth };
-      mockState.executeRevertCalls.push({ uris, depth });
+    (revert as any).getResourceStatesOrExit = async () => selection;
+    (revert as any).runBySelectionPaths = async (_selection: any, op: any) => {
+      runBySelectionPathsCalled = true;
+      const paths = (_selection as Resource[]).map(r => r.resourceUri.fsPath);
+      await op(mockRepository, paths);
     };
-
-    // Mock Command.getResourceStatesOrExit
-    (revert as any).getResourceStatesOrExit = async () => {
-      mockState.getResourceStatesOrExitCalled = true;
-      return mockState.getResourceStatesOrExitResult;
+    (revert as any).handleRepositoryOperation = async (op: any) => {
+      return op();
     };
   });
 
   teardown(() => {
-    (confirmModule as any).confirmRevert = originalConfirmRevert;
+    vi.restoreAllMocks();
   });
 
-  function resetMockCalls() {
-    mockState.confirmRevertCalled = false;
-    mockState.executeRevertCalled = false;
-    mockState.getResourceStatesOrExitCalled = false;
-    mockState.executeRevertCalls = [];
-    mockState.lastExecuteRevertCall = undefined;
-  }
+  test("reverts selected paths with infinity depth", async () => {
+    const filePath = path.join(workspaceRoot, "file.txt");
+    const resource = new Resource(Uri.file(filePath), Status.MODIFIED);
+    selection = [resource];
 
-  suite("Single Resource Revert", () => {
-    test("should always use infinity depth", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const resource = new Resource(fileUri, Status.MODIFIED);
+    await revert.execute(resource);
 
-      resetMockCalls();
-      mockState.getResourceStatesOrExitResult = [resource];
-
-      await revert.execute(resource);
-
-      assert.ok(mockState.executeRevertCalled);
-      assert.ok(mockState.lastExecuteRevertCall);
-      assert.strictEqual(mockState.lastExecuteRevertCall.depth, "infinity");
-    });
-
-    test("should revert single modified file", async () => {
-      const fileUri = Uri.file("/test/modified.txt");
-      const resource = new Resource(fileUri, Status.MODIFIED);
-
-      resetMockCalls();
-      mockState.getResourceStatesOrExitResult = [resource];
-
-      await revert.execute(resource);
-
-      assert.ok(mockState.executeRevertCalled);
-      assert.ok(mockState.lastExecuteRevertCall);
-      assert.strictEqual(
-        mockState.lastExecuteRevertCall.uris[0]!.fsPath,
-        fileUri.fsPath
-      );
-    });
+    assert.ok(runBySelectionPathsCalled);
+    assert.strictEqual(revertCalls.length, 1);
+    assert.strictEqual(revertCalls[0]!.depth, "infinity");
+    assert.strictEqual(revertCalls[0]!.paths[0], filePath);
+    assert.ok(refreshedNeedsLock);
+    assert.ok(refreshedExplorer);
   });
 
-  suite("Multiple Resources Revert", () => {
-    test("should revert multiple files with infinity depth", async () => {
-      const fileUri1 = Uri.file("/test/file1.txt");
-      const fileUri2 = Uri.file("/test/file2.txt");
-      const resource1 = new Resource(fileUri1, Status.MODIFIED);
-      const resource2 = new Resource(fileUri2, Status.MODIFIED);
+  test("includes original path for renamed file", async () => {
+    const renamedFrom = Uri.file(path.join(workspaceRoot, "old-name.txt"));
+    const renamedTo = Uri.file(path.join(workspaceRoot, "new-name.txt"));
+    const renamed = new Resource(renamedTo, Status.ADDED, renamedFrom);
+    selection = [renamed];
 
-      resetMockCalls();
-      mockState.getResourceStatesOrExitResult = [resource1, resource2];
+    await revert.execute(renamed);
 
-      await revert.execute(resource1, resource2);
-
-      assert.ok(mockState.executeRevertCalled);
-      assert.ok(mockState.lastExecuteRevertCall);
-      assert.strictEqual(mockState.lastExecuteRevertCall.uris.length, 2);
-      assert.strictEqual(mockState.lastExecuteRevertCall.depth, "infinity");
-    });
+    assert.strictEqual(revertCalls.length, 1);
+    assert.deepStrictEqual(revertCalls[0]!.paths, [
+      renamedTo.fsPath,
+      renamedFrom.fsPath
+    ]);
   });
 
-  suite("User Confirmation", () => {
-    test("should not revert when user cancels confirmation", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const resource = new Resource(fileUri, Status.MODIFIED);
+  test("does nothing when user cancels confirm", async () => {
+    const resource = new Resource(
+      Uri.file(path.join(workspaceRoot, "file.txt")),
+      Status.MODIFIED
+    );
+    selection = [resource];
+    confirmResult = false;
 
-      resetMockCalls();
-      mockState.getResourceStatesOrExitResult = [resource];
-      mockState.confirmRevertResult = false;
+    await revert.execute(resource);
 
-      await revert.execute(resource);
-
-      assert.ok(mockState.confirmRevertCalled);
-      assert.ok(!mockState.executeRevertCalled);
-    });
-
-    test("should proceed when user confirms", async () => {
-      const fileUri = Uri.file("/test/file.txt");
-      const resource = new Resource(fileUri, Status.MODIFIED);
-
-      resetMockCalls();
-      mockState.getResourceStatesOrExitResult = [resource];
-      mockState.confirmRevertResult = true;
-
-      await revert.execute(resource);
-
-      assert.ok(mockState.executeRevertCalled);
-    });
+    assert.ok(!runBySelectionPathsCalled);
+    assert.strictEqual(revertCalls.length, 0);
   });
 
-  suite("Error Handling - No Resources", () => {
-    test("should exit when no resources selected", async () => {
-      resetMockCalls();
-      mockState.getResourceStatesOrExitResult = null;
+  test("exits when no resources are selected", async () => {
+    selection = null;
 
-      await revert.execute();
+    await revert.execute();
 
-      assert.ok(mockState.getResourceStatesOrExitCalled);
-      assert.ok(!mockState.confirmRevertCalled);
-      assert.ok(!mockState.executeRevertCalled);
-    });
+    assert.strictEqual((confirmModule.confirmRevert as any).mock.calls.length, 0);
+    assert.ok(!runBySelectionPathsCalled);
+    assert.strictEqual(revertCalls.length, 0);
   });
 });

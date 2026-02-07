@@ -109,19 +109,37 @@ export function validateFilePath(filePath: string): boolean {
     return false;
   }
 
-  // Normalize path to resolve encoded characters and standardize separators
-  // This catches bypasses like %2e%2e, ..%2f, etc.
-  const normalized = path.normalize(decodeURIComponent(filePath));
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(filePath);
+  } catch {
+    return false;
+  }
+
+  // Reject null bytes
+  if (decoded.includes("\0")) {
+    return false;
+  }
+
+  // Reject traversal before normalization (normalize would collapse "..")
+  const rawSegments = decoded.replace(/\\/g, "/").split("/");
+  if (rawSegments.includes("..")) {
+    return false;
+  }
+
+  const normalized = path.normalize(decoded);
 
   // Reject absolute paths
   if (path.isAbsolute(normalized)) {
     return false;
   }
 
-  // Reject paths with parent directory references
-  // Split on separators to check for '..' as a discrete segment
-  const segments = normalized.split(path.sep);
-  return !segments.includes("..");
+  // Defense in depth: reject normalized paths escaping upwards
+  if (normalized === ".." || normalized.startsWith(`..${path.sep}`)) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -145,9 +163,10 @@ export function validateRepositoryUrl(url: string): boolean {
     }
 
     // Reject URLs with shell metacharacters in hostname/path
+    const decodedPath = decodeURIComponent(parsed.pathname);
     if (
       /[;&|`$()]/.test(parsed.hostname) ||
-      /[;&|`$()]/.test(parsed.pathname)
+      /[;&|`$()]/.test(decodedPath)
     ) {
       return false;
     }

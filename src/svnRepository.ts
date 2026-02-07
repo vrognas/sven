@@ -968,7 +968,7 @@ export class Repository {
   }
 
   public async addFiles(files: string[]) {
-    const ignoreList = configuration.get<string[]>("sourceControl.ignore");
+    const ignoreList = configuration.get<string[]>("sourceControl.ignore", []);
     if (ignoreList.length > 0) {
       return this.addFilesByIgnore(files, ignoreList);
     }

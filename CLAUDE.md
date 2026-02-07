@@ -22,3 +22,8 @@
 - Commit often, with small and focused commits.
 - Write concise commit messages that clearly describe the changes made.
 - For simple queries, use under five tool calls, but for more complex queries you can use up to 15 tool calls.
+- In Vitest suites, do not reassign imported module exports; use `vi.spyOn(...).mockImplementation(...)`.
+- For VS Code mocks, include real API semantics (`thisArg` in command registration, config defaults, `workspace.textDocuments`) when tests hit runtime integration paths.
+- For parser tests using `parseXml`, cover both rooted and root-stripped XML shapes.
+- In command tests, if stubbing `runByRepository`, pass `Uri[]` to callback; path mapping belongs to `runByRepositoryPaths`.
+- For coverage pushes, rank by uncovered lines and execute fail-cluster passes largest bucket first.

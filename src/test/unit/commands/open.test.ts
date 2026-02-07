@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { commands, Uri, window, workspace } from "vscode";
+import { vi } from "vitest";
 import { OpenFile } from "../../../commands/openFile";
 import {
   OpenChangeBase,
@@ -20,6 +21,8 @@ interface MockState {
   showWarningMessageCalls: Array<{ message: string }>;
   existsCalls: Array<{ path: string }>;
   statCalls: Array<{ path: string }>;
+  existsResult: boolean;
+  statIsDirectory: boolean;
   getSCMResourceResult: Resource | undefined;
   getLeftResourceResult: Uri | undefined;
 }
@@ -30,8 +33,8 @@ suite("Open Commands Tests", () => {
   let origOpenTextDocument: typeof workspace.openTextDocument;
   let origShowTextDocument: typeof window.showTextDocument;
   let origShowWarningMessage: typeof window.showWarningMessage;
-  let origExists: typeof fs.exists;
-  let origStat: typeof fs.stat;
+  let existsSpy: ReturnType<typeof vi.spyOn>;
+  let statSpy: ReturnType<typeof vi.spyOn>;
 
   setup(() => {
     mockState = {
@@ -41,9 +44,12 @@ suite("Open Commands Tests", () => {
       showWarningMessageCalls: [],
       existsCalls: [],
       statCalls: [],
+      existsResult: false,
+      statIsDirectory: false,
       getSCMResourceResult: undefined,
       getLeftResourceResult: undefined
     };
+    (window as any).activeTextEditor = undefined;
 
     // Mock commands.executeCommand
     origExecuteCommand = commands.executeCommand;
@@ -77,18 +83,16 @@ suite("Open Commands Tests", () => {
     };
 
     // Mock fs.exists
-    origExists = fs.exists;
-    (fs as any).exists = async (path: string) => {
+    existsSpy = vi.spyOn(fs, "exists").mockImplementation(async (path: string) => {
       mockState.existsCalls.push({ path });
-      return false; // Default: file doesn't exist
-    };
+      return mockState.existsResult;
+    });
 
     // Mock fs.stat
-    origStat = fs.stat;
-    (fs as any).stat = async (path: string) => {
+    statSpy = vi.spyOn(fs, "stat").mockImplementation(async (path: string) => {
       mockState.statCalls.push({ path });
-      return { isDirectory: () => false };
-    };
+      return { isDirectory: () => mockState.statIsDirectory } as any;
+    });
   });
 
   teardown(() => {
@@ -96,8 +100,8 @@ suite("Open Commands Tests", () => {
     (workspace as any).openTextDocument = origOpenTextDocument;
     (window as any).showTextDocument = origShowTextDocument;
     (window as any).showWarningMessage = origShowWarningMessage;
-    (fs as any).exists = origExists;
-    (fs as any).stat = origStat;
+    existsSpy.mockRestore();
+    statSpy.mockRestore();
   });
 
   suite("OpenFile Command", () => {
@@ -149,8 +153,8 @@ suite("Open Commands Tests", () => {
       const dirUri = Uri.file("/test/directory");
       const resource = new Resource(dirUri, Status.MODIFIED);
 
-      (fs as any).exists = async () => true;
-      (fs as any).stat = async () => ({ isDirectory: () => true });
+      mockState.existsResult = true;
+      mockState.statIsDirectory = true;
 
       await openFile.execute(resource);
 
@@ -678,8 +682,8 @@ suite("Open Commands Tests", () => {
       const dirUri = Uri.file("/test/directory");
       const resource = new Resource(dirUri, Status.MODIFIED);
 
-      (fs as any).exists = async () => true;
-      (fs as any).stat = async () => ({ isDirectory: () => true });
+      mockState.existsResult = true;
+      mockState.statIsDirectory = true;
       (openResourceBase as any).getLeftResource = async () =>
         Uri.parse("svn:/test/directory?rev=BASE");
       (openResourceBase as any).getRightResource = () => dirUri;
@@ -905,18 +909,14 @@ suite("Open Commands Tests", () => {
       await openFile.execute(file1, file2, file3);
 
       assert.strictEqual(mockState.openTextDocumentCalls.length, 3);
-      assert.strictEqual(
-        mockState.openTextDocumentCalls[0]!.uri.fsPath,
-        "/test/file1.txt"
-      );
-      assert.strictEqual(
-        mockState.openTextDocumentCalls[1]!.uri.fsPath,
-        "/test/file2.txt"
-      );
-      assert.strictEqual(
-        mockState.openTextDocumentCalls[2]!.uri.fsPath,
+      const openedPaths = mockState.openTextDocumentCalls
+        .map(call => call.uri.fsPath)
+        .sort();
+      assert.deepStrictEqual(openedPaths, [
+        "/test/file1.txt",
+        "/test/file2.txt",
         "/test/file3.txt"
-      );
+      ]);
       openFile.dispose();
     });
 

@@ -1,20 +1,18 @@
 import * as assert from "assert";
 import { window } from "vscode";
+import { vi } from "vitest";
 import { Resolve } from "../../../commands/resolve";
 import { Status } from "../../../common/types";
 import { Repository } from "../../../repository";
 import { Resource } from "../../../resource";
-import * as conflictItems from "../../../conflictItems";
 
 suite("Resolve Command Tests", () => {
   let mockRepository: Partial<Repository>;
-  let origShowQuickPick: typeof window.showQuickPick;
-  let origGetConflictPickOptions: typeof conflictItems.getConflictPickOptions;
+  let showQuickPickSpy: ReturnType<typeof vi.spyOn>;
   let quickPickResult: any;
   let resolveCalls: any[] = [];
 
   setup(() => {
-    // Mock Repository
     mockRepository = {
       resolve: async (paths: string[], action: string) => {
         resolveCalls.push({ paths, action });
@@ -22,28 +20,16 @@ suite("Resolve Command Tests", () => {
       }
     };
 
-    // Mock window.showQuickPick
-    origShowQuickPick = window.showQuickPick;
-    (window as any).showQuickPick = async () => quickPickResult;
+    showQuickPickSpy = vi
+      .spyOn(window, "showQuickPick")
+      .mockImplementation(async () => quickPickResult);
 
-    // Mock getConflictPickOptions
-    origGetConflictPickOptions = conflictItems.getConflictPickOptions;
-    (conflictItems as any).getConflictPickOptions = () => [
-      { label: "postpone", description: "Mark as still conflicted" },
-      { label: "base", description: "Use base revision" },
-      { label: "mine-full", description: "Accept my version" },
-      { label: "theirs-full", description: "Accept their version" },
-      { label: "working", description: "Use working copy" }
-    ];
-
-    // Reset tracking
     resolveCalls = [];
     quickPickResult = null;
   });
 
   teardown(() => {
-    (window as any).showQuickPick = origShowQuickPick;
-    (conflictItems as any).getConflictPickOptions = origGetConflictPickOptions;
+    vi.restoreAllMocks();
   });
 
   const createResource = (path: string, status: Status): Resource => {
@@ -182,16 +168,10 @@ suite("Resolve Command Tests", () => {
     assert.strictEqual(resolveCalls.length, 0);
   });
 
-  test("getConflictPickOptions called", async () => {
+  test("quick pick receives conflict options", async () => {
     quickPickResult = { label: "postpone" };
     const resource = createResource("conflict.txt", Status.CONFLICTED);
     const command = new Resolve();
-
-    let getConflictPickOptionsCalled = false;
-    (conflictItems as any).getConflictPickOptions = () => {
-      getConflictPickOptionsCalled = true;
-      return [{ label: "postpone" }];
-    };
 
     (command as any).getResourceStatesOrExit = async () => [resource];
     (command as any).executeOnResources = async (_r: any, op: any) => {
@@ -200,7 +180,10 @@ suite("Resolve Command Tests", () => {
 
     await command.execute(resource);
 
-    assert.ok(getConflictPickOptionsCalled);
+    assert.ok(showQuickPickSpy.mock.calls.length > 0);
+    const firstCallItems = showQuickPickSpy.mock.calls[0]?.[0] as any[];
+    assert.ok(Array.isArray(firstCallItems));
+    assert.ok(firstCallItems.length > 0);
   });
 
   test("QuickPick shown with correct placeholder", async () => {
@@ -209,10 +192,10 @@ suite("Resolve Command Tests", () => {
     const command = new Resolve();
 
     let quickPickPlaceholder: string | undefined;
-    (window as any).showQuickPick = async (_items: any, options: any) => {
+    showQuickPickSpy.mockImplementation(async (_items: any, options: any) => {
       quickPickPlaceholder = options?.placeHolder;
       return { label: "base" };
-    };
+    });
 
     (command as any).getResourceStatesOrExit = async () => [resource];
     (command as any).executeOnResources = async (_r: any, op: any) => {

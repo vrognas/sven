@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as cp from "child_process";
+const cp = require("child_process") as typeof import("child_process");
 import * as sinon from "sinon";
 import { Svn } from "../../../svn";
 import { SvnAuthCache } from "../../../services/svnAuthCache";

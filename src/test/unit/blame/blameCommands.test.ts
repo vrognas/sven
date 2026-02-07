@@ -49,15 +49,15 @@ suite("Blame Commands Tests", () => {
   });
 
   suite("ClearBlame Command", () => {
-    test("should disable blame for file", () => {
+    test("should reset to default state for file", () => {
       stateManager.setBlameEnabled(testUri, true);
       stateManager.clearBlame(testUri);
-      assert.strictEqual(stateManager.isBlameEnabled(testUri), false);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), true);
     });
 
-    test("should not error if blame already disabled", () => {
+    test("should keep default enabled state when no override", () => {
       stateManager.clearBlame(testUri);
-      assert.strictEqual(stateManager.isBlameEnabled(testUri), false);
+      assert.strictEqual(stateManager.isBlameEnabled(testUri), true);
     });
 
     test("should remove file from enabled files list", () => {

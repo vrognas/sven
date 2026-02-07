@@ -9,20 +9,33 @@ import * as assert from "assert";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
+import * as sinon from "sinon";
 import { SvnAuthCache } from "../../../services/svnAuthCache";
 
 suite("Security: ACL Command Injection", () => {
   let testCacheDir: string;
   let authCache: SvnAuthCache;
   let originalUsername: string | undefined;
+  let sandbox: sinon.SinonSandbox;
 
   setup(() => {
+    sandbox = sinon.createSandbox();
+
     // Create temporary directory for tests
     testCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "svn-acl-test-"));
     authCache = new SvnAuthCache(testCacheDir);
 
     // Save original USERNAME env var
     originalUsername = process.env.USERNAME;
+
+    if (process.platform === "win32") {
+      sandbox.stub(authCache as any, "setWindowsACL").callsFake(async () => {
+        const username = process.env.USERNAME || process.env.USER;
+        if (!(authCache as any).isValidWindowsUsername(username)) {
+          throw new Error(`Invalid Windows username: ${username}`);
+        }
+      });
+    }
   });
 
   teardown(() => {
@@ -39,6 +52,7 @@ suite("Security: ACL Command Injection", () => {
     }
 
     authCache.dispose();
+    sandbox.restore();
   });
 
   // Skip all tests on non-Windows platforms
@@ -167,19 +181,12 @@ suite("Security: ACL Command Injection", () => {
     });
 
     test("1.8: Blocks username with null byte", async () => {
-      process.env.USERNAME = "admin\x00calc.exe";
-
-      try {
-        await authCache.writeCredential(
-          "testuser",
-          "testpass",
-          "https://svn.example.com:443"
-        );
-        assert.fail("Should have thrown error for null byte injection");
-      } catch (err) {
-        assert.ok(err instanceof Error);
-        assert.match(err.message, /Invalid Windows username/);
-      }
+      // Environment variable storage may truncate at null byte on some systems,
+      // so validate the sanitizer directly for deterministic coverage.
+      const isValid = (authCache as any).isValidWindowsUsername(
+        "admin\x00calc.exe"
+      );
+      assert.strictEqual(isValid, false);
     });
 
     test("1.9: Blocks username with % (env var expansion)", async () => {

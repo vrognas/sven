@@ -1,8 +1,9 @@
 import * as assert from "assert";
-import * as cp from "child_process";
+const cp = require("child_process") as typeof import("child_process");
 import * as sinon from "sinon";
 import { Svn } from "../../../svn";
 import { SvnAuthCache } from "../../../services/svnAuthCache";
+import * as configuration from "../../../helpers/configuration";
 
 /**
  * Debug Logging Tests for Authentication
@@ -258,19 +259,18 @@ suite("Authentication Logging - Debug Tests", () => {
       // This test verifies warning is shown at extension activation
       // The actual warning is in extension.ts
 
-      const origGet = require("../../../helpers/configuration").configuration
-        .get;
+      const origGet = configuration.configuration.get;
       let sanitizationDisabled = false;
 
-      require("../../../helpers/configuration").configuration.get = (
-        key: string
-      ) => {
+      const getStub = sinon
+        .stub(configuration.configuration, "get")
+        .callsFake((key: string) => {
         if (key === "debug.disableSanitization") {
           sanitizationDisabled = true;
           return true;
         }
-        return origGet.call(this, key);
-      };
+        return origGet.call(configuration.configuration, key as any);
+      });
 
       await svn.exec("/repo", ["update"], {
         username: "alice",
@@ -282,7 +282,7 @@ suite("Authentication Logging - Debug Tests", () => {
       // Warning display tested in extension.test.ts
       assert.ok(sanitizationDisabled || true, "Debug mode detected");
 
-      require("../../../helpers/configuration").configuration.get = origGet;
+      getStub.restore();
     });
 
     test("3.2: warning includes disable instructions", () => {

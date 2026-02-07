@@ -151,6 +151,10 @@ export abstract class Command implements Disposable {
   protected async getResourceStates(
     resourceStates: SourceControlResourceState[]
   ): Promise<Resource[]> {
+    resourceStates = resourceStates.filter(
+      (state): state is SourceControlResourceState => !!state
+    );
+
     if (
       resourceStates.length === 0 ||
       !(resourceStates[0]!.resourceUri instanceof Uri)
@@ -823,8 +827,11 @@ export abstract class Command implements Disposable {
 
     return (
       stderr
+        // Sanitize URLs first (preserve protocol/domain, strip credentials)
+        .replace(/https?:\/\/[^:@\s]+:[^@\s]+@/g, "https://[CREDENTIALS]@")
         // Strip absolute file paths (Unix and Windows)
-        .replace(/\/[^\s:]+/g, "[PATH]")
+        // Avoid matching URLs by requiring start/whitespace and no double slash.
+        .replace(/(^|\s)\/(?!\/)[^\s:]+/g, "$1[PATH]")
         .replace(/[A-Za-z]:\\[^\s:]+/g, "[PATH]")
         // Remove password parameters (handles quoted values with spaces)
         .replace(
@@ -844,8 +851,6 @@ export abstract class Command implements Disposable {
           /--username\s+(?:"[^"]*"|'[^']*'|\S+)/gi,
           "--username [REDACTED]"
         )
-        // Sanitize URLs (preserve protocol and domain, strip credentials)
-        .replace(/https?:\/\/[^:@\s]+:[^@\s]+@/g, "https://[CREDENTIALS]@")
         // Strip internal IP addresses
         .replace(
           /\b(?:10|127|172\.(?:1[6-9]|2[0-9]|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b/g,

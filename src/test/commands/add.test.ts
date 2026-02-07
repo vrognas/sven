@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Uri } from "vscode";
+import { Uri, window } from "vscode";
 import { Add } from "../../commands/add";
 import { Repository } from "../../svnRepository";
 import { Svn } from "../../svn";
@@ -43,7 +43,7 @@ suite("Add Command E2E Tests", () => {
     // Mock command internals to use our test repository
     (addCmd as any).getResourceStates = async () => [resource];
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(repository, uris.map((u: Uri) => u.fsPath));
+      await fn(repository, uris);
     };
 
     await addCmd.execute(resource);
@@ -66,7 +66,7 @@ suite("Add Command E2E Tests", () => {
 
     (addCmd as any).getResourceStates = async () => resources;
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(repository, uris.map((u: Uri) => u.fsPath));
+      await fn(repository, uris);
     };
 
     await addCmd.execute(...resources);
@@ -85,12 +85,11 @@ suite("Add Command E2E Tests", () => {
     const fileUri = Uri.file("/test/workspace/error.txt");
     const resource = new Resource(fileUri, Status.UNVERSIONED);
 
-    const errorStub = sinon.stub();
-    (addCmd as any).showErrorMessage = errorStub;
+    const errorStub = sinon.stub(window, "showErrorMessage");
 
     (addCmd as any).getResourceStates = async () => [resource];
     (addCmd as any).runByRepository = async (uris: any, fn: any) => {
-      await fn(repository, uris.map((u: Uri) => u.fsPath));
+      await fn(repository, uris);
     };
 
     await addCmd.execute(resource);
@@ -100,3 +99,4 @@ suite("Add Command E2E Tests", () => {
     assert.ok(errorStub.firstCall.args[0].includes("Unable to add file"), "Error message should mention add failure");
   });
 });
+
