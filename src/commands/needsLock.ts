@@ -2,14 +2,15 @@
 // Licensed under MIT License
 
 import { SourceControlResourceState, Uri, window } from "vscode";
-import { Command } from "./command";
+import { BasePropertyCommand } from "./basePropertyCommand";
 import { makeReadOnly, makeWritable } from "../fs";
+import type { Repository } from "../repository";
 
 /**
  * Toggle svn:needs-lock property on files.
  * Files with this property are read-only until locked.
  */
-export class ToggleNeedsLock extends Command {
+export class ToggleNeedsLock extends BasePropertyCommand {
   // Prevent concurrent toggles on same paths
   private inProgress = new Set<string>();
 
@@ -18,17 +19,15 @@ export class ToggleNeedsLock extends Command {
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
-    await this.executeOnUrisOrResources(
+    await this.executePropertyOperation(
       args,
-      async (repository, paths) => {
-        await this.toggleNeedsLockOnPaths(repository, paths);
-      },
+      (repository, paths) => this.toggleNeedsLockOnPaths(repository, paths),
       "Unable to toggle needs-lock property"
     );
   }
 
   private async toggleNeedsLockOnPaths(
-    repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
+    repository: Repository,
     paths: string[]
   ): Promise<void> {
     let successCount = 0;

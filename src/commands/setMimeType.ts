@@ -2,8 +2,9 @@
 // Licensed under MIT License
 
 import { QuickPickItem, SourceControlResourceState, Uri, window } from "vscode";
-import { Command } from "./command";
+import { BasePropertyCommand } from "./basePropertyCommand";
 import * as path from "path";
+import type { Repository } from "../repository";
 
 interface MimeTypeQuickPickItem extends QuickPickItem {
   value: string;
@@ -131,23 +132,21 @@ function suggestMimeType(filePath: string): string | undefined {
  * Set svn:mime-type property on files.
  * Controls how SVN handles merges and diffs.
  */
-export class SetMimeType extends Command {
+export class SetMimeType extends BasePropertyCommand {
   constructor() {
     super("sven.setMimeType");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
-    await this.executeOnUrisOrResources(
+    await this.executePropertyOperation(
       args,
-      async (repository, paths) => {
-        await this.setMimeTypeOnPaths(repository, paths);
-      },
+      (repository, paths) => this.setMimeTypeOnPaths(repository, paths),
       "Unable to set mime-type property"
     );
   }
 
   private async setMimeTypeOnPaths(
-    repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
+    repository: Repository,
     paths: string[]
   ): Promise<void> {
     // Build QuickPick items with auto-detected suggestion at top
@@ -212,23 +211,21 @@ export class SetMimeType extends Command {
 /**
  * Remove svn:mime-type property from files.
  */
-export class RemoveMimeType extends Command {
+export class RemoveMimeType extends BasePropertyCommand {
   constructor() {
     super("sven.removeMimeType");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
-    await this.executeOnUrisOrResources(
+    await this.executePropertyOperation(
       args,
-      async (repository, paths) => {
-        await this.removeMimeTypeFromPaths(repository, paths);
-      },
+      (repository, paths) => this.removeMimeTypeFromPaths(repository, paths),
       "Unable to remove mime-type property"
     );
   }
 
   private async removeMimeTypeFromPaths(
-    repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
+    repository: Repository,
     paths: string[]
   ): Promise<void> {
     await this.executeWithFeedback(

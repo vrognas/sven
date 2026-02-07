@@ -2,8 +2,9 @@
 // Licensed under MIT License
 
 import { QuickPickItem, SourceControlResourceState, Uri, window } from "vscode";
-import { Command } from "./command";
+import { BasePropertyCommand } from "./basePropertyCommand";
 import { askRecursive, hasAnyDirectory } from "../helpers/propertyHelper";
+import type { Repository } from "../repository";
 
 type EolStyleValue = "native" | "LF" | "CRLF" | "CR";
 
@@ -15,23 +16,21 @@ interface EolStyleQuickPickItem extends QuickPickItem {
  * Set svn:eol-style property on files.
  * Controls line-ending normalization across platforms.
  */
-export class SetEolStyle extends Command {
+export class SetEolStyle extends BasePropertyCommand {
   constructor() {
     super("sven.setEolStyle");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
-    await this.executeOnUrisOrResources(
+    await this.executePropertyOperation(
       args,
-      async (repository, paths) => {
-        await this.setEolStyleOnPaths(repository, paths);
-      },
+      (repository, paths) => this.setEolStyleOnPaths(repository, paths),
       "Unable to set eol-style property"
     );
   }
 
   private async setEolStyleOnPaths(
-    repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
+    repository: Repository,
     paths: string[]
   ): Promise<void> {
     // Check for directories (for title and recursive prompt)
@@ -94,23 +93,21 @@ export class SetEolStyle extends Command {
 /**
  * Remove svn:eol-style property from files.
  */
-export class RemoveEolStyle extends Command {
+export class RemoveEolStyle extends BasePropertyCommand {
   constructor() {
     super("sven.removeEolStyle");
   }
 
   public async execute(...args: (SourceControlResourceState | Uri)[]) {
-    await this.executeOnUrisOrResources(
+    await this.executePropertyOperation(
       args,
-      async (repository, paths) => {
-        await this.removeEolStyleFromPaths(repository, paths);
-      },
+      (repository, paths) => this.removeEolStyleFromPaths(repository, paths),
       "Unable to remove eol-style property"
     );
   }
 
   private async removeEolStyleFromPaths(
-    repository: Parameters<Parameters<typeof this.executeOnResources>[1]>[0],
+    repository: Repository,
     paths: string[]
   ): Promise<void> {
     // Ask about recursive if any directories selected
