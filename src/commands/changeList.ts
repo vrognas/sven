@@ -2,10 +2,10 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { commands, Uri, window } from "vscode";
+import { Uri, window } from "vscode";
 import { inputSwitchChangelist } from "../changelistItems";
-import { SourceControlManager } from "../source_control_manager";
 import { Resource } from "../resource";
+import { Repository } from "../repository";
 import { normalizePath } from "../util";
 import { logError } from "../util/errorLogger";
 import { Command } from "./command";
@@ -15,101 +15,123 @@ export class ChangeList extends Command {
     super("sven.changelist");
   }
 
-  public async execute(...args: (Resource | Uri | Uri[])[]) {
-    let uris: Uri[];
+  private canRemovePathsFromChangelists(
+    repository: Repository,
+    paths: string[]
+  ): boolean {
+    const normalizedPaths = new Set(paths.map(normalizePath));
+    return Array.from(repository.changelists.values()).some(group =>
+      group.resourceStates.some(state =>
+        normalizedPaths.has(normalizePath(state.resourceUri.path))
+      )
+    );
+  }
+
+  private resolveCommandUris(
+    args: (Resource | Uri | Uri[])[]
+  ): Uri[] | undefined {
+    const extractedUris = this.extractUris(args as unknown[]);
 
     if (args[0] instanceof Resource) {
-      uris = this.toUris(args as Resource[]);
-    } else if (args[0] instanceof Uri) {
-      uris = args[1] as Uri[];
-    } else if (window.activeTextEditor) {
-      uris = [window.activeTextEditor.document.uri];
-    } else {
-      logError(
-        "Unhandled type for changelist command",
-        new Error("No valid URI source")
-      );
-      return;
+      return this.toUris(args as Resource[]);
+    }
+    if (extractedUris) {
+      return extractedUris;
+    }
+    if (window.activeTextEditor) {
+      return [window.activeTextEditor.document.uri];
     }
 
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as SourceControlManager;
-
-    const promiseArray = uris.map(async uri =>
-      sourceControlManager.getRepositoryFromUri(uri)
+    logError(
+      "Unhandled type for changelist command",
+      new Error("No valid URI source")
     );
-    let repositories = await Promise.all(promiseArray);
-    repositories = repositories.filter(repository => repository);
+    return undefined;
+  }
+
+  private async resolveSingleRepository(
+    uris: Uri[]
+  ): Promise<Repository | undefined> {
+    const sourceControlManager = await this.getSourceControlManager();
+    const repositories = (
+      await Promise.all(
+        uris.map(uri => sourceControlManager.getRepositoryFromUri(uri))
+      )
+    ).filter(
+      (repository): repository is Repository => repository !== undefined
+    );
 
     if (repositories.length === 0) {
       window.showErrorMessage(
         "Files are not under version control and cannot be added to a change list"
       );
-      return;
+      return undefined;
     }
 
-    const uniqueRepositories = Array.from(new Set(repositories));
-
-    if (uniqueRepositories.length !== 1) {
+    if (new Set(repositories).size !== 1) {
       window.showErrorMessage(
         "Unable to add files from different repositories to change list"
       );
-      return;
+      return undefined;
     }
 
     if (repositories.length !== uris.length) {
       window.showErrorMessage(
         "Some Files are not under version control and cannot be added to a change list"
       );
+      return undefined;
+    }
+
+    return repositories[0];
+  }
+
+  private async applyChangelistChange(
+    repository: Repository,
+    paths: string[],
+    changelistName: string | false
+  ): Promise<void> {
+    const pathList = paths.join(",");
+    let operation: () => Promise<void>;
+    let errorMessage: string;
+
+    if (changelistName === false) {
+      operation = async () => {
+        await repository.removeChangelist(paths);
+      };
+      errorMessage = `Unable to remove file "${pathList}" from changelist`;
+    } else {
+      operation = async () => {
+        await repository.addChangelist(paths, changelistName);
+        window.showInformationMessage(
+          `Added files "${pathList}" to changelist "${changelistName}"`
+        );
+      };
+      errorMessage = `Unable to add file "${pathList}" to changelist "${changelistName}"`;
+    }
+
+    await this.handleRepositoryOperation(operation, errorMessage);
+  }
+
+  public async execute(...args: (Resource | Uri | Uri[])[]) {
+    const uris = this.resolveCommandUris(args);
+    if (!uris) {
       return;
     }
 
-    const repository = repositories[0];
-
+    const repository = await this.resolveSingleRepository(uris);
     if (!repository) {
       return;
     }
 
     const paths = uris.map(uri => uri.fsPath);
-    let canRemove = false;
-
-    repository.changelists.forEach((group, _changelist) => {
-      if (
-        group.resourceStates.some(state => {
-          return paths.some(path => {
-            return (
-              normalizePath(path) === normalizePath(state.resourceUri.path)
-            );
-          });
-        })
-      ) {
-        canRemove = true;
-      }
-    });
+    const canRemove = this.canRemovePathsFromChangelists(repository, paths);
 
     const changelistName = await inputSwitchChangelist(repository, canRemove);
 
-    if (!changelistName && changelistName !== false) {
+    if (changelistName === undefined) {
       return;
     }
 
-    if (changelistName === false) {
-      await this.handleRepositoryOperation(
-        async () => await repository.removeChangelist(paths),
-        `Unable to remove file "${paths.join(",")}" from changelist`
-      );
-    } else {
-      await this.handleRepositoryOperation(
-        async () => {
-          await repository.addChangelist(paths, changelistName);
-          window.showInformationMessage(
-            `Added files "${paths.join(",")}" to changelist "${changelistName}"`
-          );
-        },
-        `Unable to add file "${paths.join(",")}" to changelist "${changelistName}"`
-      );
-    }
+    await this.applyChangelistChange(repository, paths, changelistName);
   }
 }

@@ -4,11 +4,64 @@
 
 import { SourceControlResourceState, window } from "vscode";
 import { configuration } from "../helpers/configuration";
+import { Repository } from "../repository";
 import { Command } from "./command";
+
+interface PullBatchResult {
+  results: string[];
+  failureCount: number;
+}
 
 export class PullIncomingChange extends Command {
   constructor() {
     super("sven.treeview.pullIncomingChange");
+  }
+
+  private async pullBatch(
+    repository: Repository,
+    files: string[]
+  ): Promise<PullBatchResult> {
+    const results: string[] = [];
+    let failureCount = 0;
+
+    await Promise.all(
+      files.map(async filePath => {
+        try {
+          const result = await repository.pullIncomingChange(filePath);
+          results.push(result);
+        } catch {
+          failureCount++;
+        }
+      })
+    );
+
+    // Refresh remote changes once after batch completes
+    repository.refreshRemoteChanges();
+
+    return { results, failureCount };
+  }
+
+  private notifyPullBatch(result: PullBatchResult): void {
+    if (result.failureCount > 0 && result.results.length === 0) {
+      window.showErrorMessage(`Failed to update ${result.failureCount} files`);
+      return;
+    }
+
+    if (result.failureCount > 0) {
+      window.showWarningMessage(
+        `Updated ${result.results.length} files, ${result.failureCount} failed`
+      );
+      return;
+    }
+
+    if (result.results.length === 1) {
+      window.showInformationMessage(result.results[0] ?? "Updated 1 file");
+      return;
+    }
+
+    if (result.results.length > 1) {
+      window.showInformationMessage(`Updated ${result.results.length} files`);
+    }
   }
 
   public async execute(...changes: SourceControlResourceState[]) {
@@ -17,42 +70,14 @@ export class PullIncomingChange extends Command {
       true
     );
 
-    const uris = this.toUris(this.filterResources(changes));
+    const uris = this.resourceStatesToUris(changes);
 
-    await this.runByRepository(uris, async (repository, resources) => {
-      const files = this.toPaths(resources);
-
-      // Pull files, collecting successes and failures
-      const results: string[] = [];
-      const failures: string[] = [];
-
-      await Promise.all(
-        files.map(async path => {
-          try {
-            const result = await repository.pullIncomingChange(path);
-            results.push(result);
-          } catch {
-            failures.push(path);
-          }
-        })
-      );
-
-      // Refresh remote changes once after batch completes
-      repository.refreshRemoteChanges();
+    await this.runByRepositoryPaths(uris, async (repository, files) => {
+      const result = await this.pullBatch(repository, files);
 
       // Show notification
       if (showUpdateMessage) {
-        if (failures.length > 0 && results.length === 0) {
-          window.showErrorMessage(`Failed to update ${failures.length} files`);
-        } else if (failures.length > 0) {
-          window.showWarningMessage(
-            `Updated ${results.length} files, ${failures.length} failed`
-          );
-        } else if (results.length === 1) {
-          window.showInformationMessage(results[0] ?? "Updated 1 file");
-        } else if (results.length > 1) {
-          window.showInformationMessage(`Updated ${results.length} files`);
-        }
+        this.notifyPullBatch(result);
       }
     });
   }
