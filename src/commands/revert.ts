@@ -22,33 +22,28 @@ export class Revert extends Command {
 
     // Track renamed files - need to revert both old and new paths
     // Otherwise reverting renamed.txt leaves file.txt deleted
-    const renamedFromPaths = this.filterResources(selection)
+    const renamedFromPaths = selection
       .filter(r => r.type === Status.ADDED && r.renameResourceUri)
       .map(r => r.renameResourceUri!.fsPath);
 
     // Always use infinity depth - for files it's ignored by SVN,
     // for directories it ensures full recursive revert including deleted paths
-    await this.runByRepository(
-      this.toUris(selection),
-      async (repository, resources) => {
-        const paths = this.toPaths(resources);
+    await this.runBySelectionPaths(selection, async (repository, paths) => {
+      // Include original paths of renamed files (relative to this repo)
+      const renamePaths = renamedFromPaths.filter(p =>
+        p.startsWith(repository.workspaceRoot + path.sep)
+      );
+      const allPaths = [...paths, ...renamePaths];
 
-        // Include original paths of renamed files (relative to this repo)
-        const renamePaths = renamedFromPaths.filter(p =>
-          p.startsWith(repository.workspaceRoot + path.sep)
-        );
-        const allPaths = [...paths, ...renamePaths];
-
-        await this.handleRepositoryOperation(async () => {
-          await repository.revert(allPaths, "infinity");
-          // Rebuild needs-lock cache from SVN for immediate L badge update
-          await repository.refreshNeedsLockCache();
-          // Refresh Explorer decorations for reverted files (L badge, etc)
-          repository.refreshExplorerDecorations(allPaths.map(p => Uri.file(p)));
-          // Auto-unstage reverted files
-          await unstageRevertedFiles(repository, paths, stagedPaths);
-        }, "Unable to revert");
-      }
-    );
+      await this.handleRepositoryOperation(async () => {
+        await repository.revert(allPaths, "infinity");
+        // Rebuild needs-lock cache from SVN for immediate L badge update
+        await repository.refreshNeedsLockCache();
+        // Refresh Explorer decorations for reverted files (L badge, etc)
+        repository.refreshExplorerDecorations(allPaths.map(p => Uri.file(p)));
+        // Auto-unstage reverted files
+        await unstageRevertedFiles(repository, paths, stagedPaths);
+      }, "Unable to revert");
+    });
   }
 }
