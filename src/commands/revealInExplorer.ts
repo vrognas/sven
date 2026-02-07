@@ -8,31 +8,18 @@
  * Reveals a file from the SCM changes view in the file explorer
  */
 
-import { SourceControlResourceState, window } from "vscode";
-import { Command } from "./command";
+import { Uri } from "vscode";
 import { revealFileInOS } from "../util/fileOperations";
+import { BaseRevealInExplorerCommand } from "./baseRevealInExplorerCommand";
 
-export class RevealInExplorer extends Command {
+export class RevealInExplorer extends BaseRevealInExplorerCommand {
   constructor() {
     super("sven.revealInExplorer");
   }
 
-  public async execute(...resourceStates: SourceControlResourceState[]) {
-    if (resourceStates.length === 0) {
-      return;
-    }
+  protected errorMessage = "Unable to reveal file in explorer";
 
-    // Reveal the first resource in the OS file explorer
-    // Note: Only first file revealed when multiple selected (matches VS Code UX)
-    const resource = resourceStates[0]!;
-    if (!resource.resourceUri) {
-      return;
-    }
-
-    try {
-      await revealFileInOS(resource.resourceUri);
-    } catch (error) {
-      window.showErrorMessage("Unable to reveal file in explorer");
-    }
+  protected async reveal(uri: Uri): Promise<void> {
+    await revealFileInOS(uri);
   }
 }

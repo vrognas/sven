@@ -7,29 +7,18 @@
  * Reveals a file from the SCM changes view in VS Code's Explorer sidebar
  */
 
-import { commands, SourceControlResourceState, window } from "vscode";
-import { Command } from "./command";
+import { commands, Uri } from "vscode";
+import { BaseRevealInExplorerCommand } from "./baseRevealInExplorerCommand";
 
-export class RevealInExplorerView extends Command {
+export class RevealInExplorerView extends BaseRevealInExplorerCommand {
   constructor() {
     super("sven.revealInExplorerView");
   }
 
-  public async execute(...resourceStates: SourceControlResourceState[]) {
-    if (resourceStates.length === 0) {
-      return;
-    }
+  protected errorMessage = "Unable to reveal file in Explorer view";
 
-    const resource = resourceStates[0]!;
-    if (!resource.resourceUri) {
-      return;
-    }
-
-    try {
-      // Use VS Code's built-in command to reveal in Explorer sidebar
-      await commands.executeCommand("revealInExplorer", resource.resourceUri);
-    } catch (error) {
-      window.showErrorMessage("Unable to reveal file in Explorer view");
-    }
+  protected async reveal(uri: Uri): Promise<void> {
+    // Use VS Code's built-in command to reveal in Explorer sidebar
+    await commands.executeCommand("revealInExplorer", uri);
   }
 }
