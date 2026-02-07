@@ -1,7 +1,34 @@
 # Lessons Learned
 
-**Version**: 0.2.21
+**Version**: 0.2.22
 **Updated**: 2026-02-07
+
+---
+
+### 56. Legacy E2E Preflight: Use Suite-Ready Guard, Not suiteSetup Skip
+
+**Lesson**: In mixed Mocha/Vitest harnesses, `this.skip()` inside `suiteSetup` can still leave tests running with uninitialized fixtures on some runners.
+
+**Fix**:
+
+- Add `suiteReady = false` by default.
+- Add per-test `setup(function () { if (!suiteReady) this.skip(); })`.
+- Set `suiteReady = true` only after full preflight/setup success.
+
+**Rule**: For binary/extension preflight in legacy E2E suites, guard each test via readiness flag; do not rely on `suiteSetup` skip alone.
+
+---
+
+### 55. Polling Tests: Await Explicit Signal, Not Fixed Sleep
+
+**Lesson**: Fixed short sleeps (`setTimeout(120)`) in timer tests can flake under CI load and miss expected callback counts.
+
+**Fix**:
+
+- Resolve a promise on the target callback invocation.
+- Await that promise with a bounded timeout.
+
+**Rule**: For timer/poll assertions, wait on explicit condition/event + timeout; avoid fixed-sleep count checks.
 
 ---
 

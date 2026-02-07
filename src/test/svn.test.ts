@@ -14,14 +14,22 @@ suite("Svn E2E Tests", () => {
   let svn: Svn;
   let repoUri: Uri;
   let checkoutDir: Uri;
+  let suiteReady = false;
+
+  setup(function () {
+    if (!suiteReady) {
+      this.skip();
+    }
+  });
 
   suiteSetup(async function () {
+    suiteReady = false;
     const missingBinaries = testUtil.getMissingSvnBinaries();
     if (missingBinaries.length > 0) {
       console.warn(
         `[test] skipping Svn E2E Tests; missing binaries: ${missingBinaries.join(", ")}`
       );
-      return this.skip();
+      return;
     }
 
     this.timeout(60000);
@@ -31,7 +39,7 @@ suite("Svn E2E Tests", () => {
       console.warn(
         `[test] skipping Svn E2E Tests; extension unavailable: ${String(err)}`
       );
-      return this.skip();
+      return;
     }
 
     // Create real SVN repo for testing
@@ -43,6 +51,7 @@ suite("Svn E2E Tests", () => {
 
     // Create Svn instance (real SVN binary)
     svn = new Svn({ svnPath: "svn", version: "1.14.0" });
+    suiteReady = true;
   });
 
   suiteTeardown(() => {

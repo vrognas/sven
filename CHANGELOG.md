@@ -17,6 +17,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Scenarios**: File lifecycle, changelists, branches, conflicts
 - **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
+## [0.2.22] (2026-02-07)
+
+### Fix
+
+- Deflake legacy E2E suites on Windows CI by replacing `suiteSetup`-only skip flow with `suiteReady` gating in `commands`, `repository`, `phase10`, and `svn` suites.
+- Deflake `svnFinder` E2E assertions by skipping binary-dependent tests when `svn` is unavailable.
+- Deflake `remoteChangeService` callback-error test by awaiting explicit second-poll signal with bounded timeout instead of fixed sleep.
+
+### Test
+
+- `npx vitest run src/test/commands.test.ts src/test/repository.test.ts src/test/phase10.test.ts src/test/svn.test.ts src/test/svnFinder.test.ts`
+- `$env:CI='true'; npm test`
+
 ## [0.2.21] (2026-02-07)
 
 ### Fix

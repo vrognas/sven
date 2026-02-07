@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { SvnFinder, ISvn } from "../svnFinder";
+import * as testUtil from "./testUtil";
 
 suite("SvnFinder E2E Tests", () => {
   let finder: SvnFinder;
@@ -17,6 +18,9 @@ suite("SvnFinder E2E Tests", () => {
 
   test("SVN binary found - verify detection works", async function () {
     this.timeout(10000);
+    if (!testUtil.hasExecutable("svn")) {
+      return this.skip();
+    }
 
     // When: Find SVN without hint (uses system SVN)
     const result: ISvn = await finder.findSvn();
@@ -53,6 +57,10 @@ suite("SvnFinder E2E Tests", () => {
   });
 
   test("Version check - verify version parsing", async function () {
+    if (!testUtil.hasExecutable("svn")) {
+      return this.skip();
+    }
+
     // Test 1: Valid version >= 1.6.0
     const validSvn: ISvn = { path: "/usr/bin/svn", version: "1.8.10" };
     const result = await finder.checkSvnVersion(validSvn);

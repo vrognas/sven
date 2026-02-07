@@ -10,14 +10,22 @@ suite("Repository Tests", () => {
   let repoUri: Uri;
   let checkoutDir: Uri;
   let sourceControlManager: SourceControlManager;
+  let suiteReady = false;
+
+  setup(function () {
+    if (!suiteReady) {
+      this.skip();
+    }
+  });
 
   suiteSetup(async function () {
+    suiteReady = false;
     const missingBinaries = testUtil.getMissingSvnBinaries();
     if (missingBinaries.length > 0) {
       console.warn(
         `[test] skipping Repository Tests; missing binaries: ${missingBinaries.join(", ")}`
       );
-      return this.skip();
+      return;
     }
 
     try {
@@ -26,7 +34,7 @@ suite("Repository Tests", () => {
       console.warn(
         `[test] skipping Repository Tests; extension unavailable: ${String(err)}`
       );
-      return this.skip();
+      return;
     }
 
     repoUri = await testUtil.createRepoServer();
@@ -39,6 +47,7 @@ suite("Repository Tests", () => {
       "sven.getSourceControlManager",
       checkoutDir
     )) as SourceControlManager;
+    suiteReady = true;
   });
 
   suiteTeardown(() => {

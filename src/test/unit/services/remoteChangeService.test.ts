@@ -14,6 +14,25 @@ import {
  * - Error resilience
  */
 describe("RemoteChangeService E2E", () => {
+  function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeoutHandle = setTimeout(() => {
+        reject(new Error(`Timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      promise.then(
+        value => {
+          clearTimeout(timeoutHandle);
+          resolve(value);
+        },
+        err => {
+          clearTimeout(timeoutHandle);
+          reject(err);
+        }
+      );
+    });
+  }
+
   /**
    * Test 1: Start polling - verify timer starts and calls update
    */
@@ -85,6 +104,10 @@ describe("RemoteChangeService E2E", () => {
   it("polling continues after callback errors", async () => {
     let callCount = 0;
     const config: RemoteChangeConfig = { checkFrequencySeconds: 0.05 }; // 50ms
+    let resolveSecondPoll: (() => void) | undefined;
+    const secondPollSeen = new Promise<void>(resolve => {
+      resolveSecondPoll = resolve;
+    });
 
     const service = new RemoteChangeService(
       async () => {
@@ -92,14 +115,15 @@ describe("RemoteChangeService E2E", () => {
         if (callCount === 1) {
           throw new Error("Simulated polling error");
         }
+        if (callCount === 2) {
+          resolveSecondPoll?.();
+        }
       },
       () => config
     );
 
     service.start();
-
-    // Wait for multiple intervals (first throws, subsequent should continue)
-    await new Promise(resolve => setTimeout(resolve, 120));
+    await withTimeout(secondPollSeen, 2000);
 
     assert.ok(
       callCount >= 2,

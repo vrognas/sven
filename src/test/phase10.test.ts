@@ -9,14 +9,22 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
   let checkoutDir: Uri;
   let sourceControlManager: SourceControlManager;
   let repository: Repository;
+  let suiteReady = false;
+
+  setup(function () {
+    if (!suiteReady) {
+      this.skip();
+    }
+  });
 
   suiteSetup(async function () {
+    suiteReady = false;
     const missingBinaries = testUtil.getMissingSvnBinaries();
     if (missingBinaries.length > 0) {
       console.warn(
         `[test] skipping Phase 10 tests; missing binaries: ${missingBinaries.join(", ")}`
       );
-      return this.skip();
+      return;
     }
 
     try {
@@ -25,7 +33,7 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
       console.warn(
         `[test] skipping Phase 10 tests; extension unavailable: ${String(err)}`
       );
-      return this.skip();
+      return;
     }
     repoUri = await testUtil.createRepoServer();
     await testUtil.createStandardLayout(testUtil.getSvnUrl(repoUri));
@@ -40,6 +48,7 @@ suite("Phase 10: Regression + Hot Path Performance", () => {
 
     await sourceControlManager.tryOpenRepository(checkoutDir.fsPath);
     repository = sourceControlManager.getRepository(checkoutDir)!;
+    suiteReady = true;
   });
 
   suiteTeardown(async () => {

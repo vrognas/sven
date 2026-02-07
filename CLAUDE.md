@@ -32,3 +32,5 @@
 - For VS Code E2E in CI, keep `.vscode-test.mjs` target list explicit and stable; skip suite early when binaries/commands unavailable.
 - In cross-platform unit tests, avoid `startsWith(mockHome)` assertions; assert invariant path suffix + absolute path instead.
 - In suites with background polling/watchers, teardown order: dispose repositories, wait briefly, then delete temp repos.
+- In legacy E2E suites, use `suiteReady` + per-test skip guard; do not rely on `suiteSetup` `this.skip()` alone.
+- In timer/poll tests, prefer explicit signal waits with bounded timeout over fixed sleep assertions.

@@ -12,14 +12,22 @@ suite("Commands Tests", () => {
   let repoUri: Uri;
   let checkoutDir: Uri;
   let sourceControlManager: SourceControlManager;
+  let suiteReady = false;
+
+  setup(function () {
+    if (!suiteReady) {
+      this.skip();
+    }
+  });
 
   suiteSetup(async function () {
+    suiteReady = false;
     const missingBinaries = testUtil.getMissingSvnBinaries();
     if (missingBinaries.length > 0) {
       console.warn(
         `[test] skipping Commands Tests; missing binaries: ${missingBinaries.join(", ")}`
       );
-      return this.skip();
+      return;
     }
 
     try {
@@ -28,7 +36,7 @@ suite("Commands Tests", () => {
       console.warn(
         `[test] skipping Commands Tests; extension unavailable: ${String(err)}`
       );
-      return this.skip();
+      return;
     }
 
     repoUri = await testUtil.createRepoServer();
@@ -43,6 +51,7 @@ suite("Commands Tests", () => {
     )) as SourceControlManager;
 
     await sourceControlManager.tryOpenRepository(checkoutDir.fsPath);
+    suiteReady = true;
   });
 
   suiteTeardown(() => {
