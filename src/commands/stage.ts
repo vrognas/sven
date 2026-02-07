@@ -6,32 +6,50 @@ import {
   prepareStaging,
   saveOriginalChangelists
 } from "../helpers/stageHelper";
+import { Repository } from "../repository";
 import { Command } from "./command";
 
-export class Stage extends Command {
+abstract class BaseStageCommand extends Command {
+  protected async stageSelection(
+    resourceStates: SourceControlResourceState[],
+    stageOperation: (repository: Repository, paths: string[]) => Promise<void>
+  ): Promise<boolean> {
+    const selection = await this.getResourceStatesOrExit(resourceStates);
+    if (!selection) return false;
+
+    const originalChangelists = await prepareStaging(selection);
+    if (!originalChangelists) return false;
+
+    await this.runBySelectionPaths(selection, async (repository, paths) => {
+      saveOriginalChangelists(repository, paths, originalChangelists);
+
+      await this.handleRepositoryOperation(
+        async () => stageOperation(repository, paths),
+        "Unable to stage files"
+      );
+    });
+
+    return true;
+  }
+
+  protected async stageAllChanges(): Promise<void> {
+    await this.runForAllInGroup("changes", async (repository, paths) => {
+      await this.handleRepositoryOperation(
+        async () => repository.stageOptimistic(paths),
+        "Unable to stage files"
+      );
+    });
+  }
+}
+
+export class Stage extends BaseStageCommand {
   constructor() {
     super("sven.stage");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStatesOrExit(resourceStates);
-    if (!selection) return;
-
-    const originalChangelists = await prepareStaging(selection);
-    if (!originalChangelists) return;
-
-    await this.runByRepository(
-      this.toUris(selection),
-      async (repository, resources) => {
-        const paths = this.toPaths(resources);
-        saveOriginalChangelists(repository, paths, originalChangelists);
-
-        // Use optimistic update - skips full status refresh
-        await this.handleRepositoryOperation(
-          async () => repository.stageOptimistic(paths),
-          "Unable to stage files"
-        );
-      }
+    await this.stageSelection(resourceStates, (repository, paths) =>
+      repository.stageOptimistic(paths)
     );
   }
 }
@@ -40,74 +58,31 @@ export class Stage extends Command {
  * Stage resources including all children of directories.
  * For folders, stages the folder plus all changed files within.
  */
-export class StageWithChildren extends Command {
+export class StageWithChildren extends BaseStageCommand {
   constructor() {
     super("sven.stageWithChildren");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStatesOrExit(resourceStates);
-    if (!selection) return;
-
-    const originalChangelists = await prepareStaging(selection);
-    if (!originalChangelists) return;
-
-    await this.runByRepository(
-      this.toUris(selection),
-      async (repository, resources) => {
-        const paths = this.toPaths(resources);
-        saveOriginalChangelists(repository, paths, originalChangelists);
-
-        // Use optimistic update with children - expands directories
-        await this.handleRepositoryOperation(
-          async () => repository.stageOptimisticWithChildren(paths),
-          "Unable to stage files"
-        );
-      }
+    await this.stageSelection(resourceStates, (repository, paths) =>
+      repository.stageOptimisticWithChildren(paths)
     );
   }
 }
 
-export class StageAll extends Command {
+export class StageAll extends BaseStageCommand {
   constructor() {
     super("sven.stageAll");
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    // Check if called with explicit selection vs button on group header
-    const hasExplicitSelection =
-      resourceStates.length > 0 &&
-      resourceStates[0]?.resourceUri instanceof (await import("vscode")).Uri;
-
-    if (hasExplicitSelection) {
-      // Stage selected resources
-      const selection = await this.getResourceStates(resourceStates);
-      if (selection.length === 0) return;
-
-      const originalChangelists = await prepareStaging(selection);
-      if (!originalChangelists) return;
-
-      await this.runByRepository(
-        this.toUris(selection),
-        async (repository, resources) => {
-          const paths = this.toPaths(resources);
-          saveOriginalChangelists(repository, paths, originalChangelists);
-
-          // Use optimistic update - skips full status refresh
-          await this.handleRepositoryOperation(
-            async () => repository.stageOptimistic(paths),
-            "Unable to stage files"
-          );
-        }
+    if (this.hasExplicitResourceSelection(resourceStates)) {
+      await this.stageSelection(resourceStates, (repository, paths) =>
+        repository.stageOptimistic(paths)
       );
-    } else {
-      // Stage all changes in all repositories
-      await this.runForAllInGroup("changes", async (repository, paths) => {
-        await this.handleRepositoryOperation(
-          async () => repository.stageOptimistic(paths),
-          "Unable to stage files"
-        );
-      });
+      return;
     }
+
+    await this.stageAllChanges();
   }
 }
