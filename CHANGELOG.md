@@ -7,6 +7,36 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [Unreleased]
+
+### Test: E2E Integration Tests
+
+- **New test suites**: 28 integration tests for real SVN operations
+- **Test helpers**: `svnTestRepo.ts` for temp repo creation/teardown
+- **Parser coverage**: Real SVN output for info, status, log, blame parsers
+- **Scenarios**: File lifecycle, changelists, branches, conflicts
+- **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
+
+## [0.2.13] (2026-02-07)
+
+### Refactor
+
+- Consolidate shared command helpers across stage/unstage/revert/changelist/pull/copy-path/commit/reveal/property/lock flows to reduce duplication.
+- Extract reusable command error utilities for more consistent command execution and error handling.
+
+### Fix
+
+- **Lock action ordering**: Prioritize explicit lock actions before cleanup fallback to avoid incorrect lock handling.
+- **Lint script scope**: Restrict lint scripts to TypeScript paths to avoid hangs on bundled JavaScript output.
+
+### Test
+
+- Add regression coverage for shared helper behavior.
+
+### Chore
+
+- Add local agent and launch setup for contributor workflows.
+
 ## [0.2.12] (2025-02-05)
 
 ### Fix
@@ -81,16 +111,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Fix: Antigravity IDE Compatibility
 
 - **Engine downgrade**: vscode ^1.104.0 for Antigravity IDE support
-
-## [Unreleased]
-
-### Test: E2E Integration Tests
-
-- **New test suites**: 28 integration tests for real SVN operations
-- **Test helpers**: `svnTestRepo.ts` for temp repo creation/teardown
-- **Parser coverage**: Real SVN output for info, status, log, blame parsers
-- **Scenarios**: File lifecycle, changelists, branches, conflicts
-- **CI compatible**: All tests run on GitHub CI (Ubuntu, Windows, macOS)
 
 ## [0.2.4] (2025-12-30)
 
