@@ -26,6 +26,7 @@ import {
 } from "../common/types";
 import { exists, readFile, stat, unlink } from "../fs";
 import { configuration } from "../helpers/configuration";
+import { fetchSourceControlManager } from "../helpers/sourceControlManager";
 import { inputIgnoreList } from "../ignoreitems";
 import { applyLineChanges } from "../lineChanges";
 import { SourceControlManager } from "../source_control_manager";
@@ -35,6 +36,25 @@ import { fromSvnUri, toSvnUri } from "../uri";
 import { getSvnDir } from "../util";
 import { logError, logWarning } from "../util/errorLogger";
 import { STAGING_CHANGELIST } from "../services/stagingService";
+import { FORMAT_CODE_MESSAGES } from "./errorPatterns";
+import {
+  getLockErrorTypeFromFullError,
+  hasFormatConnectionErrorFromFullError,
+  hasFormatTimeoutErrorFromFullError,
+  needsAuthActionFromFullError,
+  needsCleanupFromFullError,
+  needsConflictResolutionFromFullError,
+  needsFormatCleanupFromFullError,
+  needsNetworkRetryFromFullError,
+  needsOutputActionFromFullError,
+  needsUpdateFromFullError,
+  type LockErrorType
+} from "./errorDetectors";
+import {
+  buildErrorContext,
+  extractErrorCode,
+  type ErrorContext
+} from "./errorUtils";
 
 /**
  * Type-safe command argument patterns used across all commands.
@@ -90,18 +110,17 @@ export abstract class Command implements Disposable {
     this._disposable?.dispose();
   }
 
+  protected async getSourceControlManager(): Promise<SourceControlManager> {
+    return Command._sourceControlManager || (await fetchSourceControlManager());
+  }
+
   private createRepositoryCommand(
     method: (...args: unknown[]) => CommandResult
   ): (...args: unknown[]) => Promise<unknown> {
     const result = async (...args: unknown[]) => {
-      const sourceControlManager =
-        Command._sourceControlManager ||
-        ((await commands.executeCommand(
-          "sven.getSourceControlManager",
-          ""
-        )) as SourceControlManager);
+      const sourceControlManager = await this.getSourceControlManager();
       const repository = sourceControlManager.getRepository(args[0]);
-      let repositoryPromise;
+      let repositoryPromise: Promise<Repository | undefined>;
 
       if (repository) {
         repositoryPromise = Promise.resolve(repository);
@@ -145,7 +164,7 @@ export abstract class Command implements Disposable {
       resourceStates = [resource];
     }
 
-    return resourceStates.filter(s => s instanceof Resource) as Resource[];
+    return this.filterResources(resourceStates);
   }
 
   /**
@@ -157,6 +176,43 @@ export abstract class Command implements Disposable {
   ): Promise<Resource[] | null> {
     const selection = await this.getResourceStates(resourceStates);
     return selection.length === 0 ? null : selection;
+  }
+
+  /**
+   * Resolve selected resource URIs or return null when selection is empty.
+   */
+  protected async getResourceUrisOrExit(
+    resourceStates: SourceControlResourceState[]
+  ): Promise<Uri[] | null> {
+    const selection = await this.getResourceStatesOrExit(resourceStates);
+    return selection ? this.toUris(selection) : null;
+  }
+
+  /**
+   * Resolve selected resource URIs and execute callback when selection exists.
+   * Returns false when there is no selection.
+   */
+  protected async withSelectedResourceUris(
+    resourceStates: SourceControlResourceState[],
+    fn: (uris: Uri[]) => Promise<void>
+  ): Promise<boolean> {
+    const uris = await this.getResourceUrisOrExit(resourceStates);
+    if (!uris) {
+      return false;
+    }
+
+    await fn(uris);
+    return true;
+  }
+
+  /**
+   * Check whether command args contain an explicit SCM resource selection.
+   * Used by *All commands to distinguish context-menu selection from group-header actions.
+   */
+  protected hasExplicitResourceSelection(
+    resourceStates: SourceControlResourceState[]
+  ): boolean {
+    return resourceStates.length > 0 && resourceStates[0] instanceof Resource;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -177,6 +233,32 @@ export abstract class Command implements Disposable {
    */
   protected toUris(resources: Resource[]): Uri[] {
     return resources.map(r => r.resourceUri);
+  }
+
+  /**
+   * Filter resource states to Resource instances and extract their URIs.
+   */
+  protected resourceStatesToUris(states: SourceControlResourceState[]): Uri[] {
+    return this.toUris(this.filterResources(states));
+  }
+
+  /**
+   * Extract URI from common command argument shapes.
+   * Supports Uri, Resource, and SourceControlResourceState-like objects.
+   */
+  protected extractUri(arg: unknown): Uri | undefined {
+    if (arg instanceof Uri) {
+      return arg;
+    }
+    if (arg instanceof Resource) {
+      return arg.resourceUri;
+    }
+    if (arg && typeof arg === "object" && "resourceUri" in arg) {
+      const maybeUri = (arg as { resourceUri?: unknown }).resourceUri;
+      return maybeUri instanceof Uri ? maybeUri : undefined;
+    }
+
+    return undefined;
   }
 
   /**
@@ -217,16 +299,11 @@ export abstract class Command implements Disposable {
     group: "changes" | "staged",
     fn: (repository: Repository, paths: string[]) => Promise<void>
   ): Promise<void> {
-    const { commands } = await import("vscode");
-
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as { repositories: Repository[] };
+    const sourceControlManager = await this.getSourceControlManager();
 
     for (const repository of sourceControlManager.repositories) {
       const resources = repository[group].resourceStates;
-      const paths = resources.map(r => r.resourceUri.fsPath);
+      const paths = this.resourcesToPaths(this.filterResources(resources));
       if (paths.length > 0) {
         await fn(repository, paths);
       }
@@ -250,12 +327,7 @@ export abstract class Command implements Disposable {
     const resources = arg instanceof Uri ? [arg] : arg;
     const isSingleResource = arg instanceof Uri;
 
-    const sourceControlManager =
-      Command._sourceControlManager ||
-      ((await commands.executeCommand(
-        "sven.getSourceControlManager",
-        ""
-      )) as SourceControlManager);
+    const sourceControlManager = await this.getSourceControlManager();
 
     const groups: Array<{ repository: Repository; resources: Uri[] }> = [];
 
@@ -267,7 +339,7 @@ export abstract class Command implements Disposable {
         continue;
       }
 
-      const tuple = groups.filter(p => p.repository === repository)[0];
+      const tuple = groups.find(p => p.repository === repository);
 
       if (tuple) {
         tuple.resources.push(resource);
@@ -279,17 +351,40 @@ export abstract class Command implements Disposable {
     const promises = groups.map(({ repository, resources }) => {
       if (isSingleResource) {
         return (fn as (repository: Repository, resource: Uri) => Promise<T>)(
-          repository as Repository,
+          repository,
           resources[0]!
         );
       }
       return (fn as (repository: Repository, resources: Uri[]) => Promise<T>)(
-        repository as Repository,
+        repository,
         resources
       );
     });
 
     return Promise.all(promises);
+  }
+
+  /**
+   * Run operation grouped by repository with path arrays.
+   * Replaces callbacks that immediately call `toPaths(resources)`.
+   */
+  protected async runByRepositoryPaths(
+    uris: Uri[],
+    fn: (repository: Repository, paths: string[]) => Promise<void>
+  ): Promise<void> {
+    await this.runByRepository(uris, async (repository, resources) =>
+      fn(repository, this.toPaths(resources))
+    );
+  }
+
+  /**
+   * Run operation grouped by repository using an existing resource selection.
+   */
+  protected async runBySelectionPaths(
+    selection: Resource[],
+    fn: (repository: Repository, paths: string[]) => Promise<void>
+  ): Promise<void> {
+    await this.runByRepositoryPaths(this.toUris(selection), fn);
   }
 
   protected async getSCMResource(uri?: Uri): Promise<Resource | undefined> {
@@ -307,12 +402,7 @@ export abstract class Command implements Disposable {
     }
 
     if (uri.scheme === "file") {
-      const sourceControlManager =
-        Command._sourceControlManager ||
-        ((await commands.executeCommand(
-          "sven.getSourceControlManager",
-          ""
-        )) as SourceControlManager);
+      const sourceControlManager = await this.getSourceControlManager();
       const repository = sourceControlManager.getRepository(uri);
 
       if (!repository) {
@@ -324,6 +414,19 @@ export abstract class Command implements Disposable {
 
     // Unsupported URI scheme (e.g., untitled, output)
     return undefined;
+  }
+
+  protected async resolveResourceFromArg(
+    arg?: Resource | Uri
+  ): Promise<Resource | undefined> {
+    if (arg instanceof Resource) {
+      return arg;
+    }
+    if (arg instanceof Uri) {
+      return this.getSCMResource(arg);
+    }
+
+    return this.getSCMResource();
   }
 
   protected async _openResource(
@@ -511,23 +614,12 @@ export abstract class Command implements Disposable {
     const preserveSelection = arg instanceof Uri || !arg;
     let resources: Resource[] | undefined;
 
-    if (arg instanceof Uri) {
-      const resource = await this.getSCMResource(arg);
-      if (resource !== undefined) {
-        resources = [resource];
-      }
-    } else {
-      let resource: Resource | undefined;
-
-      if (arg instanceof Resource) {
-        resource = arg;
-      } else {
-        resource = await this.getSCMResource();
-      }
-
-      if (resource) {
-        resources = [...(resourceStates as Resource[]), resource];
-      }
+    const resource = await this.resolveResourceFromArg(arg);
+    if (resource) {
+      resources =
+        arg instanceof Uri
+          ? [resource]
+          : [...(resourceStates as Resource[]), resource];
     }
 
     if (!resources) {
@@ -622,10 +714,6 @@ export abstract class Command implements Disposable {
 
   protected async addToIgnore(uris: Uri[]): Promise<void> {
     await this.runByRepository(uris, async (repository, resources) => {
-      if (!repository) {
-        return;
-      }
-
       try {
         const ignored = await inputIgnoreList(repository, resources);
 
@@ -650,21 +738,12 @@ export abstract class Command implements Disposable {
     operation: (repository: Repository, paths: string[]) => Promise<void>,
     errorMsg: string
   ): Promise<void> {
-    const selection = await this.getResourceStates(resourceStates);
-
-    if (selection.length === 0) {
+    const uris = await this.getResourceUrisOrExit(resourceStates);
+    if (!uris) {
       return;
     }
 
-    const uris = this.toUris(selection);
-
-    await this.runByRepository(uris, async (repository, resources) => {
-      if (!repository) {
-        return;
-      }
-
-      const paths = this.toPaths(resources);
-
+    await this.runByRepositoryPaths(uris, async (repository, paths) => {
       try {
         await operation(repository, paths);
       } catch (error) {
@@ -681,11 +760,11 @@ export abstract class Command implements Disposable {
 
         // Offer cleanup button for cleanup-related errors
         if (this.needsCleanup(error)) {
-          const runCleanup = "Run Cleanup";
-          const choice = await window.showErrorMessage(userMessage, runCleanup);
-          if (choice === runCleanup) {
-            await commands.executeCommand("sven.cleanup");
-          }
+          await this.runCommandActionIfChosen(
+            userMessage,
+            "Run Cleanup",
+            "sven.cleanup"
+          );
         } else {
           window.showErrorMessage(userMessage);
         }
@@ -706,8 +785,7 @@ export abstract class Command implements Disposable {
     // Try URI path first (Explorer context menu)
     const uris = this.extractUris(args);
     if (uris) {
-      await this.runByRepository(uris, async (repository, resources) => {
-        const paths = this.toPaths(resources);
+      await this.runByRepositoryPaths(uris, async (repository, paths) => {
         try {
           await operation(repository, paths);
         } catch (error) {
@@ -777,118 +855,52 @@ export abstract class Command implements Disposable {
   }
 
   /**
-   * Extract error code from SVN error message.
-   */
-  private extractErrorCode(stderr: string): string | undefined {
-    const match = stderr.match(/E\d{6}/);
-    return match ? match[0] : undefined;
-  }
-
-  /**
    * Format user-friendly error message based on error type.
    * Includes error code for transparency (e.g., "Message (E155004)").
    * Provides actionable guidance for common errors.
    */
   private formatErrorMessage(error: unknown, fallbackMsg: string): string {
-    const err = error as
-      | { message?: string; stderr?: string; stderrFormated?: string }
-      | undefined;
-    const errorStr = err?.message || String(error) || "";
-    const rawStderr = err?.stderr || err?.stderrFormated || "";
-    const stderr = this.sanitizeStderr(rawStderr);
-    const fullError = `${errorStr} ${stderr}`.toLowerCase();
-    const code = this.extractErrorCode(`${errorStr} ${rawStderr}`);
+    const context = this.getErrorContext(error);
+    const fullError = context.fullErrorSanitized;
+    const code = extractErrorCode(context.rawCombined);
 
     // Authentication errors - check FIRST (priority over network errors)
     // SVN may return E170013 with E215004 when auth fails
-    if (
-      fullError.includes("e170001") ||
-      fullError.includes("e215004") ||
-      fullError.includes("no more credentials") ||
-      fullError.includes("authorization failed") ||
-      fullError.includes("authentication failed")
-    ) {
+    if (needsAuthActionFromFullError(fullError)) {
       const c = fullError.includes("e215004") ? "E215004" : "E170001";
       return `Authentication failed (${c}). Check credentials and try again.`;
     }
 
     // Network/connection errors (E170013)
-    if (
-      fullError.includes("e170013") ||
-      fullError.includes("unable to connect") ||
-      fullError.includes("connection refused") ||
-      fullError.includes("could not resolve host")
-    ) {
+    if (hasFormatConnectionErrorFromFullError(fullError)) {
       return "Unable to connect (E170013). Check network and repository URL.";
     }
 
     // Timeout errors (E175002)
-    if (
-      fullError.includes("e175002") ||
-      fullError.includes("timed out") ||
-      fullError.includes("timeout") ||
-      fullError.includes("operation timed out")
-    ) {
+    if (hasFormatTimeoutErrorFromFullError(fullError)) {
       return "Network timeout (E175002). Try again or check network connection.";
     }
 
     // Out-of-date errors (E155019, E200042)
-    if (
-      fullError.includes("e155019") ||
-      fullError.includes("e200042") ||
-      fullError.includes("out of date") ||
-      fullError.includes("not up-to-date")
-    ) {
+    if (needsUpdateFromFullError(fullError)) {
       const c = fullError.includes("e200042") ? "E200042" : "E155019";
       return `Working copy not up-to-date (${c}). Update before committing.`;
     }
 
     // Conflict errors (E155023, E200024)
-    if (
-      fullError.includes("e155023") ||
-      fullError.includes("e200024") ||
-      (fullError.includes("conflict") && !fullError.includes("resolved"))
-    ) {
+    if (needsConflictResolutionFromFullError(fullError)) {
       const c = fullError.includes("e200024") ? "E200024" : "E155023";
       return `Conflict blocking operation (${c}). Resolve conflicts first.`;
     }
 
-    // Lock errors (E200035, E200036, E200041)
-    if (fullError.includes("e200035")) {
-      return "Path already locked (E200035). Another user has the lock.";
-    }
-    if (fullError.includes("e200036")) {
-      return "Path not locked (E200036). No lock to release.";
-    }
-    if (fullError.includes("e200041")) {
-      return "Lock expired (E200041). Re-lock the file if needed.";
-    }
-
-    // Permission errors (E261001, E261002)
-    if (fullError.includes("e261001")) {
-      return "Access denied (E261001). Insufficient read permissions.";
-    }
-    if (fullError.includes("e261002")) {
-      return "Partial access (E261002). Some items not visible.";
-    }
-
-    // Version mismatch (E250006)
-    if (fullError.includes("e250006")) {
-      return "Version mismatch (E250006). Client/server versions incompatible.";
+    for (const { token, message } of FORMAT_CODE_MESSAGES) {
+      if (fullError.includes(token)) {
+        return message;
+      }
     }
 
     // Working copy needs cleanup (E155004, E155037, E200030, E155032, E200033, etc.)
-    if (
-      fullError.includes("e155004") ||
-      fullError.includes("e155037") ||
-      fullError.includes("e200030") ||
-      fullError.includes("e200033") ||
-      fullError.includes("e155032") ||
-      /\blocked\b/.test(fullError) ||
-      fullError.includes("previous operation") ||
-      fullError.includes("run 'cleanup'") ||
-      /sqlite[:\[]/.test(fullError)
-    ) {
+    if (needsFormatCleanupFromFullError(fullError)) {
       const c = code || "E155004";
       return `Working copy needs cleanup (${c}). Run cleanup to fix.`;
     }
@@ -901,12 +913,11 @@ export abstract class Command implements Disposable {
    * Get full error string from error object.
    */
   private getFullErrorString(error: unknown): string {
-    const err = error as
-      | { message?: string; stderr?: string; stderrFormated?: string }
-      | undefined;
-    const errorStr = err?.message || String(error) || "";
-    const rawStderr = err?.stderr || err?.stderrFormated || "";
-    return `${errorStr} ${rawStderr}`.toLowerCase();
+    return this.getErrorContext(error).fullErrorRaw;
+  }
+
+  private getErrorContext(error: unknown): ErrorContext {
+    return buildErrorContext(error, stderr => this.sanitizeStderr(stderr));
   }
 
   /**
@@ -917,30 +928,7 @@ export abstract class Command implements Disposable {
   private needsCleanup(error: unknown): boolean {
     const fullError = this.getFullErrorString(error);
 
-    return (
-      // Working copy locked/lock errors
-      fullError.includes("e155004") || // WC locked / already locked
-      fullError.includes("e155005") || // WC not locked (inconsistent state)
-      fullError.includes("e155009") || // Failed to run WC DB work queue
-      fullError.includes("e155010") || // Node in inconsistent state
-      fullError.includes("e155015") || // Another client has the lock
-      fullError.includes("e155016") || // WC database corrupt
-      fullError.includes("e155031") || // Obstructed update
-      fullError.includes("e155032") || // WC upgrade required
-      fullError.includes("e155037") || // Previous operation not finished
-      // SQLite/database errors
-      fullError.includes("e200030") ||
-      fullError.includes("e200033") ||
-      fullError.includes("e200034") ||
-      // Text pattern detection
-      /\blocked\b/.test(fullError) ||
-      fullError.includes("previous operation") ||
-      fullError.includes("run 'cleanup'") ||
-      fullError.includes("work queue") ||
-      fullError.includes("is corrupt") ||
-      fullError.includes("disk image is malformed") ||
-      /sqlite[:\[]/.test(fullError)
-    );
+    return needsCleanupFromFullError(fullError);
   }
 
   /**
@@ -950,12 +938,7 @@ export abstract class Command implements Disposable {
   private needsUpdate(error: unknown): boolean {
     const fullError = this.getFullErrorString(error);
 
-    return (
-      fullError.includes("e155019") ||
-      fullError.includes("e200042") ||
-      fullError.includes("out of date") ||
-      fullError.includes("not up-to-date")
-    );
+    return needsUpdateFromFullError(fullError);
   }
 
   /**
@@ -965,11 +948,7 @@ export abstract class Command implements Disposable {
   private needsConflictResolution(error: unknown): boolean {
     const fullError = this.getFullErrorString(error);
 
-    return (
-      fullError.includes("e155023") ||
-      fullError.includes("e200024") ||
-      (fullError.includes("conflict") && !fullError.includes("resolved"))
-    );
+    return needsConflictResolutionFromFullError(fullError);
   }
 
   /**
@@ -979,13 +958,7 @@ export abstract class Command implements Disposable {
   private needsAuthAction(error: unknown): boolean {
     const fullError = this.getFullErrorString(error);
 
-    return (
-      fullError.includes("e170001") ||
-      fullError.includes("e215004") ||
-      fullError.includes("no more credentials") ||
-      fullError.includes("authorization failed") ||
-      fullError.includes("authentication failed")
-    );
+    return needsAuthActionFromFullError(fullError);
   }
 
   /**
@@ -995,14 +968,7 @@ export abstract class Command implements Disposable {
   private needsNetworkRetry(error: unknown): boolean {
     const fullError = this.getFullErrorString(error);
 
-    return (
-      fullError.includes("e170013") ||
-      fullError.includes("e175002") ||
-      fullError.includes("unable to connect") ||
-      fullError.includes("network timeout") ||
-      fullError.includes("connection refused") ||
-      fullError.includes("could not connect")
-    );
+    return needsNetworkRetryFromFullError(fullError);
   }
 
   /**
@@ -1010,21 +976,10 @@ export abstract class Command implements Disposable {
    * Returns the specific lock error type for choosing the right action.
    * E200035 (locked by other), E200036 (not locked), E200041 (expired)
    */
-  private getLockErrorType(
-    error: unknown
-  ): "conflict" | "notLocked" | "expired" | null {
+  private getLockErrorType(error: unknown): LockErrorType | null {
     const fullError = this.getFullErrorString(error);
 
-    if (fullError.includes("e200035") || fullError.includes("already locked")) {
-      return "conflict";
-    }
-    if (fullError.includes("e200036") || fullError.includes("not locked")) {
-      return "notLocked";
-    }
-    if (fullError.includes("e200041") || fullError.includes("lock expired")) {
-      return "expired";
-    }
-    return null;
+    return getLockErrorTypeFromFullError(fullError);
   }
 
   /**
@@ -1034,21 +989,32 @@ export abstract class Command implements Disposable {
   private needsOutputAction(error: unknown): boolean {
     const fullError = this.getFullErrorString(error);
 
-    return (
-      fullError.includes("e261001") ||
-      fullError.includes("e261002") ||
-      fullError.includes("e250006") ||
-      fullError.includes("access denied") ||
-      fullError.includes("permission denied") ||
-      fullError.includes("not readable")
-    );
+    return needsOutputActionFromFullError(fullError);
+  }
+
+  /**
+   * Show one-action error notification and execute command when chosen.
+   * Returns true when action was selected and command executed.
+   */
+  private async runCommandActionIfChosen(
+    userMessage: string,
+    actionLabel: string,
+    commandId: string
+  ): Promise<boolean> {
+    const choice = await window.showErrorMessage(userMessage, actionLabel);
+    if (choice !== actionLabel) {
+      return false;
+    }
+
+    await commands.executeCommand(commandId);
+    return true;
   }
 
   /**
    * Handle repository operation with consistent error handling.
    * Pattern: try/catch with console.log + showErrorMessage
    * Offers actionable buttons based on error type.
-   * Priority: auth > cleanup > update > conflict > lock > network > output
+   * Priority: auth > lock > cleanup > update > conflict > network > output
    */
   protected async handleRepositoryOperation<T>(
     operation: () => Promise<T>,
@@ -1059,61 +1025,55 @@ export abstract class Command implements Disposable {
     } catch (error) {
       logError("Repository operation failed", error);
       const userMessage = this.formatErrorMessage(error, errorMsg);
+      const lockType = this.getLockErrorType(error);
 
       // Auth errors - highest priority (often appears with network errors)
       if (this.needsAuthAction(error)) {
-        const clearCreds = "Clear Credentials";
-        const choice = await window.showErrorMessage(userMessage, clearCreds);
-        if (choice === clearCreds) {
-          await commands.executeCommand("sven.clearCredentials");
+        await this.runCommandActionIfChosen(
+          userMessage,
+          "Clear Credentials",
+          "sven.clearCredentials"
+        );
+      }
+      // File lock errors (not working copy lock) should win over generic cleanup/conflict text matches.
+      else if (lockType !== null) {
+        if (lockType === "conflict") {
+          await this.runCommandActionIfChosen(
+            userMessage,
+            "Steal Lock",
+            "sven.stealLock"
+          );
+        } else if (lockType === "notLocked" || lockType === "expired") {
+          await this.runCommandActionIfChosen(
+            userMessage,
+            "Lock File",
+            "sven.lock"
+          );
         }
       }
       // Cleanup for working copy issues
       else if (this.needsCleanup(error)) {
-        const runCleanup = "Run Cleanup";
-        const choice = await window.showErrorMessage(userMessage, runCleanup);
-        if (choice === runCleanup) {
-          await commands.executeCommand("sven.cleanup");
-        }
+        await this.runCommandActionIfChosen(
+          userMessage,
+          "Run Cleanup",
+          "sven.cleanup"
+        );
       }
       // Update for out-of-date errors
       else if (this.needsUpdate(error)) {
-        const runUpdate = "Update";
-        const choice = await window.showErrorMessage(userMessage, runUpdate);
-        if (choice === runUpdate) {
-          await commands.executeCommand("sven.update");
-        }
+        await this.runCommandActionIfChosen(
+          userMessage,
+          "Update",
+          "sven.update"
+        );
       }
       // Conflict resolution
       else if (this.needsConflictResolution(error)) {
-        const resolveConflicts = "Resolve Conflicts";
-        const choice = await window.showErrorMessage(
+        await this.runCommandActionIfChosen(
           userMessage,
-          resolveConflicts
+          "Resolve Conflicts",
+          "sven.resolveAll"
         );
-        if (choice === resolveConflicts) {
-          await commands.executeCommand("sven.resolveAll");
-        }
-      }
-      // File lock errors (not working copy lock)
-      else if (this.getLockErrorType(error) !== null) {
-        const lockType = this.getLockErrorType(error);
-        if (lockType === "conflict") {
-          const stealLock = "Steal Lock";
-          const choice = await window.showErrorMessage(userMessage, stealLock);
-          if (choice === stealLock) {
-            await commands.executeCommand("sven.stealLock");
-          }
-        } else if (lockType === "notLocked" || lockType === "expired") {
-          const acquireLock = "Lock File";
-          const choice = await window.showErrorMessage(
-            userMessage,
-            acquireLock
-          );
-          if (choice === acquireLock) {
-            await commands.executeCommand("sven.lock");
-          }
-        }
       }
       // Network errors - offer retry
       else if (this.needsNetworkRetry(error)) {
@@ -1126,11 +1086,11 @@ export abstract class Command implements Disposable {
       }
       // Permission/diagnostic errors - show output
       else if (this.needsOutputAction(error)) {
-        const showOutput = "Show Output";
-        const choice = await window.showErrorMessage(userMessage, showOutput);
-        if (choice === showOutput) {
-          await commands.executeCommand("sven.showOutput");
-        }
+        await this.runCommandActionIfChosen(
+          userMessage,
+          "Show Output",
+          "sven.showOutput"
+        );
       } else {
         window.showErrorMessage(userMessage);
       }
@@ -1202,11 +1162,7 @@ export abstract class Command implements Disposable {
     depth: keyof typeof import("../common/types").SvnDepth
   ): Promise<void> {
     await this.runByRepository(uris, async (repository, resources) => {
-      if (!repository) {
-        return;
-      }
-
-      const paths = resources.map(resource => resource.fsPath).reverse();
+      const paths = this.toPaths(resources).reverse();
 
       // Find staged files before revert so we can unstage them after
       const stagedPaths = paths.filter(p => {
