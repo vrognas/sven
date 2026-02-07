@@ -1,10 +1,9 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { commands, window } from "vscode";
+import { window } from "vscode";
 import { Command } from "./command";
 import { Repository } from "../repository";
-import { SourceControlManager } from "../source_control_manager";
 import { formatSvnError, logError } from "../util/errorLogger";
 
 interface DirectoryItem {
@@ -32,11 +31,7 @@ export class ViewIgnorePatterns extends Command {
   }
 
   public async execute() {
-    // Get the source control manager
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as SourceControlManager;
+    const sourceControlManager = await this.getSourceControlManager();
 
     if (
       !sourceControlManager ||

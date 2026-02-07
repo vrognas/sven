@@ -13,15 +13,7 @@ export class OpenHeadFile extends Command {
   }
 
   public async execute(arg?: Resource | Uri) {
-    let resource: Resource | undefined;
-
-    if (arg instanceof Resource) {
-      resource = arg;
-    } else if (arg instanceof Uri) {
-      resource = await this.getSCMResource(arg);
-    } else {
-      resource = await this.getSCMResource();
-    }
+    const resource = await this.resolveResourceFromArg(arg);
 
     if (!resource) {
       return;

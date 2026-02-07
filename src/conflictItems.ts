@@ -4,7 +4,7 @@
 
 /* tslint:disable:max-line-length */
 
-import { QuickPickItem } from "vscode";
+import { QuickPickItem, window } from "vscode";
 import { IConflictOption } from "./common/types";
 
 const conflictOptions = [
@@ -54,4 +54,10 @@ class ConflictItem implements QuickPickItem {
 
 export function getConflictPickOptions() {
   return conflictOptions.map(option => new ConflictItem(option));
+}
+
+export async function pickConflictOption(
+  placeHolder: string
+): Promise<QuickPickItem | undefined> {
+  return window.showQuickPick(getConflictPickOptions(), { placeHolder });
 }

@@ -11,15 +11,11 @@ export class Patch extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStatesOrExit(resourceStates);
-    if (!selection) return;
-
-    const uris = this.toUris(this.filterResources(selection));
-
-    await this.runByRepository(uris, async (repository, resources) => {
-      const files = this.toPaths(resources);
-      const content = await repository.patch(files);
-      await this.showDiffPath(repository, content);
+    await this.withSelectedResourceUris(resourceStates, async uris => {
+      await this.runByRepositoryPaths(uris, async (repository, files) => {
+        const content = await repository.patch(files);
+        await this.showDiffPath(repository, content);
+      });
     });
   }
 }

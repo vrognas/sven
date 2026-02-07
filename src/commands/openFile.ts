@@ -35,12 +35,7 @@ export class OpenFile extends Command {
         uris = [arg];
       }
     } else {
-      let resource: Resource | undefined = arg;
-
-      if (!(resource instanceof Resource)) {
-        resource = await this.getSCMResource();
-      }
-
+      const resource = await this.resolveResourceFromArg(arg);
       if (resource) {
         uris = [
           ...resourceStates.map(r => r.resourceUri),

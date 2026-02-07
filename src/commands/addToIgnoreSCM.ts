@@ -11,11 +11,8 @@ export class AddToIgnoreSCM extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStatesOrExit(resourceStates);
-    if (!selection) return;
-
-    const uris = this.toUris(this.filterResources(selection));
-
-    return this.addToIgnore(uris);
+    await this.withSelectedResourceUris(resourceStates, async uris => {
+      await this.addToIgnore(uris);
+    });
   }
 }

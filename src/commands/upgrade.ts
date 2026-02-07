@@ -2,9 +2,8 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { commands, window } from "vscode";
+import { window } from "vscode";
 import { configuration } from "../helpers/configuration";
-import { SourceControlManager } from "../source_control_manager";
 import { fixPathSeparator } from "../util";
 import { Command } from "./command";
 
@@ -33,10 +32,7 @@ export class Upgrade extends Command {
       no,
       neverShowAgain
     );
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as SourceControlManager;
+    const sourceControlManager = await this.getSourceControlManager();
 
     if (choice === yes) {
       const upgraded =

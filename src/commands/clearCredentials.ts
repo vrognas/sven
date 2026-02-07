@@ -1,8 +1,7 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { commands, window } from "vscode";
-import { SourceControlManager } from "../source_control_manager";
+import { window } from "vscode";
 import { Command } from "./command";
 
 export class ClearCredentials extends Command {
@@ -12,10 +11,7 @@ export class ClearCredentials extends Command {
   }
 
   public async execute() {
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as SourceControlManager;
+    const sourceControlManager = await this.getSourceControlManager();
 
     const repositories = sourceControlManager.repositories;
 

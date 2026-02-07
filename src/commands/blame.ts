@@ -36,19 +36,7 @@ export class Blame extends Command {
     revision?: string
   ) {
     await this.handleRepositoryOperation(async () => {
-      let uri: Uri | undefined;
-
-      // Determine URI from argument or active editor
-      if (arg instanceof Resource) {
-        uri = arg.resourceUri;
-      } else if (arg instanceof Uri) {
-        uri = arg;
-      } else {
-        const editor = window.activeTextEditor;
-        if (editor) {
-          uri = editor.document.uri;
-        }
-      }
+      const uri = this.extractUri(arg) ?? window.activeTextEditor?.document.uri;
 
       if (!uri) {
         window.showErrorMessage("No file selected for blame");

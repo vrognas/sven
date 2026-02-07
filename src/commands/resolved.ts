@@ -35,9 +35,7 @@ export class Resolved extends Command {
 
     const uris = [uri];
 
-    await this.runByRepository(uris, async (repository, resources) => {
-      const files = this.toPaths(resources);
-
+    await this.runByRepositoryPaths(uris, async (repository, files) => {
       await repository.resolve(files, "working");
     });
   }

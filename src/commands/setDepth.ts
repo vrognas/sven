@@ -15,7 +15,6 @@ import {
 import { SvnDepth } from "../common/types";
 import { Command } from "./command";
 import { confirm } from "../ui";
-import { SourceControlManager } from "../source_control_manager";
 import { formatBytes, formatDuration, formatSpeed } from "../util/formatting";
 
 /** Default download timeout in minutes */
@@ -154,10 +153,7 @@ export class SetDepth extends Command {
     }
 
     // Get repository for this path
-    const sourceControlManager = (await commands.executeCommand(
-      "sven.getSourceControlManager",
-      ""
-    )) as SourceControlManager;
+    const sourceControlManager = await this.getSourceControlManager();
 
     const repository = sourceControlManager.getRepository(uri);
     if (!repository) {

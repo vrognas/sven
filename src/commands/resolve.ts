@@ -2,8 +2,8 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
-import { SourceControlResourceState, window } from "vscode";
-import { getConflictPickOptions } from "../conflictItems";
+import { SourceControlResourceState } from "vscode";
+import { pickConflictOption } from "../conflictItems";
 import { Command } from "./command";
 
 export class Resolve extends Command {
@@ -15,10 +15,7 @@ export class Resolve extends Command {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return;
 
-    const picks = getConflictPickOptions();
-    const choice = await window.showQuickPick(picks, {
-      placeHolder: "Select conflict option"
-    });
+    const choice = await pickConflictOption("Select conflict option");
 
     if (!choice) {
       return;

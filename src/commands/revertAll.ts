@@ -19,18 +19,21 @@ export class RevertAll extends Command {
       return;
     }
 
-    const uris = this.toUris(this.filterResources(resourceStates));
+    const uris = this.resourceStatesToUris(resourceStates);
     const stagedPaths = getStagedPaths(resourceStates);
 
     // Always use infinity depth - for files it's ignored by SVN,
     // for directories it ensures full recursive revert including deleted paths
-    await this.runByRepository(uris, async (repository, resources) => {
-      const paths = this.toPaths(resources).reverse();
-      await this.handleRepositoryOperation(async () => {
-        await repository.revert(paths, "infinity");
-        // Auto-unstage reverted files
-        await unstageRevertedFiles(repository, paths, stagedPaths);
-      }, "Unable to revert");
-    });
+    await this.runByRepositoryPaths(
+      uris,
+      async (repository, repositoryPaths) => {
+        const paths = repositoryPaths.reverse();
+        await this.handleRepositoryOperation(async () => {
+          await repository.revert(paths, "infinity");
+          // Auto-unstage reverted files
+          await unstageRevertedFiles(repository, paths, stagedPaths);
+        }, "Unable to revert");
+      }
+    );
   }
 }

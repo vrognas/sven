@@ -14,27 +14,28 @@ export class DeleteUnversioned extends Command {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    const selection = await this.getResourceStatesOrExit(resourceStates);
-    if (!selection) return;
-    const uris = this.toUris(this.filterResources(selection));
-    if (!(await confirmDestructive("Delete selected files?", "Delete"))) return;
+    await this.withSelectedResourceUris(resourceStates, async uris => {
+      if (!(await confirmDestructive("Delete selected files?", "Delete"))) {
+        return;
+      }
 
-    for (const uri of uris) {
-      const fsPath = uri.fsPath;
+      for (const uri of uris) {
+        const fsPath = uri.fsPath;
 
-      await this.handleRepositoryOperation(async () => {
-        if (!(await exists(fsPath))) {
-          return;
-        }
+        await this.handleRepositoryOperation(async () => {
+          if (!(await exists(fsPath))) {
+            return;
+          }
 
-        const stat = await lstat(fsPath);
+          const stat = await lstat(fsPath);
 
-        if (stat.isDirectory()) {
-          await deleteDirectory(fsPath);
-        } else {
-          await unlink(fsPath);
-        }
-      }, "Unable to delete file");
-    }
+          if (stat.isDirectory()) {
+            await deleteDirectory(fsPath);
+          } else {
+            await unlink(fsPath);
+          }
+        }, "Unable to delete file");
+      }
+    });
   }
 }

@@ -3,7 +3,7 @@
 // Licensed under MIT License
 
 import { window } from "vscode";
-import { getConflictPickOptions } from "../conflictItems";
+import { pickConflictOption } from "../conflictItems";
 import { Repository } from "../repository";
 import { Command } from "./command";
 
@@ -22,9 +22,7 @@ export class ResolveAll extends Command {
 
     for (const conflict of conflicts) {
       const placeHolder = `Select conflict option for ${conflict.resourceUri.path}`;
-      const picks = getConflictPickOptions();
-
-      const choice = await window.showQuickPick(picks, { placeHolder });
+      const choice = await pickConflictOption(placeHolder);
 
       if (!choice) {
         return;

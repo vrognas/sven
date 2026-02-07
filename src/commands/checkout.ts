@@ -8,7 +8,6 @@ import { commands, ProgressLocation, Uri, window, workspace } from "vscode";
 import { IAuth, ICpOptions, ISvnErrorData } from "../common/types";
 import { getBranchName } from "../helpers/branch";
 import { configuration } from "../helpers/configuration";
-import { SourceControlManager } from "../source_control_manager";
 import { svnErrorCodes } from "../svn";
 import { validateRepositoryUrl } from "../validation";
 import { Command } from "./command";
@@ -103,10 +102,7 @@ export class Checkout extends Command {
       attempt++;
       try {
         await window.withProgress(progressOptions, async () => {
-          const sourceControlManager = (await commands.executeCommand(
-            "sven.getSourceControlManager",
-            ""
-          )) as SourceControlManager;
+          const sourceControlManager = await this.getSourceControlManager();
           const args = ["checkout", url, repositoryPath];
           await sourceControlManager.svn.exec(parentPath, args, opt);
         });
