@@ -203,7 +203,6 @@ Use in `template` settings: `${author}`, `${date}`, `${revision}`, `${message}`
 
 ## Decorators
 
-| Setting                      | Default  | Description            |
-| ---------------------------- | -------- | ---------------------- |
-| `sven.decorator.baseColor`   | `purple` | Color for BASE badge   |
-| `sven.decorator.serverColor` | `blue`   | Color for server badge |
+| Setting                    | Default  | Description          |
+| -------------------------- | -------- | -------------------- |
+| `sven.decorator.baseColor` | `purple` | Color for BASE badge |

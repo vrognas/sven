@@ -25,10 +25,10 @@ Visual and UX patterns for the Sven VS Code extension.
 
 ### Repository Log Colors
 
-| Badge      | Color Setting                | Default         |
-| ---------- | ---------------------------- | --------------- |
-| B (BASE)   | `sven.decorator.baseColor`   | `charts.blue`   |
-| S (Server) | `sven.decorator.serverColor` | `charts.orange` |
+| Badge      | Color Setting              | Default       |
+| ---------- | -------------------------- | ------------- |
+| B (BASE)   | `sven.decorator.baseColor` | `charts.blue` |
+| S (Server) | _(no color — badge only)_  | —             |
 
 ## Badge System
 

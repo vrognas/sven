@@ -34,10 +34,7 @@ export class SvnFileDecorationProvider
     // Refresh decorations when decorator color settings change
     this.disposables.push(
       configuration.onDidChange(e => {
-        if (
-          e.affectsConfiguration("sven.decorator.baseColor") ||
-          e.affectsConfiguration("sven.decorator.serverColor")
-        ) {
+        if (e.affectsConfiguration("sven.decorator.baseColor")) {
           this._onDidChangeFileDecorations.fire(undefined);
         }
       })
@@ -67,14 +64,9 @@ export class SvnFileDecorationProvider
         };
       }
       if (queryParams.get("isServerOnly") === "true") {
-        const serverColor = configuration.get<string>(
-          "decorator.serverColor",
-          "charts.orange"
-        );
         return {
           badge: "S",
-          tooltip: "Server revision - not synced yet (run svn update)",
-          color: new ThemeColor(serverColor)
+          tooltip: "Server revision - not synced yet (run svn update)"
         };
       }
       return undefined;

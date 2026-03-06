@@ -7,6 +7,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.24] - 2026-03-04
+
+### Fixed
+
+- **Repo history readability**: Remove foreground color from server-only (S) commit decorations — `FileDecoration.color` was coloring entire label text, making commits above BASE unreadable on dark themes
+- Remove `sven.decorator.serverColor` setting (no longer needed; S badge still appears without text color override)
+
 ## [Unreleased]
 
 ### Test: E2E Integration Tests
