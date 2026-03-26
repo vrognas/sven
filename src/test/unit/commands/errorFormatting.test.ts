@@ -338,16 +338,15 @@ suite("Error Formatting Tests", () => {
       assert.strictEqual(result, "Fallback message");
     });
 
-    test("Detects 'locked' message", () => {
+    test("'locked' without error code returns fallback (not cleanup)", () => {
+      // Plain "locked" text without E-code should NOT suggest cleanup.
+      // Real locked-WC errors have E155004/E155037 codes.
       const error = {
         message: "The working copy is locked"
       };
       const result = command.testFormatErrorMessage(error, "Generic error");
 
-      assert.ok(
-        result.toLowerCase().includes("cleanup"),
-        `Expected "cleanup" in: ${result}`
-      );
+      assert.strictEqual(result, "Generic error");
     });
 
     test("Does NOT flag 'unlocked' as cleanup (false positive fix)", () => {

@@ -1945,7 +1945,8 @@ export class Repository implements IRemoteRepository {
         operation === Operation.Lock ||
         operation === Operation.Unlock ||
         operation === Operation.Ignore ||
-        operation === Operation.PropertyChange;
+        operation === Operation.PropertyChange ||
+        operation === Operation.CleanUp;
 
       // Set grace period BEFORE operation runs to block file watcher events
       // that fire during .svn directory changes from lock/unlock/commit/etc.
