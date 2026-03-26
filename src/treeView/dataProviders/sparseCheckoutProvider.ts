@@ -805,21 +805,22 @@ export default class SparseCheckoutProvider
       }
     }
 
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
     return items.sort((a, b) => {
       // Dirs first
       if (a.kind !== b.kind) {
         return a.kind === "dir" ? -1 : 1;
       }
-      // For files: sort by extension, then alphabetical
+      // For files: sort by extension, then natural sort
       if (a.kind === "file") {
         const extA = extensions.get(a) ?? "";
         const extB = extensions.get(b) ?? "";
         if (extA !== extB) {
-          return extA.localeCompare(extB);
+          return collator.compare(extA, extB);
         }
       }
-      // Within same kind/extension: alphabetical
-      return a.name.localeCompare(b.name);
+      // Within same kind/extension: natural sort
+      return collator.compare(a.name, b.name);
     });
   }
 

@@ -7,6 +7,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.25] - 2026-03-26
+
+### Fixed
+
+- **Selective download panel**: Use natural/numeric sort for directory and file names — `dos1, dos2, dos3, ..., dos10` instead of `dos1, dos10, dos2` ([#117](https://github.com/vrognas/sven/issues/117))
+
 ## [0.2.24] - 2026-03-04
 
 ### Fixed

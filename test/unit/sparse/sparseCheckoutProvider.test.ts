@@ -52,21 +52,22 @@ function mergeItems(
     depth: i.depth,
     isGhost: false
   }));
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
   return [...local, ...ghosts].sort((a, b) => {
     // Dirs first
     if (a.kind !== b.kind) {
       return a.kind === "dir" ? -1 : 1;
     }
-    // For files: sort by extension, then alphabetical
+    // For files: sort by extension, then natural sort
     if (a.kind === "file") {
       const extA = getExtension(a.name);
       const extB = getExtension(b.name);
       if (extA !== extB) {
-        return extA.localeCompare(extB);
+        return collator.compare(extA, extB);
       }
     }
-    // Within same kind/extension: alphabetical
-    return a.name.localeCompare(b.name);
+    // Within same kind/extension: natural sort
+    return collator.compare(a.name, b.name);
   });
 }
 
@@ -240,6 +241,48 @@ describe("Sparse Checkout Provider", () => {
         "config.json",
         "README.md",
         "index.ts"
+      ]);
+    });
+
+    it("sorts numerically (natural sort) for numbered names", () => {
+      const localItems = [
+        { name: "dos1", kind: "dir" as const },
+        { name: "dos10", kind: "dir" as const },
+        { name: "dos11", kind: "dir" as const },
+        { name: "dos2", kind: "dir" as const },
+        { name: "dos20", kind: "dir" as const },
+        { name: "dos3", kind: "dir" as const }
+      ];
+      const ghosts: ISparseItem[] = [];
+
+      const merged = mergeItems(localItems, ghosts);
+
+      expect(merged.map(m => m.name)).toEqual([
+        "dos1",
+        "dos2",
+        "dos3",
+        "dos10",
+        "dos11",
+        "dos20"
+      ]);
+    });
+
+    it("sorts numbered files naturally within same extension", () => {
+      const localItems = [
+        { name: "file1.txt", kind: "file" as const },
+        { name: "file10.txt", kind: "file" as const },
+        { name: "file2.txt", kind: "file" as const },
+        { name: "file20.txt", kind: "file" as const }
+      ];
+      const ghosts: ISparseItem[] = [];
+
+      const merged = mergeItems(localItems, ghosts);
+
+      expect(merged.map(m => m.name)).toEqual([
+        "file1.txt",
+        "file2.txt",
+        "file10.txt",
+        "file20.txt"
       ]);
     });
 
