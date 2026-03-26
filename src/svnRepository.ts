@@ -1660,7 +1660,12 @@ export class Repository {
         stderr.includes("e155004");
       if (isLocked && hasOptions) {
         // Clear the lock with plain cleanup
-        await this.exec(["cleanup"]);
+        try {
+          await this.exec(["cleanup"]);
+        } catch (cleanupErr) {
+          logError("Auto-retry cleanup failed to clear lock", cleanupErr);
+          throw err; // Rethrow original error — caller handles it
+        }
 
         // Retry with original options
         const result = await this.exec(args);
