@@ -7,168 +7,140 @@ import {
 /**
  * Cleanup Error Detection Tests
  *
- * Tests error patterns that should suggest running SVN cleanup.
- * Error codes: E155004, E155009, E155016, E155032, E155037, E200030, E200033, E200034
+ * Tests real production detectors from errorDetectors.ts.
+ * No mirror functions — tests import and call production code directly.
  */
-
-/**
- * Detect if an error message indicates cleanup is needed.
- * This mirrors the logic in command.ts needsCleanup()
- */
-function needsCleanup(errorMessage: string): boolean {
-  const fullError = errorMessage.toLowerCase();
-  return (
-    fullError.includes("e155004") ||
-    fullError.includes("e155009") ||
-    fullError.includes("e155016") ||
-    fullError.includes("e155032") ||
-    fullError.includes("e155037") ||
-    fullError.includes("e200030") ||
-    fullError.includes("e200033") ||
-    fullError.includes("e200034") ||
-    /\blocked\b/.test(fullError) ||
-    fullError.includes("previous operation") ||
-    fullError.includes("run 'cleanup'") ||
-    fullError.includes("work queue") ||
-    fullError.includes("is corrupt") ||
-    /sqlite[:\[]/.test(fullError)
-  );
-}
 
 describe("Cleanup Error Detection", () => {
   describe("Error Code Detection", () => {
     it("detects E155004 (working copy locked)", () => {
-      const error = "svn: E155004: Working copy is locked";
-      expect(needsCleanup(error)).toBe(true);
+      expect(needsCleanupFromFullError("svn: e155004: working copy is locked")).toBe(true);
     });
 
     it("detects E155037 (previous operation interrupted)", () => {
-      const error =
-        "svn: E155037: Previous operation has not finished; run 'cleanup' if it was interrupted";
-      expect(needsCleanup(error)).toBe(true);
+      expect(
+        needsCleanupFromFullError(
+          "svn: e155037: previous operation has not finished; run 'cleanup' if it was interrupted"
+        )
+      ).toBe(true);
     });
 
     it("detects E200030 (sqlite database issue)", () => {
-      const error = "svn: E200030: sqlite: database is locked";
-      expect(needsCleanup(error)).toBe(true);
+      expect(needsCleanupFromFullError("svn: e200030: sqlite: database is locked")).toBe(true);
     });
 
     it("detects E155032 (working copy database problem)", () => {
-      const error = "svn: E155032: The working copy database is corrupted";
-      expect(needsCleanup(error)).toBe(true);
+      expect(needsCleanupFromFullError("svn: e155032: the working copy database is corrupted")).toBe(true);
     });
 
     it("detects E155009 (failed to run WC DB work queue)", () => {
-      const error =
-        "svn: E155009: Failed to run the WC DB work queue associated with '/path'";
-      expect(needsCleanup(error)).toBe(true);
+      expect(
+        needsCleanupFromFullError("svn: e155009: failed to run the wc db work queue associated with '/path'")
+      ).toBe(true);
     });
 
     it("detects E200033 (sqlite database busy)", () => {
-      const error = "svn: E200033: sqlite[S5]: database is busy";
-      expect(needsCleanup(error)).toBe(true);
+      expect(needsCleanupFromFullError("svn: e200033: sqlite[s5]: database is busy")).toBe(true);
     });
 
     it("detects E155016 (working copy corrupt)", () => {
-      const error = "svn: E155016: Working copy is corrupt";
-      expect(needsCleanup(error)).toBe(true);
+      expect(needsCleanupFromFullError("svn: e155016: working copy is corrupt")).toBe(true);
     });
 
     it("detects E200034 (sqlite rollback reset)", () => {
-      const error =
-        "svn: E200034: SQLite busy at transaction rollback; resetting all statements";
-      expect(needsCleanup(error)).toBe(true);
+      expect(
+        needsCleanupFromFullError("svn: e200034: sqlite busy at transaction rollback; resetting all statements")
+      ).toBe(true);
+    });
+
+    it("detects E155031 (unexpected status)", () => {
+      expect(needsCleanupFromFullError("svn: e155031: path has unexpected status")).toBe(true);
     });
   });
 
   describe("Text Pattern Detection", () => {
-    it("detects 'locked' text", () => {
-      expect(needsCleanup("The working copy is locked")).toBe(true);
-    });
-
     it("detects 'previous operation' text", () => {
-      expect(needsCleanup("Previous operation has not finished")).toBe(true);
+      expect(needsCleanupFromFullError("previous operation has not finished")).toBe(true);
     });
 
     it("detects 'run cleanup' instruction", () => {
-      expect(needsCleanup("run 'cleanup' if it was interrupted")).toBe(true);
+      expect(needsCleanupFromFullError("run 'cleanup' if it was interrupted")).toBe(true);
     });
 
     it("detects 'sqlite:' errors", () => {
-      expect(needsCleanup("sqlite: database is locked")).toBe(true);
+      expect(needsCleanupFromFullError("sqlite: database is locked")).toBe(true);
     });
 
     it("detects 'sqlite[S5]' errors", () => {
-      expect(needsCleanup("sqlite[S5]: database is locked")).toBe(true);
+      expect(needsCleanupFromFullError("sqlite[s5]: database is locked")).toBe(true);
     });
 
     it("detects 'work queue' text", () => {
-      expect(needsCleanup("Failed to run the WC DB work queue")).toBe(true);
+      expect(needsCleanupFromFullError("failed to run the wc db work queue")).toBe(true);
     });
 
     it("detects 'is corrupt' text", () => {
-      expect(needsCleanup("Working copy is corrupt")).toBe(true);
+      expect(needsCleanupFromFullError("working copy is corrupt")).toBe(true);
     });
 
-    it("is case-insensitive", () => {
-      expect(needsCleanup("SVN: E155004: LOCKED")).toBe(true);
-      expect(needsCleanup("SQLITE: DATABASE LOCKED")).toBe(true);
+    it("detects 'disk image is malformed' text", () => {
+      expect(needsCleanupFromFullError("sqlite: disk image is malformed")).toBe(true);
+    });
+
+    it("detects 'blocked' text", () => {
+      expect(needsCleanupFromFullError("operation blocked by lock")).toBe(true);
+    });
+
+    it("works with lowercased input (as produced by buildErrorContext)", () => {
+      // Production lowercases via buildErrorContext before calling detectors
+      expect(needsCleanupFromFullError("svn: e155004: locked")).toBe(true);
+      expect(needsCleanupFromFullError("sqlite: database locked")).toBe(true);
     });
   });
 
   describe("Non-Cleanup Errors", () => {
-    it("does not flag auth errors as cleanup", () => {
-      expect(needsCleanup("svn: E170001: Authorization failed")).toBe(false);
+    it("does not flag auth errors", () => {
+      expect(needsCleanupFromFullError("svn: e170001: authorization failed")).toBe(false);
     });
 
-    it("does not flag network errors as cleanup", () => {
-      expect(needsCleanup("svn: E170013: Unable to connect")).toBe(false);
+    it("does not flag network errors", () => {
+      expect(needsCleanupFromFullError("svn: e170013: unable to connect")).toBe(false);
     });
 
-    it("does not flag conflict errors as cleanup", () => {
-      expect(needsCleanup("svn: E155015: Remains in conflict")).toBe(false);
+    it("does not flag conflict errors (E155015)", () => {
+      expect(needsCleanupFromFullError("svn: e155015: remains in conflict")).toBe(false);
     });
 
-    it("does not flag random errors as cleanup", () => {
-      expect(needsCleanup("File not found")).toBe(false);
+    it("does not flag random errors", () => {
+      expect(needsCleanupFromFullError("file not found")).toBe(false);
     });
 
-    it("does not flag 'unlocked' as cleanup (false positive)", () => {
-      expect(needsCleanup("'file.txt' unlocked.")).toBe(false);
+    it("does not flag 'unlocked' (false positive guard)", () => {
+      expect(needsCleanupFromFullError("'file.txt' unlocked.")).toBe(false);
     });
 
     it("does not flag successful unlock operation", () => {
-      expect(needsCleanup("Unlocked file successfully")).toBe(false);
+      expect(needsCleanupFromFullError("unlocked file successfully")).toBe(false);
     });
 
-    it("does not flag 'sqlite' in file paths (false positive)", () => {
-      expect(needsCleanup("Error in /path/to/sqlite_backup/")).toBe(false);
+    it("does not flag 'sqlite' in file paths", () => {
+      expect(needsCleanupFromFullError("error in /path/to/sqlite_backup/")).toBe(false);
     });
 
     it("does not flag 'sqlite' as substring", () => {
-      expect(needsCleanup("mysqlite.db not found")).toBe(false);
+      expect(needsCleanupFromFullError("mysqlite.db not found")).toBe(false);
+    });
+
+    it("plain 'locked' without error code does NOT trigger cleanup", () => {
+      expect(needsCleanupFromFullError("the working copy is locked")).toBe(false);
     });
   });
 
-  describe("Production Error Detectors", () => {
-    it("E155015 does NOT trigger cleanup in production code", () => {
+  describe("Conflict Error Detection", () => {
+    it("E155015 triggers conflict resolution, not cleanup", () => {
       const error = "svn: e155015: aborting commit: remains in conflict";
       expect(needsCleanupFromFullError(error)).toBe(false);
-    });
-
-    it("E155015 triggers conflict resolution in production code", () => {
-      const error = "svn: e155015: aborting commit: remains in conflict";
       expect(needsConflictResolutionFromFullError(error)).toBe(true);
-    });
-
-    it("'blocked' text triggers cleanup in production", () => {
-      expect(needsCleanupFromFullError("operation blocked by lock")).toBe(true);
-    });
-
-    it("plain 'locked' without error code does NOT trigger cleanup in production", () => {
-      // "locked" was a false positive from regex bug (\blocked\b matched "locked")
-      // Error codes E155004/E155037 cover real locked-WC cases
-      expect(needsCleanupFromFullError("the working copy is locked")).toBe(false);
     });
   });
 });
