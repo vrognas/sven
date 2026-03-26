@@ -3,9 +3,7 @@
 
 export const CLEANUP_ERROR_TOKENS = [
   "e155004",
-  "e155005",
   "e155009",
-  "e155010",
   "e155016",
   "e155031",
   "e155032",
