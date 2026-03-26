@@ -16,6 +16,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Error action buttons**: Explorer context menu errors now show full action button chain (cleanup, update, resolve, etc.) instead of plain error messages
 - **Cleanup auto-retry**: Retries on E155004 (locked) in addition to E155037, and checks raw stderr for multi-code errors
 - **Auto-retry error context**: Intermediate cleanup failure is logged and original error rethrown for clearer messaging
+- **hasBlockedWord regex**: Was matching "locked" (false positives on lock errors) instead of "blocked" — one-char regex fix
+- **Cleanup UI refresh**: Added `Operation.CleanUp` to `forceRefresh` list so UI actually refreshes after cleanup
+- **Error sanitization**: Cleanup catch block now sanitizes error messages before display
+- **Misclassified tokens**: Removed E155005 (WC not locked) and E155010 (path not found) from cleanup tokens
+- **Format token drift**: `FORMAT_CLEANUP_TOKENS` now derived from `CLEANUP_ERROR_TOKENS` to prevent divergence
+- **Cleanup retry**: Retry dialog is now properly awaited with max 3 retries before terminal fallback
 
 ## [0.2.25] - 2026-03-26
 
