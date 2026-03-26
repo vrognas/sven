@@ -164,6 +164,35 @@ describe("Command action button wiring", () => {
     expect(commands.executeCommand).toHaveBeenCalledWith("sven.showOutput");
   });
 
+  it("shows 'Update' and executes sven.update for out-of-date error", async () => {
+    const command = new TestActionCommand();
+    vi.mocked(window.showErrorMessage).mockResolvedValueOnce(
+      "Update" as never
+    );
+
+    await command.invokeHandleRepositoryOperation(async () => {
+      throw new Error("svn: E155019: Item is not up-to-date");
+    }, "Fallback");
+
+    expect(vi.mocked(window.showErrorMessage).mock.calls[0]?.[1]).toBe(
+      "Update"
+    );
+    expect(commands.executeCommand).toHaveBeenCalledWith("sven.update");
+  });
+
+  it("shows generic error with no action button for unrecognized errors", async () => {
+    const command = new TestActionCommand();
+
+    await command.invokeHandleRepositoryOperation(async () => {
+      throw new Error("Something completely unexpected");
+    }, "Operation failed");
+
+    expect(window.showErrorMessage).toHaveBeenCalledTimes(1);
+    // Generic errors: only the message, no action button
+    expect(vi.mocked(window.showErrorMessage).mock.calls[0]?.length).toBe(1);
+    expect(commands.executeCommand).not.toHaveBeenCalled();
+  });
+
   it("shows 'Retry' and retries operation without command execution", async () => {
     const command = new TestActionCommand();
     let attempts = 0;
