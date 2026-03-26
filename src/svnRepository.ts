@@ -1595,6 +1595,7 @@ export class Repository {
     this.requireSvnVersion("1.9.0", "--include-externals");
     const result = await this.exec(["cleanup", "--include-externals"]);
     this.svn.logOutput(result.stdout);
+    this.resetInfoCache();
     return result.stdout;
   }
 

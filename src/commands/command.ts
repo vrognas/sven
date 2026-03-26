@@ -871,9 +871,13 @@ export abstract class Command implements Disposable {
       return `Working copy not up-to-date (${c}). Update before committing.`;
     }
 
-    // Conflict errors (E155023, E200024)
+    // Conflict errors (E155015, E155023, E200024)
     if (needsConflictResolutionFromFullError(fullError)) {
-      const c = fullError.includes("e200024") ? "E200024" : "E155023";
+      const c = fullError.includes("e200024")
+        ? "E200024"
+        : fullError.includes("e155015")
+          ? "E155015"
+          : "E155023";
       return `Conflict blocking operation (${c}). Resolve conflicts first.`;
     }
 
