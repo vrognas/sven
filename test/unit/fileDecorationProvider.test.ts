@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Uri } from "vscode";
+import { ThemeColor, Uri } from "vscode";
 
 // Mock vscode
 vi.mock("vscode", () => ({
@@ -15,11 +15,16 @@ vi.mock("vscode", () => ({
     constructor(public id: string) {}
   },
   Uri: {
-    file: (path: string) => ({ scheme: "file", fsPath: path, query: "" })
+    file: (path: string) => ({ scheme: "file", fsPath: path, query: "" }),
+    parse: (raw: string) => {
+      const [schemePath, query] = raw.split("?");
+      const scheme = schemePath?.split(":")[0] ?? "";
+      return { scheme, query: query ?? "", fsPath: "" };
+    }
   },
   workspace: {
     getConfiguration: vi.fn(() => ({
-      get: vi.fn(),
+      get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
       has: vi.fn(),
       inspect: vi.fn(),
       update: vi.fn()
@@ -192,6 +197,39 @@ describe("SvnFileDecorationProvider", () => {
 
       // M (1 char) + K = MK (2 chars) - should work
       expect(decoration?.badge).toBe("MK");
+    });
+  });
+
+  describe("commit decorations", () => {
+    it("returns green color for server-only commits", async () => {
+      const uri = Uri.parse("svn-commit:r100?isServerOnly=true");
+      const decoration = await provider.provideFileDecoration(
+        uri as Parameters<typeof provider.provideFileDecoration>[0]
+      );
+
+      expect(decoration?.badge).toBe("S");
+      expect(decoration?.color).toBeInstanceOf(ThemeColor);
+      expect((decoration?.color as ThemeColor).id).toBe("charts.green");
+    });
+
+    it("returns blue color for BASE commits", async () => {
+      const uri = Uri.parse("svn-commit:r50?isBase=true");
+      const decoration = await provider.provideFileDecoration(
+        uri as Parameters<typeof provider.provideFileDecoration>[0]
+      );
+
+      expect(decoration?.badge).toBe("B");
+      expect(decoration?.color).toBeInstanceOf(ThemeColor);
+      expect((decoration?.color as ThemeColor).id).toBe("charts.blue");
+    });
+
+    it("returns undefined for plain commit (neither base nor server-only)", async () => {
+      const uri = Uri.parse("svn-commit:r30");
+      const decoration = await provider.provideFileDecoration(
+        uri as Parameters<typeof provider.provideFileDecoration>[0]
+      );
+
+      expect(decoration).toBeUndefined();
     });
   });
 

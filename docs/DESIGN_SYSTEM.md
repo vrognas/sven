@@ -28,7 +28,7 @@ Visual and UX patterns for the Sven VS Code extension.
 | Badge      | Color Setting              | Default       |
 | ---------- | -------------------------- | ------------- |
 | B (BASE)   | `sven.decorator.baseColor` | `charts.blue` |
-| S (Server) | _(no color — badge only)_  | —             |
+| S (Server) | `sven.decorator.serverOnlyColor` | `charts.green` |
 
 ## Badge System
 

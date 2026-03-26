@@ -2,7 +2,7 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.105.0",
@@ -2582,6 +2582,36 @@
           "markdownDescription": "Color for the BASE revision badge (B) in repository log. Uses VS Code theme colors.",
           "default": "charts.blue",
           "order": 204,
+          "tags": [
+            "decorator",
+            "ui"
+          ]
+        },
+        "sven.decorator.serverOnlyColor": {
+          "type": "string",
+          "enum": [
+            "charts.green",
+            "charts.blue",
+            "charts.purple",
+            "charts.yellow",
+            "charts.orange",
+            "charts.red",
+            "editorInfo.foreground",
+            "editorWarning.foreground"
+          ],
+          "enumDescriptions": [
+            "Green (default)",
+            "Blue",
+            "Purple",
+            "Yellow",
+            "Orange",
+            "Red",
+            "Info foreground color",
+            "Warning foreground color"
+          ],
+          "markdownDescription": "Color for server-only revision badges (S) in repository log — commits above your BASE that haven't been synced yet.",
+          "default": "charts.green",
+          "order": 205,
           "tags": [
             "decorator",
             "ui"

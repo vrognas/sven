@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.27] - 2026-03-26
+
+### Added
+
+- **Server-only commit color**: Commits above BASE in repo history now show in green (configurable via `sven.decorator.serverOnlyColor`) instead of being dimmed/invisible on dark backgrounds
+
+---
+
 ## [0.2.26] - 2026-03-26
 
 ### Fixed
