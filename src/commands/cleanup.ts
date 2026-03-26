@@ -149,7 +149,10 @@ export class Cleanup extends Command {
       const message = error.message ?? String(err);
 
       // Provide helpful message for locked working copy
-      if (error.svnErrorCode === "E155037") {
+      if (
+        error.svnErrorCode === "E155037" ||
+        error.svnErrorCode === "E155004"
+      ) {
         if (this.retryCount >= Cleanup.MAX_RETRIES) {
           this.retryCount = 0;
           window.showErrorMessage(
@@ -174,6 +177,7 @@ export class Cleanup extends Command {
         return;
       }
 
+      this.retryCount = 0;
       window.showErrorMessage(`Cleanup failed: ${sanitizeString(message)}`);
     }
   }
