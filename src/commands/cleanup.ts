@@ -5,6 +5,7 @@
 import { ProgressLocation, QuickPickItem, window } from "vscode";
 import { ICleanupOptions } from "../common/types";
 import { Repository } from "../repository";
+import { sanitizeString } from "../security/errorSanitizer";
 import { confirmDestructive } from "../ui";
 import { Command } from "./command";
 
@@ -159,7 +160,7 @@ export class Cleanup extends Command {
         return;
       }
 
-      window.showErrorMessage(`Cleanup failed: ${message}`);
+      window.showErrorMessage(`Cleanup failed: ${sanitizeString(message)}`);
     }
   }
 }
