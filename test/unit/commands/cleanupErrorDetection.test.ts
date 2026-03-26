@@ -1,4 +1,8 @@
 import { describe, it, expect } from "vitest";
+import {
+  needsCleanupFromFullError,
+  needsConflictResolutionFromFullError
+} from "../../../src/commands/errorDetectors";
 
 /**
  * Cleanup Error Detection Tests
@@ -143,6 +147,18 @@ describe("Cleanup Error Detection", () => {
 
     it("does not flag 'sqlite' as substring", () => {
       expect(needsCleanup("mysqlite.db not found")).toBe(false);
+    });
+  });
+
+  describe("Production Error Detectors", () => {
+    it("E155015 does NOT trigger cleanup in production code", () => {
+      const error = "svn: e155015: aborting commit: remains in conflict";
+      expect(needsCleanupFromFullError(error)).toBe(false);
+    });
+
+    it("E155015 triggers conflict resolution in production code", () => {
+      const error = "svn: e155015: aborting commit: remains in conflict";
+      expect(needsConflictResolutionFromFullError(error)).toBe(true);
     });
   });
 });

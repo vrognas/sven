@@ -6,7 +6,6 @@ export const CLEANUP_ERROR_TOKENS = [
   "e155005",
   "e155009",
   "e155010",
-  "e155015",
   "e155016",
   "e155031",
   "e155032",
@@ -28,7 +27,7 @@ export const UPDATE_ERROR_TOKENS = [
   "not up-to-date"
 ] as const;
 
-export const CONFLICT_ERROR_TOKENS = ["e155023", "e200024"] as const;
+export const CONFLICT_ERROR_TOKENS = ["e155015", "e155023", "e200024"] as const;
 
 export const AUTH_ERROR_TOKENS = [
   "e170001",
