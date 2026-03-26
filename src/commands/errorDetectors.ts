@@ -18,7 +18,7 @@ import {
 import { includesAny } from "./errorUtils";
 
 function hasBlockedWord(fullError: string): boolean {
-  return /\blocked\b/.test(fullError);
+  return /\bblocked\b/.test(fullError);
 }
 
 function hasSqliteMarker(fullError: string): boolean {

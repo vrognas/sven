@@ -160,5 +160,15 @@ describe("Cleanup Error Detection", () => {
       const error = "svn: e155015: aborting commit: remains in conflict";
       expect(needsConflictResolutionFromFullError(error)).toBe(true);
     });
+
+    it("'blocked' text triggers cleanup in production", () => {
+      expect(needsCleanupFromFullError("operation blocked by lock")).toBe(true);
+    });
+
+    it("plain 'locked' without error code does NOT trigger cleanup in production", () => {
+      // "locked" was a false positive from regex bug (\blocked\b matched "locked")
+      // Error codes E155004/E155037 cover real locked-WC cases
+      expect(needsCleanupFromFullError("the working copy is locked")).toBe(false);
+    });
   });
 });
