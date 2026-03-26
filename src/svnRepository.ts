@@ -1650,10 +1650,15 @@ export class Repository {
 
       return result.stdout;
     } catch (err) {
-      // E155037: Working copy locked from interrupted operation
-      // Auto-retry: run plain cleanup first to clear lock, then retry with options
-      const error = err as { svnErrorCode?: string };
-      if (error.svnErrorCode === "E155037" && hasOptions) {
+      // Working copy locked — auto-retry: plain cleanup to clear lock, then retry
+      const error = err as { svnErrorCode?: string; stderr?: string };
+      const stderr = (error.stderr ?? "").toLowerCase();
+      const isLocked =
+        error.svnErrorCode === "E155037" ||
+        error.svnErrorCode === "E155004" ||
+        stderr.includes("e155037") ||
+        stderr.includes("e155004");
+      if (isLocked && hasOptions) {
         // Clear the lock with plain cleanup
         await this.exec(["cleanup"]);
 

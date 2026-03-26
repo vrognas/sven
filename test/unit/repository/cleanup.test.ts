@@ -408,4 +408,60 @@ describe("Repository Cleanup Advanced", () => {
       expect(buildCompletionMessage([], false)).toBe("Cleanup completed.");
     });
   });
+
+  describe("cleanupAdvanced() Auto-Retry Guard", () => {
+    /**
+     * Mirrors the isLocked guard in cleanupAdvanced() — checks both
+     * svnErrorCode and raw stderr for E155037/E155004.
+     */
+    function shouldAutoRetry(error: {
+      svnErrorCode?: string;
+      stderr?: string;
+    }): boolean {
+      const stderr = (error.stderr ?? "").toLowerCase();
+      return (
+        error.svnErrorCode === "E155037" ||
+        error.svnErrorCode === "E155004" ||
+        stderr.includes("e155037") ||
+        stderr.includes("e155004")
+      );
+    }
+
+    it("triggers on svnErrorCode E155037", () => {
+      expect(shouldAutoRetry({ svnErrorCode: "E155037" })).toBe(true);
+    });
+
+    it("triggers on svnErrorCode E155004", () => {
+      expect(shouldAutoRetry({ svnErrorCode: "E155004" })).toBe(true);
+    });
+
+    it("triggers when E155037 in stderr but svnErrorCode is E155004", () => {
+      expect(
+        shouldAutoRetry({
+          svnErrorCode: "E155004",
+          stderr:
+            "svn: E155004: Working copy locked\nsvn: E155037: Previous operation interrupted"
+        })
+      ).toBe(true);
+    });
+
+    it("triggers when E155004 in stderr but svnErrorCode differs", () => {
+      expect(
+        shouldAutoRetry({
+          svnErrorCode: "E200030",
+          stderr:
+            "svn: E155004: Working copy locked\nsvn: E200030: sqlite busy"
+        })
+      ).toBe(true);
+    });
+
+    it("does not trigger for unrelated errors", () => {
+      expect(
+        shouldAutoRetry({
+          svnErrorCode: "E170001",
+          stderr: "svn: E170001: Authorization failed"
+        })
+      ).toBe(false);
+    });
+  });
 });
