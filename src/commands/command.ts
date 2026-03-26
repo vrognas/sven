@@ -751,27 +751,7 @@ export abstract class Command implements Disposable {
       try {
         await operation(repository, paths);
       } catch (error) {
-        logError("Repository resource operation failed", error);
-        // Extract SVN error message if available
-        const err = error as {
-          message?: string;
-          stderr?: string;
-          stderrFormated?: string;
-        };
-        const rawStderr = err?.stderrFormated || err?.stderr || "";
-        const svnMsg = this.sanitizeStderr(rawStderr) || err?.message || "";
-        const userMessage = svnMsg ? `${errorMsg}: ${svnMsg}` : errorMsg;
-
-        // Offer cleanup button for cleanup-related errors
-        if (this.needsCleanup(error)) {
-          await this.runCommandActionIfChosen(
-            userMessage,
-            "Run Cleanup",
-            "sven.cleanup"
-          );
-        } else {
-          window.showErrorMessage(userMessage);
-        }
+        await this.handleOperationError(error, errorMsg);
       }
     });
   }
@@ -793,8 +773,7 @@ export abstract class Command implements Disposable {
         try {
           await operation(repository, paths);
         } catch (error) {
-          logError("URI operation failed", error);
-          window.showErrorMessage(errorMsg);
+          await this.handleOperationError(error, errorMsg);
         }
       });
       return true;
@@ -1016,10 +995,84 @@ export abstract class Command implements Disposable {
   }
 
   /**
+   * Handle operation error with full priority chain.
+   * Shared by executeOnResources, executeOnUrisOrResources, and handleRepositoryOperation.
+   * Priority: auth > lock > cleanup > update > conflict > output > generic
+   * Note: network retry is NOT here — it needs the operation lambda, so it stays
+   * in handleRepositoryOperation only.
+   */
+  private async handleOperationError(
+    error: unknown,
+    errorMsg: string
+  ): Promise<void> {
+    logError("Repository operation failed", error);
+    const userMessage = this.formatErrorMessage(error, errorMsg);
+    const lockType = this.getLockErrorType(error);
+
+    // Auth errors - highest priority (often appears with network errors)
+    if (this.needsAuthAction(error)) {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Clear Credentials",
+        "sven.clearCredentials"
+      );
+    }
+    // File lock errors (not working copy lock)
+    else if (lockType !== null) {
+      if (lockType === "conflict") {
+        await this.runCommandActionIfChosen(
+          userMessage,
+          "Steal Lock",
+          "sven.stealLock"
+        );
+      } else if (lockType === "notLocked" || lockType === "expired") {
+        await this.runCommandActionIfChosen(
+          userMessage,
+          "Lock File",
+          "sven.lock"
+        );
+      }
+    }
+    // Cleanup for working copy issues
+    else if (this.needsCleanup(error)) {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Run Cleanup",
+        "sven.cleanup"
+      );
+    }
+    // Update for out-of-date errors
+    else if (this.needsUpdate(error)) {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Update",
+        "sven.update"
+      );
+    }
+    // Conflict resolution
+    else if (this.needsConflictResolution(error)) {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Resolve Conflicts",
+        "sven.resolveAll"
+      );
+    }
+    // Permission/diagnostic errors - show output
+    else if (this.needsOutputAction(error)) {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Show Output",
+        "sven.showOutput"
+      );
+    } else {
+      window.showErrorMessage(userMessage);
+    }
+  }
+
+  /**
    * Handle repository operation with consistent error handling.
-   * Pattern: try/catch with console.log + showErrorMessage
-   * Offers actionable buttons based on error type.
-   * Priority: auth > lock > cleanup > update > conflict > network > output
+   * Wraps handleOperationError; adds network retry (needs operation lambda).
+   * Priority: network retry (special) > handleOperationError chain
    */
   protected async handleRepositoryOperation<T>(
     operation: () => Promise<T>,
@@ -1028,76 +1081,17 @@ export abstract class Command implements Disposable {
     try {
       return await operation();
     } catch (error) {
-      logError("Repository operation failed", error);
-      const userMessage = this.formatErrorMessage(error, errorMsg);
-      const lockType = this.getLockErrorType(error);
-
-      // Auth errors - highest priority (often appears with network errors)
-      if (this.needsAuthAction(error)) {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Clear Credentials",
-          "sven.clearCredentials"
-        );
-      }
-      // File lock errors (not working copy lock) should win over generic cleanup/conflict text matches.
-      else if (lockType !== null) {
-        if (lockType === "conflict") {
-          await this.runCommandActionIfChosen(
-            userMessage,
-            "Steal Lock",
-            "sven.stealLock"
-          );
-        } else if (lockType === "notLocked" || lockType === "expired") {
-          await this.runCommandActionIfChosen(
-            userMessage,
-            "Lock File",
-            "sven.lock"
-          );
-        }
-      }
-      // Cleanup for working copy issues
-      else if (this.needsCleanup(error)) {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Run Cleanup",
-          "sven.cleanup"
-        );
-      }
-      // Update for out-of-date errors
-      else if (this.needsUpdate(error)) {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Update",
-          "sven.update"
-        );
-      }
-      // Conflict resolution
-      else if (this.needsConflictResolution(error)) {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Resolve Conflicts",
-          "sven.resolveAll"
-        );
-      }
-      // Network errors - offer retry
-      else if (this.needsNetworkRetry(error)) {
+      // Network errors - offer retry (needs the operation to re-run)
+      if (this.needsNetworkRetry(error)) {
+        logError("Repository operation failed", error);
+        const userMessage = this.formatErrorMessage(error, errorMsg);
         const retry = "Retry";
         const choice = await window.showErrorMessage(userMessage, retry);
         if (choice === retry) {
-          // Re-run the operation
           return this.handleRepositoryOperation(operation, errorMsg);
         }
-      }
-      // Permission/diagnostic errors - show output
-      else if (this.needsOutputAction(error)) {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Show Output",
-          "sven.showOutput"
-        );
       } else {
-        window.showErrorMessage(userMessage);
+        await this.handleOperationError(error, errorMsg);
       }
 
       return undefined;

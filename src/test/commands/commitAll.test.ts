@@ -122,7 +122,8 @@ suite("CommitAll Command E2E Tests", () => {
 
     assert.ok(runCommitFlowStub.calledOnce);
     assert.ok(showErrorStub.calledOnce);
-    assert.ok(showErrorStub.firstCall.args[0].includes("Unable to commit"));
-    assert.strictEqual(showErrorStub.firstCall.args[1], "Run Cleanup");
+    // E155015 is a conflict error — routes to "Resolve Conflicts"
+    assert.ok(showErrorStub.firstCall.args[0].includes("Conflict blocking operation"));
+    assert.strictEqual(showErrorStub.firstCall.args[1], "Resolve Conflicts");
   });
 });

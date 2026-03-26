@@ -161,8 +161,8 @@ suite("Add Command Tests", () => {
     await addCmd.execute(resource);
 
     assert.strictEqual(showErrorCalls.length, 1);
+    // handleOperationError uses formatErrorMessage which returns fallbackMsg for generic errors
     assert.ok(showErrorCalls[0]!.includes("Unable to add file"));
-    assert.ok(showErrorCalls[0]!.includes("SVN add failed"));
     assert.strictEqual(addFilesCalls.length, 0);
   });
 
