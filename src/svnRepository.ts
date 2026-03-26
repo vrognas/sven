@@ -1540,6 +1540,7 @@ export class Repository {
   public async cleanup() {
     const result = await this.exec(["cleanup"]);
     this.svn.logOutput(result.stdout);
+    this.resetInfoCache();
     return result.stdout;
   }
 
@@ -1644,10 +1645,8 @@ export class Repository {
       const result = await this.exec(args);
       this.svn.logOutput(result.stdout);
 
-      // Invalidate cache if files were deleted
-      if (options.removeUnversioned || options.removeIgnored) {
-        this.resetInfoCache();
-      }
+      // Always invalidate — cleanup changes lock state, timestamps, etc.
+      this.resetInfoCache();
 
       return result.stdout;
     } catch (err) {
@@ -1661,10 +1660,7 @@ export class Repository {
         // Retry with original options
         const result = await this.exec(args);
         this.svn.logOutput(result.stdout);
-
-        if (options.removeUnversioned || options.removeIgnored) {
-          this.resetInfoCache();
-        }
+        this.resetInfoCache();
 
         return result.stdout;
       }
