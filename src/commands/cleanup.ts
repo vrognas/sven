@@ -71,6 +71,9 @@ const cleanupOptions: CleanupQuickPickItem[] = [
  * Optionally can also remove files and vacuum pristines.
  */
 export class Cleanup extends Command {
+  private static readonly MAX_RETRIES = 3;
+  private retryCount = 0;
+
   constructor() {
     super("sven.cleanup", { repository: true });
   }
@@ -130,6 +133,8 @@ export class Cleanup extends Command {
         }
       );
 
+      this.retryCount = 0;
+
       // Show descriptive completion message
       const completedOps =
         operations.length > 0 ? `Removed ${formatList(operations)}. ` : "";
@@ -145,18 +150,27 @@ export class Cleanup extends Command {
 
       // Provide helpful message for locked working copy
       if (error.svnErrorCode === "E155037") {
-        window
-          .showErrorMessage(
-            "Cleanup failed: Working copy is locked. " +
-              "A previous SVN operation was interrupted. " +
-              "Try running cleanup again, or use 'svn cleanup' in terminal.",
-            "Retry Cleanup"
-          )
-          .then(choice => {
-            if (choice === "Retry Cleanup") {
-              this.execute(repository);
-            }
-          });
+        if (this.retryCount >= Cleanup.MAX_RETRIES) {
+          this.retryCount = 0;
+          window.showErrorMessage(
+            "Cleanup failed after multiple attempts. " +
+              "Try running 'svn cleanup' in terminal."
+          );
+          return;
+        }
+
+        const choice = await window.showErrorMessage(
+          "Cleanup failed: Working copy is locked. " +
+            "A previous SVN operation was interrupted. " +
+            "Try running cleanup again, or use 'svn cleanup' in terminal.",
+          "Retry Cleanup"
+        );
+        if (choice === "Retry Cleanup") {
+          this.retryCount++;
+          await this.execute(repository);
+        } else {
+          this.retryCount = 0;
+        }
         return;
       }
 
