@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.26] - 2026-03-26
+
+### Fixed
+
+- **Cleanup error detection**: E155015 (conflict) no longer falsely triggers "Run Cleanup" — correctly routes to conflict resolution
+- **Cleanup cache**: All cleanup operations now invalidate status cache — UI reflects actual state after cleanup
+- **Error action buttons**: Explorer context menu errors now show full action button chain (cleanup, update, resolve, etc.) instead of plain error messages
+- **Cleanup auto-retry**: Retries on E155004 (locked) in addition to E155037, and checks raw stderr for multi-code errors
+- **Auto-retry error context**: Intermediate cleanup failure is logged and original error rethrown for clearer messaging
+
 ## [0.2.25] - 2026-03-26
 
 ### Fixed

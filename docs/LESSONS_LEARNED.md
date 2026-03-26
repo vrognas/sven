@@ -1,7 +1,37 @@
 # Lessons Learned
 
-**Version**: 0.2.23
-**Updated**: 2026-02-07
+**Version**: 0.2.26
+**Updated**: 2026-03-26
+
+---
+
+### 57. Test Mirrors Diverge from Production — Use Real Imports
+
+**Lesson**: `cleanupErrorDetection.test.ts` had a local `needsCleanup` mirror that omitted E155015, while production `CLEANUP_ERROR_TOKENS` still included it. The test passed (matching desired behavior) while production was wrong.
+
+**Fix**: Import real `needsCleanupFromFullError` / `needsConflictResolutionFromFullError` from production code in tests. Mirror functions can't catch regressions if they diverge.
+
+**Rule**: Prefer importing real detection functions in tests over maintaining local mirrors.
+
+---
+
+### 58. Always Invalidate Cache After Cleanup
+
+**Lesson**: `cleanup()` didn't call `resetInfoCache()`, only `removeUnversioned()`/`removeIgnored()` did. After lock repair (most common cleanup), UI showed stale "locked" status.
+
+**Fix**: Call `resetInfoCache()` unconditionally after all cleanup variants.
+
+**Rule**: Cache invalidation should match operation scope, not just the "destructive" subset.
+
+---
+
+### 59. Unify Error Handling Across Command Paths
+
+**Lesson**: `executeOnResources` only offered "Run Cleanup" button. `executeOnUrisOrResources` (Explorer) offered no action buttons at all. `handleRepositoryOperation` had the full priority chain. Three paths, three behaviors.
+
+**Fix**: Extract `handleOperationError()` with full priority chain (auth > lock > cleanup > update > conflict > output). All paths delegate to it.
+
+**Rule**: Error handling is a crosscutting concern — extract once, reuse everywhere.
 
 ---
 
