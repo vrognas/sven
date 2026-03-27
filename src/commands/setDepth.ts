@@ -17,6 +17,7 @@ import { Command } from "./command";
 import { confirm } from "../ui";
 import { formatBytes, formatDuration, formatSpeed } from "../util/formatting";
 import { Repository } from "../repository";
+import { needsCleanupFromFullError } from "./errorDetectors";
 
 /** Default download timeout in minutes */
 const DEFAULT_DOWNLOAD_TIMEOUT_MINUTES = 10;
@@ -446,15 +447,18 @@ export class SetDepth extends Command {
               }
             }
 
+            // Check cancellation before starting SVN operation
+            if (token.isCancellationRequested) {
+              return { exitCode: -1, cancelled: true, stderr: "" };
+            }
+
             const res = await repository.setDepth(uri.fsPath, selected.depth, {
               parents: true,
               timeout: downloadTimeoutMs
             });
 
-            if (token.isCancellationRequested) {
-              return { ...res, cancelled: true };
-            }
-
+            // SVN completed — show success even if cancel was pressed during execution,
+            // since the operation actually finished and the working copy was changed.
             return { ...res, cancelled: false };
           } catch (err) {
             return {
@@ -489,12 +493,34 @@ export class SetDepth extends Command {
         // Refresh sparse checkout tree to reflect changes
         commands.executeCommand("sven.sparse.refresh");
       } else {
-        window.showErrorMessage(
-          `Failed to change checkout: ${result.stderr || "Unknown error"}`
-        );
+        const stderr = result.stderr || String(error || "Unknown error");
+        if (needsCleanupFromFullError(stderr)) {
+          const action = await window.showErrorMessage(
+            "Working copy is locked. Run cleanup to fix.",
+            "Run Cleanup"
+          );
+          if (action === "Run Cleanup") {
+            commands.executeCommand("sven.cleanup");
+          }
+        } else {
+          window.showErrorMessage(
+            `Failed to change checkout: ${result.stderr || "Unknown error"}`
+          );
+        }
       }
     } catch (error) {
-      window.showErrorMessage(`Failed to change checkout: ${error}`);
+      const errStr = String(error);
+      if (needsCleanupFromFullError(errStr)) {
+        const action = await window.showErrorMessage(
+          "Working copy is locked. Run cleanup to fix.",
+          "Run Cleanup"
+        );
+        if (action === "Run Cleanup") {
+          commands.executeCommand("sven.cleanup");
+        }
+      } else {
+        window.showErrorMessage(`Failed to change checkout: ${error}`);
+      }
     } finally {
       // Re-enable status updates
       repository.endSparseDownload();
