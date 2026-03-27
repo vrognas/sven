@@ -34,11 +34,38 @@ import SparseItemNode from "../nodes/sparseItemNode";
 import { SparseFileDecorationProvider } from "../sparseFileDecorationProvider";
 import { dispose } from "../../util";
 import { logError } from "../../util/errorLogger";
+import { needsCleanupFromFullError } from "../../commands/errorDetectors";
 import {
   formatBytes,
   formatDuration,
   parseSizeToBytes
 } from "../../util/formatting";
+
+/** Max concurrent svn info subprocess calls (prevents EMFILE / WC lock contention) */
+const MAX_CONCURRENT_INFO = 5;
+
+/** Run async tasks with bounded concurrency */
+async function pLimit<T>(
+  tasks: (() => Promise<T>)[],
+  concurrency: number
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < tasks.length) {
+      const i = nextIndex++;
+      results[i] = await tasks[i]!();
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, tasks.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
+  return results;
+}
 
 class RepositoryRootNode extends BaseNode {
   constructor(
@@ -558,8 +585,9 @@ export default class SparseCheckoutProvider
     const dirItems = items.filter(i => i.kind === "dir");
     if (dirItems.length === 0) return;
 
-    const depths = await Promise.all(
-      dirItems.map(d => this.getDepth(repo, path.join(repo.root, d.path)))
+    const depths = await pLimit(
+      dirItems.map(d => () => this.getDepth(repo, path.join(repo.root, d.path))),
+      MAX_CONCURRENT_INFO
     );
 
     dirItems.forEach((item, i) => {
@@ -596,9 +624,9 @@ export default class SparseCheckoutProvider
     const localItems = items.filter(i => !i.isGhost);
     if (localItems.length === 0) return;
 
-    // Batch fetch info for all local items in parallel
-    const infos = await Promise.all(
-      localItems.map(async item => {
+    // Batch fetch info with bounded concurrency (prevents EMFILE / WC lock contention)
+    const infos = await pLimit(
+      localItems.map(item => async () => {
         try {
           const fullPath = path.join(repo.root, item.path);
           const info = await repo.getInfo(fullPath);
@@ -606,7 +634,8 @@ export default class SparseCheckoutProvider
         } catch {
           return undefined;
         }
-      })
+      }),
+      MAX_CONCURRENT_INFO
     );
 
     // Apply local revisions
@@ -1227,13 +1256,24 @@ export default class SparseCheckoutProvider
       }
     } catch (err) {
       logError("Sparse checkout failed", err);
-      window
-        .showErrorMessage(`Download failed: ${err}`, "Show Output")
-        .then(choice => {
-          if (choice === "Show Output") {
-            commands.executeCommand("sven.showOutputChannel");
-          }
-        });
+      const errStr = String(err);
+      if (needsCleanupFromFullError(errStr)) {
+        window
+          .showErrorMessage("Working copy is locked. Run cleanup to fix.", "Run Cleanup")
+          .then(choice => {
+            if (choice === "Run Cleanup") {
+              commands.executeCommand("sven.cleanup");
+            }
+          });
+      } else {
+        window
+          .showErrorMessage(`Download failed: ${err}`, "Show Output")
+          .then(choice => {
+            if (choice === "Show Output") {
+              commands.executeCommand("sven.showOutputChannel");
+            }
+          });
+      }
     } finally {
       // Re-enable status updates after download completes
       for (const repo of affectedRepos) {
@@ -1441,13 +1481,24 @@ export default class SparseCheckoutProvider
       }
     } catch (err) {
       logError("Sparse exclude failed", err);
-      window
-        .showErrorMessage(`Exclude failed: ${err}`, "Show Output")
-        .then(choice => {
-          if (choice === "Show Output") {
-            commands.executeCommand("sven.showOutputChannel");
-          }
-        });
+      const errStr = String(err);
+      if (needsCleanupFromFullError(errStr)) {
+        window
+          .showErrorMessage("Working copy is locked. Run cleanup to fix.", "Run Cleanup")
+          .then(choice => {
+            if (choice === "Run Cleanup") {
+              commands.executeCommand("sven.cleanup");
+            }
+          });
+      } else {
+        window
+          .showErrorMessage(`Exclude failed: ${err}`, "Show Output")
+          .then(choice => {
+            if (choice === "Show Output") {
+              commands.executeCommand("sven.showOutputChannel");
+            }
+          });
+      }
     } finally {
       // Re-enable status updates after exclude completes
       for (const repo of affectedRepos) {
