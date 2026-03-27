@@ -186,12 +186,10 @@ export default class SparseItemNode extends BaseNode {
     const items = await this.loadChildren(fullPath);
 
     // Track if folder has excluded children (for partial indicator)
-    // Only fire targeted refresh if flag actually changed (prevents loop)
+    // Fire targeted refresh if flag actually changed in either direction
     const hasGhosts = items.some(i => i.isGhost);
-    const flagChanged = hasGhosts && !this.item.hasExcludedChildren;
-    if (hasGhosts) {
-      this.item.hasExcludedChildren = true;
-    }
+    const flagChanged = hasGhosts !== (this.item.hasExcludedChildren ?? false);
+    this.item.hasExcludedChildren = hasGhosts;
     if (flagChanged) {
       // Targeted refresh for just this node - updates icon without full rebuild
       this.onRefresh?.(this);
