@@ -43,11 +43,9 @@ async function init(
   outputChannel: OutputChannel,
   disposables: Disposable[]
 ) {
-  console.log("Sven: init() started");
   const pathHint = configuration.get<string>("path");
   const svnFinder = new SvnFinder();
 
-  console.log("Sven: Finding SVN executable...");
   // Pass context for caching - startup optimization saves ~1-2s on subsequent launches
   const info = await svnFinder.findSvn(pathHint, extensionContext);
   console.log(`Sven: Found SVN ${info.version} at ${info.path}`);
@@ -89,10 +87,8 @@ async function init(
     extensionContext
   );
 
-  console.log("Sven: Registering commands...");
   registerCommands(sourceControlManager, disposables);
 
-  console.log("Sven: Creating providers...");
   try {
     tempSvnFs.activate();
   } catch (err) {
@@ -117,10 +113,8 @@ async function init(
 
   outputChannel.appendLine(`Using svn "${info.version}" from "${info.path}"`);
   outputChannel.appendLine(`Running in ${getEnvironmentName()}`);
-  console.log("Sven: Providers created successfully");
 
   // Initialize blame status bar (singleton)
-  console.log("Sven: Creating BlameStatusBar...");
   const blameStatusBar = new BlameStatusBar(sourceControlManager);
   disposables.push(blameStatusBar);
 
@@ -130,19 +124,14 @@ async function init(
       blameStatusBar.showCommitDetails();
     })
   );
-  console.log("Sven: BlameStatusBar created");
 
   // Initialize needs-lock status bar
-  console.log("Sven: Creating NeedsLockStatusBar...");
   const needsLockStatusBar = new NeedsLockStatusBar(sourceControlManager);
   disposables.push(needsLockStatusBar);
-  console.log("Sven: NeedsLockStatusBar created");
 
   // Initialize lock status bar
-  console.log("Sven: Creating LockStatusBar...");
   const lockStatusBar = new LockStatusBar(sourceControlManager);
   disposables.push(lockStatusBar);
-  console.log("Sven: LockStatusBar created");
 
   // Register cache management command
   disposables.push(
@@ -156,7 +145,6 @@ async function init(
 
   // Register Positron-specific providers
   if (isPositron()) {
-    console.log("Sven: Registering Positron connections provider");
     const connectionsDisposable =
       registerSvnConnectionsProvider(sourceControlManager);
     if (connectionsDisposable) {
@@ -172,7 +160,6 @@ async function init(
   );
   disposables.push(toDisposable(messages.dispose));
   disposables.push(authConfigDisposable);
-  console.log("Sven: init() complete");
 }
 
 async function _activate(context: ExtensionContext, disposables: Disposable[]) {
@@ -258,12 +245,7 @@ async function _activate(context: ExtensionContext, disposables: Disposable[]) {
 }
 
 export async function activate(context: ExtensionContext) {
-  const env = getEnvironmentName();
-  console.log(`Sven: activate() called in ${env}`);
-
-  if (isPositron()) {
-    console.log("Sven: Positron-specific features available");
-  }
+  console.log(`Sven: activating (${getEnvironmentName()})`);
 
   const disposables: Disposable[] = [];
   context.subscriptions.push(
@@ -275,7 +257,7 @@ export async function activate(context: ExtensionContext) {
     window.showErrorMessage(`Sven activation failed: ${err.message || err}`);
   });
 
-  console.log("Sven: activation complete");
+  console.log("Sven: ready");
 }
 
 export function deactivate() {
