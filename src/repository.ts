@@ -282,12 +282,16 @@ export class Repository implements IRemoteRepository {
    * When true, file watcher events won't trigger SVN status commands,
    * preventing working copy lock conflicts on Windows.
    */
-  private _sparseDownloadInProgress = false;
+  private _sparseDownloadCount = 0;
   get sparseDownloadInProgress(): boolean {
-    return this._sparseDownloadInProgress;
+    return this._sparseDownloadCount > 0;
   }
-  set sparseDownloadInProgress(value: boolean) {
-    this._sparseDownloadInProgress = value;
+  /** Increment/decrement the concurrent download counter. */
+  beginSparseDownload(): void {
+    this._sparseDownloadCount++;
+  }
+  endSparseDownload(): void {
+    this._sparseDownloadCount = Math.max(0, this._sparseDownloadCount - 1);
   }
 
   get root(): string {

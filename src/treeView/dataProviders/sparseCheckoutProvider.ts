@@ -771,6 +771,8 @@ export default class SparseCheckoutProvider
     const localNamesLower = new Set(localItems.map(i => i.name.toLowerCase()));
     return serverItems
       .filter(s => !localNamesLower.has(s.name.toLowerCase()))
+      // Reject path traversal from malicious server responses
+      .filter(s => !s.name.includes("/") && !s.name.includes("\\") && s.name !== ".." && s.name !== ".")
       .map(s => ({
         name: s.name,
         path: relativeFolder ? path.join(relativeFolder, s.name) : s.name,
@@ -951,7 +953,7 @@ export default class SparseCheckoutProvider
 
     // Suppress status updates during download (fixes svn info spam on Windows)
     for (const repo of affectedRepos) {
-      repo.sparseDownloadInProgress = true;
+      repo.beginSparseDownload();
     }
 
     try {
@@ -1235,7 +1237,7 @@ export default class SparseCheckoutProvider
     } finally {
       // Re-enable status updates after download completes
       for (const repo of affectedRepos) {
-        repo.sparseDownloadInProgress = false;
+        repo.endSparseDownload();
       }
     }
   }
@@ -1280,6 +1282,40 @@ export default class SparseCheckoutProvider
   }
 
   /**
+   * Find uncommitted changes and unversioned files under the given nodes.
+   * Returns list of relative paths that would be lost on exclude.
+   */
+  private getUnsafeItems(nodes: SparseItemNode[]): string[] {
+    const unsafe: string[] = [];
+    for (const node of nodes) {
+      const repo = this.sourceControlManager.getRepository(
+        Uri.file(node.fullPath)
+      );
+      if (!repo) continue;
+
+      const root = repo.workspaceRoot;
+      const prefix = node.fullPath.replace(/\\/g, "/").toLowerCase();
+
+      // Check tracked changes (modified, added, conflicted, etc.)
+      for (const r of repo.changes.resourceStates) {
+        const fp = r.resourceUri.fsPath.replace(/\\/g, "/").toLowerCase();
+        if (fp.startsWith(prefix + "/") || fp === prefix) {
+          unsafe.push(path.relative(root, r.resourceUri.fsPath));
+        }
+      }
+
+      // Check unversioned files (would be silently deleted by SVN)
+      for (const r of repo.unversioned.resourceStates) {
+        const fp = r.resourceUri.fsPath.replace(/\\/g, "/").toLowerCase();
+        if (fp.startsWith(prefix + "/") || fp === prefix) {
+          unsafe.push(path.relative(root, r.resourceUri.fsPath));
+        }
+      }
+    }
+    return unsafe;
+  }
+
+  /**
    * Exclude multiple items (remove from working copy)
    */
   private async excludeItems(nodes: SparseItemNode[]): Promise<void> {
@@ -1296,8 +1332,21 @@ export default class SparseCheckoutProvider
         ? `"${path.basename(validNodes[0]!.fullPath)}"`
         : `${validNodes.length} items`;
 
-    // Check if confirmation is enabled
-    const confirmEnabled = workspace
+    // Check for uncommitted changes or unversioned files under target paths
+    const unsafeItems = this.getUnsafeItems(validNodes);
+    if (unsafeItems.length > 0) {
+      const fileList = unsafeItems.slice(0, 5).join("\n");
+      const more = unsafeItems.length > 5 ? `\n...and ${unsafeItems.length - 5} more` : "";
+      const choice = await window.showWarningMessage(
+        `${unsafeItems.length} uncommitted/unversioned file(s) will be lost:\n\n${fileList}${more}\n\nCommit or move them first, or proceed to discard.`,
+        { modal: true },
+        "Exclude Anyway"
+      );
+      if (choice !== "Exclude Anyway") return;
+    }
+
+    // Check if confirmation is enabled (skip if user already confirmed unsafe dialog)
+    const confirmEnabled = unsafeItems.length === 0 && workspace
       .getConfiguration("sven.sparse")
       .get<boolean>("confirmExclude", true);
 
@@ -1333,7 +1382,7 @@ export default class SparseCheckoutProvider
     // Suppress status updates during exclude (prevents WC lock conflicts)
     const affectedRepos = new Set(repoMap.values());
     for (const repo of affectedRepos) {
-      repo.sparseDownloadInProgress = true;
+      repo.beginSparseDownload();
     }
 
     try {
@@ -1402,7 +1451,7 @@ export default class SparseCheckoutProvider
     } finally {
       // Re-enable status updates after exclude completes
       for (const repo of affectedRepos) {
-        repo.sparseDownloadInProgress = false;
+        repo.endSparseDownload();
       }
     }
   }

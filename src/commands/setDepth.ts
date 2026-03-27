@@ -16,6 +16,7 @@ import { SvnDepth } from "../common/types";
 import { Command } from "./command";
 import { confirm } from "../ui";
 import { formatBytes, formatDuration, formatSpeed } from "../util/formatting";
+import { Repository } from "../repository";
 
 /** Default download timeout in minutes */
 const DEFAULT_DOWNLOAD_TIMEOUT_MINUTES = 10;
@@ -85,6 +86,26 @@ function getFolderStats(
     // Folder may not exist yet
   }
   return { count, size };
+}
+
+/**
+ * Find uncommitted changes and unversioned files under a path.
+ * Returns relative paths that would be lost on depth change.
+ */
+function getUnsafeFiles(repo: Repository, targetPath: string): string[] {
+  const unsafe: string[] = [];
+  const root = repo.workspaceRoot;
+  const prefix = targetPath.replace(/\\/g, "/").toLowerCase();
+
+  for (const group of [repo.changes, repo.unversioned]) {
+    for (const r of group.resourceStates) {
+      const fp = r.resourceUri.fsPath.replace(/\\/g, "/").toLowerCase();
+      if (fp.startsWith(prefix + "/") || fp === prefix) {
+        unsafe.push(path.relative(root, r.resourceUri.fsPath));
+      }
+    }
+  }
+  return unsafe;
 }
 
 export interface DepthQuickPickItem extends QuickPickItem {
@@ -174,29 +195,43 @@ export class SetDepth extends Command {
       return; // User cancelled
     }
 
-    // Confirm for destructive operations (all except infinity add content)
-    if (selected.depth !== "infinity") {
-      const warningMessages: Record<string, string> = {
-        exclude:
-          "This will remove the folder and all its contents locally. " +
-          "The files still exist on the server and can be restored later.",
-        empty:
-          "This will remove all files and subfolders inside this folder. " +
-          "The folder itself will remain as an empty placeholder.",
-        files:
-          "This will remove all subfolders (but keep files). " +
-          "Subfolder contents can be restored later.",
-        immediates:
-          "This will remove contents of subfolders (keeping them as empty). " +
-          "Deeper contents can be restored later."
-      };
+    // For destructive depths, check for uncommitted/unversioned files first
+    const destructiveDepths = ["exclude", "empty", "files", "immediates"];
+    if (destructiveDepths.includes(selected.depth)) {
+      const unsafeFiles = getUnsafeFiles(repository, uri.fsPath);
+      if (unsafeFiles.length > 0) {
+        const fileList = unsafeFiles.slice(0, 5).join("\n");
+        const more = unsafeFiles.length > 5 ? `\n...and ${unsafeFiles.length - 5} more` : "";
+        const choice = await window.showWarningMessage(
+          `${unsafeFiles.length} uncommitted/unversioned file(s) will be lost:\n\n${fileList}${more}\n\nCommit or move them first, or proceed to discard.`,
+          { modal: true },
+          "Continue Anyway"
+        );
+        if (choice !== "Continue Anyway") return;
+      } else {
+        // No unsafe files — show normal confirmation
+        const warningMessages: Record<string, string> = {
+          exclude:
+            "This will remove the folder and all its contents locally. " +
+            "The files still exist on the server and can be restored later.",
+          empty:
+            "This will remove all files and subfolders inside this folder. " +
+            "The folder itself will remain as an empty placeholder.",
+          files:
+            "This will remove all subfolders (but keep files). " +
+            "Subfolder contents can be restored later.",
+          immediates:
+            "This will remove contents of subfolders (keeping them as empty). " +
+            "Deeper contents can be restored later."
+        };
 
-      const confirmed = await confirm(
-        warningMessages[selected.depth] ||
-          "This operation may remove local files.",
-        "Continue"
-      );
-      if (!confirmed) return;
+        const confirmed = await confirm(
+          warningMessages[selected.depth] ||
+            "This operation may remove local files.",
+          "Continue"
+        );
+        if (!confirmed) return;
+      }
     }
 
     // Get configurable timeout
@@ -206,7 +241,7 @@ export class SetDepth extends Command {
     const downloadTimeoutMs = timeoutMinutes * 60 * 1000;
 
     // Suppress status updates during download (prevents WC lock conflicts)
-    repository.sparseDownloadInProgress = true;
+    repository.beginSparseDownload();
 
     try {
       // Detect ghost folder (not locally present) - these are downloads regardless of depth
@@ -272,7 +307,7 @@ export class SetDepth extends Command {
                 const files = items.filter(i => i.kind === "file");
                 expectedFileCount = files.length;
                 expectedTotalSize = files.reduce(
-                  (sum, f) => sum + parseInt(f.size, 10),
+                  (sum, f) => sum + parseInt(f.size ?? "0", 10),
                   0
                 );
 
@@ -305,9 +340,9 @@ export class SetDepth extends Command {
                 pollInterval = setInterval(() => {
                   if (token.isCancellationRequested) return;
                   const stats = getFolderStats(uri.fsPath, pollRecursive);
-                  const pct = Math.round(
+                  const pct = Math.max(0, Math.min(100, Math.round(
                     (stats.size / expectedTotalSize) * 100
-                  );
+                  )));
 
                   // Calculate smoothed speed with exponential moving average
                   const now = Date.now();
@@ -368,9 +403,9 @@ export class SetDepth extends Command {
                 pollInterval = setInterval(() => {
                   const stats = getFolderStats(uri.fsPath);
                   const removedSize = initialTotalSize - stats.size;
-                  const pct = Math.round(
+                  const pct = Math.max(0, Math.min(100, Math.round(
                     (removedSize / initialTotalSize) * 100
-                  );
+                  )));
 
                   // Calculate smoothed speed with exponential moving average
                   const now = Date.now();
@@ -462,7 +497,7 @@ export class SetDepth extends Command {
       window.showErrorMessage(`Failed to change checkout: ${error}`);
     } finally {
       // Re-enable status updates
-      repository.sparseDownloadInProgress = false;
+      repository.endSparseDownload();
     }
   }
 }
