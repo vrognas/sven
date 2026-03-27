@@ -818,7 +818,7 @@
       },
       {
         "command": "sven.sparse.exclude",
-        "title": "Remove from Disk",
+        "title": "Exclude from Download (Kept on Server)",
         "category": "SVN",
         "icon": "$(eye-closed)"
       },

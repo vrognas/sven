@@ -1303,7 +1303,7 @@ export default class SparseCheckoutProvider
 
     if (confirmEnabled) {
       const confirm = await window.showWarningMessage(
-        `Exclude ${label}? This will remove locally. Files remain on server.`,
+        `Exclude ${label} from download? Local copy will be removed. Files are kept on server.`,
         { modal: true },
         "Exclude",
         "Don't Ask Again"
