@@ -14,6 +14,7 @@ suite("Checkout Commands Tests", () => {
   // Mock tracking
   let origShowInputBox: typeof window.showInputBox;
   let origShowOpenDialog: typeof window.showOpenDialog;
+  let origShowQuickPick: typeof window.showQuickPick;
   let origShowErrorMessage: typeof window.showErrorMessage;
   let origShowInfoMessage: typeof window.showInformationMessage;
   let origWithProgress: typeof window.withProgress;
@@ -32,6 +33,7 @@ suite("Checkout Commands Tests", () => {
   let withProgressCalls: any[] = [];
   let executeCommandCalls: any[] = [];
   let configGetCalls: any[] = [];
+  let quickPickCalls: any[] = [];
 
   // Mock results
   let validateUrlResult: boolean = true;
@@ -41,6 +43,7 @@ suite("Checkout Commands Tests", () => {
   let errorMessageResult: string | undefined;
   let infoMessageResult: string | undefined;
   let configGetResult: any = "/home/test";
+  let quickPickResult: any = { depth: "infinity", label: "Full" };
 
   setup(() => {
     // Clear tracking
@@ -53,10 +56,12 @@ suite("Checkout Commands Tests", () => {
     withProgressCalls = [];
     executeCommandCalls = [];
     configGetCalls = [];
+    quickPickCalls = [];
 
     // Reset results
     validateUrlResult = true;
     getBranchNameResult = null;
+    quickPickResult = { depth: "infinity", label: "Full" };
     inputBoxResult = undefined;
     openDialogResult = undefined;
     errorMessageResult = undefined;
@@ -91,6 +96,13 @@ suite("Checkout Commands Tests", () => {
     (window as any).showOpenDialog = async (options?: any) => {
       openDialogCalls.push({ options });
       return openDialogResult;
+    };
+
+    // Mock window.showQuickPick (depth picker)
+    origShowQuickPick = window.showQuickPick;
+    (window as any).showQuickPick = async (items?: any, options?: any) => {
+      quickPickCalls.push({ items, options });
+      return quickPickResult;
     };
 
     // Mock window.showErrorMessage
@@ -162,6 +174,7 @@ suite("Checkout Commands Tests", () => {
     getBranchNameSpy.mockRestore();
     (window as any).showInputBox = origShowInputBox;
     (window as any).showOpenDialog = origShowOpenDialog;
+    (window as any).showQuickPick = origShowQuickPick;
     (window as any).showErrorMessage = origShowErrorMessage;
     (window as any).showInformationMessage = origShowInfoMessage;
     (window as any).withProgress = origWithProgress;

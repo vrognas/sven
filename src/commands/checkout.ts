@@ -11,6 +11,36 @@ import { configuration } from "../helpers/configuration";
 import { svnErrorCodes } from "../svn";
 import { validateRepositoryUrl } from "../validation";
 import { Command } from "./command";
+import { DepthQuickPickItem } from "./setDepth";
+
+/** Depth options for initial checkout — shallow first so user can deepen via Selective Download */
+const initialCheckoutDepthOptions: DepthQuickPickItem[] = [
+  {
+    label: "$(list-tree) Shallow (recommended)",
+    description: "Files + empty subfolders",
+    detail:
+      "Fast checkout. Shows repo structure, then use Selective Download to get what you need.",
+    depth: "immediates"
+  },
+  {
+    label: "$(folder) Folder Only",
+    description: "Empty placeholder",
+    detail: "Fastest checkout. Only creates the folder, no files downloaded.",
+    depth: "empty"
+  },
+  {
+    label: "$(file) Files Only",
+    description: "Skip subfolders",
+    detail: "Downloads root files but no subfolders.",
+    depth: "files"
+  },
+  {
+    label: "$(folder-opened) Full",
+    description: "Download everything",
+    detail: "Downloads all files and folders recursively. Can be slow for large repos.",
+    depth: "infinity"
+  }
+];
 
 export class Checkout extends Command {
   constructor() {
@@ -21,6 +51,7 @@ export class Checkout extends Command {
     if (!url) {
       url = await window.showInputBox({
         prompt: "Repository URL",
+        title: "Checkout (1/3): Repository URL",
         ignoreFocusOut: true
       });
     }
@@ -59,17 +90,23 @@ export class Checkout extends Command {
     const uri = uris[0]!;
     const parentPath = uri.fsPath;
 
+    // Default folder name: from branch layout (strip trunk/branches/tags),
+    // or last path segment of URL
     let folderName: string | undefined;
-
-    // Get folder name from branch
     const branch = getBranchName(url);
     if (branch) {
       const baseUrl = url.replace(/\//g, "/").replace(branch.path, "");
       folderName = path.basename(baseUrl);
     }
+    if (!folderName) {
+      // Strip trailing slashes and query string, take last segment
+      const cleanUrl = url.replace(/[?#].*$/, "").replace(/\/+$/, "");
+      folderName = path.basename(cleanUrl) || undefined;
+    }
 
     folderName = await window.showInputBox({
       prompt: "Folder name",
+      title: "Checkout (2/3): Folder Name",
       value: folderName,
       ignoreFocusOut: true
     });
@@ -80,6 +117,16 @@ export class Checkout extends Command {
 
     const repositoryPath = path.join(parentPath, folderName);
 
+    // Depth picker — default to shallow so user can selectively download later
+    const depthPick = await window.showQuickPick(initialCheckoutDepthOptions, {
+      placeHolder: "How much to download? (use Selective Download to add more later)",
+      title: `Checkout (3/3): Download Depth`
+    });
+
+    if (!depthPick) {
+      return;
+    }
+
     // Use Notification location if supported
     let location: ProgressLocation = ProgressLocation.Window;
     if ((ProgressLocation as unknown as Record<string, unknown>).Notification) {
@@ -88,9 +135,10 @@ export class Checkout extends Command {
       ).Notification!;
     }
 
+    const depthLabel = depthPick.depth === "infinity" ? "" : ` (${depthPick.description})`;
     const progressOptions = {
       location,
-      title: `Checkout svn repository '${url}'...`,
+      title: `Checkout svn repository${depthLabel}...`,
       cancellable: true
     };
 
@@ -103,7 +151,7 @@ export class Checkout extends Command {
       try {
         await window.withProgress(progressOptions, async () => {
           const sourceControlManager = await this.getSourceControlManager();
-          const args = ["checkout", url, repositoryPath];
+          const args = ["checkout", "--depth", depthPick.depth, url, repositoryPath];
           await sourceControlManager.svn.exec(parentPath, args, opt);
         });
         break;
