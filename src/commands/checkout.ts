@@ -2,9 +2,19 @@
 // Copyright (c) 2025-present Viktor Rognas
 // Licensed under MIT License
 
+import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { commands, ProgressLocation, Uri, window, workspace } from "vscode";
+import {
+  commands,
+  ExtensionContext,
+  ProgressLocation,
+  QuickPickItem,
+  QuickPickItemKind,
+  Uri,
+  window,
+  workspace
+} from "vscode";
 import { IAuth, ICpOptions, ISvnErrorData } from "../common/types";
 import { getBranchName } from "../helpers/branch";
 import { configuration } from "../helpers/configuration";
@@ -12,6 +22,10 @@ import { svnErrorCodes } from "../svn";
 import { validateRepositoryUrl } from "../validation";
 import { Command } from "./command";
 import { DepthQuickPickItem } from "./setDepth";
+
+/** Max number of URLs to remember */
+const MAX_URL_HISTORY = 25;
+const URL_HISTORY_KEY = "sven.checkoutUrlHistory";
 
 /** Depth options for initial checkout — shallow first so user can deepen via Selective Download */
 const initialCheckoutDepthOptions: DepthQuickPickItem[] = [
@@ -48,12 +62,13 @@ export class Checkout extends Command {
   }
 
   public async execute(url?: string) {
+    // Get SCM early for globalState access (URL history)
+    const sourceControlManager = await this.getSourceControlManager();
+    const globalState = sourceControlManager.context.globalState;
+
+    // Step 1: Repository URL (with MRU history)
     if (!url) {
-      url = await window.showInputBox({
-        prompt: "Repository URL",
-        title: "Checkout (1/3): Repository URL",
-        ignoreFocusOut: true
-      });
+      url = await this.promptUrl(globalState);
     }
 
     if (!url) {
@@ -68,6 +83,7 @@ export class Checkout extends Command {
       return;
     }
 
+    // Step 2: Select parent directory
     let defaultCheckoutDirectory =
       configuration.get<string>("defaultCheckoutDirectory") || os.homedir();
     defaultCheckoutDirectory = defaultCheckoutDirectory.replace(
@@ -90,8 +106,7 @@ export class Checkout extends Command {
     const uri = uris[0]!;
     const parentPath = uri.fsPath;
 
-    // Default folder name: from branch layout (strip trunk/branches/tags),
-    // or last path segment of URL
+    // Step 3: Folder name (defaults to repo name from URL)
     let folderName: string | undefined;
     const branch = getBranchName(url);
     if (branch) {
@@ -99,14 +114,13 @@ export class Checkout extends Command {
       folderName = path.basename(baseUrl);
     }
     if (!folderName) {
-      // Strip trailing slashes and query string, take last segment
       const cleanUrl = url.replace(/[?#].*$/, "").replace(/\/+$/, "");
       folderName = path.basename(cleanUrl) || undefined;
     }
 
     folderName = await window.showInputBox({
       prompt: "Folder name",
-      title: "Checkout (2/3): Folder Name",
+      title: "Checkout (3/4): Folder Name",
       value: folderName,
       ignoreFocusOut: true
     });
@@ -117,15 +131,54 @@ export class Checkout extends Command {
 
     const repositoryPath = path.join(parentPath, folderName);
 
-    // Depth picker — default to shallow so user can selectively download later
-    const depthPick = await window.showQuickPick(initialCheckoutDepthOptions, {
-      placeHolder: "How much to download? (use Selective Download to add more later)",
-      title: `Checkout (3/3): Download Depth`
-    });
+    // Warn if target folder exists and is non-empty
+    try {
+      const entries = fs.readdirSync(repositoryPath);
+      if (entries.length > 0) {
+        const choice = await window.showWarningMessage(
+          `"${folderName}" already exists and contains ${entries.length} item(s). Checkout into this folder?`,
+          { modal: true },
+          "Continue"
+        );
+        if (choice !== "Continue") return;
+      }
+    } catch {
+      // Folder doesn't exist — that's fine
+    }
 
-    if (!depthPick) {
+    // Step 4: Depth + externals picker
+    const depthPick = await window.showQuickPick(
+      [
+        ...initialCheckoutDepthOptions,
+        { label: "", kind: QuickPickItemKind.Separator } as DepthQuickPickItem,
+        {
+          label: "$(exclude) Omit Externals",
+          description: "Skip svn:externals",
+          detail: "Don't download external references. Useful if externals are large or need separate credentials.",
+          depth: "_omitExternals" as any
+        } as DepthQuickPickItem
+      ],
+      {
+        placeHolder: "How much to download? (use Selective Download to add more later)",
+        title: "Checkout (4/4): Download Depth",
+        canPickMany: true
+      }
+    ) as DepthQuickPickItem[] | undefined;
+
+    if (!depthPick || depthPick.length === 0) {
       return;
     }
+
+    // Extract depth and externals flag from multi-select
+    const omitExternals = depthPick.some(p => (p.depth as string) === "_omitExternals");
+    const selectedDepth = depthPick.find(p => (p.depth as string) !== "_omitExternals");
+    if (!selectedDepth) {
+      window.showErrorMessage("Please select a download depth.");
+      return;
+    }
+
+    // Save URL to history (after all validation passed)
+    this.saveUrlHistory(globalState, url);
 
     // Use Notification location if supported
     let location: ProgressLocation = ProgressLocation.Window;
@@ -135,7 +188,7 @@ export class Checkout extends Command {
       ).Notification!;
     }
 
-    const depthLabel = depthPick.depth === "infinity" ? "" : ` (${depthPick.description})`;
+    const depthLabel = selectedDepth.depth === "infinity" ? "" : ` (${selectedDepth.description})`;
     const progressOptions = {
       location,
       title: `Checkout svn repository${depthLabel}...`,
@@ -150,8 +203,10 @@ export class Checkout extends Command {
       attempt++;
       try {
         await window.withProgress(progressOptions, async () => {
-          const sourceControlManager = await this.getSourceControlManager();
-          const args = ["checkout", "--depth", depthPick.depth, url, repositoryPath];
+          const args = ["checkout", "--depth", selectedDepth.depth, url, repositoryPath];
+          if (omitExternals) {
+            args.push("--ignore-externals");
+          }
           await sourceControlManager.svn.exec(parentPath, args, opt);
         });
         break;
@@ -212,5 +267,70 @@ export class Checkout extends Command {
         uri: Uri.file(repositoryPath)
       });
     }
+  }
+
+  /** Show URL picker with history + option to enter new URL */
+  private async promptUrl(
+    globalState: { get<T>(key: string): T | undefined }
+  ): Promise<string | undefined> {
+    const history = globalState.get<string[]>(URL_HISTORY_KEY) || [];
+
+    if (history.length === 0) {
+      // No history — just show input box
+      return window.showInputBox({
+        prompt: "Repository URL",
+        title: "Checkout (1/4): Repository URL",
+        ignoreFocusOut: true
+      });
+    }
+
+    // Show history with "Enter new URL" option
+    interface UrlPickItem extends QuickPickItem {
+      url?: string;
+      isNew?: boolean;
+    }
+
+    const items: UrlPickItem[] = [
+      {
+        label: "$(add) Enter new URL...",
+        isNew: true
+      },
+      { label: "Recent", kind: QuickPickItemKind.Separator },
+      ...history.map(u => ({
+        label: u,
+        url: u
+      }))
+    ];
+
+    const pick = await window.showQuickPick(items, {
+      placeHolder: "Select a recent repository or enter a new URL",
+      title: "Checkout (1/4): Repository URL"
+    });
+
+    if (!pick) return undefined;
+
+    if (pick.isNew) {
+      return window.showInputBox({
+        prompt: "Repository URL",
+        title: "Checkout (1/4): Repository URL",
+        ignoreFocusOut: true
+      });
+    }
+
+    return pick.url;
+  }
+
+  /** Save URL to MRU history */
+  private saveUrlHistory(
+    globalState: { get<T>(key: string): T | undefined; update(key: string, value: unknown): Thenable<void> },
+    url: string
+  ): void {
+    const history = globalState.get<string[]>(URL_HISTORY_KEY) || [];
+    // Move to front, deduplicate
+    const updated = [url, ...history.filter(u => u !== url)].slice(
+      0,
+      MAX_URL_HISTORY
+    );
+    globalState.update(URL_HISTORY_KEY, updated);
   }
 }

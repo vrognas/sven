@@ -10,6 +10,15 @@ import * as configuration from "../../../helpers/configuration";
 import { Repository } from "../../../repository";
 import { vi } from "vitest";
 
+/** Build a mock globalState for test SCM objects */
+function mockGlobalState() {
+  const store: Record<string, any> = {};
+  return {
+    get: (key: string) => store[key],
+    update: async (key: string, value: any) => { store[key] = value; }
+  };
+}
+
 suite("Checkout Commands Tests", () => {
   // Mock tracking
   let origShowInputBox: typeof window.showInputBox;
@@ -43,7 +52,7 @@ suite("Checkout Commands Tests", () => {
   let errorMessageResult: string | undefined;
   let infoMessageResult: string | undefined;
   let configGetResult: any = "/home/test";
-  let quickPickResult: any = { depth: "infinity", label: "Full" };
+  let quickPickResult: any = [{ depth: "infinity", label: "Full" }];
 
   setup(() => {
     // Clear tracking
@@ -61,7 +70,7 @@ suite("Checkout Commands Tests", () => {
     // Reset results
     validateUrlResult = true;
     getBranchNameResult = null;
-    quickPickResult = { depth: "infinity", label: "Full" };
+    quickPickResult = [{ depth: "infinity", label: "Full" }];
     inputBoxResult = undefined;
     openDialogResult = undefined;
     errorMessageResult = undefined;
@@ -144,10 +153,17 @@ suite("Checkout Commands Tests", () => {
       executeCommandCalls.push({ command, args });
 
       if (command === "sven.getSourceControlManager") {
+        const stateStore: Record<string, any> = {};
         return {
           svn: {
             exec: async () => {
               return { stdout: "Checked out", stderr: "", exitCode: 0 };
+            }
+          },
+          context: {
+            globalState: {
+              get: (key: string) => stateStore[key],
+              update: async (key: string, value: any) => { stateStore[key] = value; }
             }
           }
         };
@@ -406,7 +422,8 @@ suite("Checkout Commands Tests", () => {
                 }
                 return { stdout: "Checked out", stderr: "", exitCode: 0 };
               }
-            }
+            },
+            context: { globalState: mockGlobalState() }
           };
         }
 
@@ -445,7 +462,8 @@ suite("Checkout Commands Tests", () => {
                 err.svnErrorCode = svnErrorCodes.AuthorizationFailed;
                 throw err;
               }
-            }
+            },
+            context: { globalState: mockGlobalState() }
           };
         }
 
@@ -481,7 +499,8 @@ suite("Checkout Commands Tests", () => {
               exec: async () => {
                 throw new Error("Network error");
               }
-            }
+            },
+            context: { globalState: mockGlobalState() }
           };
         }
 
@@ -542,7 +561,8 @@ suite("Checkout Commands Tests", () => {
                 stderr: "",
                 exitCode: 0
               })
-            }
+            },
+            context: { globalState: mockGlobalState() }
           };
         }
 
@@ -833,7 +853,8 @@ suite("Checkout Commands Tests", () => {
                 err.svnErrorCode = svnErrorCodes.AuthorizationFailed;
                 throw err;
               }
-            }
+            },
+            context: { globalState: mockGlobalState() }
           };
         }
 
