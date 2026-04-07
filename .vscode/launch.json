@@ -30,7 +30,7 @@
         "--extensionDevelopmentPath=${workspaceRoot}",
         "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/redmyne",
         "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/vscode-nmtran",
-        "C:/Projects/test/Test-Viktor"
+        "C:/Projects/Test-Viktor"
       ],
       "sourceMaps": true,
       "outFiles": ["${workspaceRoot}/dist/**/*.js"]
