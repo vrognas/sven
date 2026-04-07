@@ -115,7 +115,7 @@ describe("ConventionalCommitService", () => {
         { type: "good", icon: "", description: "Empty icon" },
         { type: "also-good", icon: "$(ok)", description: "" },
         { type: "valid", icon: "$(check)", description: "Valid entry" }
-      ] as any);
+      ]);
       const types = service2.getCommitTypes();
       expect(types).toHaveLength(2); // valid + custom
       expect(types[0].type).toBe("valid");
