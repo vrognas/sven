@@ -560,7 +560,7 @@ export class Repository implements IRemoteRepository {
   @debounce(500)
   private async onDidAnyFileChanged(e: Uri) {
     // Skip during sparse checkout downloads to prevent svn info spam
-    if (this._sparseDownloadInProgress) {
+    if (this.sparseDownloadInProgress) {
       return;
     }
 
@@ -855,7 +855,7 @@ export class Repository implements IRemoteRepository {
   ) {
     // Skip status updates during sparse checkout downloads
     // Prevents working copy lock conflicts on Windows
-    if (this._sparseDownloadInProgress) {
+    if (this.sparseDownloadInProgress) {
       return;
     }
 

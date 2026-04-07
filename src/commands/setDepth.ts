@@ -493,7 +493,7 @@ export class SetDepth extends Command {
         // Refresh sparse checkout tree to reflect changes
         commands.executeCommand("sven.sparse.refresh");
       } else {
-        const stderr = result.stderr || String(error || "Unknown error");
+        const stderr = result.stderr || "Unknown error";
         if (needsCleanupFromFullError(stderr)) {
           const action = await window.showErrorMessage(
             "Working copy is locked. Run cleanup to fix.",
