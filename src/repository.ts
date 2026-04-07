@@ -4,6 +4,7 @@
 
 import * as path from "path";
 import {
+  CancellationToken,
   commands,
   Disposable,
   env,
@@ -106,6 +107,7 @@ import {
   getSvnDir,
   isDescendant,
   isReadOnly,
+  shouldFetchLockStatus,
   timeout
 } from "./util";
 import { logError } from "./util/errorLogger";
@@ -194,6 +196,9 @@ export class Repository implements IRemoteRepository {
   private needsLockFilesSet = new Set<string>();
   private needsLockCacheExpiry = 0;
   private static readonly NEEDS_LOCK_CACHE_TTL = 60000; // 60 seconds
+
+  // Cached result from last remote-change check (background polling or explicit)
+  private _lastRemoteCheck?: { hasChanges: boolean; timestamp: number };
 
   // Property caches for decoration tooltips (eol-style, mime-type)
   private eolStyleCache = new Map<string, string>();
@@ -885,18 +890,21 @@ export class Repository implements IRemoteRepository {
     this.isIncomplete = result.isIncomplete;
     this.needCleanUp = result.needCleanUp;
 
-    // Populate lock status cache from status results
-    // Clear and replace to remove stale entries (unlocked files)
-    const prevLockCount = this.lockStatusCache.size;
-    this.lockStatusCache.clear();
-    for (const [relativePath, lockInfo] of result.lockStatuses) {
-      // Normalize key: forward slashes, lowercase on Windows
-      const cacheKey = this.normalizeRelativePath(relativePath);
-      this.lockStatusCache.set(cacheKey, lockInfo);
-    }
-    // Fire event if lock count changed
-    if (this.lockStatusCache.size !== prevLockCount) {
-      this._onDidChangeLockStatus.fire();
+    // Only update lock status cache when we actually fetched lock info
+    // (--show-updates). Local-only status calls don't return lock data,
+    // so clearing the cache would wipe valid entries from previous remote polls.
+    if (fetchLockStatus) {
+      const prevLockCount = this.lockStatusCache.size;
+      this.lockStatusCache.clear();
+      for (const [relativePath, lockInfo] of result.lockStatuses) {
+        // Normalize key: forward slashes, lowercase on Windows
+        const cacheKey = this.normalizeRelativePath(relativePath);
+        this.lockStatusCache.set(cacheKey, lockInfo);
+      }
+      // Fire event if lock count changed
+      if (this.lockStatusCache.size !== prevLockCount) {
+        this._onDidChangeLockStatus.fire();
+      }
     }
 
     // Delegate group management to ResourceGroupManager
@@ -934,13 +942,16 @@ export class Repository implements IRemoteRepository {
       this.groupManager.remoteChanges.repository = this;
     }
 
-    // Update remote changes count
-    if (
-      checkRemoteChanges &&
-      result.remoteChanges.length !== this.remoteChangedFiles
-    ) {
-      this.remoteChangedFiles = result.remoteChanges.length;
-      this._onDidChangeRemoteChangedFiles.fire();
+    // Update remote changes count + cache result for PreCommitUpdateService
+    if (checkRemoteChanges) {
+      this._lastRemoteCheck = {
+        hasChanges: result.remoteChanges.length > 0,
+        timestamp: Date.now()
+      };
+      if (result.remoteChanges.length !== this.remoteChangedFiles) {
+        this.remoteChangedFiles = result.remoteChanges.length;
+        this._onDidChangeRemoteChangedFiles.fire();
+      }
     }
 
     // Update context key for remote changes
@@ -1365,27 +1376,56 @@ export class Repository implements IRemoteRepository {
   }
 
   public async updateRevision(
-    ignoreExternals: boolean = false
+    ignoreExternals: boolean = false,
+    { skipHistoryRefresh = false, token }: { skipHistoryRefresh?: boolean; token?: CancellationToken } = {}
   ): Promise<IUpdateResult> {
     const result = await this.run<IUpdateResult>(Operation.Update, async () => {
-      const updateResult = await this.repository.update(ignoreExternals);
+      const updateResult = await this.repository.update(ignoreExternals, { token });
       // Note: status refresh handled by run() via updateModelState() after callback
       // Do NOT call this.status() here - causes credentialLock deadlock (nested retryRun)
-      // Skip updateRemoteChangedFiles - after update we're at HEAD, no remote changes
+      // After update we're at HEAD — mark cache accordingly
+      this._lastRemoteCheck = { hasChanges: false, timestamp: Date.now() };
       return updateResult;
     });
-    // Fetch history views to show new commits from update
-    await commands.executeCommand("sven.repolog.fetch");
-    await commands.executeCommand("sven.itemlog.refresh");
+    // Fetch history views (skipped when caller handles refresh, e.g. commitFiles)
+    if (!skipHistoryRefresh) {
+      await Promise.all([
+        commands.executeCommand("sven.repolog.fetch"),
+        commands.executeCommand("sven.itemlog.refresh")
+      ]);
+    }
     return result;
   }
 
   /**
    * Check if server has new commits since last update.
    * Uses svn log BASE:HEAD to compare local vs remote revision.
+   * Caches result for reuse by PreCommitUpdateService.
    */
   public async hasRemoteChanges(): Promise<boolean> {
-    return this.repository.hasRemoteChanges();
+    const result = await this.repository.hasRemoteChanges();
+    this._lastRemoteCheck = { hasChanges: result, timestamp: Date.now() };
+    return result;
+  }
+
+  /**
+   * Get cached result from last remote-change check.
+   * Used by PreCommitUpdateService to skip redundant network call.
+   */
+  public getLastRemoteCheckResult():
+    | { hasChanges: boolean; timestamp: number }
+    | undefined {
+    return this._lastRemoteCheck;
+  }
+
+  /**
+   * Get configured remote check frequency in ms.
+   * Used as freshness threshold for cached remote-check result.
+   */
+  public getRemoteCheckFrequencyMs(): number {
+    return (
+      configuration.get<number>("remoteChanges.checkFrequency", 300) * 1000
+    );
   }
 
   public async pullIncomingChange(path: string) {
@@ -1412,15 +1452,23 @@ export class Repository implements IRemoteRepository {
   }
 
   public async commitFiles(message: string, files: string[]) {
-    // Check for needs-lock files that aren't locked
+    // Ensure needs-lock cache is warm before parallel checks.
+    // Cold cache would cause N concurrent svn propget calls hitting wc.db.
+    if (Date.now() >= this.needsLockCacheExpiry) {
+      await this.refreshNeedsLockCache();
+    }
+    // Check for needs-lock files that aren't locked (parallel for performance)
     // Skip warning for property-only changes (e.g., setting svn:needs-lock itself)
+    const needsLockResults = await Promise.all(
+      files.map(async file => ({
+        file,
+        hasNeedsLock: await this.hasNeedsLock(file)
+      }))
+    );
     const unlockedNeedsLock: string[] = [];
-    for (const file of files) {
-      const hasNeedsLock = await this.hasNeedsLock(file);
+    for (const { file, hasNeedsLock } of needsLockResults) {
       if (hasNeedsLock) {
-        // Check if file has lock token
         const resource = this.getResourceFromFile(file);
-        // Skip if property-only change (status=NORMAL means no content changes)
         if (resource?.type === Status.NORMAL) {
           continue;
         }
@@ -1455,10 +1503,10 @@ export class Repository implements IRemoteRepository {
           {
             location: ProgressLocation.Notification,
             title: "Syncing working copy...",
-            cancellable: false
+            cancellable: true
           },
-          async () => {
-            await this.updateRevision();
+          async (_progress, token) => {
+            await this.updateRevision(false, { skipHistoryRefresh: true, token });
           }
         );
       } catch (updateErr) {
@@ -1481,11 +1529,12 @@ export class Repository implements IRemoteRepository {
       }
     }
 
-    // Refresh repo info (will use cache if revision unchanged)
-    await this.repository.updateInfo(true);
-    // Fetch history views to show new commit
-    await commands.executeCommand("sven.repolog.fetch");
-    await commands.executeCommand("sven.itemlog.refresh");
+    // Refresh repo info + fetch history views in parallel
+    await Promise.all([
+      this.repository.updateInfo(true),
+      commands.executeCommand("sven.repolog.fetch"),
+      commands.executeCommand("sven.itemlog.refresh")
+    ]);
     return result;
   }
 
@@ -1963,8 +2012,10 @@ export class Repository implements IRemoteRepository {
 
         const checkRemote = operation === Operation.StatusRemote;
 
-        // Always fetch lock status to show K/O/B/T badges in explorer
-        const fetchLockStatus = true;
+        // Only fetch lock status (--show-updates) when needed.
+        // Regular status refreshes (file watcher) stay local-only for speed.
+        // Lock badges refresh during remote polling and after lock/unlock.
+        const fetchLockStatus = shouldFetchLockStatus(operation);
 
         if (!isReadOnly(operation)) {
           await this.updateModelState(

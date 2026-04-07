@@ -7,6 +7,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.28] - 2026-04-07
+
+### Changed
+
+- **Commit workflow perf**: Reuse cached remote-check result from background polling — skips redundant `svn log` network call when fresh
+- **Commit workflow perf**: Parallel needs-lock checks — `Promise.all` instead of sequential `await` loop
+- **Commit workflow perf**: Deduplicate post-commit history fetches — `updateRevision` called from `commitFiles` no longer fires its own `repolog.fetch`/`itemlog.refresh`
+- **Commit workflow perf**: Parallelize history fetch + info refresh after commit with `Promise.all`
+- **Commit workflow UX**: Post-commit update is now cancellable (kills SVN process via CancellationToken)
+- **Status call perf**: `--show-updates` (network-hitting) now only added for remote checks and lock/unlock operations — file-watcher-triggered status refreshes stay local-only
+
+---
+
 ## [0.2.27] - 2026-03-26
 
 ### Added

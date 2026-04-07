@@ -1,17 +1,37 @@
 # Lessons Learned
 
-**Version**: 0.2.26
-**Updated**: 2026-03-26
+**Version**: 0.2.28
+**Updated**: 2026-04-07
 
 ---
 
-### 57. Test Mirrors Diverge from Production — Use Real Imports
+### 62. Network Flags Should Be Opt-In, Not Always-On
 
-**Lesson**: `cleanupErrorDetection.test.ts` had a local `needsCleanup` mirror that omitted E155015, while production `CLEANUP_ERROR_TOKENS` still included it. The test passed (matching desired behavior) while production was wrong.
+**Lesson**: `fetchLockStatus = true` was hardcoded in `run()`, adding `--show-updates` (network call) to every status refresh — including file-watcher-triggered ones. This caused 20+ server round-trips during normal usage like opening files.
 
-**Fix**: Import real `needsCleanupFromFullError` / `needsConflictResolutionFromFullError` from production code in tests. Mirror functions can't catch regressions if they diverge.
+**Fix**: Extract `shouldFetchLockStatus(operation)` — returns `true` only for `StatusRemote`, `Lock`, `Unlock`. Regular status stays local-only.
 
-**Rule**: Prefer importing real detection functions in tests over maintaining local mirrors.
+**Rule**: Flags that hit the network must be opt-in per operation, never hardcoded to always-on.
+
+---
+
+### 61. Reuse Background Polling Results for User-Triggered Checks
+
+**Lesson**: Pre-commit update called `svn log -r BASE:HEAD` even though background polling already checked seconds ago. On slow connections, this added 5-30s of pure wait.
+
+**Fix**: Cache `hasRemoteChanges` result with timestamp. `PreCommitUpdateService` reuses it if within poll interval. Both `hasRemoteChanges()` and `updateModelState(checkRemote=true)` populate the cache.
+
+**Rule**: When background polling already computes a value, cache it with TTL and let on-demand paths reuse it.
+
+---
+
+### 60. Deduplicate Cascading Refreshes in Compound Operations
+
+**Lesson**: `commitFiles()` called `updateRevision()` post-commit, which fired `repolog.fetch` + `itemlog.refresh`. Then `commitFiles()` fired the same two commands again. 4 redundant history fetches per commit.
+
+**Fix**: Add `skipHistoryRefresh` option to `updateRevision()`. Caller handles refresh once.
+
+**Rule**: When operation A calls operation B, let A own the side effects — give B an opt-out flag.
 
 ---
 

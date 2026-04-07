@@ -5,7 +5,7 @@
 import * as path from "path";
 import * as semver from "semver";
 import * as tmp from "tmp";
-import { Uri, workspace } from "vscode";
+import { CancellationToken, Uri, workspace } from "vscode";
 import {
   ConstructorPolicy,
   ICpOptions,
@@ -1196,7 +1196,8 @@ export class Repository {
   }
 
   public async update(
-    ignoreExternals: boolean = false
+    ignoreExternals: boolean = false,
+    options: { token?: CancellationToken } = {}
   ): Promise<IUpdateResult> {
     const args = ["update"];
 
@@ -1204,7 +1205,7 @@ export class Repository {
       args.push("--ignore-externals");
     }
 
-    const result = await this.exec(args);
+    const result = await this.exec(args, { token: options.token });
 
     this.resetInfoCache();
 

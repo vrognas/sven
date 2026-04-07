@@ -1,7 +1,7 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.26
-**Updated**: 2026-03-26
+**Version**: 0.2.28
+**Updated**: 2026-04-07
 
 ---
 
@@ -117,11 +117,13 @@ All critical bottlenecks fixed:
 - **Glob matching**: Two-tier simple→complex, 3x faster
 - **Batch operations**: Adaptive chunking, 2-3x faster
 - **Startup**: Conditional activation + path caching, 1-3s saved
+- **Commit workflow**: Cached remote-check, parallel needs-lock, deduplicated history fetches — fewer network round-trips per commit
 
 Caching strategy:
 
 - LRU eviction for info, blame, log caches
 - Immutable data (SVN logs) = infinite TTL
+- Remote-check result cached with poll-frequency TTL for pre-commit reuse
 
 ---
 

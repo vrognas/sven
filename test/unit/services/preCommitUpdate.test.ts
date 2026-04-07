@@ -27,7 +27,9 @@ describe("PreCommitUpdateService", () => {
     mockRepository = {
       root: "/test/repo",
       hasRemoteChanges: vi.fn().mockResolvedValue(true),
-      updateRevision: vi.fn()
+      updateRevision: vi.fn(),
+      getLastRemoteCheckResult: vi.fn().mockReturnValue(undefined),
+      getRemoteCheckFrequencyMs: vi.fn().mockReturnValue(300_000)
     };
 
     service = new PreCommitUpdateService();

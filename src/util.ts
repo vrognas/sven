@@ -249,6 +249,22 @@ export function isReadOnly(operation: Operation): boolean {
 }
 
 /**
+ * Whether an operation needs lock status (--show-updates) in its post-op status.
+ * Only operations that interact with locks or check remote state need it.
+ * Regular status refreshes (file watcher) stay local-only for performance.
+ */
+export function shouldFetchLockStatus(operation: Operation | string): boolean {
+  switch (operation) {
+    case Operation.StatusRemote:
+    case Operation.Lock:
+    case Operation.Unlock:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
  * Remove directory recursively
  * @param {string} dirPath
  * @see https://stackoverflow.com/a/42505874/3027390

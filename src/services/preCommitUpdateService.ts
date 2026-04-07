@@ -24,11 +24,13 @@ export type ConflictChoice = "abort" | "continue";
 /**
  * Service for running SVN update before commit.
  * Checks for remote changes first, only updates if needed.
+ * Uses cached polling result when fresh enough to avoid redundant network call.
  */
 export class PreCommitUpdateService {
   /**
    * Run SVN update with progress notification.
    * First checks if server has new commits - skips update if already at HEAD.
+   * Reuses cached remote-check result from background polling when fresh.
    */
   async runUpdate(repository: Repository): Promise<UpdateResult> {
     return window.withProgress(
@@ -43,17 +45,33 @@ export class PreCommitUpdateService {
         }
 
         try {
-          // Check if update is needed
+          // Check if update is needed — reuse cached result if fresh
           progress.report({ message: "Checking server for new commits..." });
-          const hasChanges = await repository.hasRemoteChanges();
+          let hasChanges: boolean;
+
+          const cached = repository.getLastRemoteCheckResult();
+          const frequencyMs = repository.getRemoteCheckFrequencyMs();
+          if (
+            cached &&
+            frequencyMs > 0 &&
+            Date.now() - cached.timestamp < frequencyMs
+          ) {
+            hasChanges = cached.hasChanges;
+          } else {
+            hasChanges = await repository.hasRemoteChanges();
+          }
 
           if (!hasChanges) {
             // Already at HEAD, skip update
             return { success: true, skipped: true };
           }
 
+          if (token.isCancellationRequested) {
+            return { success: false, cancelled: true };
+          }
+
           progress.report({ message: "Running svn update..." });
-          const updateResult = await repository.updateRevision();
+          const updateResult = await repository.updateRevision(false, { token });
 
           if (updateResult.conflicts.length > 0) {
             return {

@@ -37,7 +37,9 @@ describe("CommitFlowService", () => {
         conflicts: [],
         message: "Updated to revision 100"
       }),
-      commitFiles: vi.fn().mockResolvedValue("Committed revision 42")
+      commitFiles: vi.fn().mockResolvedValue("Committed revision 42"),
+      getLastRemoteCheckResult: vi.fn().mockReturnValue(undefined),
+      getRemoteCheckFrequencyMs: vi.fn().mockReturnValue(300_000)
     };
 
     service = new CommitFlowService(new ConventionalCommitService());
