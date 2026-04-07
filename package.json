@@ -1894,7 +1894,7 @@
         },
         "sven.commit.types": {
           "type": "array",
-          "markdownDescription": "Commit types for the guided commit flow. When types are defined, the quick-pick shows a type picker → scope → description. When empty (default), goes straight to a free-form message input.\n\nEach entry is a JSON object with three required fields:\n- `type` — prefix in commit message (e.g. `data`, `model`, `analysis`)\n- `icon` — [VS Code icon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) as `$(icon-name)`\n- `description` — short text shown in the quick-pick\n\nExample:\n```json\n[\n  { \"type\": \"data\", \"icon\": \"$(database)\", \"description\": \"Data changes\" },\n  { \"type\": \"model\", \"icon\": \"$(beaker)\", \"description\": \"Model updates\" }\n]\n```",
+          "markdownDescription": "Commit types for the guided commit flow. When types are defined, the quick-pick shows a type picker → scope → description. When empty (default), goes straight to a free-form message input.\n\nEach entry is a JSON object with three required fields:\n- `type` — prefix in commit message (e.g. `data`, `model`, `analysis`)\n- `icon` — [VS Code icon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) as `$(icon-name)`\n- `description` — short text shown in the quick-pick\n\nExample (paste into `settings.json`):\n\n`{ \"type\": \"data\", \"icon\": \"$(database)\", \"description\": \"Data changes\" }`\n\n`{ \"type\": \"model\", \"icon\": \"$(beaker)\", \"description\": \"Model updates\" }`",
           "default": [],
           "items": {
             "type": "object",
