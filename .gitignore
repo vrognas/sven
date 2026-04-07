@@ -9,3 +9,4 @@ sven*.vsix
 *.tsbuildinfo
 .claude/settings.json
 .claude/settings.local.json
+docs/superpowers/
