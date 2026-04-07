@@ -98,7 +98,7 @@ export class ConventionalCommitService {
       return null;
     }
 
-    const [, type, scope, description] = match;
+    const [, type = "", scope, description] = match;
     return {
       type,
       scope: scope || undefined,
