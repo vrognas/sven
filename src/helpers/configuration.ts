@@ -94,11 +94,6 @@ class Configuration {
     return this.get<boolean>("commit.useQuickPick", true);
   }
 
-  /** Enable conventional commits format */
-  public commitConventionalCommits(): boolean {
-    return this.get<boolean>("commit.conventionalCommits", true);
-  }
-
   /** Show colored author dots in history */
   public logAuthorColors(): boolean {
     return this.get<boolean>("log.authorColors", true);

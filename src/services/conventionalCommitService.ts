@@ -4,117 +4,44 @@
 import { truncate } from "../util/formatting";
 
 /**
- * Conventional commit type definition
- */
-export type CommitType =
-  | "feat"
-  | "fix"
-  | "docs"
-  | "style"
-  | "refactor"
-  | "perf"
-  | "test"
-  | "build"
-  | "ci"
-  | "chore"
-  | "revert"
-  | "custom";
-
-/**
  * Parsed conventional commit structure
  */
 export interface ConventionalCommit {
-  type: CommitType | string;
+  type: string;
   scope?: string;
   description: string;
 }
 
 /**
- * Commit type with UI metadata
+ * Commit type with UI metadata.
+ * Users define these via sven.commit.types setting.
  */
 export interface CommitTypeInfo {
-  type: CommitType;
+  type: string;
   icon: string;
   label: string;
   description: string;
 }
 
+/**
+ * User-configurable commit type definition (from settings).
+ * Label defaults to type if omitted.
+ */
+export interface CommitTypeConfig {
+  type: string;
+  icon: string;
+  description: string;
+}
+
 const MAX_MESSAGE_LENGTH = 50;
 
-const COMMIT_TYPES: CommitTypeInfo[] = [
-  {
-    type: "feat",
-    icon: "$(sparkle)",
-    label: "feat",
-    description: "New feature (MINOR version bump)"
-  },
-  {
-    type: "fix",
-    icon: "$(bug)",
-    label: "fix",
-    description: "Bug fix (PATCH version bump)"
-  },
-  {
-    type: "docs",
-    icon: "$(book)",
-    label: "docs",
-    description: "Documentation only changes"
-  },
-  {
-    type: "style",
-    icon: "$(paintcan)",
-    label: "style",
-    description: "Formatting, whitespace, semicolons"
-  },
-  {
-    type: "refactor",
-    icon: "$(wrench)",
-    label: "refactor",
-    description: "Code change without fix or feature"
-  },
-  {
-    type: "perf",
-    icon: "$(rocket)",
-    label: "perf",
-    description: "Performance improvement"
-  },
-  {
-    type: "test",
-    icon: "$(beaker)",
-    label: "test",
-    description: "Adding or updating tests"
-  },
-  {
-    type: "build",
-    icon: "$(package)",
-    label: "build",
-    description: "Build system or dependencies"
-  },
-  {
-    type: "ci",
-    icon: "$(server-process)",
-    label: "ci",
-    description: "CI/CD configuration"
-  },
-  {
-    type: "chore",
-    icon: "$(tools)",
-    label: "chore",
-    description: "Maintenance, no src/test change"
-  },
-  {
-    type: "revert",
-    icon: "$(discard)",
-    label: "revert",
-    description: "Revert a previous commit"
-  },
-  {
-    type: "custom",
-    icon: "$(pencil)",
-    label: "custom",
-    description: "Write custom message"
-  }
-];
+/** Always-present option for free-form messages */
+const CUSTOM_TYPE: CommitTypeInfo = {
+  type: "custom",
+  icon: "$(pencil)",
+  label: "custom",
+  description: "Write custom message"
+};
 
 // Regex to parse conventional commit: type(scope): description
 const CONVENTIONAL_REGEX = /^(\w+)(?:\(([^)]+)\))?:\s*(.+)$/;
@@ -122,8 +49,22 @@ const CONVENTIONAL_REGEX = /^(\w+)(?:\(([^)]+)\))?:\s*(.+)$/;
 /**
  * Service for parsing and formatting conventional commit messages.
  * Enforces 50-char max message length.
+ * Commit types are user-configurable via sven.commit.types setting.
  */
 export class ConventionalCommitService {
+  private readonly userTypes: CommitTypeInfo[];
+
+  constructor(configuredTypes?: CommitTypeConfig[]) {
+    this.userTypes = (configuredTypes ?? [])
+      .filter(t => t.type && t.icon && t.description && t.type !== "custom")
+      .map(t => ({
+        type: t.type,
+        icon: t.icon,
+        label: t.type,
+        description: t.description
+      }));
+  }
+
   /**
    * Format a conventional commit object into a message string
    */
@@ -159,17 +100,18 @@ export class ConventionalCommitService {
 
     const [, type, scope, description] = match;
     return {
-      type: type as CommitType,
+      type,
       scope: scope || undefined,
       description: (description || "").trim()
     };
   }
 
   /**
-   * Get all available commit types with icons and descriptions
+   * Get available commit types: user-configured types + always-present "custom" option.
+   * Returns only "custom" when no types configured.
    */
   getCommitTypes(): CommitTypeInfo[] {
-    return COMMIT_TYPES;
+    return [...this.userTypes, CUSTOM_TYPE];
   }
 
   /**

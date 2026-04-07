@@ -52,7 +52,6 @@ suite("CommitAll Command E2E Tests", () => {
     showErrorStub = sinon.stub(window, "showErrorMessage").resolves(undefined);
 
     sinon.stub(configuration, "commitUseQuickPick").returns(true);
-    sinon.stub(configuration, "commitConventionalCommits").returns(false);
     sinon.stub(configuration, "commitAutoUpdate").returns("none");
   });
 

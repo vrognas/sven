@@ -1892,10 +1892,44 @@
             "essential"
           ]
         },
-        "sven.commit.conventionalCommits": {
-          "type": "boolean",
-          "markdownDescription": "Use [Conventional Commits](https://www.conventionalcommits.org/) format (`feat:`, `fix:`, `docs:`, etc). Guided commit flow helps you create consistent commit messages.",
-          "default": true,
+        "sven.commit.types": {
+          "type": "array",
+          "markdownDescription": "Commit types for the guided commit flow. When types are defined, the quick-pick shows a type picker → scope → description. When empty (default), goes straight to a free-form message input.\n\nEach entry is a JSON object with three required fields:\n- `type` — prefix in commit message (e.g. `data`, `model`, `analysis`)\n- `icon` — [VS Code icon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) as `$(icon-name)`\n- `description` — short text shown in the quick-pick\n\nExample:\n```json\n[\n  { \"type\": \"data\", \"icon\": \"$(database)\", \"description\": \"Data changes\" },\n  { \"type\": \"model\", \"icon\": \"$(beaker)\", \"description\": \"Model updates\" }\n]\n```",
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "icon",
+              "description"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Commit type prefix (e.g. feat, data, model)"
+              },
+              "icon": {
+                "type": "string",
+                "description": "VS Code product icon (e.g. $(database), $(beaker))"
+              },
+              "description": {
+                "type": "string",
+                "description": "Short description shown in quick-pick"
+              }
+            },
+            "additionalProperties": false,
+            "defaultSnippets": [
+              {
+                "label": "New commit type",
+                "description": "Add a custom commit type with icon",
+                "body": {
+                  "type": "${1:data}",
+                  "icon": "$(${2:database})",
+                  "description": "${3:Data changes}"
+                }
+              }
+            ]
+          },
           "order": 10,
           "tags": [
             "commit",
@@ -1926,7 +1960,7 @@
         },
         "sven.commit.useQuickPick": {
           "type": "boolean",
-          "markdownDescription": "Use native VS Code QuickPick for commit dialog. Set `false` for webview-based commit form.",
+          "markdownDescription": "Use the multi-step quick-pick for commits. Enables file selection, pre-commit update, and confirmation steps. When disabled, shows a simple single-line input box and commits all staged files.",
           "default": true,
           "order": 13,
           "tags": [

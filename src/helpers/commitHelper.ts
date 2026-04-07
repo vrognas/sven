@@ -9,6 +9,10 @@ import { inputCommitMessage } from "../messages";
 import { Repository } from "../repository";
 import { Resource } from "../resource";
 import { CommitFlowService } from "../services/commitFlowService";
+import {
+  CommitTypeConfig,
+  ConventionalCommitService
+} from "../services/conventionalCommitService";
 
 /**
  * Check if there are staged files to commit.
@@ -157,14 +161,11 @@ export interface CommitFlowResult {
   cancelled: boolean;
 }
 
-// Shared commit flow service instance
-let commitFlowServiceInstance: CommitFlowService | undefined;
-
-function getCommitFlowService(): CommitFlowService {
-  if (!commitFlowServiceInstance) {
-    commitFlowServiceInstance = new CommitFlowService();
-  }
-  return commitFlowServiceInstance;
+// Creates a fresh CommitFlowService with provided types.
+function getCommitFlowService(
+  userTypes: CommitTypeConfig[]
+): CommitFlowService {
+  return new CommitFlowService(new ConventionalCommitService(userTypes));
 }
 
 /**
@@ -177,7 +178,8 @@ export async function runCommitMessageFlow(
   renameMap: Map<string, string>
 ): Promise<CommitFlowResult> {
   const useQuickPick = configuration.commitUseQuickPick();
-  const conventionalCommits = configuration.commitConventionalCommits();
+  const userTypes = configuration.get<CommitTypeConfig[]>("commit.types", []);
+  const conventionalCommits = userTypes.length > 0;
   const autoUpdate = configuration.commitAutoUpdate();
   const updateBeforeCommit = autoUpdate === "both" || autoUpdate === "before";
 
@@ -185,7 +187,7 @@ export async function runCommitMessageFlow(
   let selectedPaths: string[] | undefined;
 
   if (useQuickPick) {
-    const result = await getCommitFlowService().runCommitFlow(
+    const result = await getCommitFlowService(userTypes).runCommitFlow(
       repository,
       displayPaths,
       { conventionalCommits, updateBeforeCommit }

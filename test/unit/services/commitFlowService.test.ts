@@ -82,7 +82,7 @@ describe("CommitFlowService", () => {
 
       const result = await service.runCommitFlow(mockRepository, [
         "/path/file.txt"
-      ]);
+      ], { conventionalCommits: true });
 
       expect(result.message).toBe("feat(ui): add button");
     });
@@ -97,7 +97,7 @@ describe("CommitFlowService", () => {
 
       const result = await service.runCommitFlow(mockRepository, [
         "/path/file.txt"
-      ]);
+      ], { conventionalCommits: true });
 
       expect(result.message).toBe("fix: resolve crash");
     });
@@ -111,7 +111,9 @@ describe("CommitFlowService", () => {
         .mockResolvedValueOnce("")
         .mockResolvedValueOnce("new feature");
 
-      await service.runCommitFlow(mockRepository, ["/path/file.txt"]);
+      await service.runCommitFlow(mockRepository, ["/path/file.txt"], {
+        conventionalCommits: true
+      });
 
       // Verify previous message option was in picker
       const pickerCall = mockWindow.showQuickPick.mock.calls[0];
@@ -206,7 +208,8 @@ describe("CommitFlowService", () => {
         mockRepository,
         ["/path/file.txt"],
         {
-          updateBeforeCommit: true
+          updateBeforeCommit: true,
+          conventionalCommits: true
         }
       );
 
@@ -300,7 +303,7 @@ describe("CommitFlowService", () => {
         "/a.txt",
         "/b.txt",
         "/c.txt"
-      ]);
+      ], { conventionalCommits: true });
 
       // Index 2: file picker (0) -> type (1) -> confirm (2)
       const confirmCall = mockWindow.showQuickPick.mock.calls[2];
@@ -325,7 +328,7 @@ describe("CommitFlowService", () => {
 
       const result = await service.runCommitFlow(mockRepository, [
         "/path/file.txt"
-      ]);
+      ], { conventionalCommits: true });
 
       expect(result.message).toBe("feat: corrected message");
     });

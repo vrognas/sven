@@ -68,7 +68,7 @@ export class CommitFlowService {
     filePaths: string[],
     options: CommitFlowOptions = {}
   ): Promise<CommitFlowResult> {
-    const { updateBeforeCommit = false, conventionalCommits = true } = options;
+    const { updateBeforeCommit = false, conventionalCommits = false } = options;
 
     // Step 0: File selection with checkboxes
     const selectedFiles = await this.showFileSelectionStep(filePaths);
@@ -215,7 +215,7 @@ export class CommitFlowService {
     }
 
     const selected = await window.showQuickPick(items, {
-      title: "Commit (1/3): Select type",
+      title: "Commit (1/3): type(scope): description",
       placeHolder: "Choose commit type"
     });
 
@@ -235,10 +235,10 @@ export class CommitFlowService {
     const placeholder =
       recentScopes.length > 0
         ? `Optional scope (recent: ${recentScopes.join(", ")})`
-        : "Optional scope (e.g., ui, api, core)";
+        : "Optional scope — narrows what this change affects";
 
     const scope = await window.showInputBox({
-      title: `Commit (2/3): ${type}(_): ...`,
+      title: `Commit (2/3): ${type}(scope): description`,
       prompt: placeholder,
       placeHolder: "Leave empty to skip"
     });
@@ -273,7 +273,7 @@ export class CommitFlowService {
     }
 
     const description = await window.showInputBox({
-      title: `Commit (3/3): ${prefix}_`,
+      title: `Commit (3/3): ${prefix}description`,
       prompt: "Use imperative mood: add, fix, update, remove...",
       placeHolder: "If applied, this commit will...",
       value: initialValue,

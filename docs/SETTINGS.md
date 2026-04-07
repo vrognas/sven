@@ -17,8 +17,8 @@ All configuration options for Sven. Open Settings (`Ctrl+,`) and search `sven`.
 
 | Setting                           | Default | Description                                      |
 | --------------------------------- | ------- | ------------------------------------------------ |
-| `sven.commit.useQuickPick`        | `true`  | Native VS Code commit dialog                     |
-| `sven.commit.conventionalCommits` | `false` | Conventional commits format                      |
+| `sven.commit.useQuickPick`        | `true`  | Multi-step quick-pick commit dialog              |
+| `sven.commit.types`              | `[]`    | Custom commit types (type picker when non-empty) |
 | `sven.commit.autoUpdate`          | `none`  | Update timing: `both`, `before`, `after`, `none` |
 | `sven.commit.checkEmptyMessage`   | `true`  | Warn on empty message                            |
 | `sven.commit.changes.selectedAll` | `true`  | Select all by default                            |

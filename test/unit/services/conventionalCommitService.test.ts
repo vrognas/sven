@@ -71,19 +71,54 @@ describe("ConventionalCommitService", () => {
   });
 
   describe("getCommitTypes", () => {
-    it("returns all commit types with icons", () => {
+    it("returns only custom option when no types configured", () => {
       const types = service.getCommitTypes();
-      expect(types.length).toBeGreaterThan(0);
-      expect(types.find(t => t.type === "feat")).toBeDefined();
-      expect(types.find(t => t.type === "fix")).toBeDefined();
+      expect(types).toHaveLength(1);
+      expect(types[0].type).toBe("custom");
     });
 
-    it("each type has icon and description", () => {
-      const types = service.getCommitTypes();
-      types.forEach(t => {
-        expect(t.icon).toBeDefined();
-        expect(t.label).toBeDefined();
-      });
+    it("returns user-configured types plus custom", () => {
+      const userTypes = [
+        { type: "data", icon: "$(database)", description: "Data changes" },
+        { type: "model", icon: "$(beaker)", description: "Model updates" }
+      ];
+      const service2 = new ConventionalCommitService(userTypes);
+      const types = service2.getCommitTypes();
+      expect(types).toHaveLength(3); // data + model + custom
+      expect(types[0].type).toBe("data");
+      expect(types[1].type).toBe("model");
+      expect(types[2].type).toBe("custom");
+    });
+
+    it("always appends custom option even with user types", () => {
+      const service2 = new ConventionalCommitService([
+        { type: "fix", icon: "$(bug)", description: "Bug fix" }
+      ]);
+      const types = service2.getCommitTypes();
+      expect(types[types.length - 1].type).toBe("custom");
+    });
+
+    it("filters out user type named 'custom' to avoid collision", () => {
+      const service2 = new ConventionalCommitService([
+        { type: "custom", icon: "$(pencil)", description: "My custom" },
+        { type: "data", icon: "$(database)", description: "Data" }
+      ]);
+      const types = service2.getCommitTypes();
+      expect(types).toHaveLength(2); // data + built-in custom
+      expect(types[0].type).toBe("data");
+      expect(types[1].type).toBe("custom");
+    });
+
+    it("filters out malformed entries with missing fields", () => {
+      const service2 = new ConventionalCommitService([
+        { type: "", icon: "$(bug)", description: "Empty type" },
+        { type: "good", icon: "", description: "Empty icon" },
+        { type: "also-good", icon: "$(ok)", description: "" },
+        { type: "valid", icon: "$(check)", description: "Valid entry" }
+      ] as any);
+      const types = service2.getCommitTypes();
+      expect(types).toHaveLength(2); // valid + custom
+      expect(types[0].type).toBe("valid");
     });
   });
 
