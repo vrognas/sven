@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [0.2.28] - 2026-04-07
 
+### Added
+
+- **Custom commit types**: New `sven.commit.types` setting — define your own commit types with icons and descriptions. No hardcoded types; empty by default. Type picker appears only when types are configured.
+
 ### Changed
 
 - **Commit workflow perf**: Reuse cached remote-check result from background polling — skips redundant `svn log` network call when fresh
@@ -17,6 +21,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Commit workflow perf**: Parallelize history fetch + info refresh after commit with `Promise.all`
 - **Commit workflow UX**: Post-commit update is now cancellable (kills SVN process via CancellationToken)
 - **Status call perf**: `--show-updates` (network-hitting) now only added for remote checks and lock/unlock operations — file-watcher-triggered status refreshes stay local-only
+- **Commit UX**: Quick-pick titles show message format preview at every step
+
+### Removed
+
+- **`sven.commit.conventionalCommits`** setting — behavior now derived from whether `sven.commit.types` is populated
+
+### Fixed
+
+- **`@types/vscode`**: Pinned to `~1.105.0` to match `engines.vscode ^1.105.0`
 
 ---
 
