@@ -1,13 +1,13 @@
 # Documentation Index
 
-**Version**: 0.2.3
+**Version**: 0.2.28
 
 ## User Documentation
 
 | Document                                                   | Purpose                          |
 | ---------------------------------------------------------- | -------------------------------- |
 | [SETTINGS.md](SETTINGS.md)                                 | All 70+ configuration options    |
-| [SECURITY_QUICK_REFERENCE.md](SECURITY_QUICK_REFERENCE.md) | Authentication & troubleshooting |
+| [SECURITY.md](../.github/SECURITY.md) | Security & privacy policy |
 
 ## Developer Documentation
 
@@ -37,7 +37,7 @@
 
 ## Archive
 
-Historical analysis, implementation plans, and audit documents are in [archive/](archive/).
+Pre-rebrand changelog is in [archive/CHANGELOG_LEGACY.md](archive/CHANGELOG_LEGACY.md).
 
 ---
 
@@ -47,4 +47,4 @@ Historical analysis, implementation plans, and audit documents are in [archive/]
 - **Understanding architecture?** Read [ARCHITECTURE_ANALYSIS.md](ARCHITECTURE_ANALYSIS.md)
 - **Adding a feature?** Check [LESSONS_LEARNED.md](LESSONS_LEARNED.md)
 - **UI work?** See [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)
-- **Security questions?** See [SECURITY_QUICK_REFERENCE.md](SECURITY_QUICK_REFERENCE.md)
+- **Security questions?** See [SECURITY.md](../.github/SECURITY.md)

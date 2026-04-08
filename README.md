@@ -129,7 +129,7 @@ Open Settings (`Ctrl+,`) and search `sven`.
 
 **Slow on large repos** → Enable sparse checkout, reduce `sven.log.length`
 
-[Full troubleshooting →](docs/SECURITY_QUICK_REFERENCE.md)
+[Full troubleshooting →](.github/SECURITY.md)
 
 ## More Info
 
@@ -137,9 +137,8 @@ Open Settings (`Ctrl+,`) and search `sven`.
 
 **Links:**
 [Settings](docs/SETTINGS.md) ·
-[Security](docs/SECURITY_QUICK_REFERENCE.md) ·
+[Security](.github/SECURITY.md) ·
 [File Locking](docs/FILE_LOCKING.md) ·
-[Privacy](PRIVACY.md) ·
 [Contributing](CONTRIBUTING.md) ·
 [Changelog](CHANGELOG.md) ·
 [Issues](https://github.com/vrognas/sven/issues)

@@ -135,7 +135,7 @@ Caching strategy:
 - Zero telemetry, local-only operations
 - Debug mode auto-timeout
 
-See SECURITY.md and SECURITY_QUICK_REFERENCE.md for details.
+See [SECURITY.md](../.github/SECURITY.md) for details.
 
 ---
 

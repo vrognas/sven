@@ -338,8 +338,7 @@ Before contributing, review:
 - [README.md](./README.md) - User guide
 - [BLAME_SYSTEM.md](./docs/BLAME_SYSTEM.md) - Blame feature docs
 - [POSITRON_INTEGRATION.md](./docs/POSITRON_INTEGRATION.md) - Positron specifics
-- [SECURITY.md](./SECURITY.md) - Security policy
-- [PRIVACY.md](./PRIVACY.md) - Privacy guarantees
+- [SECURITY.md](./.github/SECURITY.md) - Security & privacy policy
 
 ### Getting Help
 
