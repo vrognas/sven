@@ -72,7 +72,8 @@ Prevent conflicts on binary files (CSVs, images, models).
 |-------|---------|
 | `K` | Locked by you |
 | `O` | Locked by someone else |
-| `L` | Needs lock (read-only) |
+
+Status bar shows `$(unlock) N` when N files need locking.
 
 Setup: right-click file → **Set Needs-Lock Property**
 
@@ -111,6 +112,7 @@ Open Settings (`Ctrl+,`) and search `sven`.
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | `sven.blame.autoBlame` | `true` | Show blame when opening files |
+| `sven.commit.types` | `[]` | Custom commit types for guided flow |
 | `sven.commit.autoUpdate` | `none` | Run update before/after commit |
 | `sven.diff.tool` | `null` | External diff tool path |
 | `sven.remoteChanges.checkFrequency` | `300` | Remote check interval (seconds) |
