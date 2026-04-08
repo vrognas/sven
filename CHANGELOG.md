@@ -39,7 +39,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
-- **`@types/vscode`**: Pinned to `~1.105.0` to match `engines.vscode ^1.105.0`
+- **`@types/vscode`**: Bumped to `~1.108.0` to match `engines.vscode ^1.108.0`
 
 ---
 

@@ -14,7 +14,7 @@ VS Code extension for SVN source control with Positron IDE support. Event-driven
 - ~13,200 source lines
 - 54 commands (+3 blame)
 - 1700+ tests, ~50% global coverage
-- Targets: vscode ^1.105.0, positron ^2025.11.0
+- Targets: vscode ^1.108.0, positron ^2025.11.0
 
 ---
 
