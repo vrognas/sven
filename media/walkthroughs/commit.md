@@ -18,8 +18,8 @@ Save your changes to the repository.
 ## Commit Options
 
 - **Commit Staged**: Only staged files
-- **Commit All**: All modified files
-- **Pick Commit Message**: Reuse previous messages
+- **Commit All Changes**: All modified files
+- **Pick Previous Message...**: Reuse previous messages
 
 ## After Committing
 

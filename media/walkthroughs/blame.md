@@ -5,8 +5,8 @@ See who last modified each line of code.
 ## Toggle Blame
 
 1. Open a file
-2. Run **SVN: Toggle Blame** from Command Palette
-3. Or use keyboard shortcut (if configured)
+2. Run **SVN Blame: Toggle Annotations (Blame)** from Command Palette
+3. Or click the blame icon in the editor title bar
 
 ## Reading Annotations
 
@@ -26,11 +26,13 @@ Hover over any annotation to see:
 
 ## Customize Appearance
 
-Settings to adjust blame display:
+Key settings for blame display:
 
-- `svn.blame.dateFormat`: Date format
-- `svn.blame.layout.showAuthorName`: Show/hide author
-- `svn.blame.layout.showDate`: Show/hide date
+- `sven.blame.dateFormat`: Date format
+- `sven.blame.gutter.template`: Gutter text template (`${author}`, `${revision}`, `${date}`, `${message}`)
+- `sven.blame.inline.enabled`: Show inline annotations at end of lines
+- `sven.blame.inline.template`: Inline annotation template
+- `sven.blame.statusBar.enabled`: Show blame info in status bar
 
 ## Tip
 

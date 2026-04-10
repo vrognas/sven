@@ -16,6 +16,8 @@ You should see version information like:
 svn, version 1.14.x (r1234567)
 ```
 
+**Note:** SVN >= 1.6 is required. The extension will not activate with older versions.
+
 ## Install SVN
 
 If not installed:

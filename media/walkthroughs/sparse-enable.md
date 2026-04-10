@@ -1,31 +1,21 @@
-# Enable Sparse Checkout
+# Selective Download
 
 For large repositories, download only the folders you need.
 
-## What is Sparse Checkout?
+## What is Selective Download?
 
 - Download a subset of the repository
 - Reduce disk usage and sync time
 - Perfect for monorepos or large projects
 
-## Enable Sparse Mode
+## Getting Started
 
-1. Open Settings (`Ctrl+,` / `Cmd+,`)
-2. Search for "svn sparse"
-3. Enable **Svn > Sparse: Enabled**
+The **Selective Download** view is always available in the Source Control sidebar when a repository is open.
 
-Or add to settings.json:
-
-```json
-"svn.sparse.enabled": true
-```
-
-## What Happens
-
-- **Selective Download** view appears in Source Control
-- You can browse server contents without downloading
-- Choose exactly which folders to include
+1. Open the **Source Control** sidebar
+2. Expand the **Selective Download** panel
+3. Browse and select which folders to download
 
 ## Tip
 
-Enable sparse checkout before cloning large repositories for best results.
+When checking out a new repository, choose **Shallow** depth to start, then use Selective Download to add folders as needed.

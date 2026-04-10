@@ -12,14 +12,14 @@ Use the Selective Download view to manage which folders are local.
 
 - **Normal text**: Downloaded locally
 - **De-emphasized**: On server only (not downloaded)
-- **Checkmark**: Included in sparse checkout
+- **↓ badge**: Outdated (newer revision on server)
 
 ## Include/Exclude Folders
 
 **To download a folder:**
 
-- Click the folder
-- Select **Include** or **Checkout**
+- Right-click the folder
+- Select **Checkout**
 
 **To exclude a folder:**
 

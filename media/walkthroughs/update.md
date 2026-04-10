@@ -21,7 +21,7 @@ If conflicts occur:
 1. Files are marked with conflict status
 2. Open the file to see conflict markers
 3. Edit to resolve
-4. Run **SVN: Resolve** to mark as resolved
+4. Run **SVN: Resolve conflicts for selected** to mark as resolved
 
 ## Tip
 

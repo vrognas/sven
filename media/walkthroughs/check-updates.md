@@ -10,14 +10,11 @@ Before starting work, see what others have committed.
 
 ## Automatic Checks
 
-Enable automatic polling in settings:
+Include remote checks with every refresh:
 
 ```json
-"svn.sourceControl.checkForIncomingChanges": true,
-"svn.sourceControl.checkForIncomingChangesInterval": 300
+"sven.refresh.remoteChanges": true
 ```
-
-This checks every 5 minutes (300 seconds).
 
 ## What You'll See
 

@@ -21,8 +21,8 @@ A property that:
 After setting:
 
 - File appears read-only in your editor
-- Must lock to edit
-- Lock icon indicates status
+- Must lock before editing
+- Status bar shows lock state
 
 ## Best For
 

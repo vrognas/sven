@@ -22,8 +22,7 @@ Staging lets you select which changes to include in your next commit.
 
 You can also commit directly without staging:
 
-- Use **SVN: Commit All** to commit everything
-- Or disable staging in settings: `"svn.sourceControl.showUnstagedFiles": true`
+- Use **SVN: Commit All Changes** to commit everything
 
 ## Tip
 
