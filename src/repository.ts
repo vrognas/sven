@@ -2329,9 +2329,10 @@ export class Repository implements IRemoteRepository {
       return this.hasNeedsLockCached(filePath);
     }
 
-    // Cache expired - do single file check (for prompt on open)
+    // Cache expired - refresh batch cache (one `svn propget -R` instead of N per-file calls)
     try {
-      return await this.repository.hasNeedsLock(filePath);
+      await this.refreshNeedsLockCache();
+      return this.hasNeedsLockCached(filePath);
     } catch {
       return false;
     }
