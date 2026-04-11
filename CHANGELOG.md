@@ -12,6 +12,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Added
 
 - **E2E integration tests**: 28 integration tests for real SVN operations
+- **Walkthrough accuracy**: All 14 walkthrough docs reviewed and corrected — fixed wrong command titles, non-existent settings, click vs right-click descriptions, `svn.` → `sven.` prefix
+
+### Changed
+
+- **Commit workflow perf**: Pre-commit update now runs in parallel with commit message input — user types while update downloads
 - **Test helpers**: `svnTestRepo.ts` for temp repo creation/teardown
 - **Parser coverage**: Real SVN output for info, status, log, blame parsers
 - **Scenarios**: File lifecycle, changelists, branches, conflicts

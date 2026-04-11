@@ -1064,7 +1064,7 @@ sourceControl.acceptInputCommand = {
 
 - `ConventionalCommitService`: Parse/format conventional commit messages
 - `CommitFlowService`: Orchestrate multi-step QuickPick flow
-- `PreCommitUpdateService`: Run SVN update before commit with progress
+- `PreCommitUpdateService`: Run SVN update in parallel with commit message input
 
 **Rule**: Prefer native VS Code UI (QuickPick, InputBox, Progress) over webviews for simple workflows.
 
