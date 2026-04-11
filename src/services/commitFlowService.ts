@@ -76,9 +76,27 @@ export class CommitFlowService {
       return { cancelled: true };
     }
 
-    // Run pre-commit update if enabled
-    if (updateBeforeCommit) {
-      const updateResult = await this.updateService.runUpdate(repository);
+    // Start pre-commit update in background (runs during message input)
+    const updatePromise = updateBeforeCommit
+      ? this.updateService.runUpdate(repository)
+      : undefined;
+
+    // Build commit message (user interacts while update runs)
+    let message: string | undefined;
+
+    if (conventionalCommits) {
+      message = await this.runConventionalFlow(repository, selectedFiles);
+    } else {
+      message = await this.runSimpleFlow(repository);
+    }
+
+    if (message === undefined) {
+      return { cancelled: true };
+    }
+
+    // Wait for update to complete before committing
+    if (updatePromise) {
+      const updateResult = await updatePromise;
 
       if (updateResult.cancelled) {
         return { cancelled: true };
@@ -95,19 +113,6 @@ export class CommitFlowService {
         window.showErrorMessage(`Update failed: ${updateResult.error}`);
         return { cancelled: true };
       }
-    }
-
-    // Build commit message
-    let message: string | undefined;
-
-    if (conventionalCommits) {
-      message = await this.runConventionalFlow(repository, selectedFiles);
-    } else {
-      message = await this.runSimpleFlow(repository);
-    }
-
-    if (message === undefined) {
-      return { cancelled: true };
     }
 
     return { message, selectedFiles, cancelled: false };

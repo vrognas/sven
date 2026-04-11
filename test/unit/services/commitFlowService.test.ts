@@ -149,7 +149,7 @@ describe("CommitFlowService", () => {
       expect(mockRepository.updateRevision).toHaveBeenCalled();
     });
 
-    it("prompts user on update conflict", async () => {
+    it("prompts user on update conflict after message flow", async () => {
       mockRepository.updateRevision.mockResolvedValueOnce({
         revision: 50,
         conflicts: ["/test/repo/file.txt"],
@@ -164,6 +164,8 @@ describe("CommitFlowService", () => {
           return task({ report: vi.fn() }, { isCancellationRequested: false });
         }
       );
+      // Message flow completes before update result is checked
+      mockWindow.showInputBox.mockResolvedValueOnce("test message");
 
       const result = await service.runCommitFlow(
         mockRepository,
