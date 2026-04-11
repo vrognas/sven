@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.30] - 2026-04-11
+
+### Changed
+
+- **Commit workflow perf**: Pre-commit update targets only committed files (`svn update --parents <files>`), falls back to full update on benign failures
+- **Commit workflow perf**: Pre-commit update runs in parallel with commit message input — user types while update downloads
+- **Commit workflow reliability**: Auth/credential errors re-thrown instead of silently retried via fallback; cancellation properly detected in all code paths
+
 ## [0.2.29] - 2026-04-11
 
 ### Added
@@ -15,10 +23,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Test helpers**: `svnTestRepo.ts` for temp repo creation/teardown
 - **Parser coverage**: Real SVN output for info, status, log, blame parsers
 - **CI compatible**: All integration tests run on GitHub CI (Ubuntu, Windows, macOS)
-
-### Changed
-
-- **Commit workflow perf**: Pre-commit update now runs in parallel with commit message input — user types while update downloads
 
 ### Fixed
 
