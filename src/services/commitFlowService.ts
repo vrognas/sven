@@ -12,7 +12,7 @@ import {
   ConventionalCommitService,
   ConventionalCommit
 } from "./conventionalCommitService";
-import { PreCommitUpdateService } from "./preCommitUpdateService";
+import { PreCommitUpdateService, UpdateResult } from "./preCommitUpdateService";
 import { truncate } from "../util/formatting";
 
 /**
@@ -77,8 +77,12 @@ export class CommitFlowService {
     }
 
     // Start pre-commit update in background (runs during message input)
+    // Targets only committed files for speed; falls back to full update on failure
+    // .catch prevents unhandled rejection if it fails while user is in message flow
     const updatePromise = updateBeforeCommit
-      ? this.updateService.runUpdate(repository)
+      ? this.updateService.runUpdate(repository, selectedFiles).catch(
+          (err): UpdateResult => ({ success: false, error: String(err) })
+        )
       : undefined;
 
     // Build commit message (user interacts while update runs)
@@ -95,6 +99,7 @@ export class CommitFlowService {
     }
 
     // Wait for update to complete before committing
+    // If still running, the original runUpdate notification remains visible and cancellable
     if (updatePromise) {
       const updateResult = await updatePromise;
 

@@ -32,7 +32,7 @@ export class PreCommitUpdateService {
    * First checks if server has new commits - skips update if already at HEAD.
    * Reuses cached remote-check result from background polling when fresh.
    */
-  async runUpdate(repository: Repository): Promise<UpdateResult> {
+  async runUpdate(repository: Repository, files?: string[]): Promise<UpdateResult> {
     return window.withProgress(
       {
         location: ProgressLocation.Notification,
@@ -71,7 +71,7 @@ export class PreCommitUpdateService {
           }
 
           progress.report({ message: "Running svn update..." });
-          const updateResult = await repository.updateRevision(false, { token });
+          const updateResult = await repository.updateRevision(false, { token, files });
 
           if (updateResult.conflicts.length > 0) {
             return {
@@ -87,6 +87,11 @@ export class PreCommitUpdateService {
           };
         } catch (error: unknown) {
           const errorMsg = (error as Error)?.message || String(error);
+
+          // Check for cancellation (exitCode 130 from killed SVN process)
+          if ((error as { exitCode?: number }).exitCode === 130) {
+            return { success: false, cancelled: true };
+          }
 
           // Check for conflict error codes
           if (

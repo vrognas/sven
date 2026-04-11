@@ -1197,12 +1197,31 @@ export class Repository {
 
   public async update(
     ignoreExternals: boolean = false,
-    options: { token?: CancellationToken } = {}
+    options: { token?: CancellationToken; files?: string[] } = {}
   ): Promise<IUpdateResult> {
     const args = ["update"];
 
     if (ignoreExternals) {
       args.push("--ignore-externals");
+    }
+
+    // Target specific files for speed; fall back to full update on failure
+    if (options.files && options.files.length > 0) {
+      const normalized = this.normalizeFilePaths(options.files);
+      const targetedArgs = [...args, "--parents", ...normalized];
+      try {
+        const result = await this.exec(targetedArgs, { token: options.token });
+        this.resetInfoCache();
+        return parseUpdateOutput(result.stdout);
+      } catch (err: unknown) {
+        const svnErr = err as { exitCode?: number; svnErrorCode?: string };
+        // Re-throw cancellation and auth errors — fallback won't help
+        // Note: E215004 (NoMoreCredentials) is remapped to E170001 by getSvnErrorCode
+        if (svnErr.exitCode === 130 || svnErr.svnErrorCode === "E170001") {
+          throw err;
+        }
+        // Other failures (unversioned files, tree conflict) — fall back to full update
+      }
     }
 
     const result = await this.exec(args, { token: options.token });

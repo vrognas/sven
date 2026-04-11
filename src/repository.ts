@@ -1377,14 +1377,19 @@ export class Repository implements IRemoteRepository {
 
   public async updateRevision(
     ignoreExternals: boolean = false,
-    { skipHistoryRefresh = false, token }: { skipHistoryRefresh?: boolean; token?: CancellationToken } = {}
+    { skipHistoryRefresh = false, token, files }: { skipHistoryRefresh?: boolean; token?: CancellationToken; files?: string[] } = {}
   ): Promise<IUpdateResult> {
     const result = await this.run<IUpdateResult>(Operation.Update, async () => {
-      const updateResult = await this.repository.update(ignoreExternals, { token });
+      const updateResult = await this.repository.update(ignoreExternals, { token, files });
       // Note: status refresh handled by run() via updateModelState() after callback
       // Do NOT call this.status() here - causes credentialLock deadlock (nested retryRun)
-      // After update we're at HEAD — mark cache accordingly
-      this._lastRemoteCheck = { hasChanges: false, timestamp: Date.now() };
+      if (!files || files.length === 0) {
+        // Full update — at HEAD, no remote changes
+        this._lastRemoteCheck = { hasChanges: false, timestamp: Date.now() };
+      } else {
+        // Targeted update — invalidate cache so next check re-queries server
+        this._lastRemoteCheck = undefined;
+      }
       return updateResult;
     });
     // Fetch history views (skipped when caller handles refresh, e.g. commitFiles)

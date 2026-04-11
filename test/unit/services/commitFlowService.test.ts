@@ -149,6 +149,33 @@ describe("CommitFlowService", () => {
       expect(mockRepository.updateRevision).toHaveBeenCalled();
     });
 
+    it("passes committed file paths to targeted update", async () => {
+      mockWindow.withProgress.mockImplementation(
+        async (
+          _opts: unknown,
+          task: (p: unknown, t: unknown) => Promise<unknown>
+        ) => {
+          return task({ report: vi.fn() }, { isCancellationRequested: false });
+        }
+      );
+      mockWindow.showQuickPick
+        .mockResolvedValueOnce({ type: "fix", label: "fix" })
+        .mockResolvedValueOnce({ action: "commit" });
+      mockWindow.showInputBox
+        .mockResolvedValueOnce("")
+        .mockResolvedValueOnce("fix bug");
+
+      await service.runCommitFlow(mockRepository, ["/path/file.txt"], {
+        updateBeforeCommit: true
+      });
+
+      // updateRevision should receive the file paths
+      expect(mockRepository.updateRevision).toHaveBeenCalledWith(
+        false,
+        expect.objectContaining({ files: ["/path/file.txt"] })
+      );
+    });
+
     it("prompts user on update conflict after message flow", async () => {
       mockRepository.updateRevision.mockResolvedValueOnce({
         revision: 50,
