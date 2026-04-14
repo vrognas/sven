@@ -13,6 +13,7 @@ import {
   ConstructorPolicy,
   ICpOptions,
   IExecutionResult,
+  ISvnInfo,
   ISvnOptions
 } from "./common/types";
 import * as encodeUtil from "./encoding";
@@ -601,11 +602,11 @@ export class Svn {
       const info = await parseInfoXml(result.stdout);
 
       if (info && info.wcInfo && info.wcInfo.wcrootAbspath) {
-        return info.wcInfo.wcrootAbspath;
+        return { root: info.wcInfo.wcrootAbspath, info };
       }
 
       // SVN 1.6 not has "wcroot-abspath"
-      return path;
+      return { root: path, info };
     } catch (error) {
       if (error instanceof SvnError) {
         throw error;
@@ -617,13 +618,15 @@ export class Svn {
 
   public async open(
     repositoryRoot: string,
-    workspaceRoot: string
+    workspaceRoot: string,
+    info?: ISvnInfo
   ): Promise<Repository> {
     return new Repository(
       this,
       repositoryRoot,
       workspaceRoot,
-      ConstructorPolicy.Async
+      ConstructorPolicy.Async,
+      info
     );
   }
 

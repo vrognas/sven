@@ -194,7 +194,9 @@ export class Repository implements IRemoteRepository {
   // Needs-lock cache: set of relative paths with svn:needs-lock property
   // Populated in batch by refreshNeedsLockCache() for efficient decoration
   private needsLockFilesSet = new Set<string>();
-  private needsLockCacheExpiry = 0;
+  // Defer first propget until 3s after construction — unblocks first paint
+  private needsLockCacheExpiry = Date.now() + 3000;
+  private needsLockCacheWarmed = false;
   private static readonly NEEDS_LOCK_CACHE_TTL = 60000; // 60 seconds
 
   // Cached result from last remote-change check (background polling or explicit)
@@ -203,7 +205,8 @@ export class Repository implements IRemoteRepository {
   // Property caches for decoration tooltips (eol-style, mime-type)
   private eolStyleCache = new Map<string, string>();
   private mimeTypeCache = new Map<string, string>();
-  private propertyCacheExpiry = 0;
+  private propertyCacheExpiry = Date.now() + 3000;
+  private propertyCacheWarmed = false;
 
   // Promise that resolves after initial status refresh completes
   private _statusReadyResolve!: () => void;
@@ -455,9 +458,9 @@ export class Repository implements IRemoteRepository {
     // Only check deleted files after the status list is fully updated
     this.onDidChangeStatus(this.actionForDeletedFiles, this, this.disposables);
 
-    // Start remote change polling
+    // Start remote change polling — defer until after initial status is ready
+    // Avoids duplicate svn stat calls during startup
     this.remoteChangeService.start();
-    this.updateRemoteChangedFiles();
 
     // On change config, restart remote change service
     configuration.onDidChange(e => {
@@ -493,7 +496,16 @@ export class Repository implements IRemoteRepository {
     });
 
     this.status()
-      .then(() => this._statusReadyResolve())
+      .then(() => {
+        this._statusReadyResolve();
+        // First remote check after initial status is ready
+        this.updateRemoteChangedFiles();
+        // Defer propget caches past first paint — single svn proplist call
+        // (can't rely on updateModelState re-triggering within grace period)
+        setTimeout(() => {
+          void this.refreshAllPropertyCaches();
+        }, 3000);
+      })
       .catch(err => {
         // Resolve even on error so callers don't hang
         this._statusReadyResolve();
@@ -964,15 +976,9 @@ export class Repository implements IRemoteRepository {
 
     this._onDidChangeStatus.fire();
 
-    // Refresh needs-lock cache only when expired (60s TTL)
-    // Avoids redundant propget calls on frequent status updates
-    if (Date.now() >= this.needsLockCacheExpiry) {
-      await this.refreshNeedsLockCache();
-    }
-
-    // Refresh eol-style/mime-type caches for decoration tooltips
-    if (Date.now() >= this.propertyCacheExpiry) {
-      await this.refreshPropertyCaches();
+    // Refresh all property caches in a single proplist call when any are expired
+    if (Date.now() >= this.needsLockCacheExpiry || Date.now() >= this.propertyCacheExpiry) {
+      await this.refreshAllPropertyCaches();
     }
 
     // Refresh file decorations in Explorer view
@@ -2210,6 +2216,7 @@ export class Repository implements IRemoteRepository {
       const oldCount = this.needsLockFilesSet.size;
       this.needsLockFilesSet = await this.repository.getAllNeedsLockFiles();
       this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+      this.needsLockCacheWarmed = true;
       // Fire event if count changed
       if (this.needsLockFilesSet.size !== oldCount) {
         this._onDidChangeNeedsLock.fire();
@@ -2324,8 +2331,8 @@ export class Repository implements IRemoteRepository {
    * Uses cache if valid, otherwise queries SVN directly.
    */
   public async hasNeedsLock(filePath: string): Promise<boolean> {
-    // If cache is valid, use it
-    if (Date.now() < this.needsLockCacheExpiry) {
+    // If cache is valid and has been populated at least once, use it
+    if (this.needsLockCacheWarmed && Date.now() < this.needsLockCacheExpiry) {
       return this.hasNeedsLockCached(filePath);
     }
 
@@ -2356,8 +2363,35 @@ export class Repository implements IRemoteRepository {
       this.eolStyleCache = this.normalizeMapKeys(eolStyles);
       this.mimeTypeCache = this.normalizeMapKeys(mimeTypes);
       this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+      this.propertyCacheWarmed = true;
     } catch {
       // Keep existing cache on error
+    }
+  }
+
+  /**
+   * Refresh all property caches in a single `svn proplist -R -v .` call.
+   * Replaces 3 separate propget calls. Used on startup for efficiency.
+   */
+  public async refreshAllPropertyCaches(): Promise<void> {
+    try {
+      const { needsLock, eolStyle, mimeType } =
+        await this.repository.getAllProperties();
+
+      const oldCount = this.needsLockFilesSet.size;
+      this.needsLockFilesSet = needsLock;
+      this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+      this.needsLockCacheWarmed = true;
+      if (this.needsLockFilesSet.size !== oldCount) {
+        this._onDidChangeNeedsLock.fire();
+      }
+
+      this.eolStyleCache = this.normalizeMapKeys(eolStyle);
+      this.mimeTypeCache = this.normalizeMapKeys(mimeType);
+      this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+      this.propertyCacheWarmed = true;
+    } catch {
+      // Keep existing caches on error
     }
   }
 

@@ -83,7 +83,8 @@ export class Repository {
     private svn: Svn,
     public root: string,
     public workspaceRoot: string,
-    policy: ConstructorPolicy
+    policy: ConstructorPolicy,
+    prefetchedInfo?: ISvnInfo
   ) {
     if (policy === ConstructorPolicy.LateInit) {
       return (async (): Promise<Repository> => {
@@ -91,7 +92,13 @@ export class Repository {
       })() as unknown as Repository;
     }
     return (async (): Promise<Repository> => {
-      await this.updateInfo();
+      if (prefetchedInfo) {
+        this._info = prefetchedInfo;
+        this._infoCache.set("", prefetchedInfo);
+        this.lastInfoUpdate = Date.now();
+      } else {
+        await this.updateInfo();
+      }
       return this;
     })() as unknown as Repository;
   }
@@ -112,6 +119,8 @@ export class Repository {
 
     try {
       this._info = await parseInfoXml(result.stdout);
+      // Seed getInfo() cache so getCurrentBranch() doesn't re-query
+      this._infoCache.set("", this._info);
     } catch (err) {
       logError(
         `Failed to parse repository info for ${this.workspaceRoot}`,
@@ -314,6 +323,65 @@ export class Repository {
       }
     }
     return files;
+  }
+
+  /**
+   * Get all properties for all files in one call.
+   * Replaces 3 separate propget calls with a single `svn proplist -R -v .`.
+   * Output format:
+   *   Properties on 'path/file':
+   *     svn:needs-lock
+   *       *
+   *     svn:eol-style
+   *       native
+   */
+  public async getAllProperties(): Promise<{
+    needsLock: Set<string>;
+    eolStyle: Map<string, string>;
+    mimeType: Map<string, string>;
+  }> {
+    const needsLock = new Set<string>();
+    const eolStyle = new Map<string, string>();
+    const mimeType = new Map<string, string>();
+
+    try {
+      const result = await this.exec(["proplist", "-R", "-v", "."]);
+      let currentPath = "";
+      let currentProp = "";
+
+      for (const line of result.stdout.split("\n")) {
+        const pathMatch = line.match(/^Properties on '(.+)':$/);
+        if (pathMatch) {
+          currentPath = pathMatch[1];
+          currentProp = "";
+          continue;
+        }
+
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Property name lines are indented with 2 spaces, values with 4+
+        if (line.startsWith("    ") && currentProp && currentPath) {
+          // Value line
+          const value = trimmed;
+          if (currentProp === "svn:needs-lock") {
+            needsLock.add(currentPath);
+          } else if (currentProp === "svn:eol-style") {
+            eolStyle.set(currentPath, value);
+          } else if (currentProp === "svn:mime-type") {
+            mimeType.set(currentPath, value);
+          }
+          currentProp = "";
+        } else if (line.startsWith("  ") && !line.startsWith("    ")) {
+          // Property name line
+          currentProp = trimmed;
+        }
+      }
+    } catch {
+      // Return empty results on error
+    }
+
+    return { needsLock, eolStyle, mimeType };
   }
 
   /**
@@ -999,7 +1067,6 @@ export class Repository {
 
   public async getCurrentBranch(): Promise<string> {
     const info = await this.getInfo();
-
     const branch = getBranchName(info.url);
 
     if (branch) {

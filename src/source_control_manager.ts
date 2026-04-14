@@ -64,6 +64,7 @@ export class SourceControlManager implements IDisposable {
   public openRepositories: IOpenRepository[] = [];
   private disposables: Disposable[] = [];
   private possibleSvnRepositoryPaths = new Set<string>();
+  private pendingOpenPaths = new Set<string>();
   private ignoreList: string[] = [];
   private maxDepth: number = 0;
   private excludedPathsCache = new Map<string, Set<string>>(); // Phase 15 perf fix
@@ -274,6 +275,11 @@ export class SourceControlManager implements IDisposable {
       return;
     }
 
+    const normalized = normalizePath(path);
+    if (this.pendingOpenPaths.has(normalized)) {
+      return;
+    }
+
     const checkParent = level === 0;
 
     if (await isSvnFolder(path, checkParent)) {
@@ -286,15 +292,16 @@ export class SourceControlManager implements IDisposable {
         )
       );
 
-      if (ignoredRepos.has(normalizePath(path))) {
+      if (ignoredRepos.has(normalized)) {
         return;
       }
 
+      this.pendingOpenPaths.add(normalized);
       try {
-        const repositoryRoot = await this.svn.getRepositoryRoot(path);
+        const { root: repositoryRoot, info } = await this.svn.getRepositoryRoot(path);
 
         const repository = new Repository(
-          await this.svn.open(repositoryRoot, path),
+          await this.svn.open(repositoryRoot, path, info),
           this.extensionContext.secrets
         );
 
@@ -307,6 +314,8 @@ export class SourceControlManager implements IDisposable {
           }
         }
         logError("Repository scan failed", err);
+      } finally {
+        this.pendingOpenPaths.delete(normalized);
       }
       return;
     }
