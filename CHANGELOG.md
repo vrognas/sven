@@ -7,6 +7,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.31] - 2026-04-14
+
+### Changed
+
+- **Needs-lock perf**: Expired cache now refreshes via single batch `svn propget -R` instead of spawning per-file propget calls
+- **Pre-commit update perf**: Skip remote check for targeted updates — one fewer network round-trip
+- **Pre-commit update perf**: Filter out unversioned/added files — skip update entirely when committing only new files
+- **Pre-commit update reliability**: Remove fallback to full update — targeted failures surface cleanly instead of pulling unrelated changes
+
 ## [0.2.30] - 2026-04-11
 
 ### Changed
