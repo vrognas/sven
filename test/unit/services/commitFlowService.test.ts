@@ -39,7 +39,8 @@ describe("CommitFlowService", () => {
       }),
       commitFiles: vi.fn().mockResolvedValue("Committed revision 42"),
       getLastRemoteCheckResult: vi.fn().mockReturnValue(undefined),
-      getRemoteCheckFrequencyMs: vi.fn().mockReturnValue(300_000)
+      getRemoteCheckFrequencyMs: vi.fn().mockReturnValue(300_000),
+      getResourceFromFile: vi.fn().mockReturnValue({ type: "modified" })
     };
 
     service = new CommitFlowService(new ConventionalCommitService());
@@ -147,6 +148,18 @@ describe("CommitFlowService", () => {
       });
 
       expect(mockRepository.updateRevision).toHaveBeenCalled();
+    });
+
+    it("skips update when all files are unversioned/added", async () => {
+      mockRepository.getResourceFromFile.mockReturnValue({ type: "added" });
+      mockWindow.showInputBox.mockResolvedValueOnce("add new files");
+
+      const result = await service.runCommitFlow(mockRepository, ["/path/new.txt"], {
+        updateBeforeCommit: true
+      });
+
+      expect(mockRepository.updateRevision).not.toHaveBeenCalled();
+      expect(result.message).toBe("add new files");
     });
 
     it("passes committed file paths to targeted update", async () => {

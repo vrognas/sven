@@ -2,6 +2,7 @@
 // Licensed under MIT License
 
 import { CancellationToken, ProgressLocation, window } from "vscode";
+import { Status } from "../common/types";
 import { Repository } from "../repository";
 
 /**
@@ -33,6 +34,23 @@ export class PreCommitUpdateService {
    * Reuses cached remote-check result from background polling when fresh.
    */
   async runUpdate(repository: Repository, files?: string[]): Promise<UpdateResult> {
+    // Filter to versioned files only — new/unversioned files don't need updating
+    const versionedFiles = files?.filter(f => {
+      const resource = repository.getResourceFromFile(f);
+      if (!resource) {
+        // Not in any resource group — check if inside unversioned/ignored folder
+        const folderStatus = repository.isInsideUnversionedOrIgnored(f);
+        // If inside unversioned/ignored folder, skip; otherwise treat as versioned
+        return !folderStatus;
+      }
+      return resource.type !== Status.ADDED && resource.type !== Status.UNVERSIONED;
+    });
+
+    // No versioned files to update — skip entirely
+    if (versionedFiles && versionedFiles.length === 0) {
+      return { success: true, skipped: true };
+    }
+
     return window.withProgress(
       {
         location: ProgressLocation.Notification,
@@ -45,25 +63,28 @@ export class PreCommitUpdateService {
         }
 
         try {
-          // Check if update is needed — reuse cached result if fresh
-          progress.report({ message: "Checking server for new commits..." });
-          let hasChanges: boolean;
+          // For targeted updates, skip the remote check — svn update is a no-op at HEAD
+          // This saves a full network round-trip (svn log -r BASE:HEAD)
+          if (!versionedFiles) {
+            // Full update: check if update is needed first
+            progress.report({ message: "Checking server for new commits..." });
+            let hasChanges: boolean;
 
-          const cached = repository.getLastRemoteCheckResult();
-          const frequencyMs = repository.getRemoteCheckFrequencyMs();
-          if (
-            cached &&
-            frequencyMs > 0 &&
-            Date.now() - cached.timestamp < frequencyMs
-          ) {
-            hasChanges = cached.hasChanges;
-          } else {
-            hasChanges = await repository.hasRemoteChanges();
-          }
+            const cached = repository.getLastRemoteCheckResult();
+            const frequencyMs = repository.getRemoteCheckFrequencyMs();
+            if (
+              cached &&
+              frequencyMs > 0 &&
+              Date.now() - cached.timestamp < frequencyMs
+            ) {
+              hasChanges = cached.hasChanges;
+            } else {
+              hasChanges = await repository.hasRemoteChanges();
+            }
 
-          if (!hasChanges) {
-            // Already at HEAD, skip update
-            return { success: true, skipped: true };
+            if (!hasChanges) {
+              return { success: true, skipped: true };
+            }
           }
 
           if (token.isCancellationRequested) {
@@ -71,7 +92,7 @@ export class PreCommitUpdateService {
           }
 
           progress.report({ message: "Running svn update..." });
-          const updateResult = await repository.updateRevision(false, { token, files });
+          const updateResult = await repository.updateRevision(false, { token, files: versionedFiles });
 
           if (updateResult.conflicts.length > 0) {
             return {
