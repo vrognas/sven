@@ -110,7 +110,7 @@ function getUnsafeFiles(repo: Repository, targetPath: string): string[] {
 }
 
 export interface DepthQuickPickItem extends QuickPickItem {
-  depth: keyof typeof SvnDepth;
+  depth: keyof typeof SvnDepth | "_omitExternals";
 }
 
 /** Checkout depth options (for restoring ghost items - no exclude option) */

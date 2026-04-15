@@ -154,7 +154,7 @@ export class Checkout extends Command {
           label: "$(exclude) Omit Externals",
           description: "Skip svn:externals",
           detail: "Don't download external references. Useful if externals are large or need separate credentials.",
-          depth: "_omitExternals" as any
+          depth: "_omitExternals"
         } as DepthQuickPickItem
       ],
       {
@@ -169,8 +169,8 @@ export class Checkout extends Command {
     }
 
     // Extract depth and externals flag from multi-select
-    const omitExternals = depthPick.some(p => (p.depth as string) === "_omitExternals");
-    const selectedDepth = depthPick.find(p => (p.depth as string) !== "_omitExternals");
+    const omitExternals = depthPick.some(p => p.depth === "_omitExternals");
+    const selectedDepth = depthPick.find(p => p.depth !== "_omitExternals");
     if (!selectedDepth) {
       window.showErrorMessage("Please select a download depth.");
       return;
