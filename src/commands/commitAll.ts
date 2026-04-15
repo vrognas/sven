@@ -18,3 +18,17 @@ export class CommitAll extends BaseCommitPromptCommand {
     await this.commitWithPrompt(repository);
   }
 }
+
+/**
+ * Commit from SCM input box (Ctrl+Enter).
+ * Same workflow as CommitAll — requires staged/selected files.
+ */
+export class CommitFromInputBox extends BaseCommitPromptCommand {
+  constructor() {
+    super("sven.commitFromInputBox", { repository: true });
+  }
+
+  public async execute(repository: Repository) {
+    await this.commitWithPrompt(repository);
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RevealInExplorer } from "../../../src/commands/revealInExplorer";
+import { RevealInExplorer } from "../../../src/commands/reveal";
 import { Uri } from "vscode";
 
 /**

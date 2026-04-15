@@ -1,9 +1,7 @@
 import * as assert from "assert";
 import { Uri } from "vscode";
 import { vi } from "vitest";
-import { Patch } from "../../../commands/patch";
-import { PatchAll } from "../../../commands/patchAll";
-import { PatchChangeList } from "../../../commands/patchChangeList";
+import { Patch, PatchAll, PatchChangeList } from "../../../commands/patch";
 import { Status } from "../../../common/types";
 import { Repository } from "../../../repository";
 import { Resource } from "../../../resource";

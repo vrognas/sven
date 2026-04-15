@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { Uri, window } from "vscode";
-import { AddToIgnoreExplorer } from "../../../commands/addToIgnoreExplorer";
-import { AddToIgnoreSCM } from "../../../commands/addToIgnoreSCM";
+import { AddToIgnoreExplorer, AddToIgnoreSCM } from "../../../commands/addToIgnore";
 import { Resource } from "../../../resource";
 import { Repository } from "../../../repository";
 import { Status } from "../../../common/types";

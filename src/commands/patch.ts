@@ -3,6 +3,8 @@
 // Licensed under MIT License
 
 import { SourceControlResourceState } from "vscode";
+import { getPatchChangelist } from "../changelistItems";
+import { Repository } from "../repository";
 import { Command } from "./command";
 
 export class Patch extends Command {
@@ -17,5 +19,33 @@ export class Patch extends Command {
         await this.showDiffPath(repository, content);
       });
     });
+  }
+}
+
+export class PatchAll extends Command {
+  constructor() {
+    super("sven.patchAll", { repository: true });
+  }
+
+  public async execute(repository: Repository) {
+    const content = await repository.patch([]);
+    await this.showDiffPath(repository, content);
+  }
+}
+
+export class PatchChangeList extends Command {
+  constructor() {
+    super("sven.patchChangeList", { repository: true });
+  }
+
+  public async execute(repository: Repository) {
+    const changelistName = await getPatchChangelist(repository);
+
+    if (!changelistName) {
+      return;
+    }
+
+    const content = await repository.patchChangelist(changelistName);
+    await this.showDiffPath(repository, content);
   }
 }
