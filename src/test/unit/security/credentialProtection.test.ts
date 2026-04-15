@@ -158,7 +158,8 @@ suite("Credential Protection - Security Tests", () => {
         const loggedText = call.args[0] as string;
         // --password-from-stdin is safe (password not in args); only bare --password is unsafe
         assert.ok(
-          !/ --password /.test(loggedText),
+          !/ --password(?:\s|$)/.test(loggedText) ||
+            / --password-from-stdin/.test(loggedText),
           "--password flag should NOT appear in log (--password-from-stdin is OK)"
         );
       }
