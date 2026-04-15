@@ -1,7 +1,17 @@
 # Lessons Learned
 
-**Version**: 0.2.28
-**Updated**: 2026-04-07
+**Version**: 0.2.32
+**Updated**: 2026-04-15
+
+---
+
+### 63. Dead Code Can Hide Security Features
+
+**Lesson**: `passwordForStdin` in svn.ts was declared, checked, and consumed — but never assigned. The `--password-from-stdin` path for SVN ≥1.10 was completely inert since the auth cache refactor. The if/else chain fell through silently.
+
+**Fix**: Add the missing `else` branch. Also add tests that verify stdin is actually written to.
+
+**Rule**: When refactoring branching logic, test every branch outcome explicitly — not just the new path, but that existing paths still fire.
 
 ---
 

@@ -23,6 +23,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Encoding**: Restored byte-sniff encoding detection for non-UTF-8 files not open in editor
 - **TOCTOU race**: `pendingOpenPaths` guard now blocks before async `isSvnFolder` check
 - **Cache correctness**: `cacheWarmed` flag prevents empty cache from being treated as valid during startup grace period
+- **Security**: `--password-from-stdin` was dead code for SVN ≥1.10 — missing else branch silently dropped passwords
+- **Error logging**: Bare `catch {}` blocks in property cache now log errors instead of swallowing silently
+- **Floating promise**: `saveAuth()` in retryRun now has explicit error handling
+
+### Performance
+
+- Pre-compiled error code regexes (avoid 22 RegExp allocations per error)
+- Cached `semver.gte` version check (avoid per-spawn comparison)
+- Cached 4 config reads in `updateModelState` hot path
+- `refreshAllPropertyCaches` no longer blocks status update
+- Added jitter to multi-repo poll timers (prevents simultaneous bursts)
+- StatusService config cache filtered to relevant keys only
+- Extracted shared `CredentialMode` type to `src/common/credentialMode.ts`
+
+### Refactored
+
+- Consolidated 9 command files into 4 (reveal, ignore, patch, commit)
 
 ## [0.2.31] - 2026-04-14
 

@@ -1,7 +1,7 @@
 # SVN Extension Architecture
 
-**Version**: 0.2.28
-**Updated**: 2026-04-07
+**Version**: 0.2.32
+**Updated**: 2026-04-15
 
 ---
 
@@ -189,10 +189,11 @@ External: vscode, @posit-dev/positron
 
 ## Technical Debt
 
-- Repository.ts still 923 lines (could extract more services)
-- 50+ command files (could consolidate by category)
-- ~248 `any` types remaining across 25 files
-- fs/ wrappers could use fs.promises
+- Repository.ts still ~2746 lines (auth + property-cache blocks extractable)
+- ~46 command files after consolidation (reveal, ignore, patch, commit merged)
+- ~248 `any` types remaining across 25 files (mostly test files; production ~5 files)
+- fs/ wrappers use `promisify(original-fs)` — could use `original-fs.promises`
+- AuthService extracted but unused in production (retryRun inline in repository.ts)
 
 ---
 
