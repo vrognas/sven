@@ -103,9 +103,14 @@ export class StatusService implements IStatusService {
     private readonly workspaceRoot: string,
     private readonly root: string
   ) {
-    // Subscribe to config changes to invalidate cache (Phase 8.1 perf fix)
-    this._configChangeDisposable = configuration.onDidChange(() => {
-      this._configCache = undefined;
+    // Invalidate cache only for relevant config keys
+    this._configChangeDisposable = configuration.onDidChange(e => {
+      if (
+        e.affectsConfiguration("sven.sourceControl") ||
+        e.affectsConfiguration("files.exclude")
+      ) {
+        this._configCache = undefined;
+      }
     });
   }
 

@@ -92,12 +92,16 @@ export class RemoteChangeService implements IRemoteChangeService {
       return;
     }
 
+    // Add 0-10% jitter to prevent simultaneous bursts with multiple repos
+    const jitter = Math.random() * 0.1 * frequencyMs;
+    const jitteredMs = frequencyMs + jitter;
+
     this.interval = setInterval(() => {
       void Promise.resolve(this.onPoll()).catch((err: unknown) => {
         logError("[RemoteChangeService] Polling failed", err);
         // Continue polling despite errors
       });
-    }, frequencyMs);
+    }, jitteredMs);
   }
 
   stop(): void {
