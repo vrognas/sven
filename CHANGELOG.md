@@ -7,6 +7,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.32] - 2026-04-15
+
+### Changed
+
+- **Startup perf**: Merged duplicate `svn info` calls — pass parsed info from discovery to constructor (8→2 calls to first paint)
+- **Startup perf**: Combined 3 separate `svn propget` calls into single `svn proplist -R -v .`
+- **Startup perf**: Deferred proplist and remote check until after initial status renders
+- **File-open perf**: In-flight dedup for `svn cat` — concurrent calls for same file+revision share one process
+- **File-open perf**: Deduplicated `svn log` and `svn stat` calls on file open via debounce coalescing
+- **File-open perf**: All property refreshes now use combined `svn proplist` instead of individual `svn propget` calls
+
+### Fixed
+
+- **Encoding**: Restored byte-sniff encoding detection for non-UTF-8 files not open in editor
+- **TOCTOU race**: `pendingOpenPaths` guard now blocks before async `isSvnFolder` check
+- **Cache correctness**: `cacheWarmed` flag prevents empty cache from being treated as valid during startup grace period
+
 ## [0.2.31] - 2026-04-14
 
 ### Changed
