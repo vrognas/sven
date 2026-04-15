@@ -70,9 +70,10 @@ export class ItemLogProvider
 
     this._dispose.push(
       window.onDidChangeActiveTextEditor(this.editorChanged, this),
-      // Refresh when repositories open/close (handles startup timing)
-      sourceControlManager.onDidOpenRepository(() => this.refresh()),
-      sourceControlManager.onDidCloseRepository(() => this.refresh()),
+      // Refresh when repositories open/close — route through editorChanged debounce
+      // to prevent duplicate log fetches when open fires alongside initial refresh
+      sourceControlManager.onDidOpenRepository(() => this.editorChanged(window.activeTextEditor)),
+      sourceControlManager.onDidCloseRepository(() => this.editorChanged(window.activeTextEditor)),
       commands.registerCommand(
         "sven.itemlog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
@@ -108,7 +109,8 @@ export class ItemLogProvider
         this
       )
     );
-    this.refresh();
+    // Route through editorChanged debounce to coalesce with onDidOpenRepository
+    this.editorChanged(window.activeTextEditor);
   }
 
   // Navigate to the same revision in repository history
@@ -170,8 +172,8 @@ export class ItemLogProvider
       await this.currentItem.repo.rollbackToRevision(filePath, commit.revision);
 
       if (repo) {
-        // Rebuild needs-lock cache from SVN for immediate L badge update
-        await repo.refreshNeedsLockCache();
+        // Rebuild property caches from SVN for immediate badge update
+        await repo.refreshAllPropertyCaches();
         // Refresh Explorer decorations (L badge, etc)
         repo.refreshExplorerDecorations([fileUri]);
       }

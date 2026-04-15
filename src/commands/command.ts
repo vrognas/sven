@@ -1177,7 +1177,7 @@ export abstract class Command implements Disposable {
         await repository.revert(paths, depth);
 
         // Post-revert cleanup
-        await repository.refreshNeedsLockCache();
+        await repository.refreshAllPropertyCaches();
         repository.refreshExplorerDecorations(resources);
 
         // Unstage reverted files

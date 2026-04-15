@@ -279,26 +279,30 @@ export class SourceControlManager implements IDisposable {
     if (this.pendingOpenPaths.has(normalized)) {
       return;
     }
+    this.pendingOpenPaths.add(normalized);
 
     const checkParent = level === 0;
 
-    if (await isSvnFolder(path, checkParent)) {
-      // Config based on folder path
-      const resourceConfig = workspace.getConfiguration("sven", Uri.file(path));
+    try {
+      if (await isSvnFolder(path, checkParent)) {
+        // Config based on folder path
+        const resourceConfig = workspace.getConfiguration(
+          "sven",
+          Uri.file(path)
+        );
 
-      const ignoredRepos = new Set(
-        (resourceConfig.get<string[]>("ignoreRepositories") || []).map(p =>
-          normalizePath(p)
-        )
-      );
+        const ignoredRepos = new Set(
+          (resourceConfig.get<string[]>("ignoreRepositories") || []).map(p =>
+            normalizePath(p)
+          )
+        );
 
-      if (ignoredRepos.has(normalized)) {
-        return;
-      }
+        if (ignoredRepos.has(normalized)) {
+          return;
+        }
 
-      this.pendingOpenPaths.add(normalized);
-      try {
-        const { root: repositoryRoot, info } = await this.svn.getRepositoryRoot(path);
+        const { root: repositoryRoot, info } =
+          await this.svn.getRepositoryRoot(path);
 
         const repository = new Repository(
           await this.svn.open(repositoryRoot, path, info),
@@ -306,18 +310,19 @@ export class SourceControlManager implements IDisposable {
         );
 
         this.open(repository);
-      } catch (err) {
-        if (err instanceof SvnError) {
-          if (err.svnErrorCode === svnErrorCodes.WorkingCopyIsTooOld) {
-            await commands.executeCommand("sven.upgrade", path);
-            return;
-          }
-        }
-        logError("Repository scan failed", err);
-      } finally {
-        this.pendingOpenPaths.delete(normalized);
+        return;
       }
+    } catch (err) {
+      if (err instanceof SvnError) {
+        if (err.svnErrorCode === svnErrorCodes.WorkingCopyIsTooOld) {
+          await commands.executeCommand("sven.upgrade", path);
+          return;
+        }
+      }
+      logError("Repository scan failed", err);
       return;
+    } finally {
+      this.pendingOpenPaths.delete(normalized);
     }
 
     const newLevel = level + 1;

@@ -501,9 +501,11 @@ export class Repository implements IRemoteRepository {
         // First remote check after initial status is ready
         this.updateRemoteChangedFiles();
         // Defer propget caches past first paint — single svn proplist call
-        // (can't rely on updateModelState re-triggering within grace period)
+        // Skip if already warmed (e.g., hasNeedsLock triggered refresh early)
         setTimeout(() => {
-          void this.refreshAllPropertyCaches();
+          if (!this.needsLockCacheWarmed || !this.propertyCacheWarmed) {
+            void this.refreshAllPropertyCaches();
+          }
         }, 3000);
       })
       .catch(err => {
@@ -846,8 +848,9 @@ export class Repository implements IRemoteRepository {
   }
 
   private lastModelUpdate: number = 0;
-  // Cache matches debounce time (500ms) - after debounce completes, cache expired
-  private readonly MODEL_CACHE_MS = 500;
+  // Cache window for status updates — prevents duplicate svn stat calls
+  // when multiple triggers fire in quick succession (file open, watcher, etc.)
+  private readonly MODEL_CACHE_MS = 1000;
 
   // Grace period after force refresh to avoid redundant file watcher status calls
   private lastForceRefresh: number = 0;
@@ -1466,7 +1469,7 @@ export class Repository implements IRemoteRepository {
     // Ensure needs-lock cache is warm before parallel checks.
     // Cold cache would cause N concurrent svn propget calls hitting wc.db.
     if (Date.now() >= this.needsLockCacheExpiry) {
-      await this.refreshNeedsLockCache();
+      await this.refreshAllPropertyCaches();
     }
     // Check for needs-lock files that aren't locked (parallel for performance)
     // Skip warning for property-only changes (e.g., setting svn:needs-lock itself)
@@ -2211,7 +2214,7 @@ export class Repository implements IRemoteRepository {
    * Refresh the batch cache of files with svn:needs-lock property.
    * Called during status updates to populate cache efficiently.
    */
-  public async refreshNeedsLockCache(): Promise<void> {
+  private async refreshNeedsLockCache(): Promise<void> {
     try {
       const oldCount = this.needsLockFilesSet.size;
       this.needsLockFilesSet = await this.repository.getAllNeedsLockFiles();
@@ -2336,9 +2339,9 @@ export class Repository implements IRemoteRepository {
       return this.hasNeedsLockCached(filePath);
     }
 
-    // Cache expired - refresh batch cache (one `svn propget -R` instead of N per-file calls)
+    // Cache expired - refresh all caches in single proplist call
     try {
-      await this.refreshNeedsLockCache();
+      await this.refreshAllPropertyCaches();
       return this.hasNeedsLockCached(filePath);
     } catch {
       return false;
@@ -2353,7 +2356,7 @@ export class Repository implements IRemoteRepository {
    * Refresh eol-style and mime-type caches.
    * Called during status updates for efficient decoration tooltips.
    */
-  public async refreshPropertyCaches(): Promise<void> {
+  private async refreshPropertyCaches(): Promise<void> {
     try {
       const [eolStyles, mimeTypes] = await Promise.all([
         this.repository.getAllEolStyleFiles(),

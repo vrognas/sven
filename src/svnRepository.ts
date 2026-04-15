@@ -53,6 +53,7 @@ import {
   unwrap
 } from "./util";
 import { logError, getErrorMessage } from "./util/errorLogger";
+import { iconv } from "./vscodeModules";
 import { matchAll } from "./util/globMatch";
 import { LRUCache } from "./util/lruCache";
 import { parseDiffXml } from "./parser/diffParser";
@@ -75,6 +76,9 @@ export class Repository {
   // Phase 10.3 perf fix - timestamp-based caching (5s)
   private lastInfoUpdate: number = 0;
   private readonly INFO_CACHE_MS = 5000;
+
+  // In-flight dedup for svn cat — prevents duplicate calls for same file+revision
+  private _catInFlight = new Map<string, Promise<Buffer>>();
 
   public username?: string;
   public password?: string;
@@ -854,6 +858,9 @@ export class Repository {
   public async show(file: string | Uri, revision?: string): Promise<string> {
     const { args, uri, filePath } = await this.prepareCatArgs(file, revision);
 
+    // Use showBuffer's dedup with pre-built args to avoid calling prepareCatArgs twice
+    const buffer = await this.showBufferWithArgs(args);
+
     /**
      * ENCODE DETECTION
      * if TextDocuments exists and autoGuessEncoding is true,
@@ -872,7 +879,6 @@ export class Repository {
     );
 
     if (textDocument) {
-      // Load encoding by languageId
       const languageConfigs = workspace.getConfiguration(
         `[${textDocument.languageId}]`,
         uri
@@ -885,9 +891,8 @@ export class Repository {
       }
 
       if (autoGuessEncoding) {
-        // The `getText` return a `utf-8` string
-        const buffer = Buffer.from(textDocument.getText(), "utf-8");
-        const detectedEncoding = encodeUtil.detectEncoding(buffer);
+        const textBuffer = Buffer.from(textDocument.getText(), "utf-8");
+        const detectedEncoding = encodeUtil.detectEncoding(textBuffer);
         if (detectedEncoding) {
           encoding = detectedEncoding;
         }
@@ -896,6 +901,14 @@ export class Repository {
       const svnEncoding = configuration.defaultEncoding();
       if (svnEncoding) {
         encoding = svnEncoding;
+      }
+
+      // Byte-sniff overrides default when enabled
+      if (autoGuessEncoding) {
+        const detectedEncoding = encodeUtil.detectEncoding(buffer);
+        if (detectedEncoding) {
+          encoding = detectedEncoding;
+        }
       }
     }
 
@@ -907,9 +920,11 @@ export class Repository {
       encoding = null;
     }
 
-    const result = await this.exec(args, { encoding });
-
-    return result.stdout;
+    // Decode buffer with detected encoding
+    if (encoding) {
+      return iconv.decode(buffer, encoding);
+    }
+    return buffer.toString("utf-8");
   }
 
   public async showBuffer(
@@ -917,25 +932,38 @@ export class Repository {
     revision?: string
   ): Promise<Buffer> {
     const { args } = await this.prepareCatArgs(file, revision);
-    const result = await this.execBuffer(args);
+    return this.showBufferWithArgs(args);
+  }
 
-    // Fix: Throw error if SVN command failed (exitCode !== 0)
-    // Previously, errors were silently swallowed, causing "Unknown Error" in diff views
-    if (result.exitCode !== 0) {
-      // Extract SVN error code (E followed by digits) from stderr
-      const errorCodeMatch = result.stderr.match(/E(\d+)/);
-      const svnErrorCode = errorCodeMatch ? `E${errorCodeMatch[1]}` : undefined;
-
-      throw new SvnError({
-        message: `SVN cat command failed: ${result.stderr}`,
-        stderr: result.stderr,
-        exitCode: result.exitCode,
-        svnErrorCode,
-        svnCommand: "cat"
-      });
+  /** Dedup concurrent svn cat calls for the same args */
+  private showBufferWithArgs(args: string[]): Promise<Buffer> {
+    const key = args.join("\0");
+    const inFlight = this._catInFlight.get(key);
+    if (inFlight) {
+      return inFlight;
     }
 
-    return result.stdout;
+    const promise = this.execBuffer(args).then(result => {
+      this._catInFlight.delete(key);
+      if (result.exitCode !== 0) {
+        const errorCodeMatch = result.stderr.match(/E(\d+)/);
+        const svnErrorCode = errorCodeMatch ? `E${errorCodeMatch[1]}` : undefined;
+        throw new SvnError({
+          message: `SVN cat command failed: ${result.stderr}`,
+          stderr: result.stderr,
+          exitCode: result.exitCode,
+          svnErrorCode,
+          svnCommand: "cat"
+        });
+      }
+      return result.stdout;
+    }).catch(err => {
+      this._catInFlight.delete(key);
+      throw err;
+    });
+
+    this._catInFlight.set(key, promise);
+    return promise;
   }
 
   public async commitFiles(message: string, files: string[]) {

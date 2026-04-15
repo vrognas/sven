@@ -38,7 +38,7 @@ suite("Revert Command Tests", () => {
         revertCalls.push({ paths, depth: depth ?? "infinity" });
         return "";
       },
-      refreshNeedsLockCache: async () => {
+      refreshAllPropertyCaches: async () => {
         refreshedNeedsLock = true;
       },
       refreshExplorerDecorations: () => {

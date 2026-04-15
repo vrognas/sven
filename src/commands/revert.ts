@@ -37,8 +37,8 @@ export class Revert extends Command {
 
       await this.handleRepositoryOperation(async () => {
         await repository.revert(allPaths, "infinity");
-        // Rebuild needs-lock cache from SVN for immediate L badge update
-        await repository.refreshNeedsLockCache();
+        // Rebuild property caches from SVN for immediate badge update
+        await repository.refreshAllPropertyCaches();
         // Refresh Explorer decorations for reverted files (L badge, etc)
         repository.refreshExplorerDecorations(allPaths.map(p => Uri.file(p)));
         // Auto-unstage reverted files
