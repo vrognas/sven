@@ -27,10 +27,7 @@ import { logError } from "./util/errorLogger";
 import { showSystemKeyringAuthNotification } from "./util/nativeStoreAuthNotification";
 import { iconv } from "./vscodeModules";
 
-/**
- * Credential storage mode - determines where SVN credentials are stored
- */
-type CredentialMode = "auto" | "systemKeyring" | "extensionStorage" | "prompt";
+import type { CredentialMode } from "./common/credentialMode";
 
 // Auth config cache - avoids repeated config reads per command
 let authConfigCache: {
@@ -163,6 +160,11 @@ const PATH_SEPARATOR_PATTERN = /[\\\/]+/;
 // Default locale for SVN command execution
 const DEFAULT_LOCALE = "en_US.UTF-8";
 
+// Pre-compiled regex map for error code detection (avoids per-call RegExp construction)
+const svnErrorCodeRegexMap: ReadonlyMap<string, RegExp> = new Map(
+  Object.values(svnErrorCodes).map(code => [code, new RegExp(`svn: ${code}`)])
+);
+
 function getSvnErrorCode(stderr: string): string | undefined {
   // Priority: Check auth-related patterns FIRST
   // SVN may return E170013 (UnableToConnect) with E215004 (NoMoreCredentials)
@@ -174,13 +176,9 @@ function getSvnErrorCode(stderr: string): string | undefined {
     return svnErrorCodes.AuthorizationFailed;
   }
 
-  for (const name in svnErrorCodes) {
-    if (Object.hasOwn(svnErrorCodes, name)) {
-      const code = svnErrorCodes[name];
-      const regex = new RegExp(`svn: ${code}`);
-      if (regex.test(stderr)) {
-        return code;
-      }
+  for (const [code, regex] of svnErrorCodeRegexMap) {
+    if (regex.test(stderr)) {
+      return code;
     }
   }
 
@@ -224,6 +222,7 @@ export class Svn {
   private svnPath: string;
   private lastCwd: string = "";
   private authCache: SvnAuthCache;
+  private readonly supportsStdinPassword: boolean;
 
   private _onOutput = new EventEmitter();
   get onOutput(): EventEmitter {
@@ -233,6 +232,10 @@ export class Svn {
   constructor(options: ISvnOptions) {
     this.svnPath = options.svnPath;
     this.version = options.version;
+    const coerced = semver.coerce(this.version);
+    this.supportsStdinPassword = coerced
+      ? semver.gte(coerced, "1.10.0")
+      : false;
     this.authCache = new SvnAuthCache();
     authModeLoggedOnce = false;
   }
@@ -295,8 +298,6 @@ export class Svn {
       args.push("--username", options.username);
     }
 
-    // Check if SVN 1.10+ for --password-from-stdin support (hides password from ps)
-    const supportsStdinPassword = semver.gte(this.version, "1.10.0");
     let passwordForStdin: string | undefined;
 
     // Add password if provided
@@ -305,13 +306,17 @@ export class Svn {
     if (effectivePassword) {
       if (useLegacyAuth) {
         args.push("--password", effectivePassword);
-      } else if (!supportsStdinPassword) {
+      } else if (!this.supportsStdinPassword) {
         // SVN < 1.10: Don't pass password via --password (visible in ps/top)
         // Log warning - auth will fail if system keyring doesn't have credentials
         this.logOutput(
           `[SECURITY] SVN ${this.version} < 1.10 does not support --password-from-stdin. ` +
             `Password not passed to avoid process list exposure. Use system keyring or upgrade SVN.\n`
         );
+      } else {
+        // SVN >= 1.10: pass password via stdin (hidden from process list)
+        passwordForStdin = effectivePassword;
+        args.push("--password-from-stdin");
       }
     }
 

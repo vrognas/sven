@@ -33,10 +33,7 @@ enum InputBoxValidationType {
   Information = 2
 }
 
-/**
- * Credential storage mode - determines where SVN credentials are stored
- */
-type CredentialMode = "auto" | "systemKeyring" | "extensionStorage" | "prompt";
+import type { CredentialMode } from "./common/credentialMode";
 
 /**
  * Determine if extension storage should be used for credentials.

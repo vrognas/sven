@@ -96,8 +96,8 @@ suite("Svn.exec() - Auth Integration Tests", () => {
         "Password should not appear anywhere in args"
       );
       assert.ok(
-        !argsString.includes("--password"),
-        "--password flag should not appear"
+        !spawnArgs.includes("--password"),
+        "--password flag should not appear (--password-from-stdin is OK)"
       );
     });
 
@@ -448,6 +448,81 @@ suite("Svn.exec() - Auth Integration Tests", () => {
       );
 
       delete process.env.SVN_PASSWORD;
+    });
+  });
+
+  suite("Password via stdin (SVN >= 1.10)", () => {
+    test("9.1: --password-from-stdin in args and password written to stdin", async () => {
+      authCacheStub.writeCredential.resolves();
+
+      const stdinStub = {
+        write: sinon.stub(),
+        end: sinon.stub()
+      };
+      mockProcess.stdin = stdinStub;
+
+      await svn.exec("/repo", ["update"], {
+        username: "alice",
+        password: "secret123"
+      });
+
+      const spawnArgs = spawnStub.firstCall.args[1] as string[];
+      assert.ok(
+        spawnArgs.includes("--password-from-stdin"),
+        "Should include --password-from-stdin flag for SVN >= 1.10"
+      );
+      assert.ok(
+        stdinStub.write.calledWith("secret123"),
+        "Should write password to stdin"
+      );
+      assert.ok(stdinStub.end.called, "Should close stdin after write");
+    });
+
+    test("9.2: --password-from-stdin NOT used in legacy mode", async () => {
+      authCacheStub.writeCredential.resolves();
+      (svn as any).useLegacyAuth = true;
+
+      const stdinStub = { write: sinon.stub(), end: sinon.stub() };
+      mockProcess.stdin = stdinStub;
+
+      await svn.exec("/repo", ["update"], {
+        username: "alice",
+        password: "secret123"
+      });
+
+      const spawnArgs = spawnStub.firstCall.args[1] as string[];
+      assert.ok(
+        !spawnArgs.includes("--password-from-stdin"),
+        "Legacy mode should NOT use --password-from-stdin"
+      );
+      assert.ok(
+        spawnArgs.includes("--password"),
+        "Legacy mode should use --password flag"
+      );
+    });
+
+    test("9.3: --password-from-stdin NOT used for SVN < 1.10", async () => {
+      const oldSvn = new Svn({ svnPath: "/usr/bin/svn", version: "1.9.7" });
+      (oldSvn as any).authCache = authCacheStub;
+      authCacheStub.writeCredential.resolves();
+
+      const stdinStub = { write: sinon.stub(), end: sinon.stub() };
+      mockProcess.stdin = stdinStub;
+
+      await oldSvn.exec("/repo", ["update"], {
+        username: "alice",
+        password: "secret123"
+      });
+
+      const spawnArgs = spawnStub.firstCall.args[1] as string[];
+      assert.ok(
+        !spawnArgs.includes("--password-from-stdin"),
+        "SVN < 1.10 should NOT use --password-from-stdin"
+      );
+      assert.ok(
+        !stdinStub.write.called,
+        "Should NOT write to stdin for old SVN"
+      );
     });
   });
 
