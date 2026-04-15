@@ -192,7 +192,7 @@ export class Repository implements IRemoteRepository {
   private storedAuthsCache?: { accounts: IStoredAuth[]; expiry: number };
 
   // Needs-lock cache: set of relative paths with svn:needs-lock property
-  // Populated in batch by refreshNeedsLockCache() for efficient decoration
+  // Populated in batch by refreshAllPropertyCaches() for efficient decoration
   private needsLockFilesSet = new Set<string>();
   // Defer first propget until 3s after construction — unblocks first paint
   private needsLockCacheExpiry = Date.now() + 3000;
@@ -2211,25 +2211,6 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Refresh the batch cache of files with svn:needs-lock property.
-   * Called during status updates to populate cache efficiently.
-   */
-  private async refreshNeedsLockCache(): Promise<void> {
-    try {
-      const oldCount = this.needsLockFilesSet.size;
-      this.needsLockFilesSet = await this.repository.getAllNeedsLockFiles();
-      this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
-      this.needsLockCacheWarmed = true;
-      // Fire event if count changed
-      if (this.needsLockFilesSet.size !== oldCount) {
-        this._onDidChangeNeedsLock.fire();
-      }
-    } catch {
-      // Keep existing cache on error
-    }
-  }
-
-  /**
    * Get count of files with svn:needs-lock property.
    */
   public getNeedsLockCount(): number {
@@ -2351,26 +2332,6 @@ export class Repository implements IRemoteRepository {
   // =========================================================================
   // EOL-Style and MIME-Type Property Caching
   // =========================================================================
-
-  /**
-   * Refresh eol-style and mime-type caches.
-   * Called during status updates for efficient decoration tooltips.
-   */
-  private async refreshPropertyCaches(): Promise<void> {
-    try {
-      const [eolStyles, mimeTypes] = await Promise.all([
-        this.repository.getAllEolStyleFiles(),
-        this.repository.getAllMimeTypeFiles()
-      ]);
-      // Normalize keys for case-insensitive lookup on Windows
-      this.eolStyleCache = this.normalizeMapKeys(eolStyles);
-      this.mimeTypeCache = this.normalizeMapKeys(mimeTypes);
-      this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
-      this.propertyCacheWarmed = true;
-    } catch {
-      // Keep existing cache on error
-    }
-  }
 
   /**
    * Refresh all property caches in a single `svn proplist -R -v .` call.

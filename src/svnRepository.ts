@@ -355,7 +355,7 @@ export class Repository {
 
       for (const line of result.stdout.split("\n")) {
         const pathMatch = line.match(/^Properties on '(.+)':$/);
-        if (pathMatch) {
+        if (pathMatch?.[1]) {
           currentPath = pathMatch[1];
           currentProp = "";
           continue;
