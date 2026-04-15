@@ -132,6 +132,10 @@ type RepositoryConfig = {
   updateFrequency: number;
   autorefresh: boolean;
   remoteChangesCheckFrequency: number;
+  ignoreOnStatusCount: string[];
+  countUnversioned: boolean;
+  hideUnversioned: boolean;
+  ignore: string[];
 };
 
 export class Repository implements IRemoteRepository {
@@ -468,7 +472,11 @@ export class Repository implements IRemoteRepository {
         e.affectsConfiguration("sven.delete.ignoredRulesForDeletedFiles") ||
         e.affectsConfiguration("sven.sourceControl.countBadge") ||
         e.affectsConfiguration("sven.autorefresh") ||
-        e.affectsConfiguration("sven.remoteChanges.checkFrequency")
+        e.affectsConfiguration("sven.remoteChanges.checkFrequency") ||
+        e.affectsConfiguration("sven.sourceControl.ignoreOnStatusCount") ||
+        e.affectsConfiguration("sven.sourceControl.countUnversioned") ||
+        e.affectsConfiguration("sven.sourceControl.hideUnversioned") ||
+        e.affectsConfiguration("sven.sourceControl.ignore")
       ) {
         this._configCache = undefined;
       }
@@ -562,7 +570,20 @@ export class Repository implements IRemoteRepository {
       remoteChangesCheckFrequency: configuration.get<number>(
         "remoteChanges.checkFrequency",
         300
-      )
+      ),
+      ignoreOnStatusCount: configuration.get<string[]>(
+        "sourceControl.ignoreOnStatusCount",
+        []
+      ),
+      countUnversioned: configuration.get<boolean>(
+        "sourceControl.countUnversioned",
+        false
+      ),
+      hideUnversioned: configuration.get<boolean>(
+        "sourceControl.hideUnversioned",
+        false
+      ),
+      ignore: configuration.get<string[]>("sourceControl.ignore", [])
     };
 
     return this._configCache;
@@ -920,22 +941,14 @@ export class Repository implements IRemoteRepository {
     }
 
     // Delegate group management to ResourceGroupManager
+    const config = this.getConfig();
     const count = this.groupManager.updateGroups({
       result,
       config: {
-        ignoreOnStatusCountList: configuration.get<string[]>(
-          "sourceControl.ignoreOnStatusCount",
-          []
-        ),
-        countUnversioned: configuration.get<boolean>(
-          "sourceControl.countUnversioned",
-          false
-        ),
-        hideUnversioned: configuration.get<boolean>(
-          "sourceControl.hideUnversioned",
-          false
-        ),
-        ignoreList: configuration.get<string[]>("sourceControl.ignore", []),
+        ignoreOnStatusCountList: config.ignoreOnStatusCount,
+        countUnversioned: config.countUnversioned,
+        hideUnversioned: config.hideUnversioned,
+        ignoreList: config.ignore,
         workspaceRoot: this.workspaceRoot
       },
       // Lock status is authoritative when fetched with --show-updates
@@ -977,8 +990,11 @@ export class Repository implements IRemoteRepository {
     this._onDidChangeStatus.fire();
 
     // Refresh all property caches in a single proplist call when any are expired
+    // Fire-and-forget: stale caches are acceptable; don't block the hot path
     if (Date.now() >= this.needsLockCacheExpiry || Date.now() >= this.propertyCacheExpiry) {
-      await this.refreshAllPropertyCaches();
+      void this.refreshAllPropertyCaches().catch(e =>
+        logError("property cache refresh", e)
+      );
     }
 
     // Refresh file decorations in Explorer view
@@ -2101,7 +2117,7 @@ export class Repository implements IRemoteRepository {
         try {
           attempt++;
           const result = await runOperation();
-          this.saveAuth();
+          void this.saveAuth().catch(e => logError("save auth", e));
           return result;
         } catch (err) {
           const svnError = err as ISvnErrorData;
@@ -2351,8 +2367,8 @@ export class Repository implements IRemoteRepository {
       this.mimeTypeCache = this.normalizeMapKeys(mimeType);
       this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
       this.propertyCacheWarmed = true;
-    } catch {
-      // Keep existing caches on error
+    } catch (e) {
+      logError("refreshAllPropertyCaches", e);
     }
   }
 

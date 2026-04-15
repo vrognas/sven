@@ -381,8 +381,8 @@ export class Repository {
           currentProp = trimmed;
         }
       }
-    } catch {
-      // Return empty results on error
+    } catch (e) {
+      logError("getAllProperties", e);
     }
 
     return { needsLock, eolStyle, mimeType };
