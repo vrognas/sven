@@ -7,6 +7,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.52] - 2026-05-14
+
+Follow-up perf pass focused on critical user-interaction paths (save, tab switch, SCM click, hover).
+
+### Performance
+
+- **`ItemLogProvider` no longer fires `svn log` on tab switch while the history view is hidden.** Previously, every `onDidChangeActiveTextEditor` (debounced 100ms) called `refresh()` → `fetchMore()` → `svn log` for the new active file, regardless of whether anyone was looking at the panel. `RepoLogProvider` already had this guard; ItemLog now matches. To keep the panel coherent when the user does open it back up, an `onDidChangeVisibility` listener fires one refresh on transition to `visible=true`.
+
+### Audited, no change needed
+
+- **File-save path**: ~300ms to status refresh; single `svn status` + 1 conditional `svn blame` if the blame decoration is active. The earlier perf passes (`getPropertyChanges` cache, watcher throttle 300ms, debounce 200ms, force-refresh grace period) already made this near-optimal.
+- **File open / tab switch**: `BlameProvider` and `BlameStatusBar` both subscribe to `onDidChangeActiveTextEditor` and call `repository.blame(file)`. Although they maintain separate local LRUs on top, the underlying `SvnRepository._blameCache` is shared, so the second caller within 5 min hits cache — only one `svn blame` spawn per file+revision. Local-cache duplication isn't a hot bottleneck.
+- **`FileDecorationProvider.provideFileDecoration`** (called many times by VS Code for Explorer, tabs, breadcrumbs): all reads are synchronous cache lookups (`hasNeedsLockCached`, `getLockStatusCached`, `getEolStyleCached`, `getMimeTypeCached`) backed by background-warmed caches. Zero SVN calls per decoration request.
+- **SCM panel actions** (stage/unstage/revert/refresh/commit): every one is already at minimum SVN command count for its operation. Optimistic UI + grace period + batching all in place.
+- **`refreshAllPropertyCaches`**: deduped via `_propertyRefreshInFlight` with explicit test coverage.
+
+---
+
 ## [0.2.51] - 2026-05-14
 
 Performance pass triggered by a deep audit for unnecessary SVN calls and bottlenecks.
