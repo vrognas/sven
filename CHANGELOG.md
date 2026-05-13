@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.38] - 2026-05-13
+
+### Fixed
+
+- **Duplicate `svn cat` on diff open**: `svnFileSystemProvider.readFile` calls `showBuffer(fsPath)` with no revision (SVN defaults to BASE for working-copy paths → `svn cat <file>`); `BlameProvider.computeLineMapping` calls `show(fsPath, "BASE")` (→ `svn cat -r BASE <file>`). Different exec args meant the in-flight dedup didn't unify them — two SVN reads for identical BASE content. Now `prepareCatArgs` normalizes `revision=undefined` to `"BASE"` for working-copy paths, and an LRU `_catCache` (50 entries, 30s TTL) lets sequential callers share results, not just concurrent ones.
+
+---
+
 ## [0.2.37] - 2026-05-13
 
 ### Fixed

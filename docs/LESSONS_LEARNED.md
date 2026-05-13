@@ -1165,6 +1165,14 @@ Result: 3× concurrent recursive proplist calls per multi-save burst.
 
 **Rule**: When you see redundant network calls for the same resource, check whether higher-layer caches are keyed by *request shape* rather than *target resource*. Move the cache to the layer where the key is canonical for the resource.
 
+#### 26e. Normalize Implicit Defaults Before Caching (v0.2.38)
+
+**Issue**: `svn cat <file>` (no `-r`) and `svn cat -r BASE <file>` return identical content for a working-copy path (SVN defaults to BASE there). Two consumers — `svnFileSystemProvider.readFile` (no rev) and `BlameProvider.computeLineMapping` (`"BASE"`) — both fetched the same content but produced different exec args, so the in-flight dedup never unified them.
+
+**Fix**: At the args-prep layer, normalize `revision=undefined` → `"BASE"` when the path is a working-copy child. Now both callers produce the same args key. Paired with a short-TTL `_catCache` so the second call doesn't re-exec after the first completes.
+
+**Rule**: Cache keys are only as good as their normalization. Equivalent inputs (SVN defaults, path slashes, case-insensitive segments) must collapse to the same key BEFORE cache lookup — otherwise the cache hit rate drops to zero for the most common case.
+
 ---
 
 ### 27. Native Resources: Track and Dispose Separately

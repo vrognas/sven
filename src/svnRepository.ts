@@ -85,6 +85,10 @@ export class Repository {
 
   // In-flight dedup for svn cat — prevents duplicate calls for same file+revision
   private _catInFlight = new Map<string, Promise<Buffer>>();
+  // Short-TTL content cache so sequential cat calls for the same file+rev
+  // (e.g. diff editor left side, then BlameProvider line mapping) share a
+  // single SVN read instead of re-executing.
+  private _catCache = new LRUCache<Buffer>(50, 30 * 1000);
 
   public username?: string;
   public password?: string;
@@ -838,6 +842,13 @@ export class Repository {
     const isChild =
       uri.scheme === "file" && isDescendant(this.workspaceRoot, uri.fsPath);
 
+    // `svn cat` without -r defaults to BASE for working-copy paths. Normalize
+    // explicitly so callers with revision=undefined share a cache key with
+    // callers passing revision="BASE" for the same file.
+    if (!revision && isChild) {
+      revision = "BASE";
+    }
+
     let target: string = filePath;
 
     if (isChild) {
@@ -941,9 +952,15 @@ export class Repository {
     return this.showBufferWithArgs(args);
   }
 
-  /** Dedup concurrent svn cat calls for the same args */
+  /** Dedup concurrent + short-window-sequential svn cat calls for the same args */
   private showBufferWithArgs(args: string[]): Promise<Buffer> {
     const key = args.join("\0");
+
+    const cached = this._catCache.get(key);
+    if (cached !== undefined) {
+      return Promise.resolve(cached);
+    }
+
     const inFlight = this._catInFlight.get(key);
     if (inFlight) {
       return inFlight;
@@ -962,6 +979,7 @@ export class Repository {
           svnCommand: "cat"
         });
       }
+      this._catCache.set(key, result.stdout);
       return result.stdout;
     }).catch(err => {
       this._catInFlight.delete(key);
@@ -2418,5 +2436,7 @@ export class Repository {
     this._infoCache.clear();
     this._blameCache.clear();
     this._logCache.clear();
+    this._listCache.clear();
+    this._catCache.clear();
   }
 }

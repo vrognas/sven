@@ -279,3 +279,53 @@ suite("svnRepository.list URL-keyed TTL cache", () => {
     assert.strictEqual(execCount, 2);
   });
 });
+
+/**
+ * Diff-open invokes svn cat from two places sequentially:
+ *   1. svnFileSystemProvider.readFile → showBuffer(fsPath) (no revision)
+ *      → defaults to BASE for working-copy paths → args: ["cat", target]
+ *   2. BlameProvider.computeLineMapping → show(fsPath, "BASE")
+ *      → args: ["cat", "-r", "BASE", target]
+ *
+ * Both return identical BASE content but produce different args, so the
+ * in-flight dedup doesn't unify them. Two issues to fix:
+ *   - prepareCatArgs must normalize undefined → "BASE" for working-copy paths
+ *   - sequential callers need a cache (in-flight only covers concurrent)
+ */
+suite("svnRepository.cat normalization + cache", () => {
+  test("sequential cat with and without -r BASE shares one execBuffer", async () => {
+    const { Repository: SvnRepository } = await import(
+      "../../../svnRepository"
+    );
+    const proto = SvnRepository.prototype;
+
+    let execCount = 0;
+    const repo: any = Object.create(proto);
+    repo.workspaceRoot = "C:/repo";
+    repo.removeAbsolutePath = (p: string) =>
+      p.startsWith("C:/repo/") ? p.slice("C:/repo/".length) : p;
+    repo.buildPegPath = (target: string, _rev?: string) => target;
+    repo.getInfo = async () => ({
+      url: "https://svn.example.com/repo",
+      repository: { uuid: "fake" }
+    });
+    repo.execBuffer = async (_args: string[]) => {
+      execCount++;
+      return { exitCode: 0, stdout: Buffer.from("base content"), stderr: "" };
+    };
+    const { LRUCache } = await import("../../../util/lruCache");
+    repo._catInFlight = new Map();
+    repo._catCache = new LRUCache(50, 30 * 1000);
+
+    // Call 1: no revision (svnFileSystemProvider.readFile pattern)
+    await proto.showBuffer.call(repo, "C:/repo/file.txt");
+    // Call 2: explicit "BASE" (BlameProvider.computeLineMapping pattern)
+    await proto.showBuffer.call(repo, "C:/repo/file.txt", "BASE");
+
+    assert.strictEqual(
+      execCount,
+      1,
+      `expected 1 execBuffer call after normalize+cache, got ${execCount}`
+    );
+  });
+});
