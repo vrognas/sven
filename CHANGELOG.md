@@ -7,6 +7,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.49] - 2026-05-13
+
+### Refactored
+
+- **`CommitFlowService` cleanup**: removed `getRecentScopes`, which duck-typed `Repository` for a method that doesn't exist — it always returned `[]` and made the `showScopeStep` placeholder branch dead. Inlined the one-line `runSimpleFlow` indirection. Replaced the `while (!confirmed) { … }` loop in `runConventionalFlow` (which always returned from inside) with a `for (;;)` form so the unreachable trailing `return undefined` could be removed without changing flow.
+- **`PreCommitUpdateService` conflict detection**: now prefers the structured `svnErrorCode` field (`E200024` / `E155015`) over substring matching on `error.message`, and uses named constants `MERGE_CONFLICT_CODE` / `COMMIT_CONFLICT_CODE` instead of bare literals. Substring/`includes("conflict")` is retained as a fallback for non-`SvnError` throws. Codes are inlined as local literals rather than importing `svnErrorCodes` from `../svn` — the latter would pull `configuration.ts` (and its `vscode.EventEmitter` dependency) into the module's import graph and break three test files whose `vscode` mock doesn't cover the full chain.
+
+---
+
 ## [0.2.48] - 2026-05-13
 
 ### Fixed
