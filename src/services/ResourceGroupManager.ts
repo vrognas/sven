@@ -12,6 +12,24 @@ import { matchAll } from "../util/globMatch";
 import * as path from "path";
 
 /**
+ * True when target matches resource path exactly, or resource is a directory
+ * and target is inside it (path-prefix match).
+ */
+function matchesPathOrFolder(
+  resource: Resource,
+  normalizedTarget: string
+): boolean {
+  const normalizedRes = normalizePath(resource.resourceUri.fsPath);
+  if (normalizedRes === normalizedTarget) {
+    return true;
+  }
+  return (
+    resource.kind === "dir" &&
+    normalizedTarget.startsWith(normalizedRes + path.sep)
+  );
+}
+
+/**
  * Configuration for resource group updates
  */
 export type ResourceGroupConfig = {
@@ -510,54 +528,25 @@ export class ResourceGroupManager implements IResourceGroupManager {
 
   /**
    * Check if a file path is unversioned/ignored (directly or inside a folder).
-   * Used when getResourceFromFile() returns undefined - checks:
-   * 1. If the file ITSELF is in _allUnversioned (exact match)
-   * 2. If the file is INSIDE an unversioned/ignored folder
+   * Used when getResourceFromFile() returns undefined.
    * Uses _allUnversioned (not UI-filtered) to correctly detect hidden files/folders.
+   * Unversioned takes precedence over ignored.
    */
   isInsideUnversionedOrIgnored(filePath: string): Status | undefined {
     const normalizedPath = normalizePath(filePath);
 
-    // First check if file ITSELF is unversioned (exact match)
-    // This catches standalone unversioned files not inside unversioned folders
     for (const resource of this._allUnversioned) {
-      if (normalizePath(resource.resourceUri.fsPath) === normalizedPath) {
+      if (matchesPathOrFolder(resource, normalizedPath)) {
         return Status.UNVERSIONED;
       }
     }
 
-    // Then check unversioned FOLDERS (file inside unversioned folder)
-    for (const resource of this._allUnversioned) {
+    for (const resource of this._ignored.resourceStates) {
       if (
-        resource.kind === "dir" &&
-        normalizedPath.startsWith(
-          normalizePath(resource.resourceUri.fsPath) + path.sep
-        )
+        resource instanceof Resource &&
+        matchesPathOrFolder(resource, normalizedPath)
       ) {
-        return Status.UNVERSIONED;
-      }
-    }
-
-    // Check if file ITSELF is ignored (exact match)
-    for (const resource of this._ignored.resourceStates) {
-      if (resource instanceof Resource) {
-        if (normalizePath(resource.resourceUri.fsPath) === normalizedPath) {
-          return Status.IGNORED;
-        }
-      }
-    }
-
-    // Check ignored FOLDERS (file inside ignored folder)
-    for (const resource of this._ignored.resourceStates) {
-      if (resource instanceof Resource) {
-        if (
-          resource.kind === "dir" &&
-          normalizedPath.startsWith(
-            normalizePath(resource.resourceUri.fsPath) + path.sep
-          )
-        ) {
-          return Status.IGNORED;
-        }
+        return Status.IGNORED;
       }
     }
 
@@ -591,49 +580,11 @@ export class ResourceGroupManager implements IResourceGroupManager {
       pathSet.add(parentPath);
     }
 
-    // Find and remove from changes group
-    const remainingChanges = this._changes.resourceStates.filter(r => {
-      if (
-        r instanceof Resource &&
-        pathSet.has(normalizePath(r.resourceUri.fsPath))
-      ) {
-        movedResources.push(r);
-        return false;
-      }
-      return true;
-    });
-    this._changes.resourceStates = remainingChanges;
-
-    // Find and remove from unversioned group (new folders appear here)
-    const remainingUnversioned = this._unversioned.resourceStates.filter(r => {
-      if (
-        r instanceof Resource &&
-        pathSet.has(normalizePath(r.resourceUri.fsPath))
-      ) {
-        if (!movedResources.includes(r)) {
-          movedResources.push(r);
-        }
-        return false;
-      }
-      return true;
-    });
-    this._unversioned.resourceStates = remainingUnversioned;
-
-    // Find and remove from changelist groups
+    // Drain matching resources out of changes, unversioned, and each changelist
+    this.extractMatching(this._changes, pathSet, movedResources);
+    this.extractMatching(this._unversioned, pathSet, movedResources);
     this._changelists.forEach(group => {
-      const remaining = group.resourceStates.filter(r => {
-        if (
-          r instanceof Resource &&
-          pathSet.has(normalizePath(r.resourceUri.fsPath))
-        ) {
-          if (!movedResources.includes(r)) {
-            movedResources.push(r);
-          }
-          return false;
-        }
-        return true;
-      });
-      group.resourceStates = remaining;
+      this.extractMatching(group, pathSet, movedResources);
     });
 
     // Add to staged group
@@ -694,6 +645,29 @@ export class ResourceGroupManager implements IResourceGroupManager {
     }
 
     return parentsToStage;
+  }
+
+  /**
+   * Remove resources whose fsPath is in pathSet from group, appending unique
+   * matches to collector. Used by moveToStaged to drain three different groups.
+   */
+  private extractMatching(
+    group: ISvnResourceGroup,
+    pathSet: Set<string>,
+    collector: Resource[]
+  ): void {
+    group.resourceStates = group.resourceStates.filter(r => {
+      if (
+        r instanceof Resource &&
+        pathSet.has(normalizePath(r.resourceUri.fsPath))
+      ) {
+        if (!collector.includes(r)) {
+          collector.push(r);
+        }
+        return false;
+      }
+      return true;
+    });
   }
 
   /**
