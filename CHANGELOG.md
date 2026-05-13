@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.40] - 2026-05-13
+
+### Refactored
+
+- **`unstageOptimistic`**: dropped the legacy `(files, targetChangelist?)` overload — no caller used it after the v0.2.34 batching refactor. Single signature `(groups: Map)` now.
+- **`stageHelper.ts`**: `getAffectedChangelists`, `buildOriginalChangelistMap`, `warnAboutChangelists` are now module-private (were leaky exports — only `prepareStaging` used them internally).
+- **`commands/stage.ts`**: replaced the `stageOperation` closure parameter with a simple `expand: boolean` — closure was abstracting a 1-line difference between `stageOptimistic(paths)` and `stageOptimistic(paths, { expand: true })`.
+
+---
+
 ## [0.2.39] - 2026-05-13
 
 ### Refactored

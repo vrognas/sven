@@ -6,13 +6,12 @@ import {
   prepareStaging,
   saveOriginalChangelists
 } from "../helpers/stageHelper";
-import { Repository } from "../repository";
 import { Command } from "./command";
 
 abstract class BaseStageCommand extends Command {
   protected async stageSelection(
     resourceStates: SourceControlResourceState[],
-    stageOperation: (repository: Repository, paths: string[]) => Promise<void>
+    expand = false
   ): Promise<boolean> {
     const selection = await this.getResourceStatesOrExit(resourceStates);
     if (!selection) return false;
@@ -24,7 +23,7 @@ abstract class BaseStageCommand extends Command {
       saveOriginalChangelists(repository, paths, originalChangelists);
 
       await this.handleRepositoryOperation(
-        async () => stageOperation(repository, paths),
+        async () => repository.stageOptimistic(paths, { expand }),
         "Unable to stage files"
       );
     });
@@ -48,9 +47,7 @@ export class Stage extends BaseStageCommand {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    await this.stageSelection(resourceStates, (repository, paths) =>
-      repository.stageOptimistic(paths)
-    );
+    await this.stageSelection(resourceStates);
   }
 }
 
@@ -64,9 +61,7 @@ export class StageWithChildren extends BaseStageCommand {
   }
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
-    await this.stageSelection(resourceStates, (repository, paths) =>
-      repository.stageOptimistic(paths, { expand: true })
-    );
+    await this.stageSelection(resourceStates, true);
   }
 }
 
@@ -77,9 +72,7 @@ export class StageAll extends BaseStageCommand {
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
     if (this.hasExplicitResourceSelection(resourceStates)) {
-      await this.stageSelection(resourceStates, (repository, paths) =>
-        repository.stageOptimistic(paths)
-      );
+      await this.stageSelection(resourceStates);
       return;
     }
 

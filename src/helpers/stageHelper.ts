@@ -6,11 +6,8 @@ import { Repository } from "../repository";
 import { Resource } from "../resource";
 import { STAGING_CHANGELIST } from "../services/stagingService";
 
-/**
- * Check if any resources are in changelists (other than staging).
- * Returns list of changelist names that will be affected.
- */
-export function getAffectedChangelists(resources: Resource[]): string[] {
+/** Distinct changelists (excluding staging) touched by the selection. */
+function getAffectedChangelists(resources: Resource[]): string[] {
   const changelists = new Set<string>();
   for (const resource of resources) {
     if (resource.changelist && resource.changelist !== STAGING_CHANGELIST) {
@@ -20,11 +17,8 @@ export function getAffectedChangelists(resources: Resource[]): string[] {
   return Array.from(changelists);
 }
 
-/**
- * Build a map of file path → original changelist for resources.
- * Used to restore changelists on unstage.
- */
-export function buildOriginalChangelistMap(
+/** Path → original changelist (for restore on unstage). */
+function buildOriginalChangelistMap(
   resources: Resource[]
 ): Map<string, string> {
   const map = new Map<string, string>();
@@ -36,13 +30,8 @@ export function buildOriginalChangelistMap(
   return map;
 }
 
-/**
- * Warn user if staging will remove files from existing changelists.
- * Returns true if user wants to proceed, false to cancel.
- */
-export async function warnAboutChangelists(
-  changelists: string[]
-): Promise<boolean> {
+/** Warn before pulling files out of existing changelists; false = cancel. */
+async function warnAboutChangelists(changelists: string[]): Promise<boolean> {
   if (changelists.length === 0) return true;
 
   const listStr = changelists.join(", ");

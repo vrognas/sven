@@ -1310,26 +1310,14 @@ export class Repository implements IRemoteRepository {
    * Unstage files with optimistic UI update.
    * Runs SVN changelist commands but skips full status refresh.
    *
-   * Accepts either a single batch (`files`, optional `targetChangelist`) or
-   * a grouped batch (Map keyed by destination changelist; `null` key means
-   * "remove from any changelist"). Grouped form runs all SVN commands then
-   * fires ONE UI notification — avoids N rounds of action-button + input-box
-   * churn when callers split work by destination.
+   * `groups` is keyed by destination changelist; `null` key means "remove
+   * from any changelist". All SVN commands run, then ONE UI notification
+   * fires — avoids N rounds of action-button + input-box churn when paths
+   * span multiple destinations.
    */
   public async unstageOptimistic(
-    files: string[],
-    targetChangelist?: string
-  ): Promise<void>;
-  public async unstageOptimistic(
     groups: Map<string | null, string[]>
-  ): Promise<void>;
-  public async unstageOptimistic(
-    arg: string[] | Map<string | null, string[]>,
-    targetChangelist?: string
   ): Promise<void> {
-    const groups: Map<string | null, string[]> =
-      arg instanceof Map ? arg : new Map([[targetChangelist ?? null, arg]]);
-
     // Suppress watcher reflex during .svn/wc.db writes — UI is updated below.
     this.setGracePeriod();
 
