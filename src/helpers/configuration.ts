@@ -54,7 +54,7 @@ class Configuration {
     return this.configuration.inspect(section);
   }
 
-  // ========== Typed accessors (DRY - single source of truth) ==========
+  // ========== Typed accessors (only those with callers; add more as needed) ==========
 
   /** Log entries to fetch per page (default: 50) */
   public logLength(): number {
@@ -74,29 +74,9 @@ class Configuration {
     return this.get<string>("default.encoding");
   }
 
-  /** Patterns to ignore in source control view */
-  public sourceControlIgnore(): string[] {
-    return this.get<string[]>("sourceControl.ignore", []);
-  }
-
-  /** Hide unversioned files in source control view */
-  public hideUnversioned(): boolean {
-    return this.get<boolean>("sourceControl.hideUnversioned", false);
-  }
-
-  /** Count unversioned files in badge */
-  public countUnversioned(): boolean {
-    return this.get<boolean>("sourceControl.countUnversioned", true);
-  }
-
   /** Use QuickPick for commit flow */
   public commitUseQuickPick(): boolean {
     return this.get<boolean>("commit.useQuickPick", true);
-  }
-
-  /** Show colored author dots in history */
-  public logAuthorColors(): boolean {
-    return this.get<boolean>("log.authorColors", true);
   }
 }
 
