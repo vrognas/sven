@@ -9,9 +9,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [0.2.43] - 2026-05-13
 
-### Refactored
+Performance + code-quality release. Substantially fewer SVN command spawns per user action, especially on large working copies. No user-visible behaviour changes — same SVN semantics, less churn.
 
-- Removed `needsFormatCleanupFromFullError` and `FORMAT_CLEANUP_TOKENS` — they were literal aliases of `needsCleanupFromFullError` and `CLEANUP_ERROR_TOKENS`. The token-set alias `FORMAT_CLEANUP_TOKENS = CLEANUP_ERROR_TOKENS` claimed to enable independent divergence later (YAGNI). Single caller in `formatErrorMessage` now uses `needsCleanupFromFullError` directly.
+### Performance
+
+- **Staging a file**: 6 SVN commands → 1 (`svn changelist`). The reflex `svn info` / `svn stat` / `svn proplist` / `svn list` cascade that fired on `.svn/wc.db` writes is now suppressed by the watcher grace period that the optimistic stage/unstage path was previously skipping. (0.2.34, 0.2.35)
+- **Saving files**: 3× concurrent `svn proplist -R -v .` (recursive over the whole working copy — the heaviest cache-refresh command) collapses to 1. `refreshAllPropertyCaches` now has in-flight dedup. (0.2.36)
+- **Opening a diff**: 2× remote `svn list <url>` → 1; 2× `svn cat` → 1. `svnRepository.list` gained a 30s URL-keyed LRU cache; `prepareCatArgs` normalizes the default revision so working-copy and `-r BASE` callers share a cache key. (0.2.37, 0.2.38)
+
+### Internal
+
+- Collapsed duplicate stage methods; batched unstage UI notifications; extracted `withCachedInFlight` helper; replaced a 13-clause operation-list boolean chain with a `Set`; inlined 8 error-detector wrapper methods in `Command`; removed dead overloads and module-private leaks. (0.2.34, 0.2.39–0.2.43)
+
+See the per-version blocks below for the full detail.
+
+### Refactored (0.2.43 itself)
+
+- Removed `needsFormatCleanupFromFullError` and `FORMAT_CLEANUP_TOKENS` — literal aliases of `needsCleanupFromFullError` and `CLEANUP_ERROR_TOKENS`. The token-set alias claimed to enable independent divergence later (YAGNI). Single caller in `formatErrorMessage` now uses `needsCleanupFromFullError` directly.
 
 ---
 
