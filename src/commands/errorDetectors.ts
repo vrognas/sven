@@ -7,7 +7,6 @@ import {
   CONFLICT_ERROR_TOKENS,
   FORMAT_NETWORK_CONNECTION_TOKENS,
   FORMAT_NETWORK_TIMEOUT_TOKENS,
-  FORMAT_CLEANUP_TOKENS,
   LOCK_CONFLICT_TOKENS,
   LOCK_EXPIRED_TOKENS,
   LOCK_NOT_LOCKED_TOKENS,
@@ -32,14 +31,6 @@ function hasUnresolvedConflictMarker(fullError: string): boolean {
 export function needsCleanupFromFullError(fullError: string): boolean {
   return (
     includesAny(fullError, CLEANUP_ERROR_TOKENS) ||
-    hasBlockedWord(fullError) ||
-    hasSqliteMarker(fullError)
-  );
-}
-
-export function needsFormatCleanupFromFullError(fullError: string): boolean {
-  return (
-    includesAny(fullError, FORMAT_CLEANUP_TOKENS) ||
     hasBlockedWord(fullError) ||
     hasSqliteMarker(fullError)
   );

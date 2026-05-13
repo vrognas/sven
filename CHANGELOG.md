@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.43] - 2026-05-13
+
+### Refactored
+
+- Removed `needsFormatCleanupFromFullError` and `FORMAT_CLEANUP_TOKENS` — they were literal aliases of `needsCleanupFromFullError` and `CLEANUP_ERROR_TOKENS`. The token-set alias `FORMAT_CLEANUP_TOKENS = CLEANUP_ERROR_TOKENS` claimed to enable independent divergence later (YAGNI). Single caller in `formatErrorMessage` now uses `needsCleanupFromFullError` directly.
+
+---
+
 ## [0.2.42] - 2026-05-13
 
 ### Refactored

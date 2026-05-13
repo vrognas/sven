@@ -73,9 +73,6 @@ export const FORMAT_NETWORK_TIMEOUT_TOKENS = [
   "operation timed out"
 ] as const;
 
-// Derived from CLEANUP_ERROR_TOKENS — same set for consistent message/action pairing
-export const FORMAT_CLEANUP_TOKENS = CLEANUP_ERROR_TOKENS;
-
 export const FORMAT_CODE_MESSAGES = [
   {
     token: "e200035",

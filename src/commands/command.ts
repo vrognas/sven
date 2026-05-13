@@ -44,7 +44,6 @@ import {
   needsAuthActionFromFullError,
   needsCleanupFromFullError,
   needsConflictResolutionFromFullError,
-  needsFormatCleanupFromFullError,
   needsNetworkRetryFromFullError,
   needsOutputActionFromFullError,
   needsUpdateFromFullError
@@ -887,7 +886,7 @@ export abstract class Command implements Disposable {
     }
 
     // Working copy needs cleanup (E155004, E155037, E200030, E155032, E200033, etc.)
-    if (needsFormatCleanupFromFullError(fullError)) {
+    if (needsCleanupFromFullError(fullError)) {
       const c = code || "E155004";
       return `Working copy needs cleanup (${c}). Run cleanup to fix.`;
     }
