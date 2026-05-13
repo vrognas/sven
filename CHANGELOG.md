@@ -7,6 +7,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.51] - 2026-05-14
+
+Performance pass triggered by a deep audit for unnecessary SVN calls and bottlenecks.
+
+### Performance
+
+- **`svn diff --properties-only` per file per status refresh, eliminated.** `SvnRepository.getPropertyChanges(filePath)` is now backed by a 30s LRU cache (500 entries) and an in-flight `Promise` dedup map, via the existing `withCachedInFlight` helper. `StatusService.fetchPropertyChanges` was the worst offender: on every status refresh (save, optimistic stage/unstage, watcher event, polling) it iterated every file with property changes and ran one `svn diff --properties-only <path>` per file in 5-parallel chunks. With this cache, the typical refresh on a working copy with stable property state spawns **zero** `svn diff` calls. The cache is dropped wholesale by `Repository.updateModelState` whenever `forceRefresh=true`, so post-mutation refreshes (Commit / Revert / PropertyChange / Update / CleanUp etc.) still see fresh diff output. Without explicit invalidation a 30s TTL would already catch this, but explicit drop on forceRefresh keeps the user-perceived latency window tight.
+- **`getInfo()` cache hits no longer queue behind concurrent fetches.** The `@sequentialize` decorator on `SvnRepository.getInfo` wrapped the entire method including the cache check, so N concurrent callers for an already-cached path executed serially even though all of them only needed a `Map.get`. Split the method: public `getInfo()` runs the LRU lookup eagerly and only falls into the sequentialized fetch on a true miss; the private `_doGetInfoFetch` carries `@sequentialize` and double-checks the cache after acquiring the lock in case a previous queued fetch already populated it. Pre-existing single-fetch semantics on cache miss preserved.
+- **`onFSChange` debounce 500ms → 200ms.** FS events already pass through `RepositoryFilesWatcher`'s 300ms throttle (`util.ts:throttleEvent`); stacking a 500ms debounce on top added latency for no extra coalescing benefit (the throttle already collapses sub-300ms bursts). The save-to-status-refresh path now starts ~300ms sooner. 200ms is enough debounce to coalesce the second wave of follow-up FS events that arrive after the throttle's leading edge.
+
+### Refactored
+
+- **Removed redundant `clearLogCache()` after commit.** `Repository.commitFiles` was wholesale-clearing the 50-entry log LRU right before dispatching `sven.repolog.fetch` / `sven.itemlog.refresh`. Both refresh handlers already call `clearLogCache()` themselves via `explicitRefreshCmd(shouldClearCache=true)`, and the cached entries for past revisions are immutable anyway. One redundant cache-clear gone.
+
+### Investigated, no change
+
+- **"Neither" operations (`Merge`, `SwitchBranch`, `Rename`, `Resolved`, `NewBranch`)**: not in `isReadOnly` and not in `FORCE_REFRESH_OPERATIONS`. The author's comment in `util.ts` documents that these handle their own grace via `onFSChange`'s `isRunning(Merge|SwitchBranch|Update)` skip. Verified: `onFSChange` does drop watcher events during these ops, and `Repository.run` always issues a post-op `updateModelState` (just without `forceRefresh`, which means a brief 2-second-cache window before the watcher events that fire as the op exits trigger a fresh refresh). Latency is bounded; behaviour matches author intent. Left as documented.
+- **`BlameProvider.messageCache` "cleared on document close"**: false alarm from the audit. Line 308's `clearCache(uri)` deletes URI-keyed entries from `blameCache`/`lineMappingCache`/`inFlightMessageFetches` but never touches `messageCache`. Revision-keyed messages persist across document closes (bounded by `evictMessageCache()` 25%-evict-at-MAX policy).
+
+---
+
 ## [0.2.50] - 2026-05-13
 
 ### Fixed
