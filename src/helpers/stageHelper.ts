@@ -86,36 +86,24 @@ export function saveOriginalChangelists(
 
 /**
  * Unstage files with optimistic UI update.
- * Restores files to their original changelist if they had one.
+ * Restores files to their original changelist if they had one,
+ * otherwise removes them from any changelist.
+ *
+ * Builds a single grouped Map (destination → paths; `null` = remove)
+ * and dispatches one batched call so the SCM UI refreshes once.
  */
 export async function unstageWithRestoreOptimistic(
   repository: Repository,
   paths: string[]
 ): Promise<void> {
-  // Group paths by their restore destination
-  const toRestore = new Map<string, string[]>(); // changelist → paths
-  const toRemove: string[] = []; // paths with no original changelist
-
-  for (const path of paths) {
-    const original = repository.staging.getOriginalChangelist(path);
-    if (original) {
-      const list = toRestore.get(original) || [];
-      list.push(path);
-      toRestore.set(original, list);
-    } else {
-      toRemove.push(path);
-    }
+  const groups = new Map<string | null, string[]>();
+  for (const p of paths) {
+    const dest = repository.staging.getOriginalChangelist(p) ?? null;
+    const list = groups.get(dest);
+    if (list) list.push(p);
+    else groups.set(dest, [p]);
   }
 
-  // Use optimistic updates for each group
-  for (const [changelist, filePaths] of toRestore) {
-    await repository.unstageOptimistic(filePaths, changelist);
-  }
-
-  if (toRemove.length > 0) {
-    await repository.unstageOptimistic(toRemove);
-  }
-
-  // Clear tracking for all unstaged files
+  await repository.unstageOptimistic(groups);
   repository.staging.clearOriginalChangelists(paths);
 }

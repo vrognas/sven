@@ -93,6 +93,9 @@ Per-file blame tracking with:
 - Hidden `__staged__` changelist
 - Optimistic UI updates (skip status refresh)
 - ResourceGroupManager handles group manipulation
+- `stageOptimistic(files, { expand })` — single entry point; `expand` opt-in for directory expansion
+- `unstageOptimistic` accepts grouped `Map<string|null, string[]>` for batched multi-changelist restore (one UI notify regardless of destination count)
+- `notifyStagingChanged()` private centralises action-button refresh + input-box revalidation
 
 ---
 

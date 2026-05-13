@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.34] - 2026-05-07
+
+### Refactored
+
+- **Staging DRY**: collapsed `stageOptimistic` + `stageOptimisticWithChildren` into single `stageOptimistic(files, { expand })`
+- **Staging UI churn**: `unstageOptimistic` now accepts grouped `Map<string|null, string[]>`; `unstageWithRestoreOptimistic` builds one map and dispatches one batched call instead of N (eliminates N×`updateActionButton` + N×`triggerInputValidation` per multi-changelist unstage)
+- Extracted `notifyStagingChanged()` private — single point for action-button refresh + input-box revalidation (3 call sites → 1)
+
 ## [0.2.33] - 2026-04-15
 
 ### Fixed

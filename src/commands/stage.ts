@@ -65,7 +65,7 @@ export class StageWithChildren extends BaseStageCommand {
 
   public async execute(...resourceStates: SourceControlResourceState[]) {
     await this.stageSelection(resourceStates, (repository, paths) =>
-      repository.stageOptimisticWithChildren(paths)
+      repository.stageOptimistic(paths, { expand: true })
     );
   }
 }

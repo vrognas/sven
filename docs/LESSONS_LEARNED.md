@@ -1125,6 +1125,14 @@ groupManager.moveToStaged(files); // Move Resource objects directly
 
 **Rule**: For predictable SCM operations, update UI optimistically. Let background refresh handle edge cases.
 
+#### 26a. Batch UI-Notify Across Multi-Group Operations (v0.2.34)
+
+**Issue**: `unstageWithRestoreOptimistic` grouped paths by destination changelist, then called `repository.unstageOptimistic` once per group + once for "remove". Each call fired its own `updateActionButton()` + `triggerInputValidation()` (the latter toggles `inputBox.value` twice to force VS Code re-validation). Unstaging files from N changelists = N rounds of action-button rewrites + 2N input-box toggles.
+
+**Fix**: `unstageOptimistic` now accepts `Map<string|null, string[]>`. Helper builds the map once and dispatches a single batched call. SVN commands still run per-group (unavoidable — different destinations), but the UI notification fires exactly once via a new `notifyStagingChanged()` private.
+
+**Rule**: For SCM operations that fan out to multiple SVN calls, run the SVN side per-group but emit ONE UI notification at the end. Let the action-button + input-box churn collapse to a single refresh.
+
 ---
 
 ### 27. Native Resources: Track and Dispose Separately

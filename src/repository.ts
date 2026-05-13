@@ -1214,64 +1214,35 @@ export class Repository implements IRemoteRepository {
   }
 
   /**
-   * Stage files with optimistic UI update (no directory expansion).
-   * Stages just the paths provided - folders are staged alone for visual grouping.
+   * Stage files with optimistic UI update.
+   * @param files Paths to stage. Folders are staged for visual grouping.
+   * @param opts.expand When true, expands directories to include all changed
+   *   descendant files (SVN changelists are file-only).
+   *
    * For unversioned files, `svn add` is called first before changelist.
    */
-  public async stageOptimistic(files: string[]): Promise<void> {
-    // Find unversioned items that need `svn add` first
-    const unversionedPaths = this.findUnversionedPaths(files);
+  public async stageOptimistic(
+    files: string[],
+    opts: { expand?: boolean } = {}
+  ): Promise<void> {
+    const targets = opts.expand
+      ? this.expandDirectoriesToGroupFiles(files, this.groupManager.changes)
+      : files;
+
+    const unversionedPaths = this.findUnversionedPaths(targets);
     if (unversionedPaths.length > 0) {
       // svn add handles parent directories automatically
       await this.repository.addFiles(unversionedPaths);
     }
 
-    // Filter out directories for SVN command (changelists are file-only)
-    // but keep them for UI update
-    const filesOnly = await this.filterOutDirectories(files);
-
-    // Run SVN command to update working copy state (files only)
+    // Changelists can't hold directories; UI move keeps them for grouping
+    const filesOnly = await this.filterOutDirectories(targets);
     if (filesOnly.length > 0) {
       await this.repository.addChangelist(filesOnly, STAGING_CHANGELIST);
     }
-    // Optimistically update UI (includes directories for visual grouping)
-    this.groupManager.moveToStaged(files);
-    this.updateActionButton();
-    this.triggerInputValidation();
-  }
 
-  /**
-   * Stage files with optimistic UI update, expanding directories.
-   * When staging a directory, includes all changed descendant files.
-   * For unversioned files, `svn add` is called first before changelist.
-   */
-  public async stageOptimisticWithChildren(files: string[]): Promise<void> {
-    // Expand directories to include all changed descendant files
-    // (SVN changelists don't support directories)
-    const expanded = this.expandDirectoriesToGroupFiles(
-      files,
-      this.groupManager.changes
-    );
-
-    // Find unversioned items that need `svn add` first
-    const unversionedPaths = this.findUnversionedPaths(expanded);
-    if (unversionedPaths.length > 0) {
-      // svn add handles parent directories automatically
-      await this.repository.addFiles(unversionedPaths);
-    }
-
-    // Filter out directories for SVN command (changelists are file-only)
-    // but keep them for UI update
-    const filesOnly = await this.filterOutDirectories(expanded);
-
-    // Run SVN command to update working copy state (files only)
-    if (filesOnly.length > 0) {
-      await this.repository.addChangelist(filesOnly, STAGING_CHANGELIST);
-    }
-    // Optimistically update UI (includes directories for visual grouping)
-    this.groupManager.moveToStaged(expanded);
-    this.updateActionButton();
-    this.triggerInputValidation();
+    this.groupManager.moveToStaged(targets);
+    this.notifyStagingChanged();
   }
 
   /**
@@ -1331,34 +1302,53 @@ export class Repository implements IRemoteRepository {
 
   /**
    * Unstage files with optimistic UI update.
-   * Runs SVN changelist command but skips full status refresh.
-   * @param files Files to unstage
-   * @param targetChangelist Optional changelist to restore to
+   * Runs SVN changelist commands but skips full status refresh.
+   *
+   * Accepts either a single batch (`files`, optional `targetChangelist`) or
+   * a grouped batch (Map keyed by destination changelist; `null` key means
+   * "remove from any changelist"). Grouped form runs all SVN commands then
+   * fires ONE UI notification — avoids N rounds of action-button + input-box
+   * churn when callers split work by destination.
    */
   public async unstageOptimistic(
     files: string[],
     targetChangelist?: string
+  ): Promise<void>;
+  public async unstageOptimistic(
+    groups: Map<string | null, string[]>
+  ): Promise<void>;
+  public async unstageOptimistic(
+    arg: string[] | Map<string | null, string[]>,
+    targetChangelist?: string
   ): Promise<void> {
-    // Expand directories to include all staged descendant files
-    const expanded = this.expandDirectoriesToGroupFiles(
-      files,
-      this.groupManager.staged
-    );
+    const groups: Map<string | null, string[]> =
+      arg instanceof Map ? arg : new Map([[targetChangelist ?? null, arg]]);
 
-    // Filter out directories for SVN command (changelists are file-only)
-    const filesOnly = await this.filterOutDirectories(expanded);
+    for (const [destination, paths] of groups) {
+      const expanded = this.expandDirectoriesToGroupFiles(
+        paths,
+        this.groupManager.staged
+      );
+      const filesOnly = await this.filterOutDirectories(expanded);
 
-    if (filesOnly.length > 0) {
-      if (targetChangelist) {
-        // Restore to original changelist
-        await this.repository.addChangelist(filesOnly, targetChangelist);
-      } else {
-        // Remove from changelist entirely
-        await this.repository.removeChangelist(filesOnly);
+      if (filesOnly.length > 0) {
+        if (destination) {
+          await this.repository.addChangelist(filesOnly, destination);
+        } else {
+          await this.repository.removeChangelist(filesOnly);
+        }
       }
+      this.groupManager.moveFromStaged(expanded, destination ?? undefined);
     }
-    // Optimistically update UI without status refresh
-    this.groupManager.moveFromStaged(expanded, targetChangelist);
+
+    this.notifyStagingChanged();
+  }
+
+  /**
+   * Notify VS Code SCM UI of staging changes.
+   * Refreshes the commit action button and re-validates the input box.
+   */
+  private notifyStagingChanged(): void {
     this.updateActionButton();
     this.triggerInputValidation();
   }
