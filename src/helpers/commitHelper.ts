@@ -155,7 +155,7 @@ export function buildExpandedCommitPaths(
   };
 }
 
-export interface CommitFlowResult {
+export interface CommitMessageFlowResult {
   message?: string;
   commitPaths?: string[];
   cancelled: boolean;
@@ -176,7 +176,7 @@ export async function runCommitMessageFlow(
   repository: Repository,
   displayPaths: string[],
   renameMap: Map<string, string>
-): Promise<CommitFlowResult> {
+): Promise<CommitMessageFlowResult> {
   const useQuickPick = configuration.commitUseQuickPick();
   const userTypes = configuration.get<CommitTypeConfig[]>("commit.types", []);
   const conventionalCommits = userTypes.length > 0;
