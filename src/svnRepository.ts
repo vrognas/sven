@@ -56,6 +56,7 @@ import { logError, getErrorMessage } from "./util/errorLogger";
 import { iconv } from "./vscodeModules";
 import { matchAll } from "./util/globMatch";
 import { LRUCache } from "./util/lruCache";
+import { withCachedInFlight } from "./util/withCachedInFlight";
 import { parseDiffXml } from "./parser/diffParser";
 import SvnError from "./svnError";
 import {
@@ -955,39 +956,28 @@ export class Repository {
   /** Dedup concurrent + short-window-sequential svn cat calls for the same args */
   private showBufferWithArgs(args: string[]): Promise<Buffer> {
     const key = args.join("\0");
-
-    const cached = this._catCache.get(key);
-    if (cached !== undefined) {
-      return Promise.resolve(cached);
-    }
-
-    const inFlight = this._catInFlight.get(key);
-    if (inFlight) {
-      return inFlight;
-    }
-
-    const promise = this.execBuffer(args).then(result => {
-      this._catInFlight.delete(key);
-      if (result.exitCode !== 0) {
-        const errorCodeMatch = result.stderr.match(/E(\d+)/);
-        const svnErrorCode = errorCodeMatch ? `E${errorCodeMatch[1]}` : undefined;
-        throw new SvnError({
-          message: `SVN cat command failed: ${result.stderr}`,
-          stderr: result.stderr,
-          exitCode: result.exitCode,
-          svnErrorCode,
-          svnCommand: "cat"
-        });
+    return withCachedInFlight(
+      key,
+      this._catCache,
+      this._catInFlight,
+      async () => {
+        const result = await this.execBuffer(args);
+        if (result.exitCode !== 0) {
+          const errorCodeMatch = result.stderr.match(/E(\d+)/);
+          const svnErrorCode = errorCodeMatch
+            ? `E${errorCodeMatch[1]}`
+            : undefined;
+          throw new SvnError({
+            message: `SVN cat command failed: ${result.stderr}`,
+            stderr: result.stderr,
+            exitCode: result.exitCode,
+            svnErrorCode,
+            svnCommand: "cat"
+          });
+        }
+        return result.stdout;
       }
-      this._catCache.set(key, result.stdout);
-      return result.stdout;
-    }).catch(err => {
-      this._catInFlight.delete(key);
-      throw err;
-    });
-
-    this._catInFlight.set(key, promise);
-    return promise;
+    );
   }
 
   public async commitFiles(message: string, files: string[]) {
@@ -1825,28 +1815,15 @@ export class Repository {
       url += "/" + urlPath;
     }
 
-    const cached = this._listCache.get(url);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const inFlight = this._listInFlight.get(url);
-    if (inFlight) {
-      return inFlight;
-    }
-
-    const promise = (async () => {
-      try {
+    return withCachedInFlight(
+      url,
+      this._listCache,
+      this._listInFlight,
+      async () => {
         const result = await this.exec(["list", url, "--xml"]);
-        const parsed = await parseSvnList(result.stdout);
-        this._listCache.set(url, parsed);
-        return parsed;
-      } finally {
-        this._listInFlight.delete(url);
+        return parseSvnList(result.stdout);
       }
-    })();
-    this._listInFlight.set(url, promise);
-    return promise;
+    );
   }
 
   /**

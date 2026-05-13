@@ -7,6 +7,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.39] - 2026-05-13
+
+### Refactored
+
+- Extracted `withCachedInFlight<V>` utility — the cache+in-flight dedup pattern used by `svnRepository.list()` and `svnRepository.showBufferWithArgs()` was duplicated verbatim (~10 lines each). Call sites collapse to 4 lines.
+- Split `src/test/unit/helpers/stageHelper.test.ts`: tests for `Repository` moved to `src/test/unit/repository/staging.test.ts`; tests for `svnRepository` moved to `src/test/unit/svn/repositoryCaches.test.ts`. `stageHelper.test.ts` now contains only stageHelper tests, matching its filename.
+
+---
+
 ## [0.2.38] - 2026-05-13
 
 ### Fixed
