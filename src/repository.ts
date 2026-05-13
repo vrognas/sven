@@ -101,6 +101,7 @@ import {
   dispose,
   eventToPromise,
   filterEvent,
+  FORCE_REFRESH_OPERATIONS,
   getSvnDir,
   isDescendant,
   isReadOnly,
@@ -2000,20 +2001,7 @@ export class Repository implements IRemoteRepository {
       this._onRunOperation.fire(operation);
 
       // Determine forceRefresh BEFORE operation to set grace period early
-      const forceRefresh =
-        operation === Operation.Commit ||
-        operation === Operation.Revert ||
-        operation === Operation.Add ||
-        operation === Operation.Remove ||
-        operation === Operation.Update ||
-        operation === Operation.Resolve ||
-        operation === Operation.AddChangelist ||
-        operation === Operation.RemoveChangelist ||
-        operation === Operation.Lock ||
-        operation === Operation.Unlock ||
-        operation === Operation.Ignore ||
-        operation === Operation.PropertyChange ||
-        operation === Operation.CleanUp;
+      const forceRefresh = FORCE_REFRESH_OPERATIONS.has(operation);
 
       // Set grace period BEFORE operation runs to block file watcher events
       // that fire during .svn directory changes from lock/unlock/commit/etc.

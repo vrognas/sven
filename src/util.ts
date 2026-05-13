@@ -249,6 +249,33 @@ export function isReadOnly(operation: Operation): boolean {
 }
 
 /**
+ * Operations that modify `.svn/wc.db` and therefore need:
+ *   - the watcher grace period set, to suppress reflex svn info/stat/proplist
+ *     cascades from .svn lock-file events
+ *   - forceRefresh=true on the post-op `updateModelState` so the model is
+ *     re-read even if cached.
+ *
+ * Keep in sync with `isReadOnly` — every operation is in exactly one set
+ * (read-only, force-refresh, or neither — neither = bulk ops like
+ * SwitchBranch/Merge which handle their own grace via onFSChange skip).
+ */
+export const FORCE_REFRESH_OPERATIONS: ReadonlySet<Operation> = new Set([
+  Operation.Commit,
+  Operation.Revert,
+  Operation.Add,
+  Operation.Remove,
+  Operation.Update,
+  Operation.Resolve,
+  Operation.AddChangelist,
+  Operation.RemoveChangelist,
+  Operation.Lock,
+  Operation.Unlock,
+  Operation.Ignore,
+  Operation.PropertyChange,
+  Operation.CleanUp
+]);
+
+/**
  * Whether an operation needs lock status (--show-updates) in its post-op status.
  * Only operations that interact with locks or check remote state need it.
  * Regular status refreshes (file watcher) stay local-only for performance.

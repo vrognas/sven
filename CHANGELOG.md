@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.41] - 2026-05-13
+
+### Refactored
+
+- `Repository.run()`'s 13-clause `forceRefresh` `||` chain replaced with `FORCE_REFRESH_OPERATIONS: ReadonlySet<Operation>` constant in `util.ts`. Same behaviour, O(1) lookup, easier to scan and extend. Co-located with `isReadOnly` for cross-reference.
+
+---
+
 ## [0.2.40] - 2026-05-13
 
 ### Refactored
