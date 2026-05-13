@@ -534,8 +534,14 @@ export class SourceControlManager implements IDisposable {
       }
     } catch (error) {
       // Cleanup on failure to prevent resource leaks
-      disappearListener.dispose();
-      for (const d of localDisposables) {
+      // Repository included — onDidOpenRepository didn't fire so dispose closure
+      // (which fires onDidCloseRepository) is not appropriate here.
+      const failureDisposables: { dispose(): void }[] = [
+        disappearListener,
+        ...localDisposables,
+        repository
+      ];
+      for (const d of failureDisposables) {
         try {
           d.dispose();
         } catch {
