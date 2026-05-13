@@ -59,6 +59,16 @@ export class ItemLogProvider
       this.treeView = window.createTreeView("sven.itemlog", {
         treeDataProvider: this
       });
+      // Refresh once when the view becomes visible — editorChanged skips
+      // refreshes while hidden, so without this the panel can show stale
+      // history after the user un-hides it.
+      this._dispose.push(
+        this.treeView.onDidChangeVisibility(e => {
+          if (e.visible) {
+            this.editorChanged(window.activeTextEditor);
+          }
+        })
+      );
       this._dispose.push(this.treeView);
     } catch (err) {
       // Handle dev reload race condition where previous provider wasn't yet disposed
@@ -72,8 +82,12 @@ export class ItemLogProvider
       window.onDidChangeActiveTextEditor(this.editorChanged, this),
       // Refresh when repositories open/close — route through editorChanged debounce
       // to prevent duplicate log fetches when open fires alongside initial refresh
-      sourceControlManager.onDidOpenRepository(() => this.editorChanged(window.activeTextEditor)),
-      sourceControlManager.onDidCloseRepository(() => this.editorChanged(window.activeTextEditor)),
+      sourceControlManager.onDidOpenRepository(() =>
+        this.editorChanged(window.activeTextEditor)
+      ),
+      sourceControlManager.onDidCloseRepository(() =>
+        this.editorChanged(window.activeTextEditor)
+      ),
       commands.registerCommand(
         "sven.itemlog.copymsg",
         async (item: ILogTreeItem) => copyCommitToClipboard("msg", item)
@@ -274,6 +288,12 @@ export class ItemLogProvider
   public async editorChanged(te?: TextEditor) {
     // Skip refresh during rollback to prevent flashing
     if (this.isRollingBack) {
+      return;
+    }
+    // Skip when the view isn't visible: refresh() fires `svn log` per tab
+    // switch and the cost has no payoff while the panel is hidden. Matches
+    // the guard repoLogProvider already has.
+    if (this.treeView && !this.treeView.visible) {
       return;
     }
     // Debounce rapid editor changes to prevent flashing
