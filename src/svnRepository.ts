@@ -91,6 +91,19 @@ export class Repository {
   // single SVN read instead of re-executing.
   private _catCache = new LRUCache<Buffer>(50, 30 * 1000);
 
+  // Path-keyed cache for `svn diff --properties-only <path>`. The status
+  // refresh flow fetches this per-file for every file with prop changes;
+  // without a cache, N files = N spawn/parse cycles per refresh.
+  // Cleared on forceRefresh from Repository.updateModelState.
+  private _propertyChangesCache = new LRUCache<PropertyChange[]>(
+    500,
+    30 * 1000
+  );
+  private _propertyChangesInFlight = new Map<
+    string,
+    Promise<PropertyChange[]>
+  >();
+
   public username?: string;
   public password?: string;
 
@@ -556,16 +569,16 @@ export class Repository {
     this._logCache.clear();
   }
 
-  @sequentialize
   public async getInfo(
     file: string = "",
     revision?: string,
     skipCache: boolean = false,
     isUrl: boolean = false
   ): Promise<ISvnInfo> {
-    // Normalize path for consistent cache keys (forward slashes, lowercase on Windows)
+    // Fast-path cache check OUTSIDE @sequentialize so concurrent callers for
+    // a path that's already cached don't queue behind an unrelated in-flight
+    // info fetch. Cache miss falls through to the sequentialized fetch.
     const normalizedFile = file ? fixPathSeparator(file).toLowerCase() : "";
-    // Build cache key (include revision for revision-specific queries)
     const cacheKey = revision
       ? `${normalizedFile}@${revision}`
       : normalizedFile;
@@ -573,6 +586,32 @@ export class Repository {
     if (!skipCache && this._infoCache.has(cacheKey)) {
       const cached = this._infoCache.get(cacheKey);
       // Check for negative cache (unversioned file marker)
+      if (cached === null) {
+        throw new Error(`File not under version control: ${file}`);
+      }
+      if (cached !== undefined) {
+        return cached;
+      }
+    }
+
+    return this._doGetInfoFetch(file, revision, isUrl, cacheKey);
+  }
+
+  // The actual network fetch + cache-write path. Sequentialized so that two
+  // concurrent misses for different paths can't both spawn `svn info`
+  // simultaneously (matches the original behaviour); cache hits no longer
+  // queue here, see getInfo() above.
+  @sequentialize
+  private async _doGetInfoFetch(
+    file: string,
+    revision: string | undefined,
+    isUrl: boolean,
+    cacheKey: string
+  ): Promise<ISvnInfo> {
+    // Re-check cache in case a previous queued fetch populated it while we
+    // were waiting for the sequentialize lock.
+    if (this._infoCache.has(cacheKey)) {
+      const cached = this._infoCache.get(cacheKey);
       if (cached === null) {
         throw new Error(`File not under version control: ${file}`);
       }
@@ -2249,15 +2288,34 @@ export class Repository {
   /**
    * Get property changes for a file (which properties changed and how).
    * Uses `svn diff --properties-only` to detect added/deleted/modified properties.
+   * Cache + in-flight dedup keyed by normalized path. The status refresh flow
+   * fetches this per-file for every file with prop changes; without a cache,
+   * N files would mean N spawn/parse cycles per refresh.
    */
   public async getPropertyChanges(filePath: string): Promise<PropertyChange[]> {
     const normalized = this.validatePath(filePath);
-    try {
-      const result = await this.exec(["diff", "--properties-only", normalized]);
-      return this.parsePropertyDiff(result.stdout);
-    } catch {
-      return [];
-    }
+    return withCachedInFlight(
+      normalized,
+      this._propertyChangesCache,
+      this._propertyChangesInFlight,
+      async () => {
+        try {
+          const result = await this.exec([
+            "diff",
+            "--properties-only",
+            normalized
+          ]);
+          return this.parsePropertyDiff(result.stdout);
+        } catch {
+          return [];
+        }
+      }
+    );
+  }
+
+  /** Clear the property-changes cache (called on forceRefresh). */
+  public clearPropertyChangesCache(): void {
+    this._propertyChangesCache.clear();
   }
 
   /**
