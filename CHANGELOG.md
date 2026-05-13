@@ -7,6 +7,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.50] - 2026-05-13
+
+### Fixed
+
+- **`isTrunk` when `layout.trunkRegex` is unset**: previously interpolated `undefined` into the regex (`/(^|\/)(undefined)$/`) and silently matched paths ending in the literal string "undefined". Now mirrors `getBranchName`'s early-return when the layout config is empty.
+
+### Refactored
+
+- **Dropped dead `Resource._renamedAndModified`**: the field was hardwired to `false` at the only construction site (`StatusService.categorizeStatuses`), so every branch that read it (`"RM"` letter, `"+ Modified"` tooltip suffix) was unreachable. Removed the constructor parameter, the getter, the `IFileStatus` field, the `false` literal passed at the call site, and simplified `letter`/`tooltip` accordingly.
+- **Dropped dead `Resource.faded`** getter (always returned `false`) and the `faded` field on the `decorations` object. `SourceControlResourceDecorations.faded` is optional in the VS Code API, so omitting it is equivalent.
+- **Dropped four unused typed config accessors** from `Configuration`: `sourceControlIgnore`, `hideUnversioned`, `countUnversioned`, `logAuthorColors`. All four had zero callers; the same settings are read directly via `configuration.get<>()` throughout the codebase. `countUnversioned` also had a different default (`true`) than every inline caller (`false`), which would have been a footgun the moment anyone adopted the wrapper.
+- **Renamed `commitHelper`'s `CommitFlowResult` → `CommitMessageFlowResult`** to disambiguate from the unrelated `CommitFlowResult` exported by `services/commitFlowService.ts` (different shape: `selectedFiles` vs `commitPaths`).
+
+---
+
 ## [0.2.49] - 2026-05-13
 
 ### Refactored
