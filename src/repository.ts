@@ -837,7 +837,11 @@ export class Repository implements IRemoteRepository {
     }, remaining + 100); // +100ms buffer
   }
 
-  @debounce(500)
+  // FS events already pass through RepositoryFilesWatcher's 300ms throttle
+  // (util.ts:throttleEvent). Debouncing here adds latency on top of that;
+  // 200ms is enough to coalesce burst follow-ups without making save→status
+  // refresh feel sluggish.
+  @debounce(200)
   private eventuallyUpdateWhenIdleAndWait(): void {
     this.updateWhenIdleAndWait();
   }
@@ -909,6 +913,10 @@ export class Repository implements IRemoteRepository {
       // Set grace period BEFORE updateInfo to block file watcher events
       // that fire during lock/unlock .svn directory changes
       this.lastForceRefresh = Date.now();
+      // Drop the property-changes cache so the upcoming StatusService
+      // refresh sees fresh prop diff output for paths that may have
+      // changed during the mutating operation.
+      this.repository.clearPropertyChangesCache();
       await this.repository.updateInfo(true);
     }
 
@@ -994,7 +1002,10 @@ export class Repository implements IRemoteRepository {
 
     // Refresh all property caches in a single proplist call when any are expired
     // Fire-and-forget: stale caches are acceptable; don't block the hot path
-    if (Date.now() >= this.needsLockCacheExpiry || Date.now() >= this.propertyCacheExpiry) {
+    if (
+      Date.now() >= this.needsLockCacheExpiry ||
+      Date.now() >= this.propertyCacheExpiry
+    ) {
       void this.refreshAllPropertyCaches().catch(e =>
         logError("property cache refresh", e)
       );
@@ -1387,10 +1398,21 @@ export class Repository implements IRemoteRepository {
 
   public async updateRevision(
     ignoreExternals: boolean = false,
-    { skipHistoryRefresh = false, token, files }: { skipHistoryRefresh?: boolean; token?: CancellationToken; files?: string[] } = {}
+    {
+      skipHistoryRefresh = false,
+      token,
+      files
+    }: {
+      skipHistoryRefresh?: boolean;
+      token?: CancellationToken;
+      files?: string[];
+    } = {}
   ): Promise<IUpdateResult> {
     const result = await this.run<IUpdateResult>(Operation.Update, async () => {
-      const updateResult = await this.repository.update(ignoreExternals, { token, files });
+      const updateResult = await this.repository.update(ignoreExternals, {
+        token,
+        files
+      });
       // Note: status refresh handled by run() via updateModelState() after callback
       // Do NOT call this.status() here - causes credentialLock deadlock (nested retryRun)
       if (!files || files.length === 0) {
@@ -1507,8 +1529,10 @@ export class Repository implements IRemoteRepository {
     const result = await this.run(Operation.Commit, () =>
       this.repository.commitFiles(message, files)
     );
-    // Clear log cache so fresh data is fetched (log cache has 60s TTL)
-    this.clearLogCache();
+    // (Log cache is cleared by the explicit `sven.repolog.fetch` invocation
+    //  below via explicitRefreshCmd's shouldClearCache=true; no redundant
+    //  wholesale clear needed here. Past revisions in the cache are
+    //  immutable anyway.)
 
     // Post-commit update: sync working copy to new revision (if enabled)
     const autoUpdate = configuration.commitAutoUpdate();
@@ -1521,7 +1545,10 @@ export class Repository implements IRemoteRepository {
             cancellable: true
           },
           async (_progress, token) => {
-            await this.updateRevision(false, { skipHistoryRefresh: true, token });
+            await this.updateRevision(false, {
+              skipHistoryRefresh: true,
+              token
+            });
           }
         );
       } catch (updateErr) {
@@ -2341,7 +2368,8 @@ export class Repository implements IRemoteRepository {
 
         const oldCount = this.needsLockFilesSet.size;
         this.needsLockFilesSet = needsLock;
-        this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+        this.needsLockCacheExpiry =
+          Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
         this.needsLockCacheWarmed = true;
         if (this.needsLockFilesSet.size !== oldCount) {
           this._onDidChangeNeedsLock.fire();
