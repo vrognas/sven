@@ -7,9 +7,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-## [0.2.43] - 2026-05-13
+## [0.2.44] - 2026-05-13
 
 Performance + code-quality release. Substantially fewer SVN command spawns per user action, especially on large working copies. No user-visible behaviour changes — same SVN semantics, less churn.
+
+(Tag `v0.2.43` was created but its publish workflow failed at the `tsc` build step on pre-existing type errors in `setDepth.ts` / `sparseCheckoutProvider.ts`. v0.2.44 fixes those by splitting `DepthQuickPickItem` into a wide form for the checkout multi-select picker and a narrow `SvnDepthQuickPickItem` for the SVN-only depth pickers. Master CI used esbuild and silently tolerated the union mismatch; the publish workflow uses real `tsc` and caught it.)
 
 ### Performance
 
@@ -23,7 +25,11 @@ Performance + code-quality release. Substantially fewer SVN command spawns per u
 
 See the per-version blocks below for the full detail.
 
-### Refactored (0.2.43 itself)
+## [0.2.43] - 2026-05-13
+
+Tag-only release — publish workflow failed at the `tsc` build step on pre-existing type errors in `setDepth.ts` / `sparseCheckoutProvider.ts`. Re-released as 0.2.44 with the fix. Substantive notes for this release are inlined into the 0.2.44 entry above.
+
+### Refactored
 
 - Removed `needsFormatCleanupFromFullError` and `FORMAT_CLEANUP_TOKENS` — literal aliases of `needsCleanupFromFullError` and `CLEANUP_ERROR_TOKENS`. The token-set alias claimed to enable independent divergence later (YAGNI). Single caller in `formatErrorMessage` now uses `needsCleanupFromFullError` directly.
 

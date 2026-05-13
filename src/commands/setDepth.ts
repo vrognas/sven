@@ -109,12 +109,21 @@ function getUnsafeFiles(repo: Repository, targetPath: string): string[] {
   return unsafe;
 }
 
+/** SVN-native depth picker item (no `_omitExternals` sentinel). */
+export interface SvnDepthQuickPickItem extends QuickPickItem {
+  depth: keyof typeof SvnDepth;
+}
+
+/**
+ * Wider type used only by the initial-checkout multi-select picker,
+ * which adds an `_omitExternals` sentinel alongside real depths.
+ */
 export interface DepthQuickPickItem extends QuickPickItem {
   depth: keyof typeof SvnDepth | "_omitExternals";
 }
 
 /** Checkout depth options (for restoring ghost items - no exclude option) */
-export const checkoutDepthOptions: DepthQuickPickItem[] = [
+export const checkoutDepthOptions: SvnDepthQuickPickItem[] = [
   {
     label: "$(folder-opened) Full",
     description: "Download everything",
@@ -143,7 +152,7 @@ export const checkoutDepthOptions: DepthQuickPickItem[] = [
 ];
 
 /** Full depth options including exclude (for setDepth command on local items) */
-export const depthPickerOptions: DepthQuickPickItem[] = [
+export const depthPickerOptions: SvnDepthQuickPickItem[] = [
   {
     label: "$(eye-closed) Exclude",
     description: "Don't download this folder",
