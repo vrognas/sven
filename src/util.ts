@@ -237,11 +237,14 @@ export function timeout(ms: number) {
 
 export function isReadOnly(operation: Operation): boolean {
   switch (operation) {
-    case Operation.CurrentBranch:
-    case Operation.Log:
-    case Operation.Show:
-    case Operation.Info:
+    case Operation.Blame:
     case Operation.Changes:
+    case Operation.CurrentBranch:
+    case Operation.Info:
+    case Operation.List:
+    case Operation.Log:
+    case Operation.Patch:
+    case Operation.Show:
       return true;
     default:
       return false;

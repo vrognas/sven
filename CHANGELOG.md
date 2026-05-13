@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.46] - 2026-05-13
+
+### Performance
+
+- **Mark `List`, `Blame`, `Patch` as read-only operations** in `isReadOnly()`. These pure-read SVN commands no longer trigger a post-operation `updateModelState` (→ `svn stat`) as a side effect. Eliminates one wasted `svn stat` per editor open (after `svn list` from `svnFileSystemProvider.stat`), per blame fetch, and per patch generation. Opening an SVN-tracked file now runs 3 parallel commands (`svn log`, `svn cat -r BASE`, `svn list`) instead of 3 parallel + 1 serial `svn stat`.
+
+---
+
 ## [0.2.45] - 2026-05-13
 
 ### Changed
