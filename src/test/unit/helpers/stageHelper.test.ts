@@ -144,3 +144,76 @@ suite("Repository.stageOptimistic grace period", () => {
     );
   });
 });
+
+/**
+ * Multiple rapid saves trigger several updateModelState passes; each one
+ * checks `propertyCacheExpiry` and (pre-fix) fires its own
+ * `svn proplist -R -v .` because the expiry isn't pushed forward until the
+ * call completes. We need in-flight dedup so concurrent callers share one
+ * proplist invocation.
+ */
+suite("Repository.refreshAllPropertyCaches in-flight dedup", () => {
+  test("3 concurrent calls share one getAllProperties invocation", async () => {
+    const { Repository } = await import("../../../repository");
+    const proto = Repository.prototype;
+
+    let invocations = 0;
+    const repo: any = Object.create(proto);
+    repo.repository = {
+      getAllProperties: async () => {
+        invocations++;
+        // Simulate a slow proplist
+        await new Promise(r => setTimeout(r, 30));
+        return {
+          needsLock: new Set<string>(),
+          eolStyle: new Map<string, string>(),
+          mimeType: new Map<string, string>()
+        };
+      }
+    };
+    repo.needsLockFilesSet = new Set();
+    repo.needsLockCacheExpiry = 0;
+    repo.propertyCacheExpiry = 0;
+    repo._onDidChangeNeedsLock = { fire: () => {} };
+
+    const calls = [
+      proto.refreshAllPropertyCaches.call(repo),
+      proto.refreshAllPropertyCaches.call(repo),
+      proto.refreshAllPropertyCaches.call(repo)
+    ];
+    await Promise.all(calls);
+
+    assert.strictEqual(
+      invocations,
+      1,
+      `expected 1 getAllProperties call, got ${invocations}`
+    );
+  });
+
+  test("Sequential calls after settle do invoke a fresh proplist", async () => {
+    const { Repository } = await import("../../../repository");
+    const proto = Repository.prototype;
+
+    let invocations = 0;
+    const repo: any = Object.create(proto);
+    repo.repository = {
+      getAllProperties: async () => {
+        invocations++;
+        return {
+          needsLock: new Set<string>(),
+          eolStyle: new Map<string, string>(),
+          mimeType: new Map<string, string>()
+        };
+      }
+    };
+    repo.needsLockFilesSet = new Set();
+    repo.needsLockCacheExpiry = 0;
+    repo.propertyCacheExpiry = 0;
+    repo._onDidChangeNeedsLock = { fire: () => {} };
+
+    await proto.refreshAllPropertyCaches.call(repo);
+    await proto.refreshAllPropertyCaches.call(repo);
+
+    assert.strictEqual(invocations, 2);
+  });
+});

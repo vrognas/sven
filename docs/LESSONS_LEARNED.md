@@ -1141,6 +1141,22 @@ groupManager.moveToStaged(files); // Move Resource objects directly
 
 **Rule**: ANY method that does SVN writes outside `run()` must call `setGracePeriod()` itself. The grace period is the contract that tells the file watcher "I already know about this — don't react." Bypassing `run()` for performance still requires upholding that contract.
 
+#### 26c. Expiry-Based Caches Need In-Flight Dedup (v0.2.36)
+
+**Issue**: `refreshAllPropertyCaches` ran `svn proplist -R -v .` (the most expensive cache-refresh command — recursive over the entire working copy) and only pushed forward `propertyCacheExpiry` AFTER `getAllProperties` resolved. That left a window where:
+
+```
+t=0:   save #1 → updateModelState → expiry expired → fires proplist A (running…)
+t=1s:  save #2 → updateModelState → expiry STILL expired → fires proplist B (concurrent)
+t=1s+: fs event → updateModelState → expiry STILL expired → fires proplist C
+```
+
+Result: 3× concurrent recursive proplist calls per multi-save burst.
+
+**Fix**: Track an in-flight Promise on the method (`_propertyRefreshInFlight`). Concurrent callers return the same Promise instead of starting fresh.
+
+**Rule**: Any cache-refresh method gated by an expiry timestamp written AFTER its async work must also dedup in-flight callers. The expiry only protects against late callers; concurrent callers need promise-sharing.
+
 ---
 
 ### 27. Native Resources: Track and Dispose Separately

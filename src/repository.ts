@@ -208,6 +208,8 @@ export class Repository implements IRemoteRepository {
   private mimeTypeCache = new Map<string, string>();
   private propertyCacheExpiry = Date.now() + 3000;
   private propertyCacheWarmed = false;
+  // In-flight dedup — concurrent callers share one `svn proplist -R -v .`
+  private _propertyRefreshInFlight?: Promise<void>;
 
   // Promise that resolves after initial status refresh completes
   private _statusReadyResolve!: () => void;
@@ -2346,27 +2348,40 @@ export class Repository implements IRemoteRepository {
   /**
    * Refresh all property caches in a single `svn proplist -R -v .` call.
    * Replaces 3 separate propget calls. Used on startup for efficiency.
+   *
+   * In-flight dedup: rapid triggers (e.g., two file saves in quick succession)
+   * previously fired N concurrent proplists because `propertyCacheExpiry` is
+   * only pushed forward AFTER the call returns. Concurrent callers now share
+   * the same Promise.
    */
   public async refreshAllPropertyCaches(): Promise<void> {
-    try {
-      const { needsLock, eolStyle, mimeType } =
-        await this.repository.getAllProperties();
-
-      const oldCount = this.needsLockFilesSet.size;
-      this.needsLockFilesSet = needsLock;
-      this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
-      this.needsLockCacheWarmed = true;
-      if (this.needsLockFilesSet.size !== oldCount) {
-        this._onDidChangeNeedsLock.fire();
-      }
-
-      this.eolStyleCache = this.normalizeMapKeys(eolStyle);
-      this.mimeTypeCache = this.normalizeMapKeys(mimeType);
-      this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
-      this.propertyCacheWarmed = true;
-    } catch (e) {
-      logError("refreshAllPropertyCaches", e);
+    if (this._propertyRefreshInFlight) {
+      return this._propertyRefreshInFlight;
     }
+    this._propertyRefreshInFlight = (async () => {
+      try {
+        const { needsLock, eolStyle, mimeType } =
+          await this.repository.getAllProperties();
+
+        const oldCount = this.needsLockFilesSet.size;
+        this.needsLockFilesSet = needsLock;
+        this.needsLockCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+        this.needsLockCacheWarmed = true;
+        if (this.needsLockFilesSet.size !== oldCount) {
+          this._onDidChangeNeedsLock.fire();
+        }
+
+        this.eolStyleCache = this.normalizeMapKeys(eolStyle);
+        this.mimeTypeCache = this.normalizeMapKeys(mimeType);
+        this.propertyCacheExpiry = Date.now() + Repository.NEEDS_LOCK_CACHE_TTL;
+        this.propertyCacheWarmed = true;
+      } catch (e) {
+        logError("refreshAllPropertyCaches", e);
+      } finally {
+        this._propertyRefreshInFlight = undefined;
+      }
+    })();
+    return this._propertyRefreshInFlight;
   }
 
   /**

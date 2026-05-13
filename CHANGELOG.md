@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.36] - 2026-05-13
+
+### Fixed
+
+- **Save lag — proplist dogpile**: `refreshAllPropertyCaches` had no in-flight dedup. `propertyCacheExpiry` is only pushed forward AFTER `getAllProperties` resolves, so two saves ~1s apart triggered two `updateModelState` passes, each seeing expired expiry and each firing its own concurrent `svn proplist -R -v .` (the most expensive command — recursive over the working copy). Observed 3× per multi-save burst. Added `_propertyRefreshInFlight` promise so concurrent callers share the same proplist.
+
+---
+
 ## [0.2.35] - 2026-05-13
 
 ### Fixed
