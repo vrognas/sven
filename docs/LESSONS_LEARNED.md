@@ -1157,6 +1157,14 @@ Result: 3× concurrent recursive proplist calls per multi-save burst.
 
 **Rule**: Any cache-refresh method gated by an expiry timestamp written AFTER its async work must also dedup in-flight callers. The expiry only protects against late callers; concurrent callers need promise-sharing.
 
+#### 26d. Cache at the Right Layer — by Actual Resource, Not by URI (v0.2.37)
+
+**Issue**: `svnFileSystemProvider.stat` has a 1-minute cache keyed by `uri.toString()`. Opening a diff editor invokes stat on two different svn-scheme URIs (e.g. `?rev=BASE` and `?rev=HEAD`) — same underlying file, different URI strings, two cache misses. Each fell through to `repository.list(fsPath)` → remote `svn list <URL>`. Two network round-trips for identical data.
+
+**Fix**: Cache lower down, at `svnRepository.list()`, keyed by the URL we actually pass to SVN. Different URIs that resolve to the same URL now share the cached result.
+
+**Rule**: When you see redundant network calls for the same resource, check whether higher-layer caches are keyed by *request shape* rather than *target resource*. Move the cache to the layer where the key is canonical for the resource.
+
 ---
 
 ### 27. Native Resources: Track and Dispose Separately

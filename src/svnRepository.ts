@@ -71,6 +71,12 @@ export class Repository {
   private _infoCache = new LRUCache<ISvnInfo | null>(500, 2 * 60 * 1000);
   private _blameCache = new LRUCache<ISvnBlameLine[]>(100, 5 * 60 * 1000);
   private _logCache = new LRUCache<ISvnLogEntry[]>(50, 60 * 1000);
+  // URL-keyed cache for `svn list` (remote call). 30s TTL — covers diff-open
+  // bursts where multiple svn-scheme URIs resolve to the same fsPath and
+  // each stat would otherwise fire its own network list.
+  private _listCache = new LRUCache<ISvnListItem[]>(200, 30 * 1000);
+  // In-flight dedup for concurrent list() calls with the same URL.
+  private _listInFlight = new Map<string, Promise<ISvnListItem[]>>();
 
   private _info?: ISvnInfo;
   // Phase 10.3 perf fix - timestamp-based caching (5s)
@@ -1792,7 +1798,7 @@ export class Repository {
     return result.stdout;
   }
 
-  public async list(folder?: string) {
+  public async list(folder?: string): Promise<ISvnListItem[]> {
     let url = await this.getRepoUrl();
 
     if (folder) {
@@ -1801,9 +1807,28 @@ export class Repository {
       url += "/" + urlPath;
     }
 
-    const result = await this.exec(["list", url, "--xml"]);
+    const cached = this._listCache.get(url);
+    if (cached !== undefined) {
+      return cached;
+    }
 
-    return parseSvnList(result.stdout);
+    const inFlight = this._listInFlight.get(url);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const promise = (async () => {
+      try {
+        const result = await this.exec(["list", url, "--xml"]);
+        const parsed = await parseSvnList(result.stdout);
+        this._listCache.set(url, parsed);
+        return parsed;
+      } finally {
+        this._listInFlight.delete(url);
+      }
+    })();
+    this._listInFlight.set(url, promise);
+    return promise;
   }
 
   /**

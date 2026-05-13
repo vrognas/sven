@@ -217,3 +217,65 @@ suite("Repository.refreshAllPropertyCaches in-flight dedup", () => {
     assert.strictEqual(invocations, 2);
   });
 });
+
+/**
+ * Opening a diff produces two svn-scheme URIs (different rev params) that
+ * both resolve to the same fsPath. svnFileSystemProvider's stat cache is
+ * keyed by URI, so both produce cache misses and each fires its own
+ * `svn list <URL>` remote call. svnRepository.list must dedupe at the URL
+ * level since the result is independent of which URI triggered it.
+ */
+suite("svnRepository.list URL-keyed TTL cache", () => {
+  test("Two sequential calls for the same folder share one exec", async () => {
+    // Build a minimal SvnRepository-like object — only what list() touches
+    const { Repository: SvnRepository } = await import(
+      "../../../svnRepository"
+    );
+    const proto = SvnRepository.prototype;
+
+    let execCount = 0;
+    const repo: any = Object.create(proto);
+    repo.getRepoUrl = async () => "https://svn.example.com/repo";
+    repo.exec = async (_args: string[]) => {
+      execCount++;
+      return { stdout: "<lists><list><entry/></list></lists>" };
+    };
+    // Wire fresh cache + in-flight map (instance fields don't init under
+    // Object.create(proto) since the constructor doesn't run)
+    const { LRUCache } = await import("../../../util/lruCache");
+    repo._listCache = new LRUCache(200, 30 * 1000);
+    repo._listInFlight = new Map();
+
+    await proto.list.call(repo, "path/to/file.txt");
+    await proto.list.call(repo, "path/to/file.txt");
+
+    assert.strictEqual(
+      execCount,
+      1,
+      `expected 1 exec call (cached), got ${execCount}`
+    );
+  });
+
+  test("Different folders bypass cache", async () => {
+    const { Repository: SvnRepository } = await import(
+      "../../../svnRepository"
+    );
+    const proto = SvnRepository.prototype;
+
+    let execCount = 0;
+    const repo: any = Object.create(proto);
+    repo.getRepoUrl = async () => "https://svn.example.com/repo";
+    repo.exec = async (_args: string[]) => {
+      execCount++;
+      return { stdout: "<lists><list><entry/></list></lists>" };
+    };
+    const { LRUCache } = await import("../../../util/lruCache");
+    repo._listCache = new LRUCache(200, 30 * 1000);
+    repo._listInFlight = new Map();
+
+    await proto.list.call(repo, "file1.txt");
+    await proto.list.call(repo, "file2.txt");
+
+    assert.strictEqual(execCount, 2);
+  });
+});

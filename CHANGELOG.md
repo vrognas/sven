@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.37] - 2026-05-13
+
+### Fixed
+
+- **Duplicate remote `svn list`**: opening a diff produced two svn-scheme URIs (different `rev=` params) that both resolved to the same fsPath. `svnFileSystemProvider.stat` cache is keyed by URI, so each fired its own `repository.list(fsPath)` → remote `svn list <URL>`. `svnRepository.list` had no cache. Added URL-keyed LRU cache (30s TTL, 200 entries) + in-flight Promise dedup, so concurrent and short-window-sequential callers share one network call.
+
+---
+
 ## [0.2.36] - 2026-05-13
 
 ### Fixed
