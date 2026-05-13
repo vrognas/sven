@@ -47,8 +47,7 @@ import {
   needsFormatCleanupFromFullError,
   needsNetworkRetryFromFullError,
   needsOutputActionFromFullError,
-  needsUpdateFromFullError,
-  type LockErrorType
+  needsUpdateFromFullError
 } from "./errorDetectors";
 import {
   buildErrorContext,
@@ -897,87 +896,8 @@ export abstract class Command implements Disposable {
     return code ? `${fallbackMsg} (${code})` : fallbackMsg;
   }
 
-  /**
-   * Get full error string from error object.
-   */
-  private getFullErrorString(error: unknown): string {
-    return this.getErrorContext(error).fullErrorRaw;
-  }
-
   private getErrorContext(error: unknown): ErrorContext {
     return buildErrorContext(error, stderr => this.sanitizeStderr(stderr));
-  }
-
-  /**
-   * Check if an error indicates that cleanup is needed.
-   * Returns true for E155xxx working copy errors and related text patterns.
-   * @see https://subversion.apache.org/docs/api/1.11/svn__error__codes_8h.html
-   */
-  private needsCleanup(error: unknown): boolean {
-    const fullError = this.getFullErrorString(error);
-
-    return needsCleanupFromFullError(fullError);
-  }
-
-  /**
-   * Check if error indicates working copy needs update.
-   * Returns true for E155019, E200042, and related text patterns.
-   */
-  private needsUpdate(error: unknown): boolean {
-    const fullError = this.getFullErrorString(error);
-
-    return needsUpdateFromFullError(fullError);
-  }
-
-  /**
-   * Check if error indicates conflicts need resolution.
-   * Returns true for E155023, E200024, and related text patterns.
-   */
-  private needsConflictResolution(error: unknown): boolean {
-    const fullError = this.getFullErrorString(error);
-
-    return needsConflictResolutionFromFullError(fullError);
-  }
-
-  /**
-   * Check if error indicates authentication action needed.
-   * Returns true for E170001 (auth failed), E215004 (no credentials).
-   */
-  private needsAuthAction(error: unknown): boolean {
-    const fullError = this.getFullErrorString(error);
-
-    return needsAuthActionFromFullError(fullError);
-  }
-
-  /**
-   * Check if error indicates network retry might help.
-   * Returns true for E170013 (connection failed), E175002 (timeout).
-   */
-  private needsNetworkRetry(error: unknown): boolean {
-    const fullError = this.getFullErrorString(error);
-
-    return needsNetworkRetryFromFullError(fullError);
-  }
-
-  /**
-   * Check if error is a file lock issue (not working copy lock).
-   * Returns the specific lock error type for choosing the right action.
-   * E200035 (locked by other), E200036 (not locked), E200041 (expired)
-   */
-  private getLockErrorType(error: unknown): LockErrorType | null {
-    const fullError = this.getFullErrorString(error);
-
-    return getLockErrorTypeFromFullError(fullError);
-  }
-
-  /**
-   * Check if error needs "Show Output" action for diagnostics.
-   * E261001 (access denied), E261002 (partial), E250006 (version mismatch)
-   */
-  private needsOutputAction(error: unknown): boolean {
-    const fullError = this.getFullErrorString(error);
-
-    return needsOutputActionFromFullError(fullError);
   }
 
   /**
@@ -1011,58 +931,47 @@ export abstract class Command implements Disposable {
   ): Promise<void> {
     logError("Repository operation failed", error);
     const userMessage = this.formatErrorMessage(error, errorMsg);
-    const lockType = this.getLockErrorType(error);
+    const fullError = this.getErrorContext(error).fullErrorRaw;
+    const lockType = getLockErrorTypeFromFullError(fullError);
 
-    // Auth errors - highest priority (often appears with network errors)
-    if (this.needsAuthAction(error)) {
+    // Priority order: auth → file-lock → cleanup → update → conflict → output → generic.
+    if (needsAuthActionFromFullError(fullError)) {
       await this.runCommandActionIfChosen(
         userMessage,
         "Clear Credentials",
         "sven.clearCredentials"
       );
-    }
-    // File lock errors (not working copy lock)
-    else if (lockType !== null) {
-      if (lockType === "conflict") {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Steal Lock",
-          "sven.stealLock"
-        );
-      } else if (lockType === "notLocked" || lockType === "expired") {
-        await this.runCommandActionIfChosen(
-          userMessage,
-          "Lock File",
-          "sven.lock"
-        );
-      }
-    }
-    // Cleanup for working copy issues
-    else if (this.needsCleanup(error)) {
+    } else if (lockType === "conflict") {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Steal Lock",
+        "sven.stealLock"
+      );
+    } else if (lockType === "notLocked" || lockType === "expired") {
+      await this.runCommandActionIfChosen(
+        userMessage,
+        "Lock File",
+        "sven.lock"
+      );
+    } else if (needsCleanupFromFullError(fullError)) {
       await this.runCommandActionIfChosen(
         userMessage,
         "Run Cleanup",
         "sven.cleanup"
       );
-    }
-    // Update for out-of-date errors
-    else if (this.needsUpdate(error)) {
+    } else if (needsUpdateFromFullError(fullError)) {
       await this.runCommandActionIfChosen(
         userMessage,
         "Update",
         "sven.update"
       );
-    }
-    // Conflict resolution
-    else if (this.needsConflictResolution(error)) {
+    } else if (needsConflictResolutionFromFullError(fullError)) {
       await this.runCommandActionIfChosen(
         userMessage,
         "Resolve Conflicts",
         "sven.resolveAll"
       );
-    }
-    // Permission/diagnostic errors - show output
-    else if (this.needsOutputAction(error)) {
+    } else if (needsOutputActionFromFullError(fullError)) {
       await this.runCommandActionIfChosen(
         userMessage,
         "Show Output",
@@ -1086,7 +995,8 @@ export abstract class Command implements Disposable {
       return await operation();
     } catch (error) {
       // Network errors - offer retry (needs the operation to re-run)
-      if (this.needsNetworkRetry(error)) {
+      const fullError = this.getErrorContext(error).fullErrorRaw;
+      if (needsNetworkRetryFromFullError(fullError)) {
         logError("Repository operation failed", error);
         const userMessage = this.formatErrorMessage(error, errorMsg);
         const retry = "Retry";

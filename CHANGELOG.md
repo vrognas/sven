@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.42] - 2026-05-13
+
+### Refactored
+
+- `Command.handleOperationError` had 6 `this.needsX(error)` calls — each a 2-line wrapper that re-extracted `fullError` from the error context. Net effect: 6× redundant string extraction + `sanitizeStderr` per error. Now extracts `fullError` once and calls the `needsXFromFullError(fullError)` helpers directly, matching the already-good pattern in `formatErrorMessage`.
+- Same treatment for `Command.handleRepositoryOperation`'s `needsNetworkRetry` call.
+- Removed 8 unused private wrapper methods (`getFullErrorString`, `needsCleanup`, `needsUpdate`, `needsConflictResolution`, `needsAuthAction`, `needsNetworkRetry`, `getLockErrorType`, `needsOutputAction`) and the now-unused `LockErrorType` import. Net ~80 lines removed.
+
+---
+
 ## [0.2.41] - 2026-05-13
 
 ### Refactored
