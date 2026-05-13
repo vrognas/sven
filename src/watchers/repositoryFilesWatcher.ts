@@ -21,125 +21,90 @@ import { logError } from "../util/errorLogger";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const nodeFs: typeof import("fs") = require("fs");
 
+// https://subversion.apache.org/docs/release-notes/1.3.html#_svn-hack
+const SVN_PATTERN = /[\\\/](\.svn|_svn)[\\\/]/;
+const SVN_TMP_PATTERN = /[\\\/](\.svn|_svn)[\\\/]tmp/;
+
 export class RepositoryFilesWatcher implements IDisposable {
   private disposables: IDisposable[] = [];
   private nativeWatcher?: FSWatcher; // Track native fs.watch for cleanup
 
-  private _onRepoChange: EventEmitter<Uri>;
-  private _onRepoCreate: EventEmitter<Uri>;
-  private _onRepoDelete: EventEmitter<Uri>;
+  private _onRepoChange = new EventEmitter<Uri>();
+  private _onRepoCreate = new EventEmitter<Uri>();
+  private _onRepoDelete = new EventEmitter<Uri>();
 
-  public onDidChange: Event<Uri>;
-  public onDidCreate: Event<Uri>;
-  public onDidDelete: Event<Uri>;
-  public onDidAny: Event<Uri>;
-
-  public onDidWorkspaceChange: Event<Uri>;
-  public onDidWorkspaceCreate: Event<Uri>;
-  public onDidWorkspaceDelete: Event<Uri>;
-  public onDidWorkspaceAny: Event<Uri>;
-
-  public onDidSvnChange: Event<Uri>;
-  public onDidSvnCreate: Event<Uri>;
-  public onDidSvnDelete: Event<Uri>;
-  public onDidSvnAny: Event<Uri>;
+  /** Any fs event inside the working copy (including `.svn/`). */
+  public readonly onDidAny: Event<Uri>;
+  /** Events inside `.svn/` (with native fs.watch fallback when the workspace doesn't include root). */
+  public readonly onDidSvnAny: Event<Uri>;
+  /** Deletions of non-`.svn` files (consumed by deleted-file detector). */
+  public readonly onDidWorkspaceDelete: Event<Uri>;
 
   constructor(readonly root: string) {
     const fsWatcher = workspace.createFileSystemWatcher(
       new RelativePattern(fixPathSeparator(root), "**")
     );
-    this._onRepoChange = new EventEmitter<Uri>();
-    this._onRepoCreate = new EventEmitter<Uri>();
-    this._onRepoDelete = new EventEmitter<Uri>();
-    let onRepoChange: Event<Uri> | undefined;
-    let onRepoCreate: Event<Uri> | undefined;
-    let onRepoDelete: Event<Uri> | undefined;
+    this.disposables.push(fsWatcher);
 
-    if (
+    // Fallback native watcher: when the workspace doesn't include the repo
+    // root (sparse checkout, file open outside workspaceFolders), VS Code's
+    // workspace watcher doesn't fire — watch `.svn/` directly via fs.watch.
+    const useNativeFallback =
       typeof workspace.workspaceFolders !== "undefined" &&
-      !workspace.workspaceFolders.filter(w => isDescendant(w.uri.fsPath, root))
-        .length
-    ) {
+      !workspace.workspaceFolders.some(w => isDescendant(w.uri.fsPath, root));
+    if (useNativeFallback) {
       try {
         this.nativeWatcher = nodeFs.watch(
           join(root, getSvnDir()),
           this.repoWatch.bind(this)
         );
-
         this.nativeWatcher.on("error", error => {
-          // Phase 20.A fix: Log error gracefully instead of crashing extension
-          // Common errors: ENOENT (.svn deleted), EACCES (permission denied)
+          // Common errors: ENOENT (.svn deleted), EACCES — degrade, don't crash.
           logError(`SVN repository watcher error for ${root}`, error);
-          // Extension continues functioning - watcher may degrade but won't crash
         });
-
-        onRepoChange = this._onRepoChange.event;
-        onRepoCreate = this._onRepoCreate.event;
-        onRepoDelete = this._onRepoDelete.event;
       } catch (error) {
         logError(`SVN repository watcher setup error for ${root}`, error);
       }
     }
 
-    this.disposables.push(fsWatcher);
-
-    //https://subversion.apache.org/docs/release-notes/1.3.html#_svn-hack
-    const isTmp = (uri: Uri) => /[\\\/](\.svn|_svn)[\\\/]tmp/.test(uri.path);
-
-    const isRelevant = (uri: Uri) => !isTmp(uri);
-
-    // Phase 8.3 perf fix - throttle events to prevent flooding on bulk file changes
-    // Increased from 100ms to 300ms to reduce CPU spikes during bulk operations
-    this.onDidChange = throttleEvent(
-      filterEvent(fsWatcher.onDidChange, isRelevant),
+    // Phase 8.3 perf fix - throttle events (300ms) to reduce CPU spikes
+    // during bulk changes. Skip `.svn/tmp` (transient SVN scratch files).
+    const notTmp = (u: Uri) => !SVN_TMP_PATTERN.test(u.path);
+    const onChange = throttleEvent(
+      filterEvent(fsWatcher.onDidChange, notTmp),
       300
     );
-    this.onDidCreate = throttleEvent(
-      filterEvent(fsWatcher.onDidCreate, isRelevant),
+    const onCreate = throttleEvent(
+      filterEvent(fsWatcher.onDidCreate, notTmp),
       300
     );
-    this.onDidDelete = throttleEvent(
-      filterEvent(fsWatcher.onDidDelete, isRelevant),
+    const onDelete = throttleEvent(
+      filterEvent(fsWatcher.onDidDelete, notTmp),
       300
     );
 
-    this.onDidAny = anyEvent(
-      this.onDidChange,
-      this.onDidCreate,
-      this.onDidDelete
+    this.onDidAny = anyEvent(onChange, onCreate, onDelete);
+    this.onDidWorkspaceDelete = filterEvent(
+      onDelete,
+      u => !SVN_PATTERN.test(u.path)
     );
 
-    //https://subversion.apache.org/docs/release-notes/1.3.html#_svn-hack
-    const svnPattern = /[\\\/](\.svn|_svn)[\\\/]/;
-
-    const ignoreSvn = (uri: Uri) => !svnPattern.test(uri.path);
-
-    this.onDidWorkspaceChange = filterEvent(this.onDidChange, ignoreSvn);
-    this.onDidWorkspaceCreate = filterEvent(this.onDidCreate, ignoreSvn);
-    this.onDidWorkspaceDelete = filterEvent(this.onDidDelete, ignoreSvn);
-
-    this.onDidWorkspaceAny = anyEvent(
-      this.onDidWorkspaceChange,
-      this.onDidWorkspaceCreate,
-      this.onDidWorkspaceDelete
-    );
-    const ignoreWorkspace = (uri: Uri) => svnPattern.test(uri.path);
-
-    this.onDidSvnChange = filterEvent(this.onDidChange, ignoreWorkspace);
-    this.onDidSvnCreate = filterEvent(this.onDidCreate, ignoreWorkspace);
-    this.onDidSvnDelete = filterEvent(this.onDidDelete, ignoreWorkspace);
-
-    if (onRepoChange && onRepoCreate && onRepoDelete) {
-      this.onDidSvnChange = onRepoChange;
-      this.onDidSvnCreate = onRepoCreate;
-      this.onDidSvnDelete = onRepoDelete;
+    // `.svn/` events: prefer native fallback if active, else filter the
+    // workspace stream to `.svn/` paths.
+    if (this.nativeWatcher) {
+      this.onDidSvnAny = anyEvent(
+        this._onRepoChange.event,
+        this._onRepoCreate.event,
+        this._onRepoDelete.event
+      );
+    } else {
+      const inSvn = (u: Uri) => SVN_PATTERN.test(u.path);
+      this.onDidSvnAny = anyEvent(
+        filterEvent(onChange, inSvn),
+        filterEvent(onCreate, inSvn),
+        filterEvent(onDelete, inSvn)
+      );
     }
-
-    this.onDidSvnAny = anyEvent(
-      this.onDidSvnChange,
-      this.onDidSvnCreate,
-      this.onDidSvnDelete
-    );
   }
 
   @debounce(500)

@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.47] - 2026-05-13
+
+### Refactored
+
+- **`RepositoryFilesWatcher`**: trimmed public surface from 12 events to 3. Only `onDidAny`, `onDidSvnAny`, and `onDidWorkspaceDelete` had external consumers; the other 9 (`onDidChange`, `onDidCreate`, `onDidDelete`, `onDidWorkspaceChange`, `onDidWorkspaceCreate`, `onDidWorkspaceAny`, `onDidSvnChange`, `onDidSvnCreate`, `onDidSvnDelete`) were unused. Constructor logic compacted accordingly; `.svn/` and `.svn/tmp` regexes hoisted to module constants.
+
+---
+
 ## [0.2.46] - 2026-05-13
 
 ### Performance
