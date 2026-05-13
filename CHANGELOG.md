@@ -7,6 +7,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.48] - 2026-05-13
+
+### Fixed
+
+- **`SourceControlManager.open()` repository leak**: when `blameProvider.activate()` (or any subsequent setup) threw, the catch path disposed the listeners and `BlameProvider` but never called `repository.dispose()`. The repository's watchers, in-flight SVN child processes, and the auth/grace-period timers all leaked. Catch now disposes the repository together with the other failure-path resources. The normal-teardown dispose closure is unchanged (and still fires `onDidCloseRepository`, which is correct only on graceful close — never on failed open).
+
+### Refactored
+
+- **`ResourceGroupManager.isInsideUnversionedOrIgnored`**: four near-identical loops (exact-match and folder-prefix-match, once over `_allUnversioned` and once over `_ignored`) collapsed into two loops sharing a single `matchesPathOrFolder` helper. Behaviour unchanged — `_allUnversioned` still wins over `_ignored`.
+- **`ResourceGroupManager.moveToStaged`**: the three filter-and-collect blocks for `_changes`, `_unversioned`, and each `_changelists` entry consolidated into a single `extractMatching(group, pathSet, collector)` private method. The dedup-on-collect check is now uniform across all three (previously only present on two), which is harmless: `_changes` is drained first, so a resource it contributes can't appear again in a later group.
+- **`StatusService.categorizeStatuses`**: dropped the unused `_config: StatusConfig` parameter. It was kept "for API stability" but the method is private, and `ignoreList` filtering moved to `ResourceGroupManager` some time ago.
+
+---
+
 ## [0.2.47] - 2026-05-13
 
 ### Refactored
