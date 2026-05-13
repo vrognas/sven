@@ -2,8 +2,15 @@
 // Licensed under MIT License
 
 import { CancellationToken, ProgressLocation, window } from "vscode";
-import { Status } from "../common/types";
+import { ISvnErrorData, Status } from "../common/types";
 import { Repository } from "../repository";
+
+// E155015 = "One or more conflicts produced" (commit-side).
+// E200024 = MergeConflict (update-side; mirrored from svn.svnErrorCodes).
+// Inlined as literals so this module doesn't pull svn.ts → configuration.ts
+// into its import graph (test vscode mock doesn't cover the full chain).
+const COMMIT_CONFLICT_CODE = "E155015";
+const MERGE_CONFLICT_CODE = "E200024";
 
 /**
  * Result of pre-commit update operation
@@ -33,7 +40,10 @@ export class PreCommitUpdateService {
    * First checks if server has new commits - skips update if already at HEAD.
    * Reuses cached remote-check result from background polling when fresh.
    */
-  async runUpdate(repository: Repository, files?: string[]): Promise<UpdateResult> {
+  async runUpdate(
+    repository: Repository,
+    files?: string[]
+  ): Promise<UpdateResult> {
     // Filter to versioned files only — new/unversioned files don't need updating
     const versionedFiles = files?.filter(f => {
       const resource = repository.getResourceFromFile(f);
@@ -43,7 +53,9 @@ export class PreCommitUpdateService {
         // If inside unversioned/ignored folder, skip; otherwise treat as versioned
         return !folderStatus;
       }
-      return resource.type !== Status.ADDED && resource.type !== Status.UNVERSIONED;
+      return (
+        resource.type !== Status.ADDED && resource.type !== Status.UNVERSIONED
+      );
     });
 
     // No versioned files to update — skip entirely
@@ -92,7 +104,10 @@ export class PreCommitUpdateService {
           }
 
           progress.report({ message: "Running svn update..." });
-          const updateResult = await repository.updateRevision(false, { token, files: versionedFiles });
+          const updateResult = await repository.updateRevision(false, {
+            token,
+            files: versionedFiles
+          });
 
           if (updateResult.conflicts.length > 0) {
             return {
@@ -114,12 +129,17 @@ export class PreCommitUpdateService {
             return { success: false, cancelled: true };
           }
 
-          // Check for conflict error codes
-          if (
-            errorMsg.includes("E155015") ||
-            errorMsg.includes("conflict") ||
-            errorMsg.includes("E200024")
-          ) {
+          // Prefer the structured svnErrorCode when present; fall back to
+          // substring match for non-SvnError throws (e.g. wrapped errors).
+          const svnErrorCode = (error as ISvnErrorData).svnErrorCode;
+          const isConflict =
+            svnErrorCode === MERGE_CONFLICT_CODE ||
+            svnErrorCode === COMMIT_CONFLICT_CODE ||
+            errorMsg.includes(COMMIT_CONFLICT_CODE) ||
+            errorMsg.includes(MERGE_CONFLICT_CODE) ||
+            errorMsg.includes("conflict");
+
+          if (isConflict) {
             return {
               success: false,
               hasConflicts: true,
