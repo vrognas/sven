@@ -80,9 +80,11 @@ export class CommitFlowService {
     // Targets only committed files for speed; falls back to full update on failure
     // .catch prevents unhandled rejection if it fails while user is in message flow
     const updatePromise = updateBeforeCommit
-      ? this.updateService.runUpdate(repository, selectedFiles).catch(
-          (err): UpdateResult => ({ success: false, error: String(err) })
-        )
+      ? this.updateService
+          .runUpdate(repository, selectedFiles)
+          .catch(
+            (err): UpdateResult => ({ success: false, error: String(err) })
+          )
       : undefined;
 
     // Build commit message (user interacts while update runs)
@@ -91,7 +93,7 @@ export class CommitFlowService {
     if (conventionalCommits) {
       message = await this.runConventionalFlow(repository, selectedFiles);
     } else {
-      message = await this.runSimpleFlow(repository);
+      message = await this.showCustomMessageStep(repository);
     }
 
     if (message === undefined) {
@@ -147,18 +149,16 @@ export class CommitFlowService {
     }
 
     // Step 2: Enter scope (optional)
-    const scope = await this.showScopeStep(repository, typeResult.type!);
+    const scope = await this.showScopeStep(typeResult.type!);
     if (scope === undefined) {
       return undefined; // Cancelled
     }
 
-    // Step 3: Enter description (pre-populate with SCM input box value)
+    // Step 3+4: description with confirm loop (every branch returns)
     const existingMessage = repository.inputBox.value;
-    let description: string | undefined;
-    let confirmed = false;
 
-    while (!confirmed) {
-      description = await this.showDescriptionStep(
+    for (;;) {
+      const description = await this.showDescriptionStep(
         typeResult.type!,
         scope,
         existingMessage
@@ -167,7 +167,6 @@ export class CommitFlowService {
         return undefined;
       }
 
-      // Build message
       const commit: ConventionalCommit = {
         type: typeResult.type!,
         scope: scope || undefined,
@@ -175,20 +174,15 @@ export class CommitFlowService {
       };
       const message = this.conventionalService.format(commit);
 
-      // Step 4: Confirm
       const confirmResult = await this.showConfirmStep(message, filePaths);
       if (confirmResult === undefined) {
         return undefined;
       }
-
       if (confirmResult === "commit") {
-        confirmed = true;
         return message;
       }
       // confirmResult === "edit" -> loop again
     }
-
-    return undefined;
   }
 
   /**
@@ -236,20 +230,10 @@ export class CommitFlowService {
    * Show scope input (Step 2)
    * Shows the message prefix being built (e.g., "feat: _")
    */
-  private async showScopeStep(
-    repository: Repository,
-    type: string
-  ): Promise<string | undefined> {
-    // Get recent scopes from repository if available
-    const recentScopes = this.getRecentScopes(repository);
-    const placeholder =
-      recentScopes.length > 0
-        ? `Optional scope (recent: ${recentScopes.join(", ")})`
-        : "Optional scope — narrows what this change affects";
-
+  private async showScopeStep(type: string): Promise<string | undefined> {
     const scope = await window.showInputBox({
       title: `Commit (2/3): ${type}(scope): description`,
-      prompt: placeholder,
+      prompt: "Optional scope — narrows what this change affects",
       placeHolder: "Leave empty to skip"
     });
 
@@ -440,29 +424,6 @@ export class CommitFlowService {
         };
       }
     });
-  }
-
-  /**
-   * Simple flow without conventional commits
-   */
-  private async runSimpleFlow(
-    repository: Repository
-  ): Promise<string | undefined> {
-    return this.showCustomMessageStep(repository);
-  }
-
-  /**
-   * Get recent scopes from repository (auto-detect from directory names)
-   */
-  private getRecentScopes(repository: Repository): string[] {
-    // If repository has getRecentScopes method, use it
-    const repoWithScopes = repository as Repository & {
-      getRecentScopes?: () => string[];
-    };
-    if (typeof repoWithScopes.getRecentScopes === "function") {
-      return repoWithScopes.getRecentScopes();
-    }
-    return [];
   }
 
   /**
