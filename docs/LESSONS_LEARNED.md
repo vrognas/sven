@@ -1133,6 +1133,14 @@ groupManager.moveToStaged(files); // Move Resource objects directly
 
 **Rule**: For SCM operations that fan out to multiple SVN calls, run the SVN side per-group but emit ONE UI notification at the end. Let the action-button + input-box churn collapse to a single refresh.
 
+#### 26b. Optimistic-Path Operations Must Set Grace Period (v0.2.35)
+
+**Issue**: `stageOptimistic`/`unstageOptimistic` correctly bypass the `run()` wrapper to avoid the heavy `updateModelState()` after-effect. But they ALSO skipped `run()`'s side effect of setting `lastForceRefresh` — so when the SVN `changelist` command modified `.svn/wc.db`, the file watcher saw no grace period and reactively fired the very cascade we tried to avoid (`onDidAnyFileChanged` → `svn info`; `onFSChange` → debounced `svn stat`; `updateModelState` → `svn proplist -R -v .`; downstream listeners → sparse-checkout `svn list`). User saw 6 SVN commands per single-file stage.
+
+**Fix**: Call `this.setGracePeriod()` at the top of optimistic stage/unstage. Grace period suppresses the immediate watcher reflex; only one delayed reconciliation status fires ~5s later (acceptable eventual consistency).
+
+**Rule**: ANY method that does SVN writes outside `run()` must call `setGracePeriod()` itself. The grace period is the contract that tells the file watcher "I already know about this — don't react." Bypassing `run()` for performance still requires upholding that contract.
+
 ---
 
 ### 27. Native Resources: Track and Dispose Separately

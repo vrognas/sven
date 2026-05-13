@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.35] - 2026-05-13
+
+### Fixed
+
+- **Staging perf**: optimistic stage/unstage bypassed `run()` (correct) but also skipped its grace-period side effect, so `svn changelist` `.svn/wc.db` writes triggered a reflex cascade (`svn info`, `svn stat`, `svn list`, second `svn stat`, `svn proplist -R -v .`) on every staged file. `stageOptimistic`/`unstageOptimistic` now call `setGracePeriod()` so the file watcher suppresses these — single staging now issues one `svn changelist` instead of six commands.
+
+---
+
 ## [0.2.34] - 2026-05-07
 
 ### Refactored

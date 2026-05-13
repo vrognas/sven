@@ -1225,6 +1225,10 @@ export class Repository implements IRemoteRepository {
     files: string[],
     opts: { expand?: boolean } = {}
   ): Promise<void> {
+    // Suppress watcher reflex (svn info / svn stat / proplist cascade) during
+    // .svn/wc.db writes from the changelist command — UI is updated below.
+    this.setGracePeriod();
+
     const targets = opts.expand
       ? this.expandDirectoriesToGroupFiles(files, this.groupManager.changes)
       : files;
@@ -1323,6 +1327,9 @@ export class Repository implements IRemoteRepository {
   ): Promise<void> {
     const groups: Map<string | null, string[]> =
       arg instanceof Map ? arg : new Map([[targetChangelist ?? null, arg]]);
+
+    // Suppress watcher reflex during .svn/wc.db writes — UI is updated below.
+    this.setGracePeriod();
 
     for (const [destination, paths] of groups) {
       const expanded = this.expandDirectoriesToGroupFiles(

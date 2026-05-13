@@ -92,3 +92,55 @@ suite("stageHelper.unstageWithRestoreOptimistic batching", () => {
     assert.deepStrictEqual(cleared, paths);
   });
 });
+
+/**
+ * stageOptimistic / unstageOptimistic must set the grace period before
+ * running SVN commands so the file watcher doesn't react to .svn/wc.db
+ * changes with a reflex svn info / svn stat / proplist cascade.
+ */
+suite("Repository.stageOptimistic grace period", () => {
+  test("stageOptimistic sets grace period before SVN call", async () => {
+    const { Repository } = await import("../../../repository");
+    const proto = Repository.prototype;
+
+    // Probe instance with just enough surface for stageOptimistic
+    const calls: string[] = [];
+    const repo: any = Object.create(proto);
+    repo.repository = {
+      addFiles: async () => {
+        calls.push("addFiles");
+      },
+      addChangelist: async () => {
+        calls.push(
+          repo.lastForceRefresh > 0 ? "addChangelist[grace]" : "addChangelist"
+        );
+      }
+    };
+    repo.groupManager = {
+      changes: { resourceStates: [] },
+      staged: { resourceStates: [] },
+      conflicts: { resourceStates: [] },
+      getResourceFromFile: () => undefined,
+      moveToStaged: () => []
+    };
+    repo.sourceControl = {
+      // @ts-ignore - actionButton not in vscode types
+      actionButton: undefined,
+      inputBox: { value: "" }
+    };
+    // operations is a getter on the real instance; shadow it via Object.defineProperty
+    Object.defineProperty(repo, "operations", {
+      value: { isRunning: () => false },
+      configurable: true
+    });
+    repo.lastForceRefresh = 0;
+
+    await proto.stageOptimistic.call(repo, ["/r/foo.txt"]);
+
+    assert.deepStrictEqual(calls, ["addChangelist[grace]"]);
+    assert.ok(
+      repo.lastForceRefresh > 0,
+      "grace period should remain set after stageOptimistic"
+    );
+  });
+});
