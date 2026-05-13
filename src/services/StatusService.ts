@@ -136,8 +136,7 @@ export class StatusService implements IStatusService {
     // Categorize resources
     const categorized = await this.categorizeStatuses(
       statusesRepository,
-      excludeList,
-      config
+      excludeList
     );
 
     return {
@@ -284,11 +283,11 @@ export class StatusService implements IStatusService {
 
   /**
    * Categorize statuses into resource groups
+   * (ignoreList filtering moved to ResourceGroupManager, so config no longer needed)
    */
   private async categorizeStatuses(
     statuses: IFileStatus[],
-    excludeList: string[],
-    _config: StatusConfig // Kept for API stability, ignoreList filtering moved to ResourceGroupManager
+    excludeList: string[]
   ): Promise<{
     changes: Resource[];
     conflicts: Resource[];
