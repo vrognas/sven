@@ -198,8 +198,6 @@ export interface IFileStatus {
   kind?: "file" | "dir";
   changelist?: string;
   rename?: string;
-  /** True if file was renamed AND has content modifications */
-  renamedAndModified?: boolean;
   /** Property changes: which properties changed and how */
   propertyChanges?: PropertyChange[];
   wcStatus: IWcStatus;

@@ -29,14 +29,8 @@ export class Resource implements SourceControlResourceState {
     private _changelist?: string,
     private _kind?: "file" | "dir",
     private _localFileExists?: boolean,
-    private _renamedAndModified: boolean = false,
     private _propertyChanges?: PropertyChange[]
   ) {}
-
-  /** True if file was renamed AND has content modifications */
-  get renamedAndModified(): boolean {
-    return this._renamedAndModified;
-  }
 
   /** Property changes: which properties changed and how */
   get propertyChanges(): PropertyChange[] | undefined {
@@ -103,7 +97,6 @@ export class Resource implements SourceControlResourceState {
     // FileDecorationProvider adds badges (A/M/D for files, FA/FM/FD for folders)
     return {
       strikeThrough: this.strikeThrough,
-      faded: this.faded,
       tooltip: this.tooltip
     };
   }
@@ -146,13 +139,9 @@ export class Resource implements SourceControlResourceState {
       (this.type === Status.ADDED || this.type === Status.REPLACED) &&
       this.renameResourceUri
     ) {
-      // Renamed file (R or RM badge) - show just filename, not full path
+      // Renamed file (R badge) - show just filename, not full path
       const oldName = path.basename(this.renameResourceUri.fsPath);
-      if (this._renamedAndModified) {
-        tip = `Renamed from ${oldName} + Modified (history preserved)`;
-      } else {
-        tip = `Renamed from ${oldName} (history preserved)`;
-      }
+      tip = `Renamed from ${oldName} (history preserved)`;
     } else if (this.type === Status.ADDED) {
       // A badge
       tip = "Added: New file (no prior history)";
@@ -196,10 +185,6 @@ export class Resource implements SourceControlResourceState {
     return false;
   }
 
-  private get faded(): boolean {
-    return false;
-  }
-
   /**
    * Format property changes for tooltip display.
    * Shows: "svn:needs-lock added, svn:ignore modified"
@@ -222,11 +207,8 @@ export class Resource implements SourceControlResourceState {
   get letter(): string | undefined {
     switch (this.type) {
       case Status.ADDED:
-        if (this.renameResourceUri) {
-          // Renamed: R or RM (renamed + modified)
-          return this._renamedAndModified ? "RM" : "R";
-        }
-        return "A";
+        // Renamed: R; otherwise A
+        return this.renameResourceUri ? "R" : "A";
       case Status.CONFLICTED:
         return "C";
       case Status.DELETED:
@@ -239,11 +221,8 @@ export class Resource implements SourceControlResourceState {
       case Status.MODIFIED:
         return "M";
       case Status.REPLACED:
-        // Replaced (history broken) - check for rename variant too
-        if (this.renameResourceUri) {
-          return this._renamedAndModified ? "RM" : "R";
-        }
-        return "!"; // Replaced without rename (history broken)
+        // Replaced with rename = R; without rename = ! (history broken)
+        return this.renameResourceUri ? "R" : "!";
       case Status.UNVERSIONED:
         return "U";
       case Status.MISSING:

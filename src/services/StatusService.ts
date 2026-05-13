@@ -435,7 +435,6 @@ export class StatusService implements IStatusService {
         status.changelist,
         kind,
         localFileExists,
-        false, // renamedAndModified - keep existing behavior
         propertyChanges
       );
 
