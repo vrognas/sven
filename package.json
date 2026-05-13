@@ -2,11 +2,11 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.2.44",
+  "version": "0.2.45",
   "publisher": "vrognas",
   "engines": {
-    "vscode": "^1.108.0",
-    "positron": "^2025.11.0"
+    "vscode": "^1.109.0",
+    "positron": "^2026.04.0"
   },
   "icon": "images/sven.png",
   "homepage": "https://github.com/vrognas/sven#readme",
@@ -109,7 +109,7 @@
     "@types/semver": "^7.5.8",
     "@types/sinon": "^21.0.0",
     "@types/tmp": "^0.2.6",
-    "@types/vscode": "~1.108.0",
+    "@types/vscode": "~1.109.0",
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.58.0",
     "@vitest/coverage-v8": "^4.1.5",

@@ -7,6 +7,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.45] - 2026-05-13
+
+### Changed
+
+- **Bumped engine floor**: `engines.vscode` `^1.108.0` → `^1.109.0`; `engines.positron` `^2025.11.0` → `^2026.04.0`. Positron 2026.04.x and 2026.05.x both ship Code-OSS 1.109.2, so the new floor matches all current Positron releases. Drops support for Positron 2025.11.x through 2026.03.x (~5 months of older releases).
+- `@types/vscode` aligned to `~1.109.0`.
+
+---
+
 ## [0.2.44] - 2026-05-13
 
 Performance + code-quality release. Substantially fewer SVN command spawns per user action, especially on large working copies. No user-visible behaviour changes — same SVN semantics, less churn.
