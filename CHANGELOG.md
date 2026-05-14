@@ -7,6 +7,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.58] - 2026-05-14
+
+Deeper perf audit of error-handling paths and command base class.
+
+### Performance
+
+- **`handleOperationError` and `handleRepositoryOperation` no longer rebuild the `ErrorContext` twice per error.** Each used to call `formatErrorMessage(error, ...)` (which internally built the context via `getErrorContext`) and then call `getErrorContext(error)` _again_ a line later. Building the context runs `sanitizeStderr` (13 sequential regex passes over the full stderr) plus `.toLowerCase()` on the combined string. Added a private `formatErrorMessageFromContext(context, fallbackMsg)` so the call sites build context once and share it. Public `formatErrorMessage(error, fallbackMsg)` signature unchanged — existing tests untouched.
+
+### Audited, no change needed
+
+- **`parser/logParser`, `infoParser`, `listParser`, `diffParser`**: minimal transforms, all of the per-call cost is in `XmlParserAdapter.parse` (which is already lazy-singleton-cached after v0.2.55).
+- **`BlameProvider.applyIconDecorations`**: disposes icon decoration types per render — intentional, since each file's color palette differs and VS Code's `TextEditorDecorationType` leaks if not disposed. Per-render cost (~10–50 disposals + recreates) is fine on the file-open path; cursor moves skip this entirely via `updateInlineDecorationsForCursor`.
+- **`BlameProvider.getRevisionColor`**: cached in `revisionColors` map. HSL→hex math runs once per unique revision, then served from cache.
+- **`generateColorBarSvg`**: cached in `svgCache` by color string. Each unique color runs `Buffer.from(...).toString("base64")` once.
+- **`includesAny` in error detectors**: each detector does a small `.some(needle => text.includes(needle))` over ≤6 tokens. Only runs on the error path (rare).
+
+---
+
 ## [0.2.57] - 2026-05-14
 
 Deeper perf audit of the gutter-blame render loop.

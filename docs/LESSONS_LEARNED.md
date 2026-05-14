@@ -1,7 +1,17 @@
 # Lessons Learned
 
-**Version**: 0.2.57
+**Version**: 0.2.58
 **Updated**: 2026-05-14
+
+---
+
+### 68. Build Expensive Error/Diagnostic Context Once, Pass It Down
+
+**Lesson**: `handleOperationError` called `formatErrorMessage(error, ...)` followed by `getErrorContext(error)` on the next line. Both internally ran `sanitizeStderr` (13 sequential regex passes) and `.toLowerCase()` on the combined stderr. Same context built twice per error.
+
+**Fix**: Extracted `formatErrorMessageFromContext(context, fallbackMsg)` so callers build the context once and reuse it. Public `formatErrorMessage(error, fallbackMsg)` kept as a thin wrapper so existing tests pass unchanged.
+
+**Rule**: If a function is called for its side-information (context, parsed payload) and then the caller rebuilds the same thing for routing logic, extract a `*FromContext` variant. The wrapper preserves the simple call site for tests/external callers.
 
 ---
 
