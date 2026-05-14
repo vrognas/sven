@@ -7,6 +7,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.56] - 2026-05-14
+
+Deeper perf audit of utility layer (uri/cache/decorator/fs/blame-state).
+
+### Performance
+
+- **`formatBlameDate` is now memoized.** Gutter blame renders call this once per line: a 1000-line file with 50 unique commit dates was reparsing the same ISO 8601 string ~950 times per render — each call constructed a fresh `Date` and ran `toLocaleDateString`/`getRelativeTime`. Bounded cache (1024 entries, 60s TTL, FIFO eviction) keyed by `${format}|${dateStr}` so absolute/relative don't collide and the "relative" form never visibly drifts.
+
+### Audited, no change needed
+
+- **`LRUCache` per-entry `setTimeout` for TTL**: for caches of ≤500 entries, the per-set `clearTimeout`+`setTimeout` cost is sub-microsecond — well below the noise floor of the SVN operations the cache fronts. Lazy expiration would be cleaner but risks broader test churn for a marginal win.
+- **`uri.ts` JSON parse/stringify per URI**: `fromSvnUri` runs on every diff stat/readFile, but the JSON payload is small (~50 bytes); caching by Uri identity is unsafe (VS Code re-instantiates URI objects).
+- **`SvnRI` getters**: already `@memoize`-d at the instance level.
+- **`decorators.ts` (`@memoize`/`@throttle`/`@debounce`/`@sequentialize`/`@globalSequentialize`)**: lean, allocation-conscious, no per-call work beyond the necessary.
+- **`temp_svn_fs` in-memory FS**: only touched by historical-diff command paths, not status hot path.
+- **`util/batchOperations.executeBatched` sequential chunks**: correct — SVN locks at WC level, so true parallel chunks would risk lock contention.
+- **`blameStateManager` / `blameConfiguration` accessors**: every call is a `Map.get` (state) or VS Code `WorkspaceConfiguration.get` (config). No SVN calls, no allocations.
+
+---
+
 ## [0.2.55] - 2026-05-14
 
 Deeper perf audit of the parser, helpers, and contexts layer.

@@ -1,7 +1,17 @@
 # Lessons Learned
 
-**Version**: 0.2.55
+**Version**: 0.2.56
 **Updated**: 2026-05-14
+
+---
+
+### 66. Memoize Pure Transforms on Repeating-Input Hot Paths
+
+**Lesson**: `formatBlameDate` was called once per line during gutter blame render. A 1000-line file with 50 unique commit dates ran 950 redundant `new Date(...)` + `toLocaleDateString(...)` round-trips, even though the input was identical across most calls.
+
+**Fix**: Bounded cache keyed by `${format}|${dateStr}`. FIFO eviction at 1024 entries; 60s TTL so the "relative" form (which depends on `Date.now()`) doesn't visibly drift.
+
+**Rule**: When a pure (deterministic-modulo-clock) transform is called in a tight loop with high input repetition, cache by input. Bound the cache and pick a TTL short enough that any time-dependent output stays fresh.
 
 ---
 
