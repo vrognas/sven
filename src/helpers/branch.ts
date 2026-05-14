@@ -112,15 +112,33 @@ export async function selectBranch(
   return;
 }
 
+// Memoize the compiled regex so repeated isTrunk() calls (e.g.,
+// HasBranch.checkHasBranch on every repo change) don't recompile it.
+// Keyed by config values so test mocks of configuration.get still take effect.
+let trunkRegexCache:
+  | { layout: string; group: number; regex: RegExp }
+  | undefined;
+
 export function isTrunk(folder: string): boolean {
   const conf = "layout.trunkRegex";
   const layout = configuration.get<string>(conf);
   if (!layout) {
     return false;
   }
-  const regex = new RegExp(`(^|/)(${layout})$`);
-  const matches = folder.match(regex);
   const group = configuration.get<number>(`${conf}Name`, 1) + 2;
 
+  if (
+    !trunkRegexCache ||
+    trunkRegexCache.layout !== layout ||
+    trunkRegexCache.group !== group
+  ) {
+    trunkRegexCache = {
+      layout,
+      group,
+      regex: new RegExp(`(^|/)(${layout})$`)
+    };
+  }
+
+  const matches = folder.match(trunkRegexCache.regex);
   return !!(matches && matches[2] && matches[group]);
 }
