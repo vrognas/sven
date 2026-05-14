@@ -12,8 +12,7 @@ import {
   TextEditor,
   TextEditorSelectionChangeEvent,
   Uri,
-  window,
-  workspace
+  window
 } from "vscode";
 import { debounce } from "../decorators";
 import { ISvnBlameLine } from "../common/types";
@@ -25,16 +24,17 @@ import { formatBlameDate } from "../util/formatting";
 
 /**
  * BlameStatusBar manages the status bar item showing blame info for current line
- * Singleton instance (unlike BlameProvider which is per-repo)
+ * Singleton instance (unlike BlameProvider which is per-repo).
+ *
+ * Blame data is fetched via `Repository.getBlameForFile`, which is itself
+ * cached by `SvnRepository._blameCache` (5min TTL). No local cache layer
+ * here — a redundant TTL of the same length plus over-eager invalidation
+ * on edit/save (BASE blame doesn't change on a local edit) was previously
+ * adding nothing on top of the shared cache.
  */
 export class BlameStatusBar implements Disposable {
   private statusBarItem: StatusBarItem;
-  private blameCache = new Map<
-    string,
-    { data: ISvnBlameLine[]; timestamp: number }
-  >();
   private disposables: Disposable[] = [];
-  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(private sourceControlManager: SourceControlManager) {
     // Create status bar item (right-aligned, priority 100)
@@ -62,15 +62,9 @@ export class BlameStatusBar implements Disposable {
       // Active editor changes
       window.onDidChangeActiveTextEditor(e => this.onActiveEditorChanged(e)),
 
-      // Document changes (invalidate cache)
-      workspace.onDidChangeTextDocument(e => {
-        this.blameCache.delete(e.document.uri.toString());
-      }),
-
-      // Document save (invalidate cache)
-      workspace.onDidSaveTextDocument(d => {
-        this.blameCache.delete(d.uri.toString());
-      }),
+      // (Document change / save invalidation removed — BASE blame doesn't
+      //  change on local edit/save, and SvnRepository._blameCache is the
+      //  authoritative cache below us.)
 
       // Configuration changes
       blameConfiguration.onDidChange(() => this.onConfigurationChanged()),
@@ -182,7 +176,6 @@ export class BlameStatusBar implements Disposable {
    */
   public dispose(): void {
     this.statusBarItem.dispose();
-    this.blameCache.clear();
     this.disposables.forEach(d => d.dispose());
     this.disposables = [];
   }
@@ -238,18 +231,10 @@ export class BlameStatusBar implements Disposable {
   }
 
   /**
-   * Get blame data for URI (with caching)
+   * Get blame data for URI. No local cache — the underlying
+   * `SvnRepository._blameCache` (5min TTL) is the single source of truth.
    */
   private async getBlameData(uri: Uri): Promise<ISvnBlameLine[] | undefined> {
-    const key = uri.toString();
-
-    // Check cache
-    const cached = this.blameCache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
-      return cached.data;
-    }
-
-    // Find repository for this file
     const repository = this.sourceControlManager.getRepository(uri);
     if (!repository) {
       return undefined;
@@ -273,7 +258,6 @@ export class BlameStatusBar implements Disposable {
         return undefined;
       }
     } else {
-      // Fallback: check if file is inside an unversioned/ignored folder
       const parentStatus = repository.isInsideUnversionedOrIgnored(uri.fsPath);
       if (
         parentStatus === Status.UNVERSIONED ||
@@ -283,14 +267,8 @@ export class BlameStatusBar implements Disposable {
       }
     }
 
-    // Fetch from repository
     try {
-      const data = await repository.blame(uri.fsPath);
-
-      // Cache with timestamp
-      this.blameCache.set(key, { data, timestamp: Date.now() });
-
-      return data;
+      return await repository.blame(uri.fsPath);
     } catch (err) {
       logError("BlameStatusBar: Failed to fetch blame data", err);
       return undefined;
