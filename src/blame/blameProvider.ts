@@ -440,6 +440,8 @@ export class BlameProvider implements Disposable {
   ): Promise<void> {
     const inlineDecorations: DecorationOptions[] = [];
     const currentLineOnly = blameConfiguration.isInlineCurrentLineOnly();
+    const inlineColor = `rgba(127, 127, 127, ${blameConfiguration.getInlineOpacity()})`;
+    const activeLine = editor.selection.active.line;
 
     for (const blameLine of blameData) {
       // Apply line mapping (handles modified files)
@@ -455,7 +457,7 @@ export class BlameProvider implements Disposable {
       }
 
       // Filter by current line if needed
-      const isCurrentLine = lineIndex === editor.selection.active.line;
+      const isCurrentLine = lineIndex === activeLine;
       if (currentLineOnly && !isCurrentLine) {
         continue;
       }
@@ -475,7 +477,7 @@ export class BlameProvider implements Disposable {
         renderOptions: {
           after: {
             contentText: inlineText,
-            color: `rgba(127, 127, 127, ${blameConfiguration.getInlineOpacity()})`
+            color: inlineColor
           }
         },
         hoverMessage: `SVN: r${blameLine.revision} by ${blameLine.author}`
@@ -529,6 +531,7 @@ export class BlameProvider implements Disposable {
 
     const currentLine = editor.selection.active.line;
     const inlineDecorations: DecorationOptions[] = [];
+    const inlineColor = `rgba(127, 127, 127, ${blameConfiguration.getInlineOpacity()})`;
 
     // Find blame info for current line only
     for (const blameLine of blameData) {
@@ -564,7 +567,7 @@ export class BlameProvider implements Disposable {
         renderOptions: {
           after: {
             contentText: inlineText,
-            color: `rgba(127, 127, 127, ${blameConfiguration.getInlineOpacity()})`
+            color: inlineColor
           }
         },
         hoverMessage: `SVN: r${blameLine.revision} by ${blameLine.author}`
@@ -930,12 +933,20 @@ export class BlameProvider implements Disposable {
     const dateFormat = blameConfiguration.getDateFormat();
     const { lineMapping } = options;
 
+    // Hoist config reads + color-string allocation out of the per-line loop.
+    // For a 1000-line file these were ~6000 redundant config reads and
+    // 1000 redundant rgba(...) string allocations per blame render.
+    const gutterEnabled = blameConfiguration.isGutterEnabled();
+    const gutterTextEnabled = blameConfiguration.isGutterTextEnabled();
+    const showGutterText = gutterEnabled && gutterTextEnabled;
+    const inlineEnabled = blameConfiguration.isInlineEnabled();
+    const inlineCurrentLineOnly = blameConfiguration.isInlineCurrentLineOnly();
+    const showInlineMessage = blameConfiguration.shouldShowInlineMessage();
+    const inlineColor = `rgba(127, 127, 127, ${blameConfiguration.getInlineOpacity()})`;
+    const activeLine = editor.selection.active.line;
+
     // Prefetch messages if inline enabled (unless skipped for progressive rendering)
-    if (
-      !options.skipMessagePrefetch &&
-      blameConfiguration.isInlineEnabled() &&
-      blameConfiguration.shouldShowInlineMessage()
-    ) {
+    if (!options.skipMessagePrefetch && inlineEnabled && showInlineMessage) {
       const uniqueRevisions = [
         ...new Set(blameData.map(b => b.revision).filter(Boolean))
       ] as string[];
@@ -958,10 +969,7 @@ export class BlameProvider implements Disposable {
       const range = new Range(lineIndex, 0, lineIndex, 0);
 
       // 1. Gutter text decoration
-      if (
-        blameConfiguration.isGutterEnabled() &&
-        blameConfiguration.isGutterTextEnabled()
-      ) {
+      if (showGutterText) {
         const text = this.formatBlameText(blameLine, template, dateFormat);
         gutterDecorations.push({
           range,
@@ -979,13 +987,11 @@ export class BlameProvider implements Disposable {
       }
 
       // 2. Inline annotation
-      if (blameConfiguration.isInlineEnabled()) {
-        // Filter by current line if currentLineOnly mode enabled
-        const currentLineOnly = blameConfiguration.isInlineCurrentLineOnly();
-        const isCurrentLine = lineIndex === editor.selection.active.line;
+      if (inlineEnabled) {
+        const isCurrentLine = lineIndex === activeLine;
 
-        if (!currentLineOnly || isCurrentLine) {
-          const message = blameConfiguration.shouldShowInlineMessage()
+        if (!inlineCurrentLineOnly || isCurrentLine) {
+          const message = showInlineMessage
             ? await this.getCommitMessage(blameLine.revision)
             : "";
 
@@ -1002,7 +1008,7 @@ export class BlameProvider implements Disposable {
             renderOptions: {
               after: {
                 contentText: inlineText,
-                color: `rgba(127, 127, 127, ${blameConfiguration.getInlineOpacity()})`
+                color: inlineColor
               }
             },
             hoverMessage: `SVN: r${blameLine.revision} by ${blameLine.author}`
