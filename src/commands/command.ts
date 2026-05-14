@@ -842,7 +842,22 @@ export abstract class Command implements Disposable {
    * Provides actionable guidance for common errors.
    */
   private formatErrorMessage(error: unknown, fallbackMsg: string): string {
-    const context = this.getErrorContext(error);
+    return this.formatErrorMessageFromContext(
+      this.getErrorContext(error),
+      fallbackMsg
+    );
+  }
+
+  /**
+   * Same as `formatErrorMessage` but takes a pre-built `ErrorContext` to
+   * avoid rebuilding it (sanitizeStderr runs 13 regex passes — non-trivial
+   * for large stderr). Callers in `handleOperationError` /
+   * `handleRepositoryOperation` build the context once and share it.
+   */
+  private formatErrorMessageFromContext(
+    context: ErrorContext,
+    fallbackMsg: string
+  ): string {
     const fullError = context.fullErrorSanitized;
     const code = extractErrorCode(context.rawCombined);
 
@@ -929,8 +944,12 @@ export abstract class Command implements Disposable {
     errorMsg: string
   ): Promise<void> {
     logError("Repository operation failed", error);
-    const userMessage = this.formatErrorMessage(error, errorMsg);
-    const fullError = this.getErrorContext(error).fullErrorRaw;
+    // Build error context once — both message formatting and lock/cleanup/
+    // update routing below need it, and rebuilding re-runs sanitizeStderr
+    // (13 regex passes).
+    const context = this.getErrorContext(error);
+    const userMessage = this.formatErrorMessageFromContext(context, errorMsg);
+    const fullError = context.fullErrorRaw;
     const lockType = getLockErrorTypeFromFullError(fullError);
 
     // Priority order: auth → file-lock → cleanup → update → conflict → output → generic.
@@ -959,11 +978,7 @@ export abstract class Command implements Disposable {
         "sven.cleanup"
       );
     } else if (needsUpdateFromFullError(fullError)) {
-      await this.runCommandActionIfChosen(
-        userMessage,
-        "Update",
-        "sven.update"
-      );
+      await this.runCommandActionIfChosen(userMessage, "Update", "sven.update");
     } else if (needsConflictResolutionFromFullError(fullError)) {
       await this.runCommandActionIfChosen(
         userMessage,
@@ -994,10 +1009,13 @@ export abstract class Command implements Disposable {
       return await operation();
     } catch (error) {
       // Network errors - offer retry (needs the operation to re-run)
-      const fullError = this.getErrorContext(error).fullErrorRaw;
-      if (needsNetworkRetryFromFullError(fullError)) {
+      const context = this.getErrorContext(error);
+      if (needsNetworkRetryFromFullError(context.fullErrorRaw)) {
         logError("Repository operation failed", error);
-        const userMessage = this.formatErrorMessage(error, errorMsg);
+        const userMessage = this.formatErrorMessageFromContext(
+          context,
+          errorMsg
+        );
         const retry = "Retry";
         const choice = await window.showErrorMessage(userMessage, retry);
         if (choice === retry) {
