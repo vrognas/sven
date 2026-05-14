@@ -7,13 +7,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-## [0.2.58] - 2026-05-14
+## [0.2.59] - 2026-05-14
 
-Deeper perf audit of error-handling paths and command base class.
+Same content as the never-shipped 0.2.58, plus a build fix: the unused `formatErrorMessage` wrapper kept around "for test compatibility" tripped TypeScript's `noUnusedLocals` in CI (the test reaches it via `as any`, which is invisible to the unused-private check). Dropped the wrapper; updated the test helper to call `formatErrorMessageFromContext` after building the context locally.
 
 ### Performance
 
-- **`handleOperationError` and `handleRepositoryOperation` no longer rebuild the `ErrorContext` twice per error.** Each used to call `formatErrorMessage(error, ...)` (which internally built the context via `getErrorContext`) and then call `getErrorContext(error)` _again_ a line later. Building the context runs `sanitizeStderr` (13 sequential regex passes over the full stderr) plus `.toLowerCase()` on the combined string. Added a private `formatErrorMessageFromContext(context, fallbackMsg)` so the call sites build context once and share it. Public `formatErrorMessage(error, fallbackMsg)` signature unchanged — existing tests untouched.
+- **`handleOperationError` and `handleRepositoryOperation` no longer rebuild the `ErrorContext` twice per error.** Each used to call `formatErrorMessage(error, ...)` (which internally built the context via `getErrorContext`) and then call `getErrorContext(error)` _again_ a line later. Building the context runs `sanitizeStderr` (13 sequential regex passes over the full stderr) plus `.toLowerCase()` on the combined string. The single remaining formatter, `formatErrorMessageFromContext(context, fallbackMsg)`, takes a pre-built context so callers share it.
 
 ### Audited, no change needed
 
