@@ -28,8 +28,9 @@
         "--disable-extension",
         "etiennebacher.jarl-vscode",
         "--extensionDevelopmentPath=${workspaceRoot}",
-        "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/redmyne",
-        "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/vscode-nmtran",
+        "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/vrognas-redmyne",
+        "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/vrognas-nmtran",
+        "--extensionDevelopmentPath=C:/Users/viktor.rognas/git_repos/vrognas-nonmem",
         "C:/Projects/Test-Viktor"
       ],
       "sourceMaps": true,
