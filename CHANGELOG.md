@@ -7,6 +7,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.55] - 2026-05-14
+
+Deeper perf audit of the parser, helpers, and contexts layer.
+
+### Performance
+
+- **`XmlParserAdapter` now reuses a single `XMLParser` instance.** Previously, every SVN result (status refresh, blame, log, info) constructed a fresh `XMLParser` with ~20 configuration options. The parser is stateless after construction, so a lazy singleton works just as well and removes that allocation from the hot path.
+- **`isTrunk` memoizes its compiled regex.** Called from `HasBranch.checkHasBranch` once per repository per change event; previously rebuilt the `RegExp` from `layout.trunkRegex` on every call. Cache key is the config value pair, so test mocks of `configuration.get` still take effect cleanly.
+- **`BlameIconState` no longer dynamic-imports `Status` per `updateIconContext` call.** Moved to a top-level ES import — the dynamic form was a legacy workaround that survived after the circular-dependency it avoided was resolved. Also added a same-value guard so `setContext` (cross-IPC) is skipped when neither blame-active nor untracked-file context changed; `updateIconContext` fires on every editor change + status refresh, and most invocations are no-ops in steady state.
+- **`BlameStatusBar.getBlameData` got the same `Status` import fix** — sister file, same legacy dynamic-import pattern.
+
+### Audited, no change needed
+
+- **`XmlParserAdapter` `performance.maxXmlTags` per-call config read**: small relative to parse cost; caching would conflict with the security test's `vi.spyOn(configuration, "get")` mock approach.
+- **`lineMapper.computeLineMapping` LCS O(N×M)**: only an issue for very large (>5k-line) files, and the result is cached per blame load. Rewriting to e.g. patience-diff would be a substantial change for a niche bottleneck.
+- **`HasBranch` / `OpenRepositoryCount` / `CheckActiveEditor` `setContext` calls**: already debounced 100ms, values are primitives. Dedup possible but marginal.
+
+---
+
 ## [0.2.54] - 2026-05-14
 
 Deeper next-layer perf audit — focused on tree providers, FS provider, and the SVN spawn layer.

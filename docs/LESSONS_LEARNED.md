@@ -1,7 +1,17 @@
 # Lessons Learned
 
-**Version**: 0.2.54
+**Version**: 0.2.55
 **Updated**: 2026-05-14
+
+---
+
+### 65. Reuse Stateless Parser/Regex Instances Across the Hot Path
+
+**Lesson**: `XmlParserAdapter` constructed a fresh `XMLParser` with ~20 options on every SVN result, and `isTrunk` rebuilt its `RegExp` on every call from `HasBranch`. Both objects are stateless after construction — the per-call allocation was waste pinned to the hot path.
+
+**Fix**: Lazy singleton for `XMLParser`; for `isTrunk`, cache the regex keyed by the config value pair so `vi.spyOn(configuration, "get")` test mocks still take effect cleanly.
+
+**Rule**: If a parser/regex/compiled-pattern is stateless and configured from values that rarely change, cache the instance behind the configuration key — don't refuse to cache just because the config could theoretically change.
 
 ---
 
