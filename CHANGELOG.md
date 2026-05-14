@@ -7,6 +7,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.57] - 2026-05-14
+
+Deeper perf audit of the gutter-blame render loop.
+
+### Performance
+
+- **`BlameProvider` decoration loops no longer re-read config + re-allocate `rgba(...)` color per line.** `createAllDecorations`, `updateInlineDecorationsWithMessages`, and `updateInlineDecorationsForCursor` all looped over blame lines while calling `blameConfiguration.isGutterEnabled()`, `isGutterTextEnabled()`, `isInlineEnabled()`, `isInlineCurrentLineOnly()`, `shouldShowInlineMessage()`, and `getInlineOpacity()` inside the loop — plus interpolating the `rgba(127, 127, 127, X)` string per line. For a 1000-line file that was ~6000 redundant config reads and 1000 redundant string allocations per render. All hoisted to locals before the loop.
+
+### Audited, no change needed
+
+- **`security/errorSanitizer.sanitizeString`** — 13 sequential regex passes, but error logging is rare relative to status refreshes, and individual error strings are short.
+- **`isSanitizationDisabled` per-call config read** — same path as above; rare.
+- **`BlameProvider.formatInlineText` per-call config reads** — kept as-is to avoid signature change that would churn 2 existing tests; the configs are themselves cheap `Map.get`s and the template result is cached at the `compileTemplate` layer.
+- **`util/globMatch`** — only used on user-triggered ignore/pattern commands, not status hot path.
+
+---
+
 ## [0.2.56] - 2026-05-14
 
 Deeper perf audit of utility layer (uri/cache/decorator/fs/blame-state).

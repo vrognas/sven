@@ -1,7 +1,17 @@
 # Lessons Learned
 
-**Version**: 0.2.56
+**Version**: 0.2.57
 **Updated**: 2026-05-14
+
+---
+
+### 67. Hoist Config Reads and String Allocations Out of Per-Line Loops
+
+**Lesson**: `BlameProvider` decoration loops read `blameConfiguration` accessors and built `rgba(127, 127, 127, X)` color strings _inside_ the per-line iteration. For a 1000-line file that was thousands of redundant `WorkspaceConfiguration.get` calls plus 1000 string allocations per render — all returning the same values.
+
+**Fix**: Read each config flag once before the loop into a local; compute the color string once and reuse the reference inside `renderOptions.after.color`.
+
+**Rule**: When a value is invariant across loop iterations, lift it. Per-line config reads and string concatenations look cheap individually but compound at scale on render hot paths.
 
 ---
 
