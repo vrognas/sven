@@ -15,8 +15,8 @@ Welcome! Positron-SVN is a VS Code extension providing Subversion source control
 
 ```bash
 # Clone repository
-git clone https://github.com/vrognas/sven.git
-cd sven
+git clone https://github.com/vrognas/vrognas-sven.git
+cd vrognas-sven
 
 # Install dependencies
 npm install
@@ -342,9 +342,9 @@ Before contributing, review:
 
 ### Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/vrognas/sven/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/vrognas/sven/discussions)
-- **Security**: [Security Advisories](https://github.com/vrognas/sven/security/advisories) (vulnerabilities only)
+- **Issues**: [GitHub Issues](https://github.com/vrognas/vrognas-sven/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/vrognas/vrognas-sven/discussions)
+- **Security**: [Security Advisories](https://github.com/vrognas/vrognas-sven/security/advisories) (vulnerabilities only)
 
 ## Common Tasks
 
@@ -406,7 +406,7 @@ We follow the [Contributor Covenant Code of Conduct](https://www.contributor-cov
 - Publishing private information
 - Disruptive behavior
 
-**Reporting:** Contact project maintainers at [security advisories](https://github.com/vrognas/sven/security/advisories).
+**Reporting:** Contact project maintainers at [security advisories](https://github.com/vrognas/vrognas-sven/security/advisories).
 
 ## License
 
@@ -414,7 +414,7 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 ---
 
-**Questions?** Open an [issue](https://github.com/vrognas/sven/issues) or [discussion](https://github.com/vrognas/sven/discussions).
+**Questions?** Open an [issue](https://github.com/vrognas/vrognas-sven/issues) or [discussion](https://github.com/vrognas/vrognas-sven/discussions).
 
 **Ready to contribute?** Start with issues labeled `good-first-issue` or `help-wanted`.
 

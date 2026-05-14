@@ -388,7 +388,7 @@ See [README.md Authentication & Security](./README.md#authentication--security)
 
 ## Questions?
 
-File issue: https://github.com/vrognas/sven/issues
+File issue: https://github.com/vrognas/vrognas-sven/issues
 ```
 
 #### 3. package.json - Extension Description

@@ -4,18 +4,18 @@
 
 **Do NOT file public GitHub issues for security vulnerabilities.**
 
-Report privately via [GitHub Security Advisories](https://github.com/vrognas/sven/security/advisories).
+Report privately via [GitHub Security Advisories](https://github.com/vrognas/vrognas-sven/security/advisories).
 
 Include: extension version, SVN version, OS, steps to reproduce, and potential impact.
 
 ### Response Timeline
 
-| Severity | Response | Fix |
-|----------|----------|-----|
-| Critical | 48 hours | 1-3 days |
-| High | 48 hours | 7-14 days |
-| Medium | 7 days | 30 days |
-| Low | 7 days | Next release |
+| Severity | Response | Fix          |
+| -------- | -------- | ------------ |
+| Critical | 48 hours | 1-3 days     |
+| High     | 48 hours | 7-14 days    |
+| Medium   | 7 days   | 30 days      |
+| Low      | 7 days   | Next release |
 
 ## Privacy
 
@@ -52,5 +52,5 @@ All error messages are sanitized before logging — passwords, tokens, paths, UR
 
 ## Contact
 
-- **Vulnerabilities**: [Security Advisories](https://github.com/vrognas/sven/security/advisories)
-- **Questions**: [GitHub Issues](https://github.com/vrognas/sven/issues)
+- **Vulnerabilities**: [Security Advisories](https://github.com/vrognas/vrognas-sven/security/advisories)
+- **Questions**: [GitHub Issues](https://github.com/vrognas/vrognas-sven/issues)

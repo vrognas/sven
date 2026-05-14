@@ -1,8 +1,8 @@
 # Sven - Subversion for VS Code & Positron
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/vrognas/sven/main.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/vrognas/vrognas-sven/main.yml)
 ![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/vrognas.sven)
-![GitHub License](https://img.shields.io/github/license/vrognas/sven)
+![GitHub License](https://img.shields.io/github/license/vrognas/vrognas-sven)
 
 **Note:** This extension is currently in active development. While stable for daily use, expect occasional breaking changes. Please report any issues to help improve the extension.
 
@@ -141,7 +141,7 @@ Open Settings (`Ctrl+,`) and search `sven`.
 [File Locking](docs/FILE_LOCKING.md) ·
 [Contributing](CONTRIBUTING.md) ·
 [Changelog](CHANGELOG.md) ·
-[Issues](https://github.com/vrognas/sven/issues)
+[Issues](https://github.com/vrognas/vrognas-sven/issues)
 
 ---
 
