@@ -109,6 +109,42 @@ export function getRelativeTime(date: Date): string {
 }
 
 /**
+ * Bounded cache of recently-formatted blame dates.
+ *
+ * Gutter blame renders call `formatBlameDate` once per line — a 1000-line
+ * file with 50 unique commits would otherwise reparse the same ISO date
+ * string 950 times. The cache is small (1024 entries, FIFO eviction) and
+ * short-lived (60s) so "relative" format never drifts visibly.
+ */
+const BLAME_DATE_CACHE_MAX = 1024;
+const BLAME_DATE_CACHE_TTL_MS = 60_000;
+const blameDateCache = new Map<string, { value: string; expiresAt: number }>();
+
+function getBlameDateCached(key: string): string | undefined {
+  const entry = blameDateCache.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt < Date.now()) {
+    blameDateCache.delete(key);
+    return undefined;
+  }
+  return entry.value;
+}
+
+function setBlameDateCached(key: string, value: string): void {
+  // FIFO eviction at capacity — first insertion order is preserved by Map.
+  if (blameDateCache.size >= BLAME_DATE_CACHE_MAX) {
+    const firstKey = blameDateCache.keys().next().value;
+    if (firstKey !== undefined) {
+      blameDateCache.delete(firstKey);
+    }
+  }
+  blameDateCache.set(key, {
+    value,
+    expiresAt: Date.now() + BLAME_DATE_CACHE_TTL_MS
+  });
+}
+
+/**
  * Format date for blame annotations (relative or absolute).
  * Used by BlameProvider and BlameStatusBar.
  */
@@ -120,13 +156,20 @@ export function formatBlameDate(
     return "unknown";
   }
 
+  const cacheKey = `${format}|${dateStr}`;
+  const cached = getBlameDateCached(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  let formatted: string;
   try {
     const date = new Date(dateStr);
 
     if (format === "relative") {
-      return getRelativeTime(date);
+      formatted = getRelativeTime(date);
     } else {
-      return date.toLocaleDateString("en-US", {
+      formatted = date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year:
@@ -136,6 +179,9 @@ export function formatBlameDate(
       });
     }
   } catch {
-    return dateStr; // Fallback to raw string
+    formatted = dateStr; // Fallback to raw string
   }
+
+  setBlameDateCached(cacheKey, formatted);
+  return formatted;
 }
