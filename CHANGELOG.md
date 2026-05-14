@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.53] - 2026-05-14
+
+### Refactored
+
+- **Removed `BlameStatusBar.blameCache`** — the local 5-min TTL cache layered on top of `SvnRepository._blameCache` (also 5-min TTL) was a redundant second cache. Worse: the two `onDidChangeTextDocument` / `onDidSaveTextDocument` listeners that invalidated it on local edit/save were over-eager (a local edit doesn't change the BASE blame), so they were forcing re-fetches that just hit the underlying cache anyway. With the local cache and listeners gone, `getBlameData` is a thin pre-check + `repository.blame()` call; the cache hit/miss decision now lives in exactly one place (`SvnRepository._blameCache`).
+
+Did not touch `BlameProvider`'s local cache: it's keyed by URI + document version and ties into `lineMappingCache`, so consolidating it would have needed a broader refactor of both consumers' line-mapping logic. The test suite is also tightly coupled to `mockRepository.blame` being called directly. Investigated a unified `Repository.getBlameForFile(uri)` entry-point but it broke ~20 tests that mock the call surface; the narrower cleanup here covers the actual duplication without disturbing the BlameProvider contract.
+
+---
+
 ## [0.2.52] - 2026-05-14
 
 Follow-up perf pass focused on critical user-interaction paths (save, tab switch, SCM click, hover).
