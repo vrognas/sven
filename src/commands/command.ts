@@ -840,19 +840,11 @@ export abstract class Command implements Disposable {
    * Format user-friendly error message based on error type.
    * Includes error code for transparency (e.g., "Message (E155004)").
    * Provides actionable guidance for common errors.
-   */
-  private formatErrorMessage(error: unknown, fallbackMsg: string): string {
-    return this.formatErrorMessageFromContext(
-      this.getErrorContext(error),
-      fallbackMsg
-    );
-  }
-
-  /**
-   * Same as `formatErrorMessage` but takes a pre-built `ErrorContext` to
-   * avoid rebuilding it (sanitizeStderr runs 13 regex passes — non-trivial
-   * for large stderr). Callers in `handleOperationError` /
-   * `handleRepositoryOperation` build the context once and share it.
+   *
+   * Takes a pre-built `ErrorContext` so call sites that also need to route
+   * on the same context (lock/cleanup/update/network detection) build it
+   * once and share — sanitizeStderr in `getErrorContext` runs 13 regex
+   * passes so duplicating is wasteful.
    */
   private formatErrorMessageFromContext(
     context: ErrorContext,

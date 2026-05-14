@@ -11,11 +11,17 @@ class TestCommand extends Command {
   }
 
   public format(error: unknown, fallback: string): string {
-    return (
-      this as unknown as {
-        formatErrorMessage(error: unknown, fallbackMsg: string): string;
-      }
-    ).formatErrorMessage(error, fallback);
+    const self = this as unknown as {
+      getErrorContext(error: unknown): unknown;
+      formatErrorMessageFromContext(
+        context: unknown,
+        fallbackMsg: string
+      ): string;
+    };
+    return self.formatErrorMessageFromContext(
+      self.getErrorContext(error),
+      fallback
+    );
   }
 }
 

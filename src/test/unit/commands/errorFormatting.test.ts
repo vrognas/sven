@@ -14,7 +14,8 @@ class TestCommand extends Command {
 
   // Expose private method for testing
   public testFormatErrorMessage(error: any, fallbackMsg: string): string {
-    return (this as any).formatErrorMessage(error, fallbackMsg);
+    const ctx = (this as any).getErrorContext(error);
+    return (this as any).formatErrorMessageFromContext(ctx, fallbackMsg);
   }
 
   // Expose sanitizeStderr for testing
@@ -238,7 +239,10 @@ suite("Error Formatting Tests", () => {
         result.toLowerCase().includes("cleanup"),
         `Expected "cleanup" in: ${result}`
       );
-      assert.ok(result.includes("Run cleanup"), `Expected guidance in: ${result}`);
+      assert.ok(
+        result.includes("Run cleanup"),
+        `Expected guidance in: ${result}`
+      );
     });
 
     test("Detects E155037 (previous operation interrupted)", () => {
@@ -252,7 +256,10 @@ suite("Error Formatting Tests", () => {
         result.toLowerCase().includes("cleanup"),
         `Expected "cleanup" in: ${result}`
       );
-      assert.ok(result.includes("Run cleanup"), `Expected guidance in: ${result}`);
+      assert.ok(
+        result.includes("Run cleanup"),
+        `Expected guidance in: ${result}`
+      );
     });
 
     test("Detects E200030 (sqlite database issue)", () => {
@@ -265,7 +272,10 @@ suite("Error Formatting Tests", () => {
         result.toLowerCase().includes("cleanup"),
         `Expected "cleanup" in: ${result}`
       );
-      assert.ok(result.includes("Run cleanup"), `Expected guidance in: ${result}`);
+      assert.ok(
+        result.includes("Run cleanup"),
+        `Expected guidance in: ${result}`
+      );
     });
 
     test("Detects E155032 (working copy database problem)", () => {
@@ -278,7 +288,10 @@ suite("Error Formatting Tests", () => {
         result.toLowerCase().includes("cleanup"),
         `Expected "cleanup" in: ${result}`
       );
-      assert.ok(result.includes("Run cleanup"), `Expected guidance in: ${result}`);
+      assert.ok(
+        result.includes("Run cleanup"),
+        `Expected guidance in: ${result}`
+      );
     });
 
     test("Detects 'previous operation' text pattern", () => {
