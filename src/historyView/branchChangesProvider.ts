@@ -6,6 +6,7 @@ import {
   TreeDataProvider,
   Disposable,
   TreeItem,
+  TreeView,
   commands,
   EventEmitter,
   window
@@ -16,16 +17,54 @@ import { openDiff, getIconObject, openFileRemote } from "./common";
 import { logError } from "../util/errorLogger";
 import { dispose } from "../util";
 
+/**
+ * Tree provider for "Branch Changes" view.
+ *
+ * Visibility gating: `repo.getChanges()` spawns 3+ SVN commands per repo
+ * (`svn log --stop-on-copy`, `svn mergeinfo`, `svn info`, `svn diff --summarize`).
+ * Status events fire on every save/lock/refresh, so we must skip refreshes
+ * while the view is hidden. A single refresh fires on visibility transition
+ * to populate stale data when the user un-hides the panel.
+ */
 export class BranchChangesProvider
   implements TreeDataProvider<ISvnPathChange>, Disposable
 {
+  private static readonly REFRESH_DEBOUNCE_MS = 1000;
+
   private _dispose: Disposable[] = [];
   private _onDidChangeTreeData = new EventEmitter<ISvnPathChange | undefined>();
   public readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+  private treeView?: TreeView<ISvnPathChange>;
+  private refreshTimeout?: ReturnType<typeof setTimeout>;
+
   constructor(private model: SourceControlManager) {
+    try {
+      this.treeView = window.createTreeView("sven.branchchanges", {
+        treeDataProvider: this
+      });
+      this._dispose.push(this.treeView);
+
+      // Refresh once when the view becomes visible — change events were
+      // suppressed while hidden, so the panel could otherwise show stale data.
+      if (this.treeView.onDidChangeVisibility) {
+        this._dispose.push(
+          this.treeView.onDidChangeVisibility(e => {
+            if (e.visible) {
+              this._onDidChangeTreeData.fire(undefined);
+            }
+          })
+        );
+      }
+    } catch (err) {
+      // Dev reload race: previous registration not yet disposed.
+      logError(
+        "Failed to register branchchanges TreeView (may be dev reload)",
+        err
+      );
+    }
+
     this._dispose.push(
-      window.registerTreeDataProvider("sven.branchchanges", this),
       commands.registerCommand(
         "sven.branchchanges.openDiff",
         this.openDiffCmd,
@@ -36,14 +75,32 @@ export class BranchChangesProvider
         () => this._onDidChangeTreeData.fire(undefined),
         this
       ),
-      this.model.onDidChangeRepository(() =>
-        this._onDidChangeTreeData.fire(undefined)
-      )
+      this.model.onDidChangeRepository(() => this.scheduleRefresh())
     );
   }
 
   dispose() {
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
     dispose(this._dispose);
+  }
+
+  /**
+   * Debounce rapid repository-change events. Skip entirely if the view is
+   * hidden — the visibility listener will refresh once when it re-opens.
+   */
+  private scheduleRefresh(): void {
+    if (this.treeView && !this.treeView.visible) {
+      return;
+    }
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
+    this.refreshTimeout = setTimeout(() => {
+      this.refreshTimeout = undefined;
+      this._onDidChangeTreeData.fire(undefined);
+    }, BranchChangesProvider.REFRESH_DEBOUNCE_MS);
   }
 
   getTreeItem(element: ISvnPathChange): TreeItem | Thenable<TreeItem> {
