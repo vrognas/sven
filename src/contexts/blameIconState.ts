@@ -4,12 +4,19 @@
 
 import { Disposable, window } from "vscode";
 import { blameStateManager } from "../blame/blameStateManager";
+import { Status } from "../common/types";
 import { IDisposable, setVscodeContext } from "../util";
 import { logError } from "../util/errorLogger";
 import { SourceControlManager } from "../source_control_manager";
 
 export class BlameIconState implements IDisposable {
   private disposables: Disposable[] = [];
+
+  // Remember last-set context values so we skip the cross-IPC setContext
+  // call when nothing changed. updateIconContext fires on every editor
+  // switch + every status refresh, so most invocations are no-ops.
+  private lastActiveForFile?: boolean;
+  private lastUntrackedFile?: boolean;
 
   constructor(private sourceControlManager: SourceControlManager) {
     // Listen to blame state changes
@@ -53,8 +60,7 @@ export class BlameIconState implements IDisposable {
     const editor = window.activeTextEditor;
 
     if (!editor || editor.document.uri.scheme !== "file") {
-      await setVscodeContext("svnBlameActiveForFile", false);
-      await setVscodeContext("svnBlameUntrackedFile", false);
+      await this.applyContext(false, false);
       return;
     }
 
@@ -65,8 +71,7 @@ export class BlameIconState implements IDisposable {
 
     // No repository found - file not in SVN workspace
     if (!repository) {
-      await setVscodeContext("svnBlameActiveForFile", false);
-      await setVscodeContext("svnBlameUntrackedFile", false);
+      await this.applyContext(false, false);
       return;
     }
 
@@ -77,29 +82,43 @@ export class BlameIconState implements IDisposable {
       // No resource = clean file (not in change index)
       // Check state manager for actual blame state
       const isEnabled = blameStateManager.isBlameEnabled(editor.document.uri);
-      await setVscodeContext("svnBlameActiveForFile", isEnabled);
-      await setVscodeContext("svnBlameUntrackedFile", false);
+      await this.applyContext(isEnabled, false);
       return;
     }
 
     // Check if file cannot be blamed:
     // - UNVERSIONED/IGNORED/NONE: not under version control
     // - ADDED: scheduled for addition but never committed (E195002)
-    const { Status } = await import("../common/types");
     const cannotBlame =
       resource.type === Status.UNVERSIONED ||
       resource.type === Status.IGNORED ||
       resource.type === Status.NONE ||
       resource.type === Status.ADDED;
 
-    // Set context variables
     if (cannotBlame) {
-      await setVscodeContext("svnBlameActiveForFile", false);
-      await setVscodeContext("svnBlameUntrackedFile", true);
+      await this.applyContext(false, true);
     } else {
       const isEnabled = blameStateManager.isBlameEnabled(editor.document.uri);
-      await setVscodeContext("svnBlameActiveForFile", isEnabled);
-      await setVscodeContext("svnBlameUntrackedFile", false);
+      await this.applyContext(isEnabled, false);
+    }
+  }
+
+  /**
+   * Push context only when values changed. setVscodeContext routes through
+   * `commands.executeCommand("setContext", ...)`, which crosses an extension
+   * IPC boundary, so it's worth skipping when state is unchanged.
+   */
+  private async applyContext(
+    activeForFile: boolean,
+    untrackedFile: boolean
+  ): Promise<void> {
+    if (this.lastActiveForFile !== activeForFile) {
+      this.lastActiveForFile = activeForFile;
+      await setVscodeContext("svnBlameActiveForFile", activeForFile);
+    }
+    if (this.lastUntrackedFile !== untrackedFile) {
+      this.lastUntrackedFile = untrackedFile;
+      await setVscodeContext("svnBlameUntrackedFile", untrackedFile);
     }
   }
 

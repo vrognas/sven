@@ -15,7 +15,7 @@ import {
   window
 } from "vscode";
 import { debounce } from "../decorators";
-import { ISvnBlameLine } from "../common/types";
+import { ISvnBlameLine, Status } from "../common/types";
 import { SourceControlManager } from "../source_control_manager";
 import { blameConfiguration } from "./blameConfiguration";
 import { blameStateManager } from "./blameStateManager";
@@ -246,7 +246,6 @@ export class BlameStatusBar implements Disposable {
     // Skip files that can't be blamed:
     // - UNVERSIONED/IGNORED/NONE: not under version control
     // - ADDED: scheduled for addition but never committed (E195002)
-    const { Status } = await import("../common/types");
     const resource = repository.getResourceFromFile(uri);
     if (resource) {
       if (
