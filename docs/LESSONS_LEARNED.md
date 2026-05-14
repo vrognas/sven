@@ -1,7 +1,17 @@
 # Lessons Learned
 
-**Version**: 0.2.32
-**Updated**: 2026-04-15
+**Version**: 0.2.54
+**Updated**: 2026-05-14
+
+---
+
+### 64. Tree Providers That Listen to Status Events Must Gate on Visibility
+
+**Lesson**: `BranchChangesProvider` subscribed to `onDidChangeRepository` and refreshed on every status update — even when collapsed. Each refresh spawned 3+ SVN commands (`svn log --stop-on-copy`, `svn mergeinfo`, `svn info`, `svn diff --summarize`) per repo. Status events fire on every save/lock/refresh, so a hidden panel kept paying full network cost.
+
+**Fix**: Switch `registerTreeDataProvider` → `createTreeView` (gains `.visible`), gate the change handler on `treeView.visible`, and fire one refresh on `onDidChangeVisibility` to update stale data when the user re-opens the panel. Same pattern already used in `ItemLogProvider` (v0.2.52) and `RepoLogProvider`.
+
+**Rule**: Any tree provider that consumes `onDidChangeRepository` (or similar high-frequency events) and does _anything_ expensive in `getChildren` must skip refreshes while hidden, and must refresh once on visibility transition.
 
 ---
 
@@ -1163,7 +1173,7 @@ Result: 3× concurrent recursive proplist calls per multi-save burst.
 
 **Fix**: Cache lower down, at `svnRepository.list()`, keyed by the URL we actually pass to SVN. Different URIs that resolve to the same URL now share the cached result.
 
-**Rule**: When you see redundant network calls for the same resource, check whether higher-layer caches are keyed by *request shape* rather than *target resource*. Move the cache to the layer where the key is canonical for the resource.
+**Rule**: When you see redundant network calls for the same resource, check whether higher-layer caches are keyed by _request shape_ rather than _target resource_. Move the cache to the layer where the key is canonical for the resource.
 
 #### 26e. Normalize Implicit Defaults Before Caching (v0.2.38)
 

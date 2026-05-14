@@ -7,6 +7,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.54] - 2026-05-14
+
+Deeper next-layer perf audit — focused on tree providers, FS provider, and the SVN spawn layer.
+
+### Performance
+
+- **`BranchChangesProvider` now skips refresh when its view is hidden.** Previously, every `onDidChangeRepository` event (fires on file save, lock change, status refresh, etc.) triggered `getChildren` → `repo.getChanges()`, which spawns **3+ SVN commands per repo** (`svn log --stop-on-copy`, `svn mergeinfo`, `svn info`, `svn diff --summarize`). Even with the panel collapsed, every status update paid this cost. Now: `registerTreeDataProvider` → `createTreeView`, change events are gated on `treeView.visible` and debounced 1s; a single refresh fires on `onDidChangeVisibility` (hidden→visible) so stale data is updated when the user re-opens the panel. Same pattern as `ItemLogProvider` (v0.2.52) and `RepoLogProvider`.
+- **`Svn.executeProcess` no longer re-reads `auth.commandTimeout` per command.** Cached with 5s TTL + `onDidChange` invalidation, mirroring the existing `authConfigCache`. Removes a workspace-config read from the SVN spawn hot path.
+
+### Audited, no change needed
+
+- **`SvnFileSystemProvider.readFile`**: `svn cat` already deduped via `SvnRepository._catCache` (LRU 50, 30s) + `_catInFlight`. Concurrent diff opens for the same URI+rev share a single spawn.
+- **`SvnFileSystemProvider.stat`**: 1-min stat cache + pending-request dedup already in place; invalidated on repository change.
+- **`SvnFileDecorationProvider.provideFileDecoration`**: every cache helper called (`hasNeedsLockCached`, `getLockStatusCached`, `getEolStyleCached`, `getMimeTypeCached`, `isInsideUnversionedOrIgnored`) is a sync `Map.get`. Zero SVN calls per decoration request — already optimal.
+- **`SparseCheckoutProvider`**: only subscribes to `onDidOpenRepository`/`onDidCloseRepository`, not `onDidChangeRepository`. Not in the status-refresh hot path.
+- **`RepositoryFilesWatcher`**: 300ms throttle on FS events plus native `fs.watch` fallback only when the workspace doesn't include the repo root. Already tuned.
+
+---
+
 ## [0.2.53] - 2026-05-14
 
 ### Refactored
