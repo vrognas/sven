@@ -38,6 +38,23 @@ let authConfigCache: {
 
 const AUTH_CACHE_TTL = 5000; // 5 seconds
 
+// Command-timeout cache - mirrors authConfigCache so repeated SVN spawns
+// don't re-read the configuration on every call.
+let commandTimeoutMsCache: { value: number; expiry: number } | null = null;
+
+function getCommandTimeoutMs(): number {
+  const now = Date.now();
+  if (commandTimeoutMsCache && now < commandTimeoutMsCache.expiry) {
+    return commandTimeoutMsCache.value;
+  }
+  const seconds = configuration.get<number>("auth.commandTimeout", 60);
+  commandTimeoutMsCache = {
+    value: seconds * 1000,
+    expiry: now + AUTH_CACHE_TTL
+  };
+  return commandTimeoutMsCache.value;
+}
+
 // Track if auth mode has been logged (for "once" setting)
 let authModeLoggedOnce = false;
 
@@ -101,11 +118,14 @@ function getAuthConfig(): {
   return authConfigCache;
 }
 
-// Invalidate cache when config changes
+// Invalidate caches when relevant config changes
 // Store disposable for cleanup on extension deactivation
 export const authConfigDisposable = configuration.onDidChange(e => {
   if (e.affectsConfiguration("sven.auth.credentialMode")) {
     authConfigCache = null;
+  }
+  if (e.affectsConfiguration("sven.auth.commandTimeout")) {
+    commandTimeoutMsCache = null;
   }
 });
 
@@ -344,9 +364,8 @@ export class Svn {
       );
     }
 
-    // Read configurable timeout (in seconds, convert to ms)
-    const timeoutSeconds = configuration.get<number>("auth.commandTimeout", 60);
-    const configuredTimeoutMs = timeoutSeconds * 1000;
+    // Read configurable timeout (cached, refreshed on config change)
+    const configuredTimeoutMs = getCommandTimeoutMs();
 
     // Log auth mode (controlled by svn.output.authLogging setting)
     if (options.log !== false && shouldLogAuthMode()) {
