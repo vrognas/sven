@@ -12,26 +12,31 @@
  * those fall back to UTF-8 with a console warning rather than crashing.
  */
 
-const BUFFER_WRITEABLE = new Set([
-  "utf8",
-  "utf-8",
-  "utf16le",
-  "utf-16le",
-  "latin1",
-  "ascii"
-]);
+/**
+ * Strip casing, whitespace, dashes, underscores. Used as a lookup key so
+ * "windows-1252" / "windows1252" / "WINDOWS_1252" all hash to the same bucket.
+ */
+function normalizeKey(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
 
 /**
- * Map of normalized (lowercase, non-alphanumeric stripped) labels to
- * WHATWG canonical labels that `TextDecoder` actually accepts.
+ * Map of normalized labels to WHATWG canonical labels that `TextDecoder`
+ * accepts. Covers (1) chardet output with spaces, (2) VS Code's no-dash
+ * `files.encoding` values, (3) iconv-lite codepage aliases that survived
+ * the migration via the old `CHARDET_TO_ICONV_ENCODINGS` map.
  *
- * Covers two sources of name drift:
- *   1. callers passing dash-stripped forms ("windows1252", "shiftjis"),
- *   2. iconv-lite codepage aliases ("cp866", "cp950", "cp936") that map
- *      onto WHATWG names.
+ * Only entries here whose normalized form differs from a TextDecoder-
+ * accepted label — e.g. `latin1`, `ascii`, `gbk` work as-is and are not
+ * listed; the fallback in `canonicalLabel` returns the normalized form
+ * for those.
  */
-const LABEL_ALIASES: Record<string, string> = {
+const DECODE_ALIASES: Record<string, string> = {
   utf8: "utf-8",
+  utf8bom: "utf-8", // VS Code's UTF-8-with-BOM is decode-equivalent to utf-8
   utf16: "utf-16le",
   utf16le: "utf-16le",
   utf16be: "utf-16be",
@@ -52,7 +57,7 @@ const LABEL_ALIASES: Record<string, string> = {
   iso88596: "iso-8859-6",
   iso88597: "iso-8859-7",
   iso88598: "iso-8859-8",
-  iso88599: "windows-1254", // WHATWG maps ISO-8859-9 onto windows-1254
+  iso88599: "windows-1254", // WHATWG: ISO-8859-9 → windows-1254
   iso885910: "iso-8859-10",
   iso885913: "iso-8859-13",
   iso885914: "iso-8859-14",
@@ -65,22 +70,34 @@ const LABEL_ALIASES: Record<string, string> = {
   koi8u: "koi8-u",
   cp866: "ibm866",
   cp950: "big5",
-  cp936: "gbk"
+  cp936: "gbk",
+  big5hkscs: "big5", // HK supplementary chars lost; closest WHATWG match
+  macroman: "macintosh"
 };
 
 /**
  * Translate a user-supplied label into one TextDecoder will accept.
- * Falls back to the original label if no alias applies.
+ * Order of preference:
+ *   1. Known alias (e.g. "windows1252" → "windows-1252")
+ *   2. Normalized form (works for labels TextDecoder accepts as-is)
+ *   3. Original (preserves casing for any label not yet normalized)
  */
 function canonicalLabel(label: string): string {
-  const normalized = label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-  return LABEL_ALIASES[normalized] ?? label;
+  const key = normalizeKey(label);
+  return DECODE_ALIASES[key] ?? (key.length > 0 ? key : label);
 }
 
-/** True iff a TextDecoder can be constructed with the given label. */
+/** Maps normalized labels to Node's BufferEncoding for the write path. */
+const ENCODE_TO_BUFFER: Record<string, BufferEncoding> = {
+  utf8: "utf-8",
+  utf16le: "utf-16le",
+  latin1: "latin1",
+  iso88591: "latin1", // byte-equivalent
+  binary: "latin1", // deprecated Node alias
+  ascii: "ascii"
+};
+
+/** True iff a TextDecoder can be constructed for the given label. */
 export function encodingSupported(encoding: string): boolean {
   try {
     new TextDecoder(canonicalLabel(encoding));
@@ -99,17 +116,21 @@ export function decode(buffer: Buffer | Uint8Array, encoding: string): string {
 }
 
 /**
- * Encode string to bytes. Supports UTF-8/16-LE, latin1, ASCII via Node's
- * native Buffer.from. Other encodings fall back to UTF-8 with a warning —
- * writing arbitrary legacy codepages was a rare path supported by iconv-lite.
+ * Encode string to bytes. Supports the encodings Node's Buffer.from handles
+ * natively (UTF-8/16-LE, latin1/ISO-8859-1, ASCII). Legacy multibyte
+ * codepages (windows-12xx, Shift_JIS, etc.) fall back to UTF-8 with a
+ * one-line warning — iconv-lite handled these but the tables it shipped
+ * cost ~500 KB. Affected users should configure UTF-8 in their workspace.
  */
 export function encode(text: string, encoding: string): Buffer {
-  const normalized = encoding.toLowerCase();
-  if (BUFFER_WRITEABLE.has(normalized)) {
-    return Buffer.from(text, normalized as BufferEncoding);
+  const key = normalizeKey(encoding);
+  const bufEnc = ENCODE_TO_BUFFER[key];
+  if (bufEnc) {
+    return Buffer.from(text, bufEnc);
   }
   console.warn(
-    `textCodec: encoding "${encoding}" not supported for writing; falling back to utf-8`
+    `textCodec: cannot encode in "${encoding}" (no Node Buffer support); ` +
+      `writing UTF-8 instead. Set the file's encoding to utf-8/utf-16le/latin1 to avoid this.`
   );
   return Buffer.from(text, "utf-8");
 }

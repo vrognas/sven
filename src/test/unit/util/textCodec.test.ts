@@ -64,4 +64,26 @@ suite("textCodec", () => {
     const buf = Buffer.from([0x41, 0x00]);
     assert.strictEqual(decode(buf, "utf16le"), "A");
   });
+
+  test("decode normalizes 'latin-1' (dash form rejected by raw TextDecoder)", () => {
+    // 0xe9 = é in latin-1
+    const buf = Buffer.from([0xe9]);
+    assert.strictEqual(decode(buf, "latin-1"), "é");
+  });
+
+  test("decode accepts VS Code internal labels (utf8bom, macroman, big5hkscs)", () => {
+    // utf8bom: stripping non-alnum gives 'utf8bom' → map to utf-8
+    const buf = Buffer.from("hi", "utf-8");
+    assert.strictEqual(decode(buf, "utf8bom"), "hi");
+    assert.strictEqual(encodingSupported("macroman"), true);
+    assert.strictEqual(encodingSupported("big5hkscs"), true);
+  });
+
+  test("encode normalizes 'iso-8859-1', 'latin-1', 'BINARY' to Node latin1", () => {
+    // é at 0xe9 in latin-1 / iso-8859-1
+    const expected = Buffer.from([0xe9]);
+    assert.deepStrictEqual([...encode("é", "iso-8859-1")], [...expected]);
+    assert.deepStrictEqual([...encode("é", "latin-1")], [...expected]);
+    assert.deepStrictEqual([...encode("é", "BINARY")], [...expected]);
+  });
 });
