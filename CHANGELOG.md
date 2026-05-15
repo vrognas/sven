@@ -7,6 +7,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.61] - 2026-05-15
+
+Bundle slimmed by ~53% (vsix 378 → 180 KB compressed; `dist/extension.js` 958 → 451 KB) by dropping `@vscode/iconv-lite-umd` (506 KB of pre-bundled encoding tables) in favor of Node's built-in `TextDecoder`. Modern Node ships with full ICU, so all common encodings (UTF-8/16, ISO-8859-x, windows-12xx, GBK, Big5, Shift_JIS, EUC-KR/JP, KOI8-R, macintosh) are still supported. Exotic encodings outside ICU now fall back to UTF-8 with a console warning instead of decoding silently.
+
+### Changed
+
+- New `src/util/textCodec.ts` wrapper exposes `decode`/`encode`/`encodingSupported`. Call sites in `svn.ts`, `svnRepository.ts`, `temp_svn_fs.ts` migrated. `vscodeModules.ts` and the `iconv-lite.d.ts` ambient type are removed.
+
+### Removed
+
+- `@vscode/iconv-lite-umd` dependency.
+
+### Also bundled in this release
+
+- The `.vscodeignore` fix that stopped `.remember/logs/` (300 KB of dev memory logs) from being published to users.
+
+---
+
 ## [0.2.60] - 2026-05-15
 
 Aggressive size/line gates for CSV-like files to stop large `.csv`/`.tsv` from stalling the editor on diff or blame.

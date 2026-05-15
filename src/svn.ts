@@ -25,7 +25,7 @@ import { Repository } from "./svnRepository";
 import { dispose, IDisposable, toDisposable } from "./util";
 import { logError } from "./util/errorLogger";
 import { showSystemKeyringAuthNotification } from "./util/nativeStoreAuthNotification";
-import { iconv } from "./vscodeModules";
+import * as textCodec from "./util/textCodec";
 
 import type { CredentialMode } from "./common/credentialMode";
 
@@ -569,12 +569,12 @@ export class Svn {
       encoding = configuration.defaultEncoding() || "utf8";
     }
 
-    if (!iconv.encodingExists(encoding)) {
+    if (!textCodec.encodingSupported(encoding)) {
       console.warn(`SVN: The encoding "${encoding}" is invalid`);
       encoding = "utf8";
     }
 
-    const decodedStdout = iconv.decode(stdout, encoding);
+    const decodedStdout = textCodec.decode(stdout, encoding);
 
     // Handle non-zero exit code
     if (exitCode) {

@@ -18,7 +18,7 @@ import {
 import * as path from "path";
 import * as crypto from "crypto";
 import { configuration } from "./helpers/configuration";
-import { iconv } from "./vscodeModules";
+import * as textCodec from "./util/textCodec";
 
 export class File implements FileStat {
   type: FileType;
@@ -215,7 +215,7 @@ class TempSvnFs implements FileSystemProvider, Disposable {
     let contentBuffer: Buffer;
 
     if (encoding) {
-      contentBuffer = Buffer.from(iconv.encode(content, encoding));
+      contentBuffer = textCodec.encode(content, encoding);
     } else {
       contentBuffer = Buffer.from(content);
     }

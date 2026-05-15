@@ -53,7 +53,7 @@ import {
   unwrap
 } from "./util";
 import { logError, getErrorMessage } from "./util/errorLogger";
-import { iconv } from "./vscodeModules";
+import * as textCodec from "./util/textCodec";
 import { matchAll } from "./util/globMatch";
 import { LRUCache } from "./util/lruCache";
 import { withCachedInFlight } from "./util/withCachedInFlight";
@@ -979,7 +979,7 @@ export class Repository {
 
     // Decode buffer with detected encoding
     if (encoding) {
-      return iconv.decode(buffer, encoding);
+      return textCodec.decode(buffer, encoding);
     }
     return buffer.toString("utf-8");
   }
