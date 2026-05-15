@@ -13,14 +13,12 @@ function detectEncodingByBOM(buffer: Buffer): string | null {
   const b0 = buffer.readUInt8(0);
   const b1 = buffer.readUInt8(1);
 
-  // UTF-16 BE
   if (b0 === 0xfe && b1 === 0xff) {
-    return "utf16be";
+    return "utf-16be";
   }
 
-  // UTF-16 LE
   if (b0 === 0xff && b1 === 0xfe) {
-    return "utf16le";
+    return "utf-16le";
   }
 
   if (buffer.length < 3) {
@@ -29,9 +27,8 @@ function detectEncodingByBOM(buffer: Buffer): string | null {
 
   const b2 = buffer.readUInt8(2);
 
-  // UTF-8
   if (b0 === 0xef && b1 === 0xbb && b2 === 0xbf) {
-    return "utf8";
+    return "utf-8";
   }
 
   return null;
@@ -39,48 +36,34 @@ function detectEncodingByBOM(buffer: Buffer): string | null {
 
 const IGNORE_ENCODINGS = ["ascii", "utf-8", "utf-16", "utf-32"];
 
-const CHARDET_TO_ICONV_ENCODINGS: { [name: string]: string } = {
-  ibm866: "cp866",
-  big5: "cp950"
-};
-
-function normaliseEncodingName(name: string): string {
+/** Loose key used only for matching priority-list entries to chardet output. */
+function looseKey(name: string): string {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 
 export function detectEncoding(buffer: Buffer): string | null {
-  // Check BOM first
   const bomEncoding = detectEncodingByBOM(buffer);
   if (bomEncoding) {
     return bomEncoding;
   }
 
-  // Use chardet to analyze encoding
   const detected = analyse(buffer);
   if (!detected || detected.length === 0) {
     return null;
   }
 
-  // Apply encoding priorities from config if available
-  const encodingPriorities = configuration.get<string[]>(
-    "experimental.encoding_priority",
-    []
-  ) || [];
+  const encodingPriorities =
+    configuration.get<string[]>("experimental.encoding_priority", []) || [];
 
   if (encodingPriorities.length > 0) {
     for (const pri of encodingPriorities) {
-      const match = detected.find(
-        d => normaliseEncodingName(pri) === normaliseEncodingName(d.name)
-      );
+      const match = detected.find(d => looseKey(pri) === looseKey(d.name));
       if (match && match.confidence > 60) {
-        const normalizedName = normaliseEncodingName(match.name);
-        const mapped = CHARDET_TO_ICONV_ENCODINGS[normalizedName];
-        return mapped || normalizedName;
+        return match.name;
       }
     }
   }
 
-  // Return highest confidence result
   const best = detected[0]!;
   if (best.confidence < 80) {
     return null;
@@ -88,14 +71,11 @@ export function detectEncoding(buffer: Buffer): string | null {
 
   const encoding = best.name;
 
-  // Ignore encodings that cannot guess correctly
+  // Ignore encodings chardet can't guess reliably
   // (http://chardet.readthedocs.io/en/latest/supported-encodings.html)
-  if (0 <= IGNORE_ENCODINGS.indexOf(encoding.toLowerCase())) {
+  if (IGNORE_ENCODINGS.indexOf(encoding.toLowerCase()) >= 0) {
     return null;
   }
 
-  const normalizedEncodingName = normaliseEncodingName(encoding);
-  const mapped = CHARDET_TO_ICONV_ENCODINGS[normalizedEncodingName];
-
-  return mapped || normalizedEncodingName;
+  return encoding;
 }

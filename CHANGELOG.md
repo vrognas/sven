@@ -14,6 +14,7 @@ Bundle slimmed by ~53% (vsix 378 → 180 KB compressed; `dist/extension.js` 958 
 ### Changed
 
 - New `src/util/textCodec.ts` wrapper exposes `decode`/`encode`/`encodingSupported`. Call sites in `svn.ts`, `svnRepository.ts`, `temp_svn_fs.ts` migrated. `vscodeModules.ts` and the `iconv-lite.d.ts` ambient type are removed.
+- `textCodec` includes a label-normalization layer so encoding names produced by chardet and the previous iconv-era code path (e.g. `"UTF-16 LE"` with a space, `"windows1252"` dash-stripped, iconv aliases `cp866`/`cp950`/`cp936`) keep working against `TextDecoder`. `encoding.ts` is simplified — the dash-stripping return path and the `CHARDET_TO_ICONV_ENCODINGS` alias map are gone; canonicalisation now lives in one place.
 
 ### Removed
 

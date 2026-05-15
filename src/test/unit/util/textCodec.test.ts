@@ -28,4 +28,40 @@ suite("textCodec", () => {
     assert.strictEqual(encodingSupported("windows-1252"), true);
     assert.strictEqual(encodingSupported("not-a-real-encoding"), false);
   });
+
+  // Regression: chardet/normaliser variants that TextDecoder rejects raw
+  test("normalizes dash-stripped labels (windows1252, shiftjis, iso88591)", () => {
+    const buf1252 = Buffer.from([0x80, 0x41]); // € then A
+    assert.strictEqual(decode(buf1252, "windows1252"), "€A");
+
+    // shift_jis: 0x82 0xa0 = あ (U+3042)
+    const bufSJIS = Buffer.from([0x82, 0xa0]);
+    assert.strictEqual(decode(bufSJIS, "shiftjis"), "あ");
+
+    // iso-8859-1: 0xe9 = é
+    const bufLatin1 = Buffer.from([0xe9]);
+    assert.strictEqual(decode(bufLatin1, "iso88591"), "é");
+  });
+
+  test("normalizes labels with spaces ('UTF-16 LE')", () => {
+    const buf = Buffer.from([0x41, 0x00, 0x42, 0x00]); // "AB" in utf-16le
+    assert.strictEqual(decode(buf, "UTF-16 LE"), "AB");
+  });
+
+  test("translates iconv-style aliases (cp950 → big5, cp936 → gbk, cp866 → ibm866)", () => {
+    // cp866: 0x80 = Cyrillic capital А (U+0410)
+    const bufCp866 = Buffer.from([0x80]);
+    assert.strictEqual(decode(bufCp866, "cp866"), "А");
+
+    // big5/cp950: 0xa4 0x40 = 一 (U+4E00)
+    const bufBig5 = Buffer.from([0xa4, 0x40]);
+    assert.strictEqual(decode(bufBig5, "cp950"), "一");
+
+    assert.strictEqual(encodingSupported("cp936"), true);
+  });
+
+  test("normalizes utf16le from BOM detection", () => {
+    const buf = Buffer.from([0x41, 0x00]);
+    assert.strictEqual(decode(buf, "utf16le"), "A");
+  });
 });
