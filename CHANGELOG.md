@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.62] - 2026-05-15
+
+CSV diff gate no longer blocks the workflow with a modal.
+
+### Changed
+
+- Clicking an over-limit CSV file in the Source Control Changes pane now opens the file immediately (no `svn cat` for the BASE side) and posts a non-blocking info toast `CSV diff skipped (X MB > 1 MB). Adjust 'sven.diff.csvSizeLimitMB' to change.` with a single `Open Diff Anyway` button. Clicking the button triggers `vscode.diff` retroactively. The old modal with `Open Diff Anyway` / `Open File` / `Cancel` was disruptive and is gone.
+
+---
+
 ## [0.2.61] - 2026-05-15
 
 Bundle slimmed by ~53% (vsix 378 → 180 KB compressed; `dist/extension.js` 958 → 451 KB) by dropping `@vscode/iconv-lite-umd` (506 KB of pre-bundled encoding tables) in favor of Node's built-in `TextDecoder`. Modern Node ships with full ICU, so all common encodings (UTF-8/16, ISO-8859-x, windows-12xx, GBK, Big5, Shift_JIS, EUC-KR/JP, KOI8-R, macintosh) are still supported. Exotic encodings outside ICU now fall back to UTF-8 with a console warning instead of decoding silently.

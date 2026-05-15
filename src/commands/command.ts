@@ -503,11 +503,13 @@ export abstract class Command implements Disposable {
 
     // Gate runs only when there's actually a BASE side to fetch — otherwise
     // there's no svn cat to skip and the "diff may be slow" prompt is bogus.
-    const csvDecision = await this.checkCsvDiffGate(right);
-    if (csvDecision === "cancel") {
-      return;
-    }
-    if (csvDecision === "openFile") {
+    const shouldSkipDiff = await this.checkCsvDiffGate(
+      left,
+      right,
+      title,
+      opts
+    );
+    if (shouldSkipDiff) {
       return commands.executeCommand<void>("vscode.open", right, opts);
     }
 
@@ -521,41 +523,54 @@ export abstract class Command implements Disposable {
   }
 
   /**
-   * Aggressive size gate for CSV-like diffs. Returns the caller's next action.
-   * Non-file scheme, non-CSV extension, or under-limit → "proceed".
+   * Aggressive size gate for CSV-like diffs. Returns true when the caller
+   * should skip the diff and open the file directly.
+   *
+   * For over-limit CSVs we fire a non-blocking info toast offering
+   * "Open Diff Anyway"; clicking it triggers `vscode.diff` retroactively.
+   * The default (no click / toast dismissed) keeps the user in the file —
+   * fast workflow, no modal interrupt.
    */
   private async checkCsvDiffGate(
-    rightUri: Uri
-  ): Promise<"proceed" | "openFile" | "cancel"> {
-    if (rightUri.scheme !== "file" || !configuration.isCsvLikeDiff(rightUri)) {
-      return "proceed";
+    left: Uri,
+    right: Uri,
+    title: string,
+    opts: TextDocumentShowOptions
+  ): Promise<boolean> {
+    if (right.scheme !== "file" || !configuration.isCsvLikeDiff(right)) {
+      return false;
     }
     const limitMB = configuration.diffCsvSizeLimitMB();
     const limitBytes = limitMB * 1024 * 1024;
     let size: number;
     try {
-      size = (await stat(rightUri.fsPath)).size;
+      size = (await stat(right.fsPath)).size;
     } catch {
-      return "proceed"; // missing or unreadable → don't block the user
+      return false; // missing or unreadable → don't block the user
     }
     if (size <= limitBytes) {
-      return "proceed";
+      return false;
     }
     const sizeMB = (size / (1024 * 1024)).toFixed(1);
-    const choice = await window.showWarningMessage(
-      `CSV diff may be slow: ${sizeMB} MB exceeds limit ${limitMB} MB. ` +
-        `Adjust 'sven.diff.csvSizeLimitMB' or 'sven.diff.csvExtensions'.`,
-      { modal: true },
-      "Open Diff Anyway",
-      "Open File"
-    );
-    if (choice === undefined) {
-      return "cancel";
-    }
-    if (choice === "Open File") {
-      return "openFile";
-    }
-    return "proceed";
+    // Fire-and-forget: don't await the toast. User's workflow continues.
+    void window
+      .showInformationMessage(
+        `CSV diff skipped (${sizeMB} MB > ${limitMB} MB). ` +
+          `Adjust 'sven.diff.csvSizeLimitMB' to change.`,
+        "Open Diff Anyway"
+      )
+      .then(choice => {
+        if (choice === "Open Diff Anyway") {
+          void commands.executeCommand<void>(
+            "vscode.diff",
+            left,
+            right,
+            title,
+            opts
+          );
+        }
+      });
+    return true;
   }
 
   protected async getLeftResource(

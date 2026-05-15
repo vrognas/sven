@@ -6,23 +6,23 @@ import { Status } from "../../../common/types";
 import { Resource } from "../../../resource";
 import * as fs from "../../../fs";
 
-interface WarnArgs {
+interface InfoCall {
   message: string;
-  options: unknown;
   items: string[];
 }
 
 interface MockState {
   executeCommandCalls: Array<{ command: string; args: any[] }>;
-  warnCalls: WarnArgs[];
-  warnResponse: string | undefined;
+  infoCalls: InfoCall[];
+  /** Resolves with this value when showInformationMessage is awaited. */
+  infoResponse: string | undefined;
   fileSize: number;
 }
 
 suite("Open* CSV diff size gate", () => {
   let state: MockState;
   let origExecuteCommand: typeof commands.executeCommand;
-  let origShowWarning: typeof window.showWarningMessage;
+  let origShowInfo: typeof window.showInformationMessage;
   let existsSpy: ReturnType<typeof vi.spyOn>;
   let statSpy: ReturnType<typeof vi.spyOn>;
   let cmd: InstanceType<typeof OpenChangeBase>;
@@ -30,8 +30,8 @@ suite("Open* CSV diff size gate", () => {
   setup(() => {
     state = {
       executeCommandCalls: [],
-      warnCalls: [],
-      warnResponse: undefined,
+      infoCalls: [],
+      infoResponse: undefined,
       fileSize: 0
     };
     (window as any).activeTextEditor = undefined;
@@ -45,14 +45,13 @@ suite("Open* CSV diff size gate", () => {
       return Promise.resolve();
     };
 
-    origShowWarning = window.showWarningMessage;
-    (window as any).showWarningMessage = async (
+    origShowInfo = window.showInformationMessage;
+    (window as any).showInformationMessage = async (
       message: string,
-      options: unknown,
       ...items: string[]
     ) => {
-      state.warnCalls.push({ message, options, items });
-      return state.warnResponse;
+      state.infoCalls.push({ message, items });
+      return state.infoResponse;
     };
 
     existsSpy = vi.spyOn(fs, "exists").mockResolvedValue(true);
@@ -68,93 +67,70 @@ suite("Open* CSV diff size gate", () => {
 
   teardown(() => {
     (commands as any).executeCommand = origExecuteCommand;
-    (window as any).showWarningMessage = origShowWarning;
+    (window as any).showInformationMessage = origShowInfo;
     existsSpy.mockRestore();
     statSpy.mockRestore();
     cmd.dispose();
   });
 
-  test("over-limit csv with 'Open Diff Anyway' shows warning then diffs", async () => {
+  test("over-limit csv: opens file immediately and shows non-modal toast (no diff yet)", async () => {
     const fileUri = Uri.file("/test/big.csv");
     const resource = new Resource(fileUri, Status.MODIFIED);
     state.fileSize = 2 * 1024 * 1024; // 2 MB > 1 MB default
-    state.warnResponse = "Open Diff Anyway";
+    // Don't set infoResponse — user ignores toast
 
-    const leftStub = vi.fn(async () => Uri.parse("svn:/test/big.csv?rev=BASE"));
-    (cmd as any).getLeftResource = leftStub;
+    (cmd as any).getLeftResource = async () =>
+      Uri.parse("svn:/test/big.csv?rev=BASE");
     (cmd as any).getRightResource = () => fileUri;
     (cmd as any).getTitle = () => "big.csv";
 
     await cmd.execute(resource);
 
-    assert.strictEqual(state.warnCalls.length, 1, "warning shown");
-    assert.deepStrictEqual(
-      state.warnCalls[0]!.options,
-      { modal: true },
-      "must be modal so the user has to decide before the diff loads"
-    );
-    assert.deepStrictEqual(
-      state.warnCalls[0]!.items,
-      ["Open Diff Anyway", "Open File"],
-      "Open Diff Anyway listed first (default)"
+    assert.ok(
+      state.executeCommandCalls.some(c => c.command === "vscode.open"),
+      "file opens immediately (no modal blocking)"
     );
     assert.ok(
-      state.executeCommandCalls.some(c => c.command === "vscode.diff"),
-      "diff command executed"
+      !state.executeCommandCalls.some(c => c.command === "vscode.diff"),
+      "diff not executed → no svn cat triggered for BASE side"
+    );
+    assert.strictEqual(state.infoCalls.length, 1, "info toast shown");
+    assert.deepStrictEqual(
+      state.infoCalls[0]!.items,
+      ["Open Diff Anyway"],
+      "single non-modal action button"
     );
   });
 
-  test("over-limit csv with 'Open File' opens file without triggering diff (no svn cat)", async () => {
+  test("over-limit csv: clicking 'Open Diff Anyway' on the toast triggers diff", async () => {
     const fileUri = Uri.file("/test/big.csv");
     const resource = new Resource(fileUri, Status.MODIFIED);
     state.fileSize = 2 * 1024 * 1024;
-    state.warnResponse = "Open File";
+    state.infoResponse = "Open Diff Anyway"; // user clicks the button
 
     (cmd as any).getLeftResource = async () =>
       Uri.parse("svn:/test/big.csv?rev=BASE");
     (cmd as any).getRightResource = () => fileUri;
+    (cmd as any).getTitle = () => "big.csv";
 
     await cmd.execute(resource);
+    // Let the fire-and-forget toast callback resolve
+    await new Promise(r => setImmediate(r));
 
-    assert.ok(
-      !state.executeCommandCalls.some(c => c.command === "vscode.diff"),
-      "diff not executed → svn cat not triggered for BASE side"
+    const diffCalls = state.executeCommandCalls.filter(
+      c => c.command === "vscode.diff"
     );
-    assert.ok(
-      state.executeCommandCalls.some(c => c.command === "vscode.open"),
-      "open executed"
-    );
-  });
-
-  test("ADDED csv with no BASE side opens directly without prompting", async () => {
-    const fileUri = Uri.file("/test/new.csv");
-    const resource = new Resource(fileUri, Status.ADDED);
-    state.fileSize = 2 * 1024 * 1024; // over limit
-
-    (cmd as any).getLeftResource = async () => undefined; // no BASE
-    (cmd as any).getRightResource = () => fileUri;
-
-    await cmd.execute(resource);
-
     assert.strictEqual(
-      state.warnCalls.length,
-      0,
-      "no prompt when there's no diff to show"
-    );
-    assert.ok(
-      state.executeCommandCalls.some(c => c.command === "vscode.open"),
-      "open executed directly"
-    );
-    assert.ok(
-      !state.executeCommandCalls.some(c => c.command === "vscode.diff"),
-      "no diff for ADDED-without-BASE"
+      diffCalls.length,
+      1,
+      "clicking 'Open Diff Anyway' triggers vscode.diff"
     );
   });
 
-  test("under-limit csv diffs normally without prompt", async () => {
+  test("under-limit csv diffs normally without any toast", async () => {
     const fileUri = Uri.file("/test/small.csv");
     const resource = new Resource(fileUri, Status.MODIFIED);
-    state.fileSize = 100 * 1024; // 100 KB < 1 MB default
+    state.fileSize = 100 * 1024;
 
     (cmd as any).getLeftResource = async () =>
       Uri.parse("svn:/test/small.csv?rev=BASE");
@@ -163,14 +139,35 @@ suite("Open* CSV diff size gate", () => {
 
     await cmd.execute(resource);
 
-    assert.strictEqual(
-      state.warnCalls.length,
-      0,
-      "no warning for under-limit file"
-    );
+    assert.strictEqual(state.infoCalls.length, 0, "no toast for small CSV");
     assert.ok(
       state.executeCommandCalls.some(c => c.command === "vscode.diff"),
       "diff executed normally"
+    );
+  });
+
+  test("ADDED csv with no BASE side opens directly with no toast", async () => {
+    const fileUri = Uri.file("/test/new.csv");
+    const resource = new Resource(fileUri, Status.ADDED);
+    state.fileSize = 2 * 1024 * 1024;
+
+    (cmd as any).getLeftResource = async () => undefined;
+    (cmd as any).getRightResource = () => fileUri;
+
+    await cmd.execute(resource);
+
+    assert.strictEqual(
+      state.infoCalls.length,
+      0,
+      "no toast when there's no diff to show"
+    );
+    assert.ok(
+      state.executeCommandCalls.some(c => c.command === "vscode.open"),
+      "open executed directly"
+    );
+    assert.ok(
+      !state.executeCommandCalls.some(c => c.command === "vscode.diff"),
+      "no diff for ADDED-without-BASE"
     );
   });
 });
