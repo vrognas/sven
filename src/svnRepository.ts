@@ -977,8 +977,10 @@ export class Repository {
       encoding = null;
     }
 
-    // Decode buffer with detected encoding
-    if (encoding) {
+    // Decode buffer with detected encoding (defensive — invalid labels
+    // from VS Code config or sven.default.encoding fall back to utf-8
+    // rather than propagating a RangeError).
+    if (encoding && textCodec.encodingSupported(encoding)) {
       return textCodec.decode(buffer, encoding);
     }
     return buffer.toString("utf-8");

@@ -86,4 +86,21 @@ suite("textCodec", () => {
     assert.deepStrictEqual([...encode("é", "latin-1")], [...expected]);
     assert.deepStrictEqual([...encode("é", "BINARY")], [...expected]);
   });
+
+  test("decode preserves dashed forms TextDecoder accepts directly (iso-2022-jp)", () => {
+    // Bug: prior canonicalLabel stripped dashes to "iso2022jp" which TextDecoder rejects,
+    // even though "iso-2022-jp" works directly.
+    assert.strictEqual(encodingSupported("iso-2022-jp"), true);
+    assert.strictEqual(encodingSupported("ISO-2022-JP"), true);
+    // The no-dash form needs the alias path
+    assert.strictEqual(encodingSupported("iso2022jp"), true);
+  });
+
+  test("decode aliases Windows OEM codepage names (cp932 → shift_jis, cp874, cp949)", () => {
+    // 0x82 0xa0 = あ in shift_jis (alias cp932)
+    const bufSJIS = Buffer.from([0x82, 0xa0]);
+    assert.strictEqual(decode(bufSJIS, "cp932"), "あ");
+    assert.strictEqual(encodingSupported("cp874"), true);
+    assert.strictEqual(encodingSupported("cp949"), true);
+  });
 });

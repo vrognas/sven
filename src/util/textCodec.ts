@@ -66,25 +66,52 @@ const DECODE_ALIASES: Record<string, string> = {
   shiftjis: "shift_jis",
   eucjp: "euc-jp",
   euckr: "euc-kr",
+  iso2022jp: "iso-2022-jp",
   koi8r: "koi8-r",
   koi8u: "koi8-u",
   cp866: "ibm866",
-  cp950: "big5",
+  cp874: "windows-874",
+  cp932: "shift_jis",
   cp936: "gbk",
+  cp949: "euc-kr",
+  cp950: "big5",
   big5hkscs: "big5", // HK supplementary chars lost; closest WHATWG match
   macroman: "macintosh"
 };
 
 /**
  * Translate a user-supplied label into one TextDecoder will accept.
- * Order of preference:
- *   1. Known alias (e.g. "windows1252" → "windows-1252")
- *   2. Normalized form (works for labels TextDecoder accepts as-is)
- *   3. Original (preserves casing for any label not yet normalized)
+ * Returns `null` if no variant works.
+ *
+ * Tried in order:
+ *   1. Known alias (e.g. "cp932" → "shift_jis").
+ *   2. Original input — handles dashed forms TextDecoder accepts directly
+ *      ("iso-2022-jp", "big5", "windows-1252") that would otherwise be
+ *      mangled by normalization.
+ *   3. Normalized form (no dashes/underscores) — handles "latin-1" → "latin1".
  */
-function canonicalLabel(label: string): string {
+function canonicalLabel(label: string): string | null {
   const key = normalizeKey(label);
-  return DECODE_ALIASES[key] ?? (key.length > 0 ? key : label);
+  if (DECODE_ALIASES[key]) {
+    return DECODE_ALIASES[key];
+  }
+  if (label.length > 0) {
+    try {
+      new TextDecoder(label);
+      return label;
+    } catch {
+      // ignore — fall through to normalized form
+    }
+  }
+  if (key.length > 0) {
+    try {
+      new TextDecoder(key);
+      return key;
+    } catch {
+      // ignore — give up
+    }
+  }
+  return null;
 }
 
 /** Maps normalized labels to Node's BufferEncoding for the write path. */
@@ -97,22 +124,22 @@ const ENCODE_TO_BUFFER: Record<string, BufferEncoding> = {
   ascii: "ascii"
 };
 
-/** True iff a TextDecoder can be constructed for the given label. */
+/** True iff some variant of the label resolves to a usable TextDecoder. */
 export function encodingSupported(encoding: string): boolean {
-  try {
-    new TextDecoder(canonicalLabel(encoding));
-    return true;
-  } catch {
-    return false;
-  }
+  return canonicalLabel(encoding) !== null;
 }
 
 /**
- * Decode bytes to string. Throws if the encoding label is unknown.
- * Callers should fall back to UTF-8 if they want to be defensive.
+ * Decode bytes to string. Throws `RangeError` if the encoding label
+ * resolves to nothing TextDecoder accepts. Callers should fall back to
+ * UTF-8 (via `encodingSupported` check) if they want to be defensive.
  */
 export function decode(buffer: Buffer | Uint8Array, encoding: string): string {
-  return new TextDecoder(canonicalLabel(encoding)).decode(buffer);
+  const label = canonicalLabel(encoding);
+  if (label === null) {
+    throw new RangeError(`Unsupported encoding: "${encoding}"`);
+  }
+  return new TextDecoder(label).decode(buffer);
 }
 
 /**
