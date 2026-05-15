@@ -501,6 +501,16 @@ export abstract class Command implements Disposable {
       return commands.executeCommand<void>("vscode.open", right, opts);
     }
 
+    // Gate runs only when there's actually a BASE side to fetch — otherwise
+    // there's no svn cat to skip and the "diff may be slow" prompt is bogus.
+    const csvDecision = await this.checkCsvDiffGate(right);
+    if (csvDecision === "cancel") {
+      return;
+    }
+    if (csvDecision === "openFile") {
+      return commands.executeCommand<void>("vscode.open", right, opts);
+    }
+
     return commands.executeCommand<void>(
       "vscode.diff",
       left,
@@ -508,6 +518,44 @@ export abstract class Command implements Disposable {
       title,
       opts
     );
+  }
+
+  /**
+   * Aggressive size gate for CSV-like diffs. Returns the caller's next action.
+   * Non-file scheme, non-CSV extension, or under-limit → "proceed".
+   */
+  private async checkCsvDiffGate(
+    rightUri: Uri
+  ): Promise<"proceed" | "openFile" | "cancel"> {
+    if (rightUri.scheme !== "file" || !configuration.isCsvLikeDiff(rightUri)) {
+      return "proceed";
+    }
+    const limitMB = configuration.diffCsvSizeLimitMB();
+    const limitBytes = limitMB * 1024 * 1024;
+    let size: number;
+    try {
+      size = (await stat(rightUri.fsPath)).size;
+    } catch {
+      return "proceed"; // missing or unreadable → don't block the user
+    }
+    if (size <= limitBytes) {
+      return "proceed";
+    }
+    const sizeMB = (size / (1024 * 1024)).toFixed(1);
+    const choice = await window.showWarningMessage(
+      `CSV diff may be slow: ${sizeMB} MB exceeds limit ${limitMB} MB. ` +
+        `Adjust 'sven.diff.csvSizeLimitMB' or 'sven.diff.csvExtensions'.`,
+      { modal: true },
+      "Open Diff Anyway",
+      "Open File"
+    );
+    if (choice === undefined) {
+      return "cancel";
+    }
+    if (choice === "Open File") {
+      return "openFile";
+    }
+    return "proceed";
   }
 
   protected async getLeftResource(

@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { Uri, workspace } from "vscode";
 import { blameConfiguration } from "../../../blame/blameConfiguration";
 
 suite("BlameConfiguration Tests", () => {
@@ -60,6 +61,52 @@ suite("BlameConfiguration Tests", () => {
     test("should read commit message fetching setting", () => {
       const enabled = blameConfiguration.get("enableLogs", true);
       assert.strictEqual(typeof enabled, "boolean");
+    });
+  });
+
+  suite("CSV-like extension gate", () => {
+    teardown(() => {
+      // Reset overrides
+      const cfg = workspace.getConfiguration("sven.blame");
+      cfg.update("csvExtensions", undefined);
+      cfg.update("csvLineLimit", undefined);
+    });
+
+    test("default csvExtensions includes .csv and .tsv (case-insensitive)", () => {
+      assert.strictEqual(
+        blameConfiguration.isCsvLike(Uri.file("/tmp/data.csv")),
+        true
+      );
+      assert.strictEqual(
+        blameConfiguration.isCsvLike(Uri.file("/tmp/data.CSV")),
+        true
+      );
+      assert.strictEqual(
+        blameConfiguration.isCsvLike(Uri.file("/tmp/data.tsv")),
+        true
+      );
+      assert.strictEqual(
+        blameConfiguration.isCsvLike(Uri.file("/tmp/code.ts")),
+        false
+      );
+    });
+
+    test("default csv line limit is 500", () => {
+      assert.strictEqual(blameConfiguration.getCsvLineLimit(), 500);
+    });
+
+    test("user-overridden csvExtensions takes effect", () => {
+      workspace
+        .getConfiguration("sven.blame")
+        .update("csvExtensions", [".log"]);
+      assert.strictEqual(
+        blameConfiguration.isCsvLike(Uri.file("/tmp/a.log")),
+        true
+      );
+      assert.strictEqual(
+        blameConfiguration.isCsvLike(Uri.file("/tmp/a.csv")),
+        false
+      );
     });
   });
 });

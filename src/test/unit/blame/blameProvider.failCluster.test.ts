@@ -257,6 +257,25 @@ suite("BlameProvider - Fail Cluster", () => {
     assert.ok(warningStub.calledOnce);
   });
 
+  test("updateDecorations skips csv files exceeding csvLineLimit (no blame fetch, no svn cat)", async () => {
+    const editor = createEditor(Uri.file("/test/big.csv"), 5000, 1);
+    sandbox.stub(provider as any, "shouldDecorate").returns(true);
+    sandbox.stub(provider as any, "getParentFolderStatus").returns(undefined);
+    mockRepository.getResourceFromFile.returns(undefined as any);
+    sandbox.stub(blameConfiguration, "isCsvLike").returns(true);
+    sandbox.stub(blameConfiguration, "getCsvLineLimit").returns(500);
+    const fetchStub = sandbox.stub(provider as any, "getBlameData");
+    const warningStub = sandbox.stub(window, "showWarningMessage");
+
+    await provider.updateDecorations(editor);
+
+    assert.ok(fetchStub.notCalled, "should not fetch blame data for big CSV");
+    assert.ok(
+      warningStub.calledOnce,
+      "should warn about CSV size (configurable)"
+    );
+  });
+
   test("updateDecorations catches unexpected failures and clears", async () => {
     const editor = createEditor(Uri.file("/test/crash.ts"), 10, 1);
     sandbox.stub(provider as any, "shouldDecorate").returns(true);

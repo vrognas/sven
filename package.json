@@ -2,7 +2,7 @@
   "name": "sven",
   "displayName": "Sven",
   "description": "Integrated Subversion source control with Positron IDE support. Privacy-focused: zero telemetry, local-only operations.",
-  "version": "0.2.59",
+  "version": "0.2.60",
   "publisher": "vrognas",
   "engines": {
     "vscode": "^1.109.0",
@@ -2142,6 +2142,33 @@
             "performance"
           ]
         },
+        "sven.blame.csvExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Extensions treated as CSV-like for the aggressive blame line limit (case-insensitive, include leading dot).",
+          "default": [
+            ".csv",
+            ".tsv"
+          ],
+          "order": 37,
+          "tags": [
+            "blame",
+            "performance"
+          ]
+        },
+        "sven.blame.csvLineLimit": {
+          "type": "number",
+          "description": "Aggressive line-count limit for CSV-like files. Blame is skipped above this regardless of largeFileLimit.",
+          "default": 500,
+          "minimum": 0,
+          "order": 38,
+          "tags": [
+            "blame",
+            "performance"
+          ]
+        },
         "sven.blame.gutter.enabled": {
           "type": "boolean",
           "markdownDescription": "Show colored revision indicators in the gutter (left of line numbers). Each color represents a different commit age.",
@@ -2432,6 +2459,33 @@
           "tags": [
             "diff",
             "tools"
+          ]
+        },
+        "sven.diff.csvExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Extensions treated as CSV-like for the aggressive diff size limit (case-insensitive, include leading dot).",
+          "default": [
+            ".csv",
+            ".tsv"
+          ],
+          "order": 112,
+          "tags": [
+            "diff",
+            "performance"
+          ]
+        },
+        "sven.diff.csvSizeLimitMB": {
+          "type": "number",
+          "description": "Aggressive file-size limit (MB) for CSV-like diffs. Above this, prompts before fetching BASE via 'svn cat'.",
+          "default": 1,
+          "minimum": 0,
+          "order": 113,
+          "tags": [
+            "diff",
+            "performance"
           ]
         },
         "sven.layout.trunkRegex": {

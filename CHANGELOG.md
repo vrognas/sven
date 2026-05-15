@@ -7,6 +7,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.60] - 2026-05-15
+
+Aggressive size/line gates for CSV-like files to stop large `.csv`/`.tsv` from stalling the editor on diff or blame.
+
+### Added
+
+- **`sven.blame.csvExtensions`** (default `[".csv", ".tsv"]`) and **`sven.blame.csvLineLimit`** (default `500`). When the file's extension matches and line count exceeds the limit, blame is skipped with a one-shot warning naming the relevant settings. Runs ahead of the generic `largeFileLimit`.
+- **`sven.diff.csvExtensions`** (default `[".csv", ".tsv"]`) and **`sven.diff.csvSizeLimitMB`** (default `1`). Above the limit, opening a change shows a modal: `Open Diff Anyway` (default), `Open File`, or cancel. The `Open File` and cancel paths skip `getLeftResource` entirely, so no `svn cat` is triggered for the BASE side.
+
+---
+
 ## [0.2.59] - 2026-05-14
 
 Same content as the never-shipped 0.2.58, plus a build fix: the unused `formatErrorMessage` wrapper kept around "for test compatibility" tripped TypeScript's `noUnusedLocals` in CI (the test reaches it via `as any`, which is invisible to the unused-private check). Dropped the wrapper; updated the test helper to call `formatErrorMessageFromContext` after building the context locally.

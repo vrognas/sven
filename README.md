@@ -112,9 +112,11 @@ Open Settings (`Ctrl+,`) and search `sven`.
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | `sven.blame.autoBlame` | `true` | Show blame when opening files |
+| `sven.blame.csvLineLimit` | `500` | Skip blame for CSV-like files over this line count |
 | `sven.commit.types` | `[]` | Custom commit types for guided flow |
 | `sven.commit.autoUpdate` | `none` | Run update before/after commit |
 | `sven.diff.tool` | `null` | External diff tool path |
+| `sven.diff.csvSizeLimitMB` | `1` | Prompt before diffing CSV-like files over this size |
 | `sven.remoteChanges.checkFrequency` | `300` | Remote check interval (seconds) |
 | `sven.sourceControl.hideUnversioned` | `false` | Hide unversioned files |
 | `sven.log.length` | `50` | Commits shown in history |

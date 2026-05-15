@@ -9,11 +9,15 @@ import {
   ConfigurationTarget,
   Event,
   EventEmitter,
+  Uri,
   workspace,
   WorkspaceConfiguration
 } from "vscode";
+import { matchesExtensionList } from "../util/extensionMatch";
 
 const SVN_BLAME = "sven.blame";
+const DEFAULT_CSV_EXTENSIONS = [".csv", ".tsv"];
+const DEFAULT_CSV_LINE_LIMIT = 500;
 
 export interface BlameConfig {
   enabled: boolean;
@@ -213,6 +217,23 @@ class BlameConfiguration {
    */
   public getInlineMaxLength(): number {
     return this.get<number>("inline.maxLength", 50);
+  }
+
+  /**
+   * Aggressive line-count limit for csv-like files (kicks in before largeFileLimit)
+   */
+  public getCsvLineLimit(): number {
+    return this.get<number>("csvLineLimit", DEFAULT_CSV_LINE_LIMIT);
+  }
+
+  /**
+   * Match uri against configured csv-like extension list (case-insensitive)
+   */
+  public isCsvLike(uri: Uri): boolean {
+    return matchesExtensionList(
+      uri,
+      this.get<string[]>("csvExtensions", DEFAULT_CSV_EXTENSIONS)
+    );
   }
 }
 

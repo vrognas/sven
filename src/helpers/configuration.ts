@@ -9,11 +9,15 @@ import {
   ConfigurationTarget,
   Event,
   EventEmitter,
+  Uri,
   workspace,
   WorkspaceConfiguration
 } from "vscode";
+import { matchesExtensionList } from "../util/extensionMatch";
 
 const SVEN = "sven";
+const DEFAULT_DIFF_CSV_EXTENSIONS = [".csv", ".tsv"];
+const DEFAULT_DIFF_CSV_SIZE_LIMIT_MB = 1;
 
 class Configuration {
   private configuration: WorkspaceConfiguration;
@@ -77,6 +81,22 @@ class Configuration {
   /** Use QuickPick for commit flow */
   public commitUseQuickPick(): boolean {
     return this.get<boolean>("commit.useQuickPick", true);
+  }
+
+  /** Aggressive size limit (MB) for csv-like diffs */
+  public diffCsvSizeLimitMB(): number {
+    return this.get<number>(
+      "diff.csvSizeLimitMB",
+      DEFAULT_DIFF_CSV_SIZE_LIMIT_MB
+    );
+  }
+
+  /** Match uri against configured csv-like diff extension list (case-insensitive) */
+  public isCsvLikeDiff(uri: Uri): boolean {
+    return matchesExtensionList(
+      uri,
+      this.get<string[]>("diff.csvExtensions", DEFAULT_DIFF_CSV_EXTENSIONS)
+    );
   }
 }
 

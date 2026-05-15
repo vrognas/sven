@@ -207,6 +207,19 @@ export class BlameProvider implements Disposable {
       }
     }
 
+    // CSV-like aggressive gate (runs before generic largeFileLimit)
+    if (blameConfiguration.isCsvLike(target.document.uri)) {
+      const csvLimit = blameConfiguration.getCsvLineLimit();
+      if (target.document.lineCount > csvLimit) {
+        window.showWarningMessage(
+          `Blame skipped for large CSV (${target.document.lineCount} lines > ` +
+            `${csvLimit} limit). ` +
+            `Adjust 'sven.blame.csvLineLimit' or 'sven.blame.csvExtensions'.`
+        );
+        return;
+      }
+    }
+
     // Large file check
     if (
       blameConfiguration.isFileTooLarge(target.document.lineCount) &&
