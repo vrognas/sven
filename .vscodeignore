@@ -1,4 +1,5 @@
 .*
+.remember/**
 .github/**
 node_modules/**
 .vscode-test/**
