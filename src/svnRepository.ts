@@ -1199,7 +1199,7 @@ export class Repository {
 
     if (trunkLayout) {
       promises.push(
-        new Promise<string[]>(async resolve => {
+        (async (): Promise<string[]> => {
           try {
             await this.exec([
               "ls",
@@ -1208,11 +1208,11 @@ export class Repository {
               "empty"
             ]);
 
-            resolve([trunkLayout]);
+            return [trunkLayout];
           } catch (error) {
-            resolve([]);
+            return [];
           }
-        })
+        })()
       );
     }
 
@@ -1228,7 +1228,7 @@ export class Repository {
 
     for (const tree of trees) {
       promises.push(
-        new Promise<string[]>(async resolve => {
+        (async (): Promise<string[]> => {
           const branchUrl = repoUrl + "/" + tree;
 
           try {
@@ -1241,11 +1241,11 @@ export class Repository {
               .filter((x: string) => !!x)
               .map((i: string) => tree + "/" + i);
 
-            resolve(list);
+            return list;
           } catch (error) {
-            resolve([]);
+            return [];
           }
-        })
+        })()
       );
     }
 

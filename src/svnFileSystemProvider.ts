@@ -100,7 +100,7 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
 
   @debounce(1100)
   private eventuallyFireChangeEvents(): void {
-    this.fireChangeEvents();
+    void this.fireChangeEvents();
   }
 
   @throttle
@@ -166,7 +166,7 @@ export class SvnFileSystemProvider implements FileSystemProvider, Disposable {
 
     // Track pending request
     this.pendingStats.set(cacheKey, promise);
-    promise.finally(() => this.pendingStats.delete(cacheKey));
+    void promise.finally(() => this.pendingStats.delete(cacheKey));
 
     return promise;
   }

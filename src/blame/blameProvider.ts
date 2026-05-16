@@ -141,7 +141,7 @@ export class BlameProvider implements Disposable {
 
     // Apply to current active editor
     if (window.activeTextEditor) {
-      this.onActiveEditorChange(window.activeTextEditor);
+      void this.onActiveEditorChange(window.activeTextEditor);
     }
   }
 

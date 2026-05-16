@@ -199,7 +199,7 @@ export class SourceControlManager implements IDisposable {
   @debounce(500)
   private eventuallyScanPossibleSvnRepositories(): void {
     for (const path of this.possibleSvnRepositoryPaths) {
-      this.tryOpenRepository(path, 1);
+      void this.tryOpenRepository(path, 1);
     }
 
     this.possibleSvnRepositoryPaths.clear();
@@ -256,9 +256,9 @@ export class SourceControlManager implements IDisposable {
           )
       ) as IOpenRepository[];
 
-    possibleRepositoryFolders.forEach(p =>
-      this.tryOpenRepository(p.uri.fsPath)
-    );
+    possibleRepositoryFolders.forEach(p => {
+      void this.tryOpenRepository(p.uri.fsPath);
+    });
     openRepositoriesToDispose.forEach(r => r.repository.dispose());
   }
 
@@ -530,7 +530,7 @@ export class SourceControlManager implements IDisposable {
 
       // Prompt walkthrough on first repository open (P0.3)
       if (this.openRepositories.length === 1) {
-        this.promptWalkthrough();
+        void this.promptWalkthrough();
       }
     } catch (error) {
       // Cleanup on failure to prevent resource leaks

@@ -586,7 +586,7 @@ export class Svn {
         svnErrorCode === svnErrorCodes.AuthorizationFailed
       ) {
         // Fire and forget - don't await, just show notification
-        showSystemKeyringAuthNotification();
+        void showSystemKeyringAuthNotification();
       }
 
       return Promise.reject<IExecutionResult>(

@@ -220,7 +220,7 @@ async function showCommitInput(message?: string, filePaths?: string[]) {
           panel.dispose();
           break;
         case "pickCommitMessage":
-          pickCommitMessage();
+          void pickCommitMessage();
           break;
         default:
           resolve(undefined);

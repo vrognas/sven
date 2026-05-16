@@ -40,7 +40,7 @@ export class Upgrade extends Command {
 
       if (upgraded) {
         window.showInformationMessage(`Working copy "${folderPath}" upgraded`);
-        sourceControlManager.tryOpenRepository(folderPath);
+        void sourceControlManager.tryOpenRepository(folderPath);
       } else {
         window.showErrorMessage(
           `Error on upgrading working copy "${folderPath}". See log for more detail`

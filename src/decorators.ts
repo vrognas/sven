@@ -131,7 +131,7 @@ function _sequentialize<T extends AsyncMethod>(
     ...args: Parameters<T>
   ): Promise<Awaited<ReturnType<T>>> {
     const currentPromise =
-      (this[currentKey] as Promise<any>) || Promise.resolve(null);
+      (this[currentKey] as Promise<any>) ?? Promise.resolve(null);
     const run = async () => fn.apply(this, args);
     this[currentKey] = currentPromise.then(run, run);
     return this[currentKey];
@@ -173,13 +173,13 @@ export function globalSequentialize(
       // Append repo root if available, ensuring each repo has independent queue
       const repoKey = this.root ? `${name}:${this.root}` : name;
       const currentPromise =
-        (_seqList[repoKey] as Promise<any>) || Promise.resolve(null);
+        (_seqList[repoKey] as Promise<any>) ?? Promise.resolve(null);
       const run = async () => fn.apply(this, args);
       const resultPromise = currentPromise.then(run, run);
       _seqList[repoKey] = resultPromise;
 
       // Clean up key after promise settles to prevent memory leak
-      resultPromise.finally(() => {
+      void resultPromise.finally(() => {
         // Only delete if this is still the current promise for this key
         if (_seqList[repoKey] === resultPromise) {
           delete _seqList[repoKey];

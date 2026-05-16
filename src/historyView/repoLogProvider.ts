@@ -119,7 +119,7 @@ export class RepoLogProvider
   }
 
   constructor(private sourceControlManager: SourceControlManager) {
-    this.refresh();
+    void this.refresh();
 
     // Create TreeView for visibility tracking
     try {
@@ -192,7 +192,7 @@ export class RepoLogProvider
           }
 
           this.refreshTimeout = setTimeout(() => {
-            this.refresh();
+            void this.refresh();
           }, this.DEBOUNCE_MS);
         }
       ),
@@ -200,10 +200,10 @@ export class RepoLogProvider
       // SourceControlManager discovers repos asynchronously after providers are created,
       // so we must listen for repo open/close events to update tree data
       this.sourceControlManager.onDidOpenRepository(() => {
-        this.refresh();
+        void this.refresh();
       }),
       this.sourceControlManager.onDidCloseRepository(() => {
-        this.refresh();
+        void this.refresh();
       }),
       // Filter commands - unified entry point
       commands.registerCommand(
@@ -236,7 +236,7 @@ export class RepoLogProvider
 
   public removeRepo(element: ILogTreeItem) {
     this.logCache.delete((element.data as SvnPath).toString());
-    this.refresh();
+    void this.refresh();
   }
 
   public async openFileRemoteCmd(element: ILogTreeItem) {
@@ -253,18 +253,18 @@ export class RepoLogProvider
     return openFileRemote(item.repo, ri.remoteFullPath, parent.revision);
   }
 
-  public openFileLocal(element: ILogTreeItem) {
+  public async openFileLocal(element: ILogTreeItem) {
     const commit = element.data as ISvnLogEntryPath;
     const item = this.getCached(element);
     if (!item) {
       return;
     }
     const ri = item.repo.getPathNormalizer().parse(commit._);
-    if (!checkIfFile(ri, true)) {
+    if (!(await checkIfFile(ri, true))) {
       return;
     }
     if (ri.localFullPath) {
-      commands.executeCommand("vscode.open", ri.localFullPath);
+      await commands.executeCommand("vscode.open", ri.localFullPath);
     }
   }
 
@@ -745,7 +745,7 @@ export class RepoLogProvider
     // Update tree view description and context variable
     this.updateFilterUI();
     // Refresh tree
-    this.refresh(undefined, false, true);
+    void this.refresh(undefined, false, true);
   }
 
   private updateFilterUI() {
@@ -1011,7 +1011,7 @@ export class RepoLogProvider
         cached.isLoading = true;
         const repoUrl = cached.svnTarget.toString(true);
         // Fetch in background, refresh when done
-        fetchMore(cached).finally(() => {
+        void fetchMore(cached).finally(() => {
           // Only refresh if this cached object is still current (not replaced by filter change)
           const currentCached = this.logCache.get(repoUrl);
           if (currentCached === cached) {

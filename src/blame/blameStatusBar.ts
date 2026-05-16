@@ -75,7 +75,7 @@ export class BlameStatusBar implements Disposable {
 
     // Initial update
     if (window.activeTextEditor) {
-      this.onActiveEditorChanged(window.activeTextEditor);
+      void this.onActiveEditorChanged(window.activeTextEditor);
     }
   }
 

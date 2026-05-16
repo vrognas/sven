@@ -486,7 +486,7 @@ export class Repository implements IRemoteRepository {
 
       if (e.affectsConfiguration("sven.remoteChanges.checkFrequency")) {
         this.remoteChangeService.restart();
-        this.updateRemoteChangedFiles();
+        void this.updateRemoteChangedFiles();
       }
 
       // Clear runtime credentials and caches when auth mode changes
@@ -507,7 +507,7 @@ export class Repository implements IRemoteRepository {
       .then(() => {
         this._statusReadyResolve();
         // First remote check after initial status is ready
-        this.updateRemoteChangedFiles();
+        void this.updateRemoteChangedFiles();
         // Defer propget caches past first paint — single svn proplist call
         // Skip if already warmed (e.g., hasNeedsLock triggered refresh early)
         setTimeout(() => {
@@ -675,7 +675,7 @@ export class Repository implements IRemoteRepository {
     const config = this.getConfig();
 
     if (config.remoteChangesCheckFrequency) {
-      this.run(Operation.StatusRemote);
+      void this.run(Operation.StatusRemote);
     } else {
       // Clear remote changes when disabled
       if (this.groupManager.remoteChanges) {
@@ -843,7 +843,7 @@ export class Repository implements IRemoteRepository {
   // refresh feel sluggish.
   @debounce(200)
   private eventuallyUpdateWhenIdleAndWait(): void {
-    this.updateWhenIdleAndWait();
+    void this.updateWhenIdleAndWait();
   }
 
   @throttle

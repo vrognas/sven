@@ -65,7 +65,7 @@ export class ItemLogProvider
       this._dispose.push(
         this.treeView.onDidChangeVisibility(e => {
           if (e.visible) {
-            this.editorChanged(window.activeTextEditor);
+            void this.editorChanged(window.activeTextEditor);
           }
         })
       );
@@ -124,7 +124,7 @@ export class ItemLogProvider
       )
     );
     // Route through editorChanged debounce to coalesce with onDidOpenRepository
-    this.editorChanged(window.activeTextEditor);
+    void this.editorChanged(window.activeTextEditor);
   }
 
   // Navigate to the same revision in repository history
@@ -304,7 +304,7 @@ export class ItemLogProvider
       this.refreshDebounceTimer = undefined;
       // Re-check in case rollback started while waiting
       if (!this.isRollingBack) {
-        this.refresh(undefined, te);
+        void this.refresh(undefined, te);
       }
     }, 100);
   }

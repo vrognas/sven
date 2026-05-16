@@ -46,7 +46,15 @@ module.exports = tseslint.config(
       }],
       '@typescript-eslint/no-inferrable-types': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-unused-expressions': 'off'
+      '@typescript-eslint/no-unused-expressions': 'off',
+
+      // Async-safety (typed-linting; requires parserOptions.project above).
+      // Catches the "forgot to handle the promise" class of bugs without
+      // forcing a Go-style tuple wrapper at every callsite.
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-misused-promises': 'warn',
+      '@typescript-eslint/await-thenable': 'warn',
+      '@typescript-eslint/require-await': 'warn'
     }
   }
 );

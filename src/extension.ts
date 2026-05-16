@@ -121,7 +121,7 @@ async function init(
   // Register blame commands
   disposables.push(
     commands.registerCommand("sven.showBlameCommit", () => {
-      blameStatusBar.showCommitDetails();
+      void blameStatusBar.showCommitDetails();
     })
   );
 
